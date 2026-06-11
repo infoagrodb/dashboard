@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard de Seguimiento - Division Agricola Comasa</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f4f6f8;
+    color: #2c2c2a;
+    padding: 20px;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #185FA5;
+  }
+  .header-left .org {
+    font-size: 11px;
+    color: #888780;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .header-left h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: #185FA5;
+  }
+  .live {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #5f5e5a;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #3B6D11; }
+  .dot.error { background: #A32D2D; }
+  .dot.loading { background: #BA7517; }
+  .refresh-btn {
+    font-size: 12px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: white;
+    cursor: pointer;
+    margin-top: 6px;
+  }
+  .refresh-btn:hover { background: #f0f0f0; }
+
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .filters label {
+    display: block;
+    font-size: 11px;
+    color: #5f5e5a;
+    margin-bottom: 3px;
+  }
+  .filters select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    background: white;
+    font-size: 13px;
+  }
+
+  .kpi-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+  .kpi {
+    background: white;
+    border-radius: 10px;
+    padding: 14px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    border-left: 4px solid #185FA5;
+  }
+  .kpi.bad { border-left-color: #A32D2D; }
+  .kpi-label { font-size: 11px; color: #5f5e5a; margin-bottom: 4px; }
+  .kpi-val { font-size: 24px; font-weight: 600; color: #2c2c2a; }
+  .kpi-sub { font-size: 11px; color: #888780; margin-top: 4px; }
+  .kpi-status {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .status-ok { background: #EAF3DE; color: #27500A; }
+  .status-bad { background: #FCEBEB; color: #791F1F; }
+  .status-na { background: #F1EFE8; color: #5f5e5a; }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #888780;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    margin: 24px 0 10px;
+  }
+  .card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: #2c2c2a; margin-bottom: 10px; }
+  .grid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .grid1 { margin-bottom: 12px; }
+  .legend {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #5f5e5a;
+  }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .ldot { width: 10px; height: 10px; border-radius: 2px; }
+  .ldash { width: 14px; height: 0; border-top: 2px dashed #A32D2D; }
+  .status-msg, .error-msg {
+    text-align: center;
+    padding: 40px;
+    font-size: 14px;
+    color: #888780;
+  }
+  .error-msg { color: #A32D2D; }
+  footer {
+    text-align: center;
+    margin-top: 30px;
+    font-size: 11px;
+    color: #888780;
+  }
+
+  @media (max-width: 700px) {
+    .grid2 { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="org">Productor: Division Agricola Comasa</div>
+    <h1>Dashboard de Seguimiento de Actividades</h1>
+  </div>
+  <div style="text-align:right">
+    <div class="live"><div class="dot loading" id="status-dot"></div><span id="update-time">Conectando con Google Sheets...</span></div>
+    <button class="refresh-btn" onclick="init()">Actualizar datos</button>
+  </div>
+</div>
+
+<div class="filters">
+  <div><label>Ciclo</label><select id="sel-ciclo" onchange="onCicloChange()"></select></div>
+  <div><label>Actividad</label><select id="sel-actividad" onchange="render()"></select></div>
+  <div><label>Sector</label><select id="sel-sector" onchange="render()"></select></div>
+  <div><label>Periodo</label>
+    <select id="sel-periodo" onchange="render()">
+      <option value="10">Ultimos 10 dias</option>
+      <option value="20">Ultimos 20 dias</option>
+      <option value="30" selected>Ultimos 30 dias</option>
+      <option value="todo">Todo el ciclo</option>
+    </select>
+  </div>
+</div>
+
+<div id="content">
+  <div class="status-msg">Cargando datos desde Google Sheets...</div>
+</div>
+
+<footer>Conectado en vivo a Google Sheets (Odoo_Ordenes_Campo) &mdash; Division Agricola Comasa &mdash; Proveedor de servicio: Comasa</footer>
+
+<script>
+const SHEET_ID = '1JvLHhYiZ9QpF5EQg1AWdXx-D7Y6kwno_LZWsB3sagig';
+const API_KEY = 'AIzaSyAzWECpeQSEq1cwVpuCf6kt_kklb5sEKf4';
+const TAB1 = 'Avances y combustible del 2022 a la fecha';
+const TAB2 = 'Combustible infoagro';
+
+const PRESUPUESTOS = {
+  'Arado/Romplona':{lts:18.18,hm:0.78}, 'Subsuelo':{lts:23.40,hm:1.28}, 'Grada':{lts:9.60,hm:0.45},
+  'Mureo':{lts:8.84,hm:0.52}, 'Siembra':{lts:7.56,hm:1.17}, 'Quema':{lts:2.29,hm:0.34},
+  'Sello':{lts:1.85,hm:0.29}, 'Post emergente':{lts:1.63,hm:0.29}, 'Fungicida I':{lts:2.39,hm:0.38},
+  'Fungicida II':{lts:2.09,hm:0.31}, 'Fungicida III':{lts:1.74,hm:0.26}, 'Fungicida IV':{lts:1.61,hm:0.25},
+  'Fungicida V':{lts:1.75,hm:0.28}, 'Fungicida VI':{lts:1.78,hm:0.34}, 'Fungicida VII':{lts:1.44,hm:0.23},
+  'Fungicida VIII':{lts:1.90,hm:0.30}, 'Insecticida':{lts:2.54,hm:0.45}, 'Arranque':{lts:13.01,hm:1.54},
+  'Combina / Casamba':{lts:31.40,hm:1.00}
+};
+const HM_CATS = ['tractor pequeño','tractor mediano','tractor grande','combinas','combina'];
+const COLORS = ['#185FA5','#1D9E75','#BA7517','#A32D2D','#534AB7','#0F6E56','#993C1D','#854F0B','#3B6D11','#72243E'];
+
+let raw1 = [], raw2 = [], charts = {};
+
+function destroy(id){ if(charts[id]){ try{ charts[id].destroy(); }catch(e){} } }
+function toNum(v){ if(v===undefined||v===null||v==='') return 0; const s=String(v).replace(/,/g,''); const n=parseFloat(s); return isNaN(n)?0:n; }
+function get(o, ...keys){ for(const k of keys){ if(o[k]!==undefined && o[k]!=='') return o[k]; } return ''; }
+function norm(s){ return String(s||'').trim().toLowerCase(); }
+
+const MESES_ES = {ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,set:8,oct:9,nov:10,dic:11};
+function parseDate(s){
+  if(!s) return null;
+  s = String(s).trim().toLowerCase();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return new Date(+m[1], +m[2]-1, +m[3]);
+  m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1]);
+  m = s.match(/^(\d{1,2})[\s\-]+de[\s\-]+([a-z]{3,})[\s\-]+de[\s\-]+(\d{4})$/);
+  if(m && MESES_ES[m[2].slice(0,3)]!==undefined) return new Date(+m[3], MESES_ES[m[2].slice(0,3)], +m[1]);
+  m = s.match(/^(\d{1,2})[\s\-]+([a-z]{3,})[\s\-]+(\d{4})$/);
+  if(m && MESES_ES[m[2].slice(0,3)]!==undefined) return new Date(+m[3], MESES_ES[m[2].slice(0,3)], +m[1]);
+  return null;
+}
+function dkey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtShort(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+function isoWeek(d){
+  const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = (dt.getUTCDay()+6)%7;
+  dt.setUTCDate(dt.getUTCDate()-dayNum+3);
+  const firstThu = new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+  const week = 1+Math.round(((dt-firstThu)/86400000-3+((firstThu.getUTCDay()+6)%7))/7);
+  return dt.getUTCFullYear()+'-S'+String(week).padStart(2,'0');
+}
+
+async function fetchTab(tabName, range){
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tabName+'!'+range)}?key=${API_KEY}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('HTTP '+res.status+' al leer '+tabName);
+  const json = await res.json();
+  return json.values || [];
+}
+function rowsToObjects(values){
+  if(!values.length) return [];
+  const header = values[0].map(h=>norm(h));
+  return values.slice(1).map(row=>{
+    const obj = {};
+    header.forEach((h,i)=>{ obj[h] = row[i]!==undefined ? row[i] : ''; });
+    return obj;
+  });
+}
+function isComasa(r){
+  return norm(get(r,'proveedor del servicio'))==='comasa' && norm(get(r,'compañia','compañía'))==='division agricola comasa';
+}
+function rowAvance(r){ return toNum(get(r,'cant. avance mzn','cantidad avance mzn')); }
+function rowLts(r){ return toNum(get(r,'cant. lts diesel','cantidad diesel ltrs')); }
+function rowHme(r){ return toNum(get(r,'hora motor efectivo','hme')); }
+function isHmCat(r){ return HM_CATS.includes(norm(get(r,'categoria equipo'))); }
+
+function applyPeriodo(rows, periodo){
+  if(periodo==='todo' || !rows.length) return rows;
+  let maxD = null;
+  rows.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(d && (!maxD||d>maxD)) maxD=d; });
+  if(!maxD) return rows;
+  const minD = new Date(maxD); minD.setDate(minD.getDate()-(parseInt(periodo)-1));
+  return rows.filter(r=>{ const d=parseDate(get(r,'fecha')); return d && d>=minD && d<=maxD; });
+}
+
+function populateSelect(sel, values, preferred){
+  sel.innerHTML = '';
+  values.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; sel.appendChild(o); });
+  if(preferred && values.includes(preferred)) sel.value = preferred;
+}
+
+function onCicloChange(){
+  const ciclo = document.getElementById('sel-ciclo').value;
+  const acts = [...new Set(raw1.filter(r=>isComasa(r)&&get(r,'ciclo')===ciclo).map(r=>get(r,'actividad')))].filter(Boolean).sort();
+  populateSelect(document.getElementById('sel-actividad'), acts, 'Arado/Romplona');
+  const sectores = [...new Set(raw1.filter(r=>isComasa(r)&&get(r,'ciclo')===ciclo).map(r=>get(r,'sector')))].filter(Boolean).sort();
+  const selSector = document.getElementById('sel-sector');
+  selSector.innerHTML = '<option value="Todos">Todos los sectores</option>';
+  sectores.forEach(s=>{ const o=document.createElement('option'); o.value=s; o.textContent=s; selSector.appendChild(o); });
+  render();
+}
+
+async function init(){
+  const dot = document.getElementById('status-dot');
+  dot.className = 'dot loading';
+  document.getElementById('update-time').textContent = 'Conectando con Google Sheets...';
+  document.getElementById('content').innerHTML = '<div class="status-msg">Cargando datos desde Google Sheets (puede tardar unos segundos)...</div>';
+  try{
+    const [v1, v2] = await Promise.all([fetchTab(TAB1,'A1:M'), fetchTab(TAB2,'A1:T')]);
+    raw1 = rowsToObjects(v1);
+    raw2 = rowsToObjects(v2);
+
+    const ciclos = [...new Set(raw1.filter(isComasa).map(r=>get(r,'ciclo')))].filter(Boolean);
+    const ciclos2026 = ciclos.filter(c=>c.includes('2026'));
+    const otros = ciclos.filter(c=>!c.includes('2026'));
+    const cicloOrder = [...ciclos2026.sort(), ...otros.sort()];
+    populateSelect(document.getElementById('sel-ciclo'), cicloOrder, 'Mani 2026');
+    onCicloChange();
+
+    const now = new Date();
+    dot.className = 'dot';
+    document.getElementById('update-time').textContent = 'Conectado - actualizado ' + now.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  }catch(err){
+    dot.className = 'dot error';
+    document.getElementById('update-time').textContent = 'Error de conexion';
+    document.getElementById('content').innerHTML = `<div class="error-msg">No se pudo conectar a Google Sheets: ${err.message}<br>Verifica tu conexion a internet e intenta "Actualizar datos".</div>`;
+  }
+}
+
+function statusBadge(real, ppto, hayDatos){
+  if(!hayDatos || ppto===undefined) return {cls:'status-na', txt:'Sin presupuesto'};
+  const dif = real-ppto;
+  if(Math.abs(dif)<=ppto*0.05) return {cls:'status-ok', txt:'En meta'};
+  if(dif>0) return {cls:'status-bad', txt:'Sobre presupuesto'};
+  return {cls:'status-ok', txt:'Bajo presupuesto'};
+}
+
+function render(){
+  if(!raw1.length) return;
+  const ciclo = document.getElementById('sel-ciclo').value;
+  const actividad = document.getElementById('sel-actividad').value;
+  const sector = document.getElementById('sel-sector').value;
+  const periodo = document.getElementById('sel-periodo').value;
+  const ppto = PRESUPUESTOS[actividad];
+
+  let rows1 = raw1.filter(r=>isComasa(r) && get(r,'ciclo')===ciclo && get(r,'actividad')===actividad && (sector==='Todos'||get(r,'sector')===sector));
+  rows1 = applyPeriodo(rows1, periodo);
+  let rows2 = raw2.filter(r=>isComasa(r) && get(r,'ciclo')===ciclo && get(r,'actividad')===actividad && (sector==='Todos'||get(r,'sector')===sector));
+  rows2 = applyPeriodo(rows2, periodo);
+  const rows2hm = rows2.filter(isHmCat);
+
+  const totalMz = rows1.reduce((s,r)=>s+rowAvance(r),0);
+  const totalLts = rows1.reduce((s,r)=>s+rowLts(r),0);
+  const totalHM = rows2hm.reduce((s,r)=>s+rowHme(r),0);
+  const realLtsMz = totalMz>0 ? totalLts/totalMz : 0;
+  const realHmMz = totalMz>0 ? totalHM/totalMz : 0;
+
+  const byDate = {};
+  rows1.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(!d) return; const k=dkey(d); if(!byDate[k]) byDate[k]={mz:0,lts:0,date:d}; byDate[k].mz+=rowAvance(r); byDate[k].lts+=rowLts(r); });
+  rows2hm.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(!d) return; const k=dkey(d); if(!byDate[k]) byDate[k]={mz:0,lts:0,hm:0,date:d}; byDate[k].hm=(byDate[k].hm||0)+rowHme(r); });
+  const dates = Object.keys(byDate).sort();
+  const labels = dates.map(k=>fmtShort(byDate[k].date));
+  let accMz=0, accLts=0, accHm=0;
+  const acumMz=[], mzDia=[], ltsAcum=[], hmAcum=[];
+  dates.forEach(k=>{
+    accMz += byDate[k].mz; accLts += byDate[k].lts; accHm += (byDate[k].hm||0);
+    acumMz.push(+accMz.toFixed(2)); mzDia.push(+byDate[k].mz.toFixed(2));
+    ltsAcum.push(accMz>0 ? +(accLts/accMz).toFixed(2) : 0);
+    hmAcum.push(accMz>0 ? +(accHm/accMz).toFixed(3) : 0);
+  });
+
+  const byFinca = {};
+  rows1.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; byFinca[f]=(byFinca[f]||0)+rowAvance(r); });
+  const fincaEntries = Object.entries(byFinca).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  const byWeek = {};
+  rows1.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(!d) return; const w=isoWeek(d); byWeek[w]=(byWeek[w]||0)+rowLts(r); });
+  const weekKeys = Object.keys(byWeek).sort();
+
+  let rows1All = raw1.filter(r=>isComasa(r) && get(r,'ciclo')===ciclo && (sector==='Todos'||get(r,'sector')===sector));
+  rows1All = applyPeriodo(rows1All, periodo);
+  let rows2All = raw2.filter(r=>isComasa(r) && get(r,'ciclo')===ciclo && (sector==='Todos'||get(r,'sector')===sector)).filter(isHmCat);
+  rows2All = applyPeriodo(rows2All, periodo);
+  const actMz={}, actLts={}, actHm={};
+  rows1All.forEach(r=>{ const a=get(r,'actividad'); if(!PRESUPUESTOS[a]) return; actMz[a]=(actMz[a]||0)+rowAvance(r); actLts[a]=(actLts[a]||0)+rowLts(r); });
+  rows2All.forEach(r=>{ const a=get(r,'actividad'); if(!PRESUPUESTOS[a]) return; actHm[a]=(actHm[a]||0)+rowHme(r); });
+  const actsPresent = Object.keys(actMz).filter(a=>actMz[a]>0).sort();
+  const actLtsMz = actsPresent.map(a=>+(actLts[a]/actMz[a]).toFixed(2));
+  const actHmMz = actsPresent.map(a=>+((actHm[a]||0)/actMz[a]).toFixed(3));
+  const actLtsPpto = actsPresent.map(a=>PRESUPUESTOS[a].lts);
+  const actHmPpto = actsPresent.map(a=>PRESUPUESTOS[a].hm);
+
+  const byCat = {};
+  rows2hm.forEach(r=>{ const c=get(r,'categoria equipo')||'Sin categoria'; byCat[c]=(byCat[c]||0)+rowHme(r); });
+  const catEntries = Object.entries(byCat).filter(e=>e[1]>0);
+
+  const stLts = statusBadge(realLtsMz, ppto?ppto.lts:undefined, totalLts>0);
+  const stHm = statusBadge(realHmMz, ppto?ppto.hm:undefined, totalHM>0);
+  const dias = dates.length;
+  const avgMz = dias>0 ? totalMz/dias : 0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="kpi-container">
+      <div class="kpi">
+        <div class="kpi-label">Avance acumulado</div>
+        <div class="kpi-val">${totalMz.toLocaleString('es',{maximumFractionDigits:1})} Mz</div>
+        <div class="kpi-sub">${dias} dias con actividad</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Avance promedio / dia</div>
+        <div class="kpi-val">${avgMz.toFixed(2)}</div>
+        <div class="kpi-sub">Mz / dia</div>
+      </div>
+      <div class="kpi ${stLts.cls==='status-bad'?'bad':''}">
+        <div class="kpi-label">Lts/Mz ${ppto?'(Presupuesto '+ppto.lts.toFixed(2)+')':''}</div>
+        <div class="kpi-val">${totalMz>0 ? realLtsMz.toFixed(2) : '-'}</div>
+        <div class="kpi-sub">${ppto ? ('Diferencia: '+(realLtsMz-ppto.lts>=0?'+':'')+(realLtsMz-ppto.lts).toFixed(2)) : ''}</div>
+        <span class="kpi-status ${stLts.cls}">${stLts.txt}</span>
+      </div>
+      <div class="kpi ${stHm.cls==='status-bad'?'bad':''}">
+        <div class="kpi-label">HM/Mz ${ppto?'(Presupuesto '+ppto.hm.toFixed(2)+')':''}</div>
+        <div class="kpi-val">${totalMz>0 ? realHmMz.toFixed(2) : '-'}</div>
+        <div class="kpi-sub">${ppto ? ('Diferencia: '+(realHmMz-ppto.hm>=0?'+':'')+(realHmMz-ppto.hm).toFixed(2)) : ''}</div>
+        <span class="kpi-status ${stHm.cls}">${stHm.txt}</span>
+      </div>
+    </div>
+
+    <div class="section-title">1. Avance general del ciclo</div>
+    <div class="grid1 card">
+      <div class="card-title">Avance acumulado (Mz) - ${actividad}</div>
+      <div style="position:relative;width:100%;height:260px"><canvas id="c1"></canvas></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Manzanas por dia</div>
+        <div style="position:relative;width:100%;height:200px"><canvas id="c2"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Avance por finca (top 10)</div>
+        <div style="position:relative;width:100%;height:200px"><canvas id="c3"></canvas></div>
+      </div>
+    </div>
+
+    <div class="section-title">2. Eficiencia vs presupuesto</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Lts/Mz acumulado vs presupuesto</div>
+        <div style="position:relative;width:100%;height:200px"><canvas id="c4"></canvas></div>
+        <div class="legend"><span><span class="ldot" style="background:#1D9E75"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">HM/Mz acumulado vs presupuesto</div>
+        <div style="position:relative;width:100%;height:200px"><canvas id="c5"></canvas></div>
+        <div class="legend"><span><span class="ldot" style="background:#378ADD"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Lts/Mz por actividad vs presupuesto</div>
+        <div style="position:relative;width:100%;height:240px"><canvas id="c6"></canvas></div>
+        <div class="legend"><span><span class="ldot" style="background:#1D9E75"></span>Real</span><span><span class="ldot" style="background:#A32D2D"></span>Presupuesto</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">HM/Mz por actividad vs presupuesto</div>
+        <div style="position:relative;width:100%;height:240px"><canvas id="c7"></canvas></div>
+        <div class="legend"><span><span class="ldot" style="background:#378ADD"></span>Real</span><span><span class="ldot" style="background:#A32D2D"></span>Presupuesto</span></div>
+      </div>
+    </div>
+
+    <div class="section-title">3. Recursos y operacion</div>
+    <div class="grid2">
+      <div class="card">
+        <div class="card-title">Horas motor por categoria de equipo</div>
+        <div style="position:relative;width:100%;height:220px"><canvas id="c8"></canvas></div>
+        <div class="legend" id="legend8"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Litros despachados por semana</div>
+        <div style="position:relative;width:100%;height:220px"><canvas id="c9"></canvas></div>
+      </div>
+    </div>
+  `;
+
+  destroy('c1');
+  charts.c1 = new Chart(document.getElementById('c1'), {
+    type: 'line',
+    data: { labels, datasets: [{ data: acumMz, borderColor:'#185FA5', backgroundColor:'rgba(24,95,165,0.08)', borderWidth:2.5, pointRadius:2, fill:true, tension:.3 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:16}, grid:{display:false} }, y:{ ticks:{font:{size:11}}, beginAtZero:true } } }
+  });
+
+  destroy('c2');
+  charts.c2 = new Chart(document.getElementById('c2'), {
+    type: 'bar',
+    data: { labels, datasets: [{ data: mzDia, backgroundColor:'#639922', borderRadius:2 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:14}, grid:{display:false} }, y:{ ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+
+  destroy('c3');
+  document.getElementById('c3').parentElement.style.height = Math.max(200, fincaEntries.length*32+60)+'px';
+  charts.c3 = new Chart(document.getElementById('c3'), {
+    type: 'bar',
+    data: { labels: fincaEntries.map(e=>e[0]), datasets: [{ data: fincaEntries.map(e=>+e[1].toFixed(1)), backgroundColor:'#185FA5', borderRadius:3 }] },
+    options: { indexAxis:'y', responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:10}}, beginAtZero:true }, y:{ ticks:{font:{size:11}} } } }
+  });
+
+  destroy('c4');
+  charts.c4 = new Chart(document.getElementById('c4'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { data: ltsAcum, borderColor:'#1D9E75', backgroundColor:'rgba(29,158,117,0.07)', borderWidth:2, pointRadius:0, fill:true, tension:.3 },
+      { data: ppto ? labels.map(()=>ppto.lts) : [], borderColor:'#A32D2D', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:12}, grid:{display:false} }, y:{ ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+
+  destroy('c5');
+  charts.c5 = new Chart(document.getElementById('c5'), {
+    type: 'line',
+    data: { labels, datasets: [
+      { data: hmAcum, borderColor:'#378ADD', backgroundColor:'rgba(55,138,221,0.07)', borderWidth:2, pointRadius:0, fill:true, tension:.3 },
+      { data: ppto ? labels.map(()=>ppto.hm) : [], borderColor:'#A32D2D', borderWidth:1.5, borderDash:[5,4], pointRadius:0, fill:false }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:9},maxRotation:45,autoSkip:true,maxTicksLimit:12}, grid:{display:false} }, y:{ ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+
+  destroy('c6');
+  charts.c6 = new Chart(document.getElementById('c6'), {
+    type: 'bar',
+    data: { labels: actsPresent, datasets: [
+      { label:'Real', data: actLtsMz, backgroundColor:'#1D9E75', borderRadius:2 },
+      { label:'Presupuesto', data: actLtsPpto, backgroundColor:'#A32D2D', borderRadius:2 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:10},maxRotation:60,minRotation:30} }, y:{ ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+
+  destroy('c7');
+  charts.c7 = new Chart(document.getElementById('c7'), {
+    type: 'bar',
+    data: { labels: actsPresent, datasets: [
+      { label:'Real', data: actHmMz, backgroundColor:'#378ADD', borderRadius:2 },
+      { label:'Presupuesto', data: actHmPpto, backgroundColor:'#A32D2D', borderRadius:2 }
+    ]},
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:10},maxRotation:60,minRotation:30} }, y:{ ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+
+  destroy('c8');
+  const catTotal = catEntries.reduce((s,e)=>s+e[1],0);
+  charts.c8 = new Chart(document.getElementById('c8'), {
+    type: 'doughnut',
+    data: { labels: catEntries.map(e=>e[0]), datasets: [{ data: catEntries.map(e=>+e[1].toFixed(1)), backgroundColor: catEntries.map((_,i)=>COLORS[i%COLORS.length]) }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, cutout:'62%' }
+  });
+  document.getElementById('legend8').innerHTML = catEntries.length
+    ? catEntries.map((e,i)=>`<span><span class="ldot" style="background:${COLORS[i%COLORS.length]}"></span>${e[0]} (${catTotal>0?Math.round(e[1]/catTotal*100):0}%)</span>`).join('')
+    : '<span>Sin datos de horas motor en este filtro</span>';
+
+  destroy('c9');
+  charts.c9 = new Chart(document.getElementById('c9'), {
+    type: 'bar',
+    data: { labels: weekKeys, datasets: [{ data: weekKeys.map(w=>+byWeek[w].toFixed(1)), backgroundColor:'#1D9E75', borderRadius:3 }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ x:{ ticks:{font:{size:10}}, grid:{display:false} }, y:{ ticks:{font:{size:10}}, beginAtZero:true } } }
+  });
+}
+
+init();
+</script>
+</body>
+</html>
