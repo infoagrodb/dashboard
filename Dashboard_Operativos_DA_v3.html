@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Indicadores Operativos — División Agrícola Comasa</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f4f5f0;
+  --surface:#ffffff;
+  --surface2:#f0f1ec;
+  --border:#e2e3dc;
+  --border2:#d0d1c8;
+  --text:#1a1c18;
+  --muted:#6b6d66;
+  --faint:#9a9c94;
+  --green:#1e7d3a;
+  --green-bg:#e8f5ec;
+  --green-mid:#4caf6e;
+  --blue:#1a5fa8;
+  --blue-bg:#e6f0fb;
+  --amber:#8a5a00;
+  --amber-bg:#fdf3dc;
+  --amber-mid:#e0a020;
+  --red:#b91c1c;
+  --red-bg:#fdeaea;
+  --red-mid:#ef4444;
+  --teal:#0e7490;
+  --teal-bg:#e0f7fa;
+  --purple:#6d28d9;
+  --purple-bg:#ede9fe;
+  --r:10px;
+  --r-sm:6px;
+}
+
+html{scroll-behavior:smooth}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;min-height:100vh}
+
+/* HEADER */
+.header{background:var(--text);padding:0 36px;display:flex;align-items:stretch;justify-content:space-between;position:sticky;top:0;z-index:200}
+.header-brand{display:flex;align-items:center;gap:14px;padding:16px 0}
+.header-logo{width:38px;height:38px;background:var(--green-mid);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#fff;flex-shrink:0;letter-spacing:-.5px}
+.header-title{font-size:15px;font-weight:600;color:#fff;line-height:1.2}
+.header-sub{font-size:11px;color:#9ca3af;font-weight:300;margin-top:1px}
+.header-meta{display:flex;align-items:center;gap:8px}
+.header-tag{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#d1d5db;padding:4px 12px;border-radius:20px;font-size:11px;font-family:'IBM Plex Mono',monospace}
+.header-tag.green{background:rgba(76,175,110,.15);border-color:rgba(76,175,110,.35);color:#6ee7a0}
+
+/* NAV */
+.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 36px;display:flex;gap:0;overflow-x:auto;position:sticky;top:72px;z-index:190}
+.nav-tab{padding:13px 20px;font-size:13px;font-weight:400;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .18s;user-select:none;display:flex;align-items:center;gap:7px}
+.nav-tab:hover{color:var(--text)}
+.nav-tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:500}
+.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
+
+/* MAIN */
+.main{padding:28px 36px;max-width:1380px;margin:0 auto}
+.section{display:none}.section.active{display:block}
+
+/* FILTER BAR */
+.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:22px;flex-wrap:wrap}
+.filter-label{font-size:11px;color:var(--faint);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-right:2px}
+.filter-btn{background:var(--surface);border:1px solid var(--border2);color:var(--muted);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
+.filter-btn:hover{border-color:var(--green);color:var(--green)}
+.filter-btn.active{background:var(--green-bg);border-color:var(--green);color:var(--green);font-weight:600}
+
+/* KPIs */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:box-shadow .2s}
+.kpi:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.kpi-stripe{position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
+.kpi-label{font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;font-weight:500;margin-bottom:9px}
+.kpi-value{font-size:26px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace;line-height:1}
+.kpi-unit{font-size:13px;font-weight:400;color:var(--muted);margin-left:2px}
+.kpi-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;margin-top:8px;padding:2px 8px;border-radius:4px}
+.badge-up{background:var(--red-bg);color:var(--red)}
+.badge-down{background:var(--green-bg);color:var(--green)}
+.badge-neutral{background:var(--surface2);color:var(--muted)}
+.kpi-sub{font-size:11px;color:var(--faint);margin-top:3px}
+
+/* CARDS */
+.grid{display:grid;gap:14px;margin-bottom:14px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g1{grid-template-columns:1fr}
+.span2{grid-column:span 2}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;transition:box-shadow .2s}
+.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
+.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
+.card-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+
+/* LEGEND */
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+.leg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* INSIGHT */
+.insight{display:flex;gap:9px;padding:10px 13px;margin-top:13px;font-size:12px;color:var(--muted);line-height:1.55;border-radius:0 var(--r-sm) var(--r-sm) 0}
+.insight strong{color:var(--text);font-weight:500}
+.ins-green{background:var(--green-bg);border-left:3px solid var(--green)}
+.ins-amber{background:var(--amber-bg);border-left:3px solid var(--amber-mid)}
+.ins-red{background:var(--red-bg);border-left:3px solid var(--red-mid)}
+.ins-blue{background:var(--blue-bg);border-left:3px solid var(--blue)}
+
+/* ALERT */
+.alert{background:var(--red-bg);border:1px solid rgba(185,28,28,.2);border-radius:var(--r);padding:12px 16px;margin-bottom:22px;display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--red)}
+.alert-icon{width:20px;height:20px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px}
+.alert strong{color:var(--red)}
+
+/* SECTION LABEL */
+.sec-label{font-size:11px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase;font-weight:500;border-bottom:1px solid var(--border);padding-bottom:8px;margin:24px 0 16px}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{padding:8px 10px;text-align:left;color:var(--faint);font-weight:500;letter-spacing:.05em;text-transform:uppercase;font-size:10px;border-bottom:1px solid var(--border);background:var(--surface2)}
+.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface2)}
+.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;font-family:'IBM Plex Mono',monospace}
+.p-red{background:var(--red-bg);color:var(--red)}
+.p-green{background:var(--green-bg);color:var(--green)}
+.p-amber{background:var(--amber-bg);color:var(--amber)}
+.p-blue{background:var(--blue-bg);color:var(--blue)}
+.p-purple{background:var(--purple-bg);color:var(--purple)}
+
+/* SEMAFORO */
+.semaforo{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.s-red{background:var(--red-mid)}
+.s-amber{background:var(--amber-mid)}
+.s-green{background:var(--green-mid)}
+
+/* PROGRESS */
+.prog-bar{height:6px;background:var(--surface2);border-radius:3px;margin-top:4px;overflow:hidden}
+.prog-fill{height:100%;border-radius:3px;transition:width .6s ease}
+
+@media(max-width:900px){
+  .g2,.g3{grid-template-columns:1fr}
+  .span2{grid-column:span 1}
+  .main{padding:16px}
+  .header{padding:0 16px}
+  .nav{padding:0 16px}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <div class="header-logo">DA</div>
+    <div>
+      <div class="header-title">División Agrícola Comasa</div>
+      <div class="header-sub">Dashboard de Indicadores Operativos — Siembra de Maní</div>
+    </div>
+  </div>
+  <div class="header-meta">
+    <span class="header-tag">Ciclos 2022 – 2025</span>
+    <span class="header-tag green">● 6 Indicadores</span>
+  </div>
+</header>
+
+<nav class="nav">
+  <div class="nav-tab active" onclick="goTab('resumen',this)"><span class="nav-dot"></span>Resumen</div>
+  <div class="nav-tab" onclick="goTab('dh',this)"><span class="nav-dot"></span>Días Hombre / Mzn</div>
+  <div class="nav-tab" onclick="goTab('diesel',this)"><span class="nav-dot"></span>Diesel / Mzn</div>
+  <div class="nav-tab" onclick="goTab('horas',this)"><span class="nav-dot"></span>Horas Máquina / Mzn</div>
+  <div class="nav-tab" onclick="goTab('labor',this)"><span class="nav-dot"></span>Indicadores por Labor</div>
+  <div class="nav-tab" onclick="goTab('fincas',this)"><span class="nav-dot"></span>Comparativa por Finca</div>
+  <div class="nav-tab" onclick="goTab('kl',this)"><span class="nav-dot"></span>Insumos KL/Mzn</div>
+</nav>
+
+<main class="main">
+
+<!-- ══════ TAB: RESUMEN ══════ -->
+<section id="tab-resumen" class="section active">
+  <div class="alert">
+    <div class="alert-icon">!</div>
+    <div><strong>Hallazgo crítico:</strong> En Maní 2024 los tres indicadores de siembra empeoraron simultáneamente: diesel subió +29.5%, horas máquina +19.7% y días hombre +35.6% por manzana. Requiere análisis urgente de causas raíz.</div>
+  </div>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--green)"></div>
+      <div class="kpi-label">DH / mzn — Siembra 2025</div>
+      <div class="kpi-value">1.116<span class="kpi-unit">DH</span></div>
+      <div class="kpi-badge badge-up">▲ 6% vs 2024</div>
+      <div class="kpi-sub">Meta recomendada: ≤ 0.94 DH/mzn</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--blue)"></div>
+      <div class="kpi-label">Diesel / mzn — Siembra 2025</div>
+      <div class="kpi-value">7.739<span class="kpi-unit">lts</span></div>
+      <div class="kpi-badge badge-down">▼ 15% mejora vs 2024</div>
+      <div class="kpi-sub">Meta: mantener ≤ 7.03 (nivel 2023)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--amber-mid)"></div>
+      <div class="kpi-label">Hrs máquina / mzn — 2025</div>
+      <div class="kpi-value">0.990<span class="kpi-unit">hrs</span></div>
+      <div class="kpi-badge badge-down">▼ 14.6% mejora vs 2024</div>
+      <div class="kpi-sub">Mejor valor del período 2024-2025</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--red-mid)"></div>
+      <div class="kpi-label">Pico máx. DH/mzn registrado</div>
+      <div class="kpi-value">1.116<span class="kpi-unit">DH</span></div>
+      <div class="kpi-badge badge-up">Maní 2025</div>
+      <div class="kpi-sub">vs 0.794 DH/mzn en Maní 2023</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--teal)"></div>
+      <div class="kpi-label">Total mzn sembradas (2025)</div>
+      <div class="kpi-value">2,767<span class="kpi-unit">mzn</span></div>
+      <div class="kpi-badge badge-neutral">▼ 11.7% vs 2024</div>
+      <div class="kpi-sub">Máximo histórico: 3,135 mzn (2024)</div>
+    </div>
+  </div>
+
+  <p class="sec-label">Los 6 indicadores operativos — Siembra</p>
+
+  <div class="grid g2">
+    <!-- G1: Los 3 ratios por ciclo -->
+    <div class="card">
+      <div class="card-title">Evolución de los 3 indicadores de eficiencia en Siembra</div>
+      <div class="card-sub">Comparativa de DH/mzn, Diesel/mzn y Hrs máquina/mzn por ciclo (índice base 2023 = 1.0)</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>DH / mzn</span>
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Diesel / mzn</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Hrs máq. / mzn</span>
+      </div>
+      <div style="position:relative;height:250px"><canvas id="g1" role="img" aria-label="Evolución indicadores siembra indexados"></canvas></div>
+      <div class="insight ins-amber">En 2024 los <strong>3 indicadores empeoraron a la vez</strong>. En 2025 el diesel y horas máquina mejoraron, pero los días hombre siguen en máximo histórico, lo que sugiere un problema de productividad laboral.</div>
+    </div>
+
+    <!-- G2: Radar comparativo -->
+    <div class="card">
+      <div class="card-title">Perfil de eficiencia operativa — Siembra</div>
+      <div class="card-sub">Radar comparativo por ciclo (menor área = más eficiente)</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#4caf6e"></span>Maní 2023</span>
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:250px"><canvas id="g2" role="img" aria-label="Radar de eficiencia operativa siembra"></canvas></div>
+      <div class="insight ins-blue">El ciclo <strong>2023 fue el más eficiente</strong> en todos los ejes. El 2024 muestra el área más grande (peor desempeño). El 2025 mejora en diesel y máquina pero no en mano de obra.</div>
+    </div>
+  </div>
+
+  <div class="grid g1">
+    <!-- G3: Mzn sembradas + total DH side by side -->
+    <div class="card">
+      <div class="card-title">Manzanas sembradas vs Total días hombre empleados — Siembra</div>
+      <div class="card-sub">Relación entre área trabajada y fuerza laboral usada en la actividad de siembra</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>Manzanas sembradas</span>
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Total días hombre</span>
+      </div>
+      <div style="position:relative;height:220px"><canvas id="g3" role="img" aria-label="Manzanas vs dias hombre siembra"></canvas></div>
+      <div class="insight ins-red">En <strong>2024 se sembraron solo 60 mzn más que en 2023 (+2%)</strong>, pero el total de DH de todo el ciclo fue <strong>46,478 vs 49,669 en 2023</strong>. El indicador global DH/mzn pasó de 16.15 a 14.83, una ligera mejora. El alza en 2025 (17.04) refleja más mano de obra por unidad de área producida.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ TAB: DÍAS HOMBRE ══════ -->
+<section id="tab-dh" class="section">
+  <p class="sec-label">Indicador 1 — Días hombre por manzana de siembra</p>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--green)"></div><div class="kpi-label">DH/mzn — Maní 2022</div><div class="kpi-value">13.84</div><div class="kpi-sub">Total DH ciclo ÷ mzn siembra</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:#9ca3af"></div><div class="kpi-label">DH/mzn — Maní 2023</div><div class="kpi-value">16.15</div><div class="kpi-badge badge-up">▲ 16.7% vs 2022</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--blue)"></div><div class="kpi-label">DH/mzn — Maní 2024</div><div class="kpi-value">14.83</div><div class="kpi-badge badge-down">▼ 8.2% mejora vs 2023</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--red-mid)"></div><div class="kpi-label">DH/mzn — Maní 2025</div><div class="kpi-value">17.04</div><div class="kpi-badge badge-up">▲ 14.9% vs 2024</div><div class="kpi-sub">Máximo del período</div></div>
+  </div>
+
+  <div class="grid g2">
+    <!-- G4: DH/mzn por ciclo -->
+    <div class="card">
+      <div class="card-title">Días hombre por manzana — Siembra por ciclo</div>
+      <div class="card-sub">Cuántos días de trabajo se requieren por cada manzana sembrada</div>
+      <div style="position:relative;height:240px"><canvas id="g4" role="img" aria-label="DH por mzn siembra por ciclo"></canvas></div>
+      <div class="insight ins-red">El indicador <strong>no muestra mejora en 2025</strong> a pesar de reducir el área. Sugiere que la productividad del trabajador sigue baja: misma cantidad de mano de obra para menos tierra.</div>
+    </div>
+
+    <!-- G5: DH por puesto (2024 vs 2025) -->
+    <div class="card">
+      <div class="card-title">Composición de días hombre por tipo de puesto — Siembra</div>
+      <div class="card-sub">Distribución interna de la fuerza laboral entre operarios, jornaleros y ayudantes</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Maní 2023</span>
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:240px"><canvas id="g5" role="img" aria-label="DH por puesto en siembra"></canvas></div>
+      <div class="insight ins-blue">Los <strong>jornaleros dominan</strong> la siembra (63-73% del total de DH). El número de <strong>operadores de maquinaria</strong> creció de 238 DH en 2023 a 825 en 2024 (+247%), sin aumento proporcional de área.</div>
+    </div>
+  </div>
+
+  <!-- G6: DH/mzn por finca -->
+  <div class="grid g1">
+    <div class="card">
+      <div class="card-title">Días hombre por manzana según finca — Siembra 2024 vs 2025</div>
+      <div class="card-sub">Identificación de fincas con mayor demanda laboral por manzana sembrada (semáforo de eficiencia)</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:290px"><canvas id="g6" role="img" aria-label="DH por mzn por finca siembra"></canvas></div>
+      <div class="insight ins-amber"><strong>Palo de Pan (32.7)</strong> y <strong>Llano Verde (26.8)</strong> son las fincas con mayor carga laboral por mzn sembrada, considerando todo el ciclo. <strong>San Luis (10.3)</strong> y <strong>La Concha (15.1)</strong> son las más eficientes. La brecha entre la mejor y peor finca es de 3x.</div>
+    </div>
+  </div>
+
+  <!-- Tabla ranking -->
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-title">Ranking de fincas — DH/mzn en Siembra 2024</div>
+      <div class="card-sub">Ordenado de mayor a menor consumo de mano de obra por manzana</div>
+      <table class="tbl">
+        <thead><tr><th>#</th><th>Finca</th><th>DH totales</th><th>Mzn</th><th>DH/mzn</th><th>Nivel</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Palo de Pan</td><td>138</td><td>56.75</td><td><span class="pill p-red">2.43</span></td><td><span class="semaforo s-red"></span>Crítico</td></tr>
+          <tr><td>2</td><td>Rancho Pando</td><td>396</td><td>203.5</td><td><span class="pill p-red">1.95</span></td><td><span class="semaforo s-red"></span>Crítico</td></tr>
+          <tr><td>3</td><td>Santa Isabel</td><td>206</td><td>118</td><td><span class="pill p-red">1.75</span></td><td><span class="semaforo s-red"></span>Alto</td></tr>
+          <tr><td>4</td><td>Llano Verde</td><td>145</td><td>91.5</td><td><span class="pill p-amber">1.58</span></td><td><span class="semaforo s-amber"></span>Medio</td></tr>
+          <tr><td>5</td><td>La Concha</td><td>781</td><td>564.3</td><td><span class="pill p-amber">1.38</span></td><td><span class="semaforo s-amber"></span>Medio</td></tr>
+          <tr><td>6</td><td>Miramar</td><td>501</td><td>425.3</td><td><span class="pill p-amber">1.18</span></td><td><span class="semaforo s-amber"></span>Normal</td></tr>
+          <tr><td>7</td><td>La Laguna</td><td>303</td><td>278</td><td><span class="pill p-amber">1.09</span></td><td><span class="semaforo s-amber"></span>Normal</td></tr>
+          <tr><td>8</td><td>Montana</td><td>201</td><td>205</td><td><span class="pill p-green">0.98</span></td><td><span class="semaforo s-green"></span>Óptimo</td></tr>
+          <tr><td>9</td><td>San Luis</td><td>98</td><td>113</td><td><span class="pill p-green">0.87</span></td><td><span class="semaforo s-green"></span>Óptimo</td></tr>
+          <tr><td>10</td><td>Quinta Maria</td><td>143</td><td>173</td><td><span class="pill p-green">0.83</span></td><td><span class="semaforo s-green"></span>Óptimo</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Días hombre mensual en Siembra</div>
+      <div class="card-sub">Distribución temporal de la carga laboral en el período de siembra</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Maní 2023</span>
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:220px"><canvas id="g6b" role="img" aria-label="DH mensual siembra por ciclo"></canvas></div>
+      <div class="insight ins-green">La siembra se concentra en <strong>julio-agosto</strong>. En 2024 la carga se extendió más en agosto (+92% vs 2023 en ese mes), lo que pudo generar ineficiencia por fatiga o desorientación del personal.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ TAB: DIESEL ══════ -->
+<section id="tab-diesel" class="section">
+  <p class="sec-label">Indicador 2 — Litros de diesel por manzana de siembra</p>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--green)"></div><div class="kpi-label">Diesel/mzn — 2022</div><div class="kpi-value">115.3<span class="kpi-unit">lts</span></div><div class="kpi-sub">Total lts ciclo ÷ mzn siembra</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:#9ca3af"></div><div class="kpi-label">Diesel/mzn — 2023</div><div class="kpi-value">125.5<span class="kpi-unit">lts</span></div><div class="kpi-badge badge-up">▲ 8.8% vs 2022</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--red-mid)"></div><div class="kpi-label">Diesel/mzn — 2024</div><div class="kpi-value">132.9<span class="kpi-unit">lts</span></div><div class="kpi-badge badge-up">▲ 5.9% — pico máx.</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--blue)"></div><div class="kpi-label">Diesel/mzn — 2025</div><div class="kpi-value">123.7<span class="kpi-unit">lts</span></div><div class="kpi-badge badge-down">▼ 6.9% mejora vs 2024</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-title">Litros de diesel por manzana — Siembra (4 ciclos)</div>
+      <div class="card-sub">Evolución del consumo de combustible en la actividad de siembra</div>
+      <div style="position:relative;height:250px"><canvas id="g7" role="img" aria-label="Diesel mzn siembra por ciclo"></canvas></div>
+      <div class="insight ins-red">El incremento de <strong>2.08 lts/mzn en 2024</strong> representa un sobrecosto de aproximadamente <strong>6,500 litros extras</strong> de diesel solo en siembra. A precio de mercado, un impacto financiero significativo.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Diesel/mzn en Siembra — por finca, ciclos 2022 a 2025</div>
+      <div class="card-sub">Fincas con mayor consumo de combustible por manzana sembrada</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#4caf6e"></span>2022</span>
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>2023</span>
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>2025</span>
+      </div>
+      <div style="position:relative;height:250px"><canvas id="g8" role="img" aria-label="Diesel por mzn por finca siembra"></canvas></div>
+      <div class="insight ins-amber">Con el indicador corregido (todo el diesel del ciclo ÷ mzn sembradas), <strong>Quinta Maria y Montana</strong> son las fincas más eficientes (~85-101 lts/mzn). <strong>Llano Verde</strong> es consistentemente la más costosa en combustible (186-193 lts/mzn).</div>
+    </div>
+  </div>
+
+  <div class="grid g1">
+    <div class="card">
+      <div class="card-title">Ranking diesel/mzn por finca — Siembra 2024 (fincas con datos de Horas Máquina)</div>
+      <div class="card-sub">Visualización de eficiencia relativa — barra llena = más consumo de diesel</div>
+      <table class="tbl">
+        <thead><tr><th>Finca</th><th>Mzn</th><th>Lts diesel</th><th>Lts/mzn</th><th>Eficiencia relativa</th><th>Nivel</th></tr></thead>
+        <tbody id="diesel-finca-rows"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ TAB: HORAS MAQUINA ══════ -->
+<section id="tab-horas" class="section">
+  <p class="sec-label">Indicadores 4 y 5 — Horas máquina por manzana y por labor de siembra</p>
+
+  <div class="kpi-grid">
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--red-mid)"></div><div class="kpi-label">Hrs máq/mzn — 2024</div><div class="kpi-value">11.11<span class="kpi-unit">hrs</span></div><div class="kpi-badge badge-up">▲ pico máximo</div><div class="kpi-sub">Total hrs ciclo ÷ mzn siembra</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--green)"></div><div class="kpi-label">Hrs máq/mzn — 2025</div><div class="kpi-value">10.04<span class="kpi-unit">hrs</span></div><div class="kpi-badge badge-down">▼ 9.6% mejora vs 2024</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--blue)"></div><div class="kpi-label">Total hrs todas actividades 2024</div><div class="kpi-value">34,827<span class="kpi-unit">hrs</span></div><div class="kpi-sub">En 3,135 mzn sembradas</div></div>
+    <div class="kpi"><div class="kpi-stripe" style="background:var(--amber-mid)"></div><div class="kpi-label">Total hrs todas actividades 2025</div><div class="kpi-value">27,786<span class="kpi-unit">hrs</span></div><div class="kpi-badge badge-down">▼ 20.2% reducción</div></div>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="card-title">Horas máquina por manzana — Siembra 2024 vs 2025</div>
+      <div class="card-sub">Eficiencia del uso de maquinaria agrícola en la actividad de siembra por finca</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="g9" role="img" aria-label="Horas maquina por mzn siembra por finca"></canvas></div>
+      <div class="insight ins-green">Con el indicador corregido (total horas del ciclo ÷ mzn sembradas), <strong>Quinta Maria (11.1 hrs/mzn)</strong> y <strong>Montana (10.1)</strong> son las más eficientes en 2024. <strong>Llano Verde (18.9)</strong> es la más intensiva en uso de maquinaria. En 2025 casi todas mejoraron.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Distribución de horas por tipo de equipo — Siembra</div>
+      <div class="card-sub">Cuántas horas aportó cada tipo de maquinaria en la labor de siembra</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="g10" role="img" aria-label="Horas por tipo equipo siembra"></canvas></div>
+      <div class="insight ins-blue">El <strong>Tractor Pequeño domina</strong> absolutamente la siembra en ambos ciclos (93%+ de las horas). Una avería o mal rendimiento en esta flotilla impacta directamente todo el programa de siembra.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ TAB: POR LABOR ══════ -->
+<section id="tab-labor" class="section">
+  <p class="sec-label">Indicadores 5 y 6 — Horas máquina y diesel por labor agrícola</p>
+
+  <div class="grid g1">
+    <!-- G11: Hrs maquina por labor -->
+    <div class="card">
+      <div class="card-title">Horas máquina por manzana según labor agrícola — comparativa 2024 vs 2025</div>
+      <div class="card-sub">Identifica qué labores demandan más tiempo de maquinaria por manzana trabajada</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="g11" role="img" aria-label="Horas maquina por mzn por labor"></canvas></div>
+      <div class="insight ins-red"><strong>Nivelación</strong> consume 4-5 veces más horas por manzana que cualquier otra labor. <strong>Siembra y Subsuelo</strong> son las segundas más intensivas. <strong>Fungicidas</strong> tienen el mejor ratio (menos de 0.35 hrs/mzn).</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <!-- G12: Total horas por labor -->
+    <div class="card">
+      <div class="card-title">Total de horas máquina por labor — 2024 vs 2025</div>
+      <div class="card-sub">Volumen absoluto de horas operadas por actividad agrícola</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="g12" role="img" aria-label="Total horas por labor 2024 vs 2025"></canvas></div>
+      <div class="insight ins-amber"><strong>Arranque y Siembra</strong> concentran el mayor bloque de horas absolutas. La Combina/Casamba redujo de 4,891 hrs a 0 en 2025 — confirmar si fue reemplazada o pospuesta.</div>
+    </div>
+
+    <!-- G13: Diesel/mzn por labor -->
+    <div class="card">
+      <div class="card-title">Litros de diesel por manzana según labor — 4 ciclos</div>
+      <div class="card-sub">Comparativa de consumo de combustible por tipo de actividad agrícola</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#4caf6e"></span>2022</span>
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>2023</span>
+        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>2024</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>2025</span>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="g13" role="img" aria-label="Diesel por mzn por labor"></canvas></div>
+      <div class="insight ins-red"><strong>Combina 2024 (32.3 lts/mzn)</strong> rompió la tendencia histórica de ~14-16. Subsuelo y Nivelación son estructuralmente intensivos (~20-25 lts/mzn). Siembra mejoró en 2025 pero sigue por encima del mejor nivel (2023).</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ TAB: POR FINCA ══════ -->
+<section id="tab-fincas" class="section">
+  <p class="sec-label">Comparativa integral por finca — los 3 indicadores principales de Siembra</p>
+
+  <div class="grid g1">
+    <!-- G14: Triple comparativa por finca 2024 -->
+    <div class="card">
+      <div class="card-title">Los 3 indicadores por finca — Siembra Maní 2024</div>
+      <div class="card-sub">DH/mzn · Diesel/mzn · Hrs máquina/mzn — indexados al promedio general para comparación directa (promedio = 1.0)</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>DH / mzn</span>
+        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Diesel / mzn</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Hrs máq. / mzn</span>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="g14" role="img" aria-label="Triple comparativa por finca 2024"></canvas></div>
+      <div class="insight ins-amber"><strong>Palo de Pan</strong> destaca negativamente en los 3 indicadores. <strong>La Concha</strong> y <strong>Quinta Maria</strong> tienen el mejor perfil integrado. Esta vista permite priorizar fincas para intervención.</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <!-- Tabla resumen integral -->
+    <div class="card span2">
+      <div class="card-title">Tabla resumen — Indicadores operativos por finca · Siembra 2024</div>
+      <div class="card-sub">Visión consolidada de los 3 indicadores para toma de decisiones a nivel de finca</div>
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Finca</th>
+            <th>Mzn sembradas</th>
+            <th>DH totales</th>
+            <th>DH / mzn</th>
+            <th>Diesel / mzn</th>
+            <th>Hrs máq. / mzn</th>
+            <th>Perfil global</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Palo de Pan</strong></td><td>56.75</td><td>138</td><td><span class="pill p-red">2.43</span></td><td><span class="pill p-red">10.91</span></td><td><span class="pill p-red">2.12</span></td><td>🔴 Crítico</td></tr>
+          <tr><td><strong>Rancho Pando</strong></td><td>203.5</td><td>396</td><td><span class="pill p-red">1.95</span></td><td><span class="pill p-amber">8.22</span></td><td><span class="pill p-amber">1.10</span></td><td>🔴 Alto</td></tr>
+          <tr><td><strong>Santa Isabel</strong></td><td>118</td><td>206</td><td><span class="pill p-red">1.75</span></td><td><span class="pill p-red">11.96</span></td><td><span class="pill p-red">1.81</span></td><td>🔴 Crítico</td></tr>
+          <tr><td><strong>Llano Verde</strong></td><td>91.5</td><td>145</td><td><span class="pill p-amber">1.58</span></td><td><span class="pill p-amber">9.56</span></td><td><span class="pill p-amber">1.38</span></td><td>🟡 Medio</td></tr>
+          <tr><td><strong>Miramar</strong></td><td>425.29</td><td>501</td><td><span class="pill p-amber">1.18</span></td><td><span class="pill p-amber">8.03</span></td><td><span class="pill p-amber">1.30</span></td><td>🟡 Medio</td></tr>
+          <tr><td><strong>La Laguna</strong></td><td>278</td><td>303</td><td><span class="pill p-amber">1.09</span></td><td><span class="pill p-amber">8.23</span></td><td><span class="pill p-amber">1.29</span></td><td>🟡 Normal</td></tr>
+          <tr><td><strong>La Concha</strong></td><td>564.3</td><td>781</td><td><span class="pill p-amber">1.38</span></td><td><span class="pill p-green">6.42</span></td><td><span class="pill p-amber">1.35</span></td><td>🟡 Normal</td></tr>
+          <tr><td><strong>Montana</strong></td><td>205</td><td>201</td><td><span class="pill p-green">0.98</span></td><td><span class="pill p-amber">7.43</span></td><td><span class="pill p-green">1.12</span></td><td>🟢 Bueno</td></tr>
+          <tr><td><strong>San Luis</strong></td><td>113</td><td>98</td><td><span class="pill p-green">0.87</span></td><td><span class="pill p-amber">8.12</span></td><td><span class="pill p-amber">1.29</span></td><td>🟢 Bueno</td></tr>
+          <tr><td><strong>Quinta Maria</strong></td><td>173</td><td>143</td><td><span class="pill p-green">0.83</span></td><td><span class="pill p-green">7.44</span></td><td><span class="pill p-green">1.12</span></td><td>🟢 Óptimo</td></tr>
+        </tbody>
+      </table>
+      <div class="insight ins-green" style="margin-top:14px"><strong>Quinta Maria y Montana</strong> son las referencias de eficiencia: bajo consumo de mano de obra, diesel moderado y buena productividad de maquinaria. Sus prácticas deberían documentarse y replicarse en las fincas con peor desempeño.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════ TAB: INSUMOS KL/MZN ══════ -->
+<section id="tab-kl" class="section">
+  <p class="sec-label">Indicador 3 — Kilo/Litros de insumos por manzana · Análisis 2018 – 2024</p>
+
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--purple)"></div>
+      <div class="kpi-label">Fungicidas KL/mzn — 2024</div>
+      <div class="kpi-value">31.79<span class="kpi-unit">KL</span></div>
+      <div class="kpi-badge badge-up">▲ vs 24.91 en 2018</div>
+      <div class="kpi-sub">Mayor consumo del período</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--green)"></div>
+      <div class="kpi-label">Fertilizantes Foliares — 2024</div>
+      <div class="kpi-value">8.34<span class="kpi-unit">KL</span></div>
+      <div class="kpi-badge badge-down">▼ vs 11.01 en 2018</div>
+      <div class="kpi-sub">Tendencia decreciente</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--teal)"></div>
+      <div class="kpi-label">Herbicidas KL/mzn — 2024</div>
+      <div class="kpi-value">10.65<span class="kpi-unit">KL</span></div>
+      <div class="kpi-badge badge-down">▼ vs 13.42 en 2018</div>
+      <div class="kpi-sub">Mejora sostenida 2018→2021</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--amber-mid)"></div>
+      <div class="kpi-label">Insecticidas KL/mzn — 2024</div>
+      <div class="kpi-value">0.48<span class="kpi-unit">KL</span></div>
+      <div class="kpi-badge badge-neutral">Estable</div>
+      <div class="kpi-sub">Bajo y constante todo el período</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-stripe" style="background:var(--blue)"></div>
+      <div class="kpi-label">Total insumos KL/mzn — 2024</div>
+      <div class="kpi-value">52.8<span class="kpi-unit">KL</span></div>
+      <div class="kpi-badge badge-down">▼ vs 59.3 en 2018</div>
+      <div class="kpi-sub">Excluye semilla</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <!-- GKL1: Fungicidas KL/mzn evolución -->
+    <div class="card">
+      <div class="card-title">Fungicidas — Kilo/Litros por manzana (2018–2024)</div>
+      <div class="card-sub">Evolución del consumo de fungicidas por unidad de área trabajada</div>
+      <div style="position:relative;height:240px"><canvas id="gkl1" role="img" aria-label="Fungicidas KL mzn por ciclo"></canvas></div>
+      <div class="insight ins-red">Los fungicidas representan el <strong>mayor componente de insumos</strong>. Subieron de 24.9 KL/mzn (2018) a un pico de <strong>34.2 en 2021</strong> y se estabilizaron en ~31-33 en los últimos ciclos. El incremento refleja mayor presión de enfermedades o ajuste de dosis.</div>
+    </div>
+
+    <!-- GKL2: Fertilizantes foliares -->
+    <div class="card">
+      <div class="card-title">Fertilizantes Foliares — Kilo/Litros por manzana (2018–2024)</div>
+      <div class="card-sub">Tendencia del uso de fertilizantes aplicados en las labores de fungicidas</div>
+      <div style="position:relative;height:240px"><canvas id="gkl2" role="img" aria-label="Fertilizantes foliares KL mzn por ciclo"></canvas></div>
+      <div class="insight ins-blue">Los fertilizantes foliares <strong>bajaron de 11.0 a 8.3 KL/mzn</strong> entre 2018 y 2024. La caída más pronunciada fue en 2021 (6.6 KL/mzn). Puede indicar optimización en dosis o cambios en el programa nutricional.</div>
+    </div>
+  </div>
+
+  <!-- GKL3: Comparativa todas las familias -->
+  <div class="grid g1">
+    <div class="card">
+      <div class="card-title">Comparativa de todas las familias de insumos — KL/mzn por ciclo (2018–2024)</div>
+      <div class="card-sub">Evolución simultánea de Fungicidas, Fertilizantes Foliares, Herbicidas e Insecticidas por manzana</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:#6d28d9"></span>Fungicidas</span>
+        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>Fert. Foliares</span>
+        <span class="leg"><span class="leg-sq" style="background:#0e7490"></span>Herbicidas</span>
+        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Insecticidas</span>
+        <span class="leg"><span class="leg-sq" style="background:#9a9c94"></span>Adherente</span>
+      </div>
+      <div style="position:relative;height:300px"><canvas id="gkl3" role="img" aria-label="Comparativa familias insumos por ciclo"></canvas></div>
+      <div class="insight ins-amber">Los <strong>fungicidas dominan</strong> el consumo de insumos (~60% del total). Los herbicidas son el segundo rubro (~16-20%). La <strong>Semilla no está incluida</strong> en este análisis — se analiza por separado en el sistema de costos.</div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <!-- GKL4: Herbicidas -->
+    <div class="card">
+      <div class="card-title">Herbicidas — KL/mzn por ciclo (2018–2024)</div>
+      <div class="card-sub">Tendencia de uso de herbicidas en el programa de aplicaciones</div>
+      <div style="position:relative;height:240px"><canvas id="gkl4" role="img" aria-label="Herbicidas KL mzn por ciclo"></canvas></div>
+      <div class="insight ins-blue">Los herbicidas mostraron una <strong>reducción consistente</strong> de 2018 a 2021 (13.4 → 7.7 KL/mzn), luego se incrementaron en 2022-2024. El dato atípico de 2023 se excluye del gráfico por contener registros de compost que distorsionan el indicador.</div>
+    </div>
+
+    <!-- GKL5: Total KL/mzn insumos vs mzn sembradas -->
+    <div class="card">
+      <div class="card-title">Total insumos KL/mzn vs manzanas sembradas — 2018–2024</div>
+      <div class="card-sub">Relación entre el nivel de aplicación de insumos y el área total trabajada</div>
+      <div style="position:relative;height:240px"><canvas id="gkl5" role="img" aria-label="Total KL mzn vs area sembrada"></canvas></div>
+      <div class="insight ins-purple" style="background:var(--purple-bg);border-left:3px solid var(--purple)">A medida que el <strong>área sembrada aumenta</strong> (de 1,637 mzn en 2019 a 2,377 en 2024), el consumo total de insumos por manzana <strong>tiende a disminuir</strong>, lo que indica economías de escala en la aplicación.</div>
+    </div>
+  </div>
+
+  <!-- GKL6: Fungicidas por finca -->
+  <div class="grid g1">
+    <div class="card">
+      <div class="card-title">Fungicidas KL/mzn por finca — ciclos 2022, 2023 y 2024</div>
+      <div class="card-sub">Variación en el consumo de fungicidas según la finca — identifica fincas con mayor presión de enfermedades o sobredosis</div>
+      <div class="legend">
+        <span class="leg"><span class="leg-sq" style="background:rgba(109,40,217,.75)"></span>Maní 2022</span>
+        <span class="leg"><span class="leg-sq" style="background:rgba(26,95,168,.75)"></span>Maní 2023</span>
+        <span class="leg"><span class="leg-sq" style="background:rgba(239,68,68,.75)"></span>Maní 2024</span>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="gkl6" role="img" aria-label="Fungicidas KL mzn por finca"></canvas></div>
+      <div class="insight ins-amber"><strong>Paraíso</strong> muestra consumos muy por encima del promedio en 2022 (1.62 KL/mzn) y 2024 (1.08 KL/mzn). <strong>Quinta Maria y Santa Isabel</strong> son las fincas más eficientes con 0.59 KL/mzn consistentemente. Estas fincas son la referencia para optimizar el programa de fungicidas.</div>
+    </div>
+  </div>
+
+  <!-- Tabla resumen -->
+  <div class="grid g1">
+    <div class="card">
+      <div class="card-title">Resumen de KL/mzn por familia de insumo — todos los ciclos</div>
+      <div class="card-sub">Vista consolidada para comparar la evolución del consumo de cada grupo de insumos</div>
+      <table class="tbl">
+        <thead>
+          <tr><th>Grupo</th><th>Familia</th><th>2018</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>2024</th><th>Tendencia</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="2"><strong>Protectores de Cultivo</strong></td><td>Fungicidas</td><td>24.91</td><td>25.82</td><td>28.58</td><td><span class="pill p-red">34.21</span></td><td>30.79</td><td>33.14</td><td>31.79</td><td>🔴 ↑ creciente</td></tr>
+          <tr><td>Herbicidas</td><td>13.42</td><td>10.38</td><td>8.22</td><td>7.75</td><td>8.46</td><td>—</td><td>10.65</td><td>🟡 Variable</td></tr>
+          <tr><td rowspan="2"><strong>Fertilizantes</strong></td><td>Foliares</td><td>11.01</td><td>10.91</td><td>10.26</td><td>6.56</td><td>9.53</td><td>8.62</td><td><span class="pill p-green">8.34</span></td><td>🟢 ↓ mejora</td></tr>
+          <tr><td>Edáficos</td><td>9.02</td><td>20.33</td><td>6.16</td><td>—</td><td>0.02</td><td>2.60</td><td>0.08</td><td>🟡 Irregular</td></tr>
+          <tr><td><strong>Protectores</strong></td><td>Insecticidas</td><td>0.78</td><td>1.47</td><td>0.85</td><td>0.60</td><td>0.13</td><td>0.39</td><td>0.48</td><td>🟢 Estable bajo</td></tr>
+          <tr><td><strong>Total insumos</strong></td><td><strong>Excl. semilla</strong></td><td><strong>59.3</strong></td><td><strong>69.1</strong></td><td><strong>59.7</strong></td><td><strong>56.2</strong></td><td><strong>49.2</strong></td><td>—</td><td><strong>52.8</strong></td><td>🟢 ↓ mejora general</td></tr>
+        </tbody>
+      </table>
+      <div class="insight ins-green" style="margin-top:14px">El <strong>total de insumos por manzana (excl. semilla) ha bajado de 59.3 a 52.8 KL/mzn</strong> entre 2018 y 2024 — una mejora del 11%. El único componente que sigue subiendo son los fungicidas, lo que merece atención en el programa de manejo integrado de enfermedades.</div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+function goTab(id, el){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+const LIGHT={grid:'rgba(0,0,0,0.06)',tick:'#9a9c94'};
+function opts(extra={}){
+  return {
+    responsive:true,maintainAspectRatio:false,
+    animation:{duration:500,easing:'easeOutQuart'},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11,family:'IBM Plex Sans'}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11,family:'IBM Plex Sans'}}}},
+    ...extra
+  };
+}
+
+// ─── G1: Índice comparativo 3 indicadores (base 2022=1) ───
+// CORREGIDO: numerador = TODAS las actividades, denominador = mzn siembra
+// DH/mzn:     2022=13.837, 2023=16.154, 2024=14.827, 2025=17.038
+// Diesel/mzn: 2022=115.3,  2023=125.5,  2024=132.9,  2025=123.7
+// Hrs/mzn:    2024=11.11,  2025=10.04   (solo 2 ciclos disponibles)
+const ciclos3=['Maní 2022','Maní 2023','Maní 2024','Maní 2025'];
+new Chart(document.getElementById('g1'),{
+  type:'line',
+  data:{labels:ciclos3,datasets:[
+    {label:'DH/mzn',data:[1,1.167,1.071,1.231],borderColor:'#1e7d3a',backgroundColor:'rgba(30,125,58,.08)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#1e7d3a',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
+    {label:'Diesel/mzn',data:[1,1.088,1.152,1.073],borderColor:'#1a5fa8',backgroundColor:'rgba(26,95,168,.05)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#1a5fa8',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
+    {label:'Hrs/mzn',data:[null,null,1,0.904],borderColor:'#e0a020',backgroundColor:'rgba(224,160,32,.05)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#e0a020',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11},callback:v=>v.toFixed(2)+'x'},min:0.8,max:1.4}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>c.parsed.y?'  '+c.dataset.label+': '+c.parsed.y.toFixed(3)+'x vs 2022':null}}}}
+});
+
+// ─── G2: Radar comparativo ───
+new Chart(document.getElementById('g2'),{
+  type:'radar',
+  data:{
+    labels:['DH/mzn','Diesel/mzn','Hrs máq./mzn','Mzn sembradas','DH totales ciclo'],
+    datasets:[
+      {label:'2022',data:[13.837,115.3,null,2870,39706],borderColor:'#4caf6e',backgroundColor:'rgba(76,175,110,.12)',borderWidth:2,pointRadius:3},
+      {label:'2024',data:[14.827,132.9,11.11,3135,46478],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.10)',borderWidth:2,pointRadius:3},
+      {label:'2025',data:[17.038,123.7,10.04,2767,47143],borderColor:'#e0a020',backgroundColor:'rgba(224,160,32,.10)',borderWidth:2,pointRadius:3}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
+    scales:{r:{grid:{color:'rgba(0,0,0,0.07)'},ticks:{display:false},pointLabels:{font:{size:10,family:'IBM Plex Sans'},color:'#6b6d66'}}}}
+});
+
+// ─── G3: Mzn vs DH total ───
+const ciclos4=['Maní 2023','Maní 2024','Maní 2025'];
+new Chart(document.getElementById('g3'),{
+  type:'bar',
+  data:{labels:ciclos4,datasets:[
+    {type:'bar',label:'Manzanas',data:[3075,3135,2767],backgroundColor:['#4caf6e','#ef4444','#e0a020'],borderRadius:4,borderWidth:0,yAxisID:'y'},
+    {type:'line',label:'Días hombre',data:[39706,46478,47143],borderColor:'#1a5fa8',backgroundColor:'rgba(26,95,168,.1)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#1a5fa8',pointBorderColor:'#fff',pointBorderWidth:2,tension:.3,yAxisID:'y2'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:'#1e7d3a',font:{size:11},callback:v=>v.toLocaleString()+' mzn'},position:'left',min:2400},
+      y2:{grid:{display:false},ticks:{color:'#1a5fa8',font:{size:11},callback:v=>(v/1000).toFixed(1)+'K DH'},position:'right',min:35000}}}
+});
+
+// ─── G4: DH/mzn por ciclo ───
+new Chart(document.getElementById('g4'),{
+  type:'bar',
+  data:{labels:ciclos4,datasets:[{label:'DH/mzn',data:[16.154,14.827,17.038],backgroundColor:['#4caf6e','#ef4444','#e0a020'],borderRadius:5,borderWidth:0}]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' DH'},min:12,max:19}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' DH/mzn'}}}}
+});
+
+// ─── G5: DH por puesto ───
+const puestos=['Jornalero','Op. Maquinaria','Ayud. Campo'];
+new Chart(document.getElementById('g5'),{
+  type:'bar',
+  data:{labels:puestos,datasets:[
+    {label:'2023',data:[1774,238,148],backgroundColor:'rgba(26,95,168,.8)',borderRadius:4,borderWidth:0},
+    {label:'2024',data:[1942,825,519],backgroundColor:'rgba(239,68,68,.8)',borderRadius:4,borderWidth:0},
+    {label:'2025',data:[1983,653,406],backgroundColor:'rgba(224,160,32,.8)',borderRadius:4,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v+' DH'}}}}
+});
+
+// ─── G6: DH/mzn por finca ───
+// CORREGIDO: DH de TODAS las actividades / mzn siembra de esa finca
+const fincas6=['Palo de Pan','Llano Verde','La Laguna','Sta. Isabel','R. Pando','Q. Maria','Montana','Miramar','La Concha','San Luis'];
+new Chart(document.getElementById('g6'),{
+  type:'bar',
+  data:{labels:fincas6,datasets:[
+    {label:'2024',data:[32.74,26.82,23.29,23.22,22.61,18.14,16.66,15.97,15.06,10.26],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[19.57,22.67,19.14,20.52,19.09,17.58,18.67,16.70,27.59,15.48],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' DH'}}}}
+});
+
+// ─── G6b: DH mensual ───
+new Chart(document.getElementById('g6b'),{
+  type:'bar',
+  data:{labels:['Jun','Jul','Ago'],datasets:[
+    {label:'2023',data:[112,2313,16],backgroundColor:'rgba(26,95,168,.8)',borderRadius:3,borderWidth:0},
+    {label:'2024',data:[0,1853,1407],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[0,1861,1222],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v+' DH'}}}}
+});
+
+// ─── G7: Diesel/mzn por ciclo ───
+const ciclos_all=['Maní 2022','Maní 2023','Maní 2024','Maní 2025'];
+new Chart(document.getElementById('g7'),{
+  type:'bar',
+  data:{labels:ciclos_all,datasets:[{label:'Diesel/mzn',data:[115.3,125.5,132.9,123.7],backgroundColor:['#4caf6e','#1a5fa8','#ef4444','#e0a020'],borderRadius:5,borderWidth:0}]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' lts'},min:105,max:140}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>'  '+c.parsed.y.toFixed(1)+' lts/mzn'}}}}
+});
+
+// ─── G8: Diesel/mzn por finca ───
+// CORREGIDO: litros TODAS las actividades / mzn siembra de esa finca
+const fincas8=['Q. Maria','Montana','Mercedes','Sta. Isabel','La Concha','Miramar','La Laguna','San Luis','R. Pando','Llano Verde'];
+new Chart(document.getElementById('g8'),{
+  type:'bar',
+  data:{labels:fincas8,datasets:[
+    {label:'2024',data:[85.40,100.72,100.65,84.50,143.03,135.96,145.84,149.58,165.22,185.77],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[81.76,104.62,106.19,137.72,134.41,135.11,136.10,123.77,162.35,192.53],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' lts'}}}}
+});
+
+// ─── Tabla diesel por finca ───
+const dieselFincaData=[
+  {f:'Fca. Las Américas',mzn:189.3,lts:2917,ratio:15.41},
+  {f:'Rancho Pando GZP',mzn:159,lts:2425,ratio:15.25},
+  {f:'Santa Isabel',mzn:118,lts:1411,ratio:11.96},
+  {f:'Palo de Pan',mzn:56.75,lts:619,ratio:10.91},
+  {f:'Mercedes',mzn:483,lts:4859,ratio:10.06},
+  {f:'Llano Verde',mzn:91.5,lts:875,ratio:9.56},
+  {f:'Paraíso',mzn:66,lts:609,ratio:9.23},
+  {f:'La Laguna',mzn:278,lts:2289,ratio:8.23},
+  {f:'Rancho Pando',mzn:203.5,lts:1673,ratio:8.22},
+  {f:'Miramar',mzn:425.3,lts:3416,ratio:8.03},
+  {f:'Montana',mzn:205,lts:1523,ratio:7.43},
+  {f:'Quinta Maria',mzn:173,lts:1287,ratio:7.44},
+  {f:'La Concha',mzn:564.3,lts:3621,ratio:6.42},
+];
+const maxR=Math.max(...dieselFincaData.map(d=>d.ratio));
+const tbody=document.getElementById('diesel-finca-rows');
+dieselFincaData.forEach(d=>{
+  const pct=Math.round((d.ratio/maxR)*100);
+  const cls=d.ratio>11?'p-red':d.ratio>8?'p-amber':'p-green';
+  const icon=d.ratio>11?'🔴':d.ratio>8?'🟡':'🟢';
+  tbody.innerHTML+=`<tr><td>${d.f}</td><td>${d.mzn}</td><td>${d.lts.toLocaleString()}</td><td><span class="pill ${cls}">${d.ratio.toFixed(2)}</span></td><td><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${d.ratio>11?'#ef4444':d.ratio>8?'#e0a020':'#4caf6e'}"></div></div></td><td>${icon}</td></tr>`;
+});
+
+// ─── G9: Hrs máq/mzn siembra por finca ───
+// CORREGIDO: horas TODAS las actividades / mzn siembra de esa finca
+const fincas9=['Q. Maria','Montana','Sta. Isabel','La Laguna','La Concha','Palo de Pan','Miramar','San Luis','R. Pando','Llano Verde'];
+new Chart(document.getElementById('g9'),{
+  type:'bar',
+  data:{labels:fincas9,datasets:[
+    {label:'2024',data:[11.10,10.06,9.90,13.40,13.95,14.17,14.38,14.73,15.46,18.92],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[7.81,9.86,12.88,11.51,13.37,10.51,13.10,12.92,12.17,14.70],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' hrs'}}}}
+});
+
+// ─── G10: Horas por tipo equipo ───
+const tipos10=['Combinas','Tractor Grande','Tractor Mediano','Tractor Pequeño'];
+new Chart(document.getElementById('g10'),{
+  type:'bar',
+  data:{labels:tipos10,datasets:[
+    {label:'Mani 2024 (Siembra)',data:[0,248,0,3386],backgroundColor:'rgba(239,68,68,.8)',borderRadius:4,borderWidth:0},
+    {label:'Mani 2025 (Siembra)',data:[0,0,0,2740],backgroundColor:'rgba(224,160,32,.8)',borderRadius:4,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:20}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toLocaleString()+' hrs'}}}}
+});
+
+// ─── G11: Hrs/mzn por labor ───
+const labs11=['Nivelación','Siembra','Subsuelo','Arranque','Arado','Combina','Mureo','Sello','Quema','Post em.','Grad','Fung. I','Fung. II','Fung. III'];
+new Chart(document.getElementById('g11'),{
+  type:'bar',
+  data:{labels:labs11,datasets:[
+    {label:'2024',data:[4.839,1.159,1.042,1.416,0.556,null,0.578,0.251,0.285,0.170,0.419,0.487,0.217,0.246],backgroundColor:'rgba(239,68,68,.75)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[3.040,0.990,1.287,1.303,0.628,1.258,0.414,0.248,0.289,0.241,0.372,0.316,0.251,0.220],backgroundColor:'rgba(224,160,32,.75)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:40,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(2)+' hrs/mzn'}}}}
+});
+
+// ─── G12: Total hrs por labor (horizontal) ───
+const labs12=['Combina/Casamba','Arranque','Siembra','Nivelación','Arado','Grad','Fung. I','Mureo','Fung. III','Quema','Fung. VI','Fung. II','Fung. V','Fung. IV'];
+new Chart(document.getElementById('g12'),{
+  type:'bar',
+  data:{labels:labs12,datasets:[
+    {label:'2024',data:[4891,4382,3634,3593,1628,1546,1526,1461,1411,1381,1355,1312,1185,1172],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[0,3605,2740,2961,1335,1417,1042,843,1188,1133,1271,1148,1128,1105],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:40,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toLocaleString()+' hrs'}}}}
+});
+
+// ─── G13: Diesel/mzn por labor ───
+const labs13=['Siembra','Combina','Mureo','Arado','Nivelación','Arranque','Sello','Fung. I','Grad'];
+new Chart(document.getElementById('g13'),{
+  type:'bar',
+  data:{labels:labs13,datasets:[
+    {label:'2022',data:[7.463,14.065,9.721,20.821,20.306,11.095,1.684,2.103,11.116],backgroundColor:'rgba(76,175,110,.8)',borderRadius:3,borderWidth:0},
+    {label:'2023',data:[7.030,16.109,9.785,16.732,12.862,10.926,2.222,2.920,9.409],backgroundColor:'rgba(26,95,168,.8)',borderRadius:3,borderWidth:0},
+    {label:'2024',data:[9.106,32.276,9.418,17.670,24.614,11.450,1.927,3.776,9.698],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
+    {label:'2025',data:[7.739,29.778,8.182,18.431,15.590,12.086,1.860,2.197,10.594],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:30,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' lts'}}}}
+});
+
+// ─── G14: Triple índice por finca 2024 ───
+const fincas14=['La Concha','La Laguna','Llano Verde','Miramar','Montana','Palo de Pan','Q. Maria','R. Pando','San Luis','Sta. Isabel'];
+const avgDH=1.053, avgD=9.106, avgH=1.159;
+const dh14=[1.38,1.09,1.58,1.18,0.98,2.43,0.83,1.95,0.87,1.75];
+const d14=[6.42,8.23,9.56,8.03,7.43,10.91,7.44,8.22,8.12,11.96];
+const h14=[1.35,1.291,1.377,1.296,1.117,2.115,1.121,1.096,1.292,1.805];
+new Chart(document.getElementById('g14'),{
+  type:'bar',
+  data:{labels:fincas14,datasets:[
+    {label:'DH/mzn (idx)',data:dh14.map(v=>(v/avgDH).toFixed(3)),backgroundColor:'rgba(30,125,58,.75)',borderRadius:3,borderWidth:0},
+    {label:'Diesel/mzn (idx)',data:d14.map(v=>(v/avgD).toFixed(3)),backgroundColor:'rgba(26,95,168,.75)',borderRadius:3,borderWidth:0},
+    {label:'Hrs máq/mzn (idx)',data:h14.map(v=>(v/avgH).toFixed(3)),backgroundColor:'rgba(224,160,32,.75)',borderRadius:3,borderWidth:0}
+  ]},
+  options:{...opts(),
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>'  '+c.dataset.label+': '+parseFloat(c.parsed.y).toFixed(2)+'x vs promedio'}}},
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v+'x'},min:0,
+        afterDataLimits(axis){axis.max=Math.max(axis.max,2.5)}}}}
+});
+
+// ─── GKL1: Fungicidas KL/mzn ───
+const ciclosKL=['2018','2019','2020','2021','2022','2023','2024'];
+const fung_data=[24.91,25.82,28.58,34.21,30.79,33.14,31.79];
+new Chart(document.getElementById('gkl1'),{
+  type:'line',
+  data:{labels:ciclosKL,datasets:[{
+    label:'Fungicidas KL/mzn',
+    data:fung_data,
+    borderColor:'#6d28d9',backgroundColor:'rgba(109,40,217,.08)',
+    fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#6d28d9',
+    pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5
+  }]},
+  options:{...opts(),
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' KL'},min:20,max:38}},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
+      callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' KL/mzn'}}}}
+});
+
+// ─── GKL2: Fertilizantes Foliares ───
+new Chart(document.getElementById('gkl2'),{
+  type:'line',
+  data:{labels:ciclosKL,datasets:[{
+    label:'Fert. Foliares KL/mzn',
+    data:[11.01,10.91,10.26,6.56,9.53,8.62,8.34],
+    borderColor:'#1e7d3a',backgroundColor:'rgba(30,125,58,.08)',
+    fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#1e7d3a',
+    pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5
+  }]},
+  options:{...opts(),
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' KL'},min:5,max:13}},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
+      callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' KL/mzn'}}}}
+});
+
+// ─── GKL3: Todas las familias comparativa ───
+new Chart(document.getElementById('gkl3'),{
+  type:'bar',
+  data:{labels:ciclosKL,datasets:[
+    {label:'Fungicidas',      data:[24.91,25.82,28.58,34.21,30.79,33.14,31.79],backgroundColor:'rgba(109,40,217,.8)',borderWidth:0},
+    {label:'Fert. Foliares',  data:[11.01,10.91,10.26,6.56,9.53,8.62,8.34],  backgroundColor:'rgba(30,125,58,.8)',  borderWidth:0},
+    {label:'Herbicidas',      data:[13.42,10.38,8.22,7.75,8.46,0,10.65],      backgroundColor:'rgba(14,116,144,.8)', borderWidth:0},
+    {label:'Insecticidas',    data:[0.78,1.47,0.85,0.60,0.13,0.39,0.48],      backgroundColor:'rgba(224,160,32,.8)', borderWidth:0},
+    {label:'Adherente',       data:[0.05,0.04,0.02,0.04,0.05,0.07,0.03],      backgroundColor:'rgba(154,156,148,.8)',borderWidth:0},
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
+      callbacks:{label:c=>'  '+c.dataset.label+': '+c.parsed.y.toFixed(2)+' KL/mzn'}}},
+    scales:{
+      x:{stacked:true,grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
+      y:{stacked:true,grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' KL'}}}}
+});
+
+// ─── GKL4: Herbicidas ───
+new Chart(document.getElementById('gkl4'),{
+  type:'bar',
+  data:{labels:['2018','2019','2020','2021','2022','2024'],datasets:[{
+    label:'Herbicidas KL/mzn',
+    data:[13.42,10.38,8.22,7.75,8.46,10.65],
+    backgroundColor:['rgba(14,116,144,.75)','rgba(14,116,144,.75)','rgba(14,116,144,.75)','rgba(30,125,58,.75)','rgba(14,116,144,.75)','rgba(239,68,68,.75)'],
+    borderRadius:4,borderWidth:0
+  }]},
+  options:{...opts(),
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' KL'},min:5,max:16}},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
+      callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' KL/mzn'}}}}
+});
+
+// ─── GKL5: Total KL/mzn vs mzn sembradas ───
+const mznSembradas=[2264,1637,2125,2066,2137,2328,2377];
+const totalKLmzn=[59.3,69.1,59.7,56.2,49.2,null,52.8];
+new Chart(document.getElementById('gkl5'),{
+  type:'bar',
+  data:{labels:ciclosKL,datasets:[
+    {type:'bar',label:'Total KL/mzn',data:totalKLmzn,backgroundColor:['rgba(26,95,168,.7)','rgba(26,95,168,.7)','rgba(26,95,168,.7)','rgba(26,95,168,.7)','rgba(26,95,168,.7)',null,'rgba(26,95,168,.7)'],borderRadius:4,borderWidth:0,yAxisID:'y'},
+    {type:'line',label:'Mzn sembradas',data:mznSembradas,borderColor:'#e0a020',backgroundColor:'rgba(224,160,32,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#e0a020',pointBorderColor:'#fff',pointBorderWidth:2,tension:.3,yAxisID:'y2'}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
+    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
+    scales:{
+      x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:'#1a5fa8',font:{size:11},callback:v=>v.toFixed(0)+' KL'},position:'left',min:35},
+      y2:{grid:{display:false},ticks:{color:'#e0a020',font:{size:11},callback:v=>v.toLocaleString()+' mzn'},position:'right',min:1200}}}
+});
+
+// ─── GKL6: Fungicidas por finca ───
+const fincasKL=['La Concha','La Laguna','Mercedes','Miramar','Montana','Paraíso','Q. Maria','R. Pando','San Luis','Sta. Isabel'];
+new Chart(document.getElementById('gkl6'),{
+  type:'bar',
+  data:{labels:fincasKL,datasets:[
+    {label:'2022',data:[0.59,0.69,0.66,0.61,0.63,1.62,0.59,0.65,0.59,0.61],backgroundColor:'rgba(109,40,217,.75)',borderRadius:3,borderWidth:0},
+    {label:'2023',data:[0.69,0.69,0.70,0.66,0.65,0.69,0.59,0.67,0.59,0.61],backgroundColor:'rgba(26,95,168,.75)', borderRadius:3,borderWidth:0},
+    {label:'2024',data:[0.65,0.62,0.73,0.68,0.61,1.08,0.59,0.66,0.71,0.59],backgroundColor:'rgba(239,68,68,.75)',  borderRadius:3,borderWidth:0},
+  ]},
+  options:{...opts(),
+    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},
+      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(2)+' KL'}}}}
+});
+</script>
+</body>
+</html>
