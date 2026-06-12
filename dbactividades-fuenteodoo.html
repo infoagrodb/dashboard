@@ -25,6 +25,8 @@
 </head>
 <body>
 <div class="container-fluid py-3">
+
+    <!-- Título -->
     <div class="row mb-3">
         <div class="col-12 d-flex justify-content-between align-items-center">
             <div>
@@ -36,6 +38,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Botón Actualizar -->
+    <button id="btnActualizar" class="btn btn-primary mb-3">
+        🔄 Actualizar datos
+    </button>
 
     <!-- KPIs -->
     <div class="row mb-3">
@@ -110,6 +117,7 @@
             </div>
         </div>
     </div>
+
 </div>
 
 <!-- JS libs -->
@@ -121,7 +129,7 @@
 <script>
 async function cargarAvancesCampo() {
     const url = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odoo.json";
-    const response = await fetch(url);
+    const response = await fetch(url + "?cache=" + Date.now());
     const json = await response.json();
 
     const data = json.result?.records || json.result?.data || json.result || [];
@@ -196,36 +204,56 @@ function actualizarCharts(datos) {
 }
 
 document.addEventListener("DOMContentLoaded", async () => {
+    datosOriginal = await cargarAvancesCampo();
+
+    actualizarKPIs(datosOriginal);
+    actualizarCharts(datosOriginal);
+
+    tablaDT = $('#tablaAvances').DataTable({
+        data: datosOriginal,
+        columns: [
+            { data: "Compañia" },
+            { data: "Fecha" },
+            { data: "Finca" },
+            { data: "Ciclo" },
+            { data: "Actividad" },
+            { data: "Lote" },
+            { data: "Orden" },
+            { data: "AvanceMzn" },
+            { data: "Productor" },
+            { data: "ProveedorServicio" },
+            { data: "Sector" },
+            { data: "CategoriaActividad" }
+        ],
+        pageLength: 10,
+        order: [[1, "asc"]]
+    });
+});
+
+document.getElementById("btnActualizar").addEventListener("click", async () => {
+    document.getElementById("btnActualizar").innerText = "Actualizando...";
+    document.getElementById("btnActualizar").disabled = true;
+
     try {
         datosOriginal = await cargarAvancesCampo();
 
         actualizarKPIs(datosOriginal);
         actualizarCharts(datosOriginal);
 
-        tablaDT = $('#tablaAvances').DataTable({
-            data: datosOriginal,
-            columns: [
-                { data: "Compañia" },
-                { data: "Fecha" },
-                { data: "Finca" },
-                { data: "Ciclo" },
-                { data: "Actividad" },
-                { data: "Lote" },
-                { data: "Orden" },
-                { data: "AvanceMzn" },
-                { data: "Productor" },
-                { data: "ProveedorServicio" },
-                { data: "Sector" },
-                { data: "CategoriaActividad" }
-            ],
-            pageLength: 10,
-            order: [[1, "asc"]]
-        });
+        tablaDT.clear();
+        tablaDT.rows.add(datosOriginal);
+        tablaDT.draw();
+
+        document.getElementById("btnActualizar").innerText = "🔄 Actualizar datos";
     } catch (e) {
-        console.error("Error cargando datos:", e);
-        alert("Error cargando datos desde odoo.json.");
+        alert("Error actualizando datos");
+        console.error(e);
+        document.getElementById("btnActualizar").innerText = "🔄 Actualizar datos";
     }
+
+    document.getElementById("btnActualizar").disabled = false;
 });
 </script>
+
 </body>
 </html>
