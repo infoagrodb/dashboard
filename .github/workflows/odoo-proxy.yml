@@ -1,0 +1,52 @@
+name: Odoo Proxy
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch-odoo:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC
+        run: |
+          curl -X POST https://infoagro.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "infoagro",
+                2,
+                "Meganet37**",
+                "x_orden_campo_line_b660b",
+                "search_read",
+                [],
+                [
+                  "id","x_orden_campo_id","x_studio_fecha","x_studio_ciclo",
+                  "x_studio_productor","x_studio_proveedor_del_servicio",
+                  "x_studio_finca","x_studio_lote_agricola",
+                  "x_studio_activiadad_realizada","x_studio_avance_mzn",
+                  "x_studio_compaia","x_name","x_studio_sector_1",
+                  "x_studio_categoria_actividad"
+                ]
+              ]
+            }
+          }' > odoo.json
+
+      - name: Commit y push del JSON
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add odoo.json
+          git commit -m "Actualización automática de datos Odoo" || echo "No hay cambios"
+          git push
