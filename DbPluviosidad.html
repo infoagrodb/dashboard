@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Pluviosidad · Análisis Histórico</title>
+<title>Pluviosidad · Análisis Histórico Gerencial</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -157,6 +157,13 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
   flex: 1; min-width: 70px; text-align: center; 
   background: #f8fafc; border: 1px solid var(--border-color); 
   padding: 8px 4px; border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.1s ease, background-color 0.1s ease;
+  user-select: none;
+}
+.kpi-year-box:hover {
+  transform: scale(1.05);
+  background: #f1f5f9;
 }
 .kpi-year-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px;}
 .kpi-year-val { font-size: 15px; font-weight: 700; color: var(--brand-dark); }
@@ -233,7 +240,7 @@ table.pivot tfoot td:first-child{
 .cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 8px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
 .cv2{background:rgba(249, 115, 22, 0.12);color:#c2410c;font-weight:700;border-radius:4px;padding:2px 8px;display:inline-block; border: 1px solid rgba(249, 115, 22, 0.25)}
 
-/* DEFINITIVE FIXED TOOLTIP (AccuWeather Premium Blur - Escaped from Overflow) */
+/* GLOBAL SECURE TOOLTIP */
 #global-tooltip {
   position: fixed;
   display: none;
@@ -244,7 +251,7 @@ table.pivot tfoot td:first-child{
   padding: 12px 14px;
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15);
-  width: 240px;
+  width: 250px;
   text-align: left;
   z-index: 999999;
   pointer-events: none;
@@ -270,7 +277,7 @@ table.pivot tfoot td:first-child{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 160px;
+  max-width: 170px;
 }
 .popup-item .p-val {
   font-weight: 700;
@@ -294,7 +301,7 @@ table.pivot tfoot td:first-child{
     <div class="page-hdr-left">
       <div class="page-icon">🌧️</div>
       <div>
-        <div class="page-title">Pluviosidad · Análisis Histórico</div>
+        <div class="page-title">Pluviosidad · Análisis Histórico Corporativo</div>
         <div class="page-sub">Monitoreo analítico de precipitaciones por día y año · INFOAGRO</div>
       </div>
     </div>
@@ -393,7 +400,7 @@ table.pivot tfoot td:first-child{
 
 <script>
 let RAW=[];
-let TOOLTIP_DATA={}; // Repositorio estructurado en memoria para los tooltips
+let TOOLTIP_DATA={}; 
 
 const MESES_NOM={
   "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
@@ -423,7 +430,13 @@ async function loadData(){
   try{
     const resp=await fetch(url+"?cache="+Date.now());
     const json=await resp.json();
-    RAW=json.result.map(r=>{
+    
+    // RED DE SEGURIDAD PARSEO: Detecta arreglos directos o envolturas clásicas de API de Odoo
+    const records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+    
+    if(!records.length && json.records) records = json.records;
+
+    RAW=records.map(r=>{
       const finca=Array.isArray(r.x_studio_finca)?r.x_studio_finca[1]:r.x_studio_finca;
       const sector=Array.isArray(r.x_studio_sector_1)?r.x_studio_sector_1[1]:r.x_studio_sector_1;
       const co=Array.isArray(r.x_studio_company_id)?r.x_studio_company_id[1]:r.x_studio_company_id;
@@ -432,7 +445,7 @@ async function loadData(){
     initFilters();
     render();
   }catch(e){
-    document.getElementById("kpiWrap").innerHTML=`<div class="empty-msg">⚠️ Error en la comunicación con el servidor de Odoo. Verifique su conexión de red.</div>`;
+    document.getElementById("kpiWrap").innerHTML=`<div class="empty-msg">⚠️ Error en la comunicación con el servidor de Odoo. Verifique su conexión de red o estructura JSON.</div>`;
   }
 }
 
@@ -591,58 +604,123 @@ function buildKPI(data){
 
   const kpis=[
     {
+      id: "vol_acum",
       label:"Volumen Total Acumulado (mm)",
       clase:"accent",
-      fn:(rows)=>totalMes(rows),
-      isBar: true
+      isBar: true,
+      calcFn: (rows) => totalMes(rows),
+      fincaFn: (fRows) => totalMes(fRows),
+      unit: "mm"
     },
     {
+      id: "dias_eff",
       label:"Días Efectivos de Lluvia",
       clase:"",
-      fn:(rows)=>[...new Set(rows.map(r=>r.f))].length,
-      isBar: false
+      isBar: false,
+      calcFn: (rows) => [...new Set(rows.map(r=>r.f))].length,
+      fincaFn: (fRows) => [...new Set(fRows.map(r=>r.f))].length,
+      unit: "días"
     },
     {
+      id: "int_prom",
       label:"Intensidad Promedio por Evento (mm/día)",
       clase:"",
-      fn:(rows)=>{
-        const dias=[...new Set(rows.map(r=>r.f))];
-        if(!dias.length) return 0;
-        return totalMes(rows)/dias.length;
+      isBar: true,
+      calcFn: (rows) => {
+        const d = [...new Set(rows.map(r=>r.f))].length;
+        return d > 0 ? totalMes(rows) / d : 0;
       },
-      isBar: true
+      fincaFn: (fRows) => {
+        const d = [...new Set(fRows.map(r=>r.f))].length;
+        return d > 0 ? totalMes(fRows) / d : 0;
+      },
+      unit: "mm/día"
     },
   ];
 
-  let html=`<div class="kpi-grid">`;
+  let containerGrid = document.createElement("div");
+  containerGrid.className = "kpi-grid";
 
   kpis.forEach(k=>{
-    html+=`<div class="kpi-card ${k.clase}">
-            <div class="kpi-title-meta">${k.label}</div>
-            <div class="kpi-years-row">`;
-            
-    const vals=years.map(y=>({y,val:k.fn(data.filter(r=>getY(r.f)===y))}));
-    const maxV=Math.max(...vals.map(x=>x.val),1);
+    let card = document.createElement("div");
+    card.className = `kpi-card ${k.clase}`;
+    
+    let titleMeta = document.createElement("div");
+    titleMeta.className = "kpi-title-meta";
+    titleMeta.textContent = k.label;
+    card.appendChild(titleMeta);
 
-    vals.forEach(({y, val})=>{
-      const pct=Math.round((val/maxV)*100);
-      const disp=val>0?val.toFixed(1):"0.0";
+    let yearsRow = document.createElement("div");
+    yearsRow.className = "kpi-years-row";
+
+    const yearVals = years.map(y => ({ y, val: k.calcFn(data.filter(r => getY(r.f) === y)) }));
+    const maxV = Math.max(...yearVals.map(x => x.val), 1);
+
+    yearVals.forEach(({y, val})=>{
+      const pct = Math.round((val / maxV) * 100);
+      const disp = val > 0 ? val.toFixed(1) : "0.0";
+
+      let yearBox = document.createElement("div");
+      yearBox.className = "kpi-year-box";
       
-      html+=`<div class="kpi-year-box">
-              <div class="kpi-year-label">${y}</div>
-              <div class="kpi-year-val">${disp}</div>
-              ${k.isBar ? `<div class="mini-bar-bg"><div class="mini-bar-fill" style="width:${pct}%"></div></div>` : ''}
-             </div>`;
+      let lbl = document.createElement("div");
+      lbl.className = "kpi-year-label";
+      lbl.textContent = y;
+      yearBox.appendChild(lbl);
+
+      let vDiv = document.createElement("div");
+      vDiv.className = "kpi-year-val";
+      vDiv.textContent = disp;
+      yearBox.appendChild(vDiv);
+
+      if(k.isBar){
+        let barBg = document.createElement("div");
+        barBg.className = "mini-bar-bg";
+        let barFill = document.createElement("div");
+        barFill.className = "mini-bar-fill";
+        barFill.style.width = `${pct}%`;
+        barBg.appendChild(barFill);
+        yearBox.appendChild(barBg);
+      }
+
+      const kpiKey = `kpi_${k.id}_${y}`;
+      const yearRows = data.filter(r => getY(r.f) === y);
+      const fincasDisponibles = unique(yearRows, "fi");
+
+      let fList = [];
+      fincasDisponibles.forEach(fi => {
+        const fRows = yearRows.filter(r => r.fi === fi);
+        const fVal = k.fincaFn(fRows);
+        fList.push({ name: fi, value: fVal });
+      });
+      fList.sort((a,b) => b.value - a.value);
+
+      let tooltipContent = `<div class="popup-hdr">Rendimiento Fincas (${y})</div>`;
+      fList.forEach(f => {
+        tooltipContent += `<div class="popup-item">
+                            <span class="p-name">${f.name}</span>
+                            <span class="p-val">${f.value.toFixed(1)} ${k.unit}</span>
+                          </div>`;
+      });
+
+      TOOLTIP_DATA[kpiKey] = tooltipContent;
+      yearBox.setAttribute("data-key", kpiKey);
+
+      yearBox.addEventListener("mouseenter", showGlobalTooltip);
+      yearBox.addEventListener("mousemove", moveGlobalTooltip);
+      yearBox.addEventListener("mouseleave", hideGlobalTooltip);
+
+      yearsRow.appendChild(yearBox);
     });
 
-    html+=`</div></div>`;
+    card.appendChild(yearsRow);
+    containerGrid.appendChild(card);
   });
 
-  html+=`</div>`;
-  wrap.innerHTML=html;
+  wrap.innerHTML = "";
+  wrap.appendChild(containerGrid);
 }
 
-// ── TABLA DINÁMICA CON CAPTURA DE EVENTOS INTEGRAL ───────────────────────────
 function buildPivot(data){
   const mes=document.getElementById("selMes").value;
   const showTotal=document.getElementById("chkTotalCol").checked;
@@ -652,7 +730,6 @@ function buildPivot(data){
   const foot=document.getElementById("pivotFoot");
   
   head.innerHTML=""; body.innerHTML=""; foot.innerHTML="";
-  TOOLTIP_DATA={}; // Resetear almacén de datos
 
   if(!years.length||!data.length){
     body.innerHTML=`<tr><td colspan="2" class="empty-msg">Sin registros estructurados disponibles.</td></tr>`;
@@ -672,14 +749,14 @@ function buildPivot(data){
   const sorted=[...cellVals].sort((a,b)=>a-b);
   const p75=sorted[Math.floor(sorted.length*0.75)]||0;
 
-  // CONSTRUCCIÓN HEAD
+  // HEAD
   let h=`<tr><th>Día</th>`;
   years.forEach(y=>h+=`<th>Año ${y}</th>`);
   if(showTotal) h+=`<th class="total-col">Media Histórica</th>`;
   h+=`</tr>`;
   head.innerHTML=h;
 
-  // CONSTRUCCIÓN BODY
+  // BODY
   for(let d=1;d<=daysInMonth;d++){
     const anyData=years.some(y=>data.some(r=>getY(r.f)===y&&getD(r.f)===d));
     if(!anyData) continue;
@@ -706,12 +783,16 @@ function buildPivot(data){
         wrapper.className = `cell-interactive ${cls}`;
         wrapper.textContent = val.toFixed(1);
         
-        // Asignación de una llave única en memoria para identificar la celda
-        const cellKey = `c_${d}_${y}`;
-        TOOLTIP_DATA[cellKey] = { year: y, rows: rows };
+        const cellKey = `cell_${d}_${y}`;
+        
+        let itemsArr = [];
+        rows.forEach(r => {
+          itemsArr.push(`<div class="popup-item"><span class="p-name">${r.fi}</span><span class="p-val">${r.v.toFixed(1)} mm</span></div>`);
+        });
+        
+        TOOLTIP_DATA[cellKey] = `<div class="popup-hdr">Desglose Fincas (${y})</div>` + itemsArr.join("");
         wrapper.setAttribute("data-key", cellKey);
         
-        // Escucha de eventos nativa libre de strings HTML corruptos
         wrapper.addEventListener("mouseenter", showGlobalTooltip);
         wrapper.addEventListener("mousemove", moveGlobalTooltip);
         wrapper.addEventListener("mouseleave", hideGlobalTooltip);
@@ -737,7 +818,7 @@ function buildPivot(data){
     body.appendChild(tr);
   }
 
-  // CONSTRUCCIÓN FOOTER
+  // FOOTER
   let tf=`<tr><td>Total Precipitación</td>`;
   let grandTotal=0; let grandCols=0;
   years.forEach(y=>{
@@ -760,42 +841,33 @@ function buildPivot(data){
   else pivotTable.classList.add("total-hidden");
 }
 
-// ── CONTROL DEL TOOLTIP GLOBAL BASADO EN CLIENT-COORDINATES ──────────────────
+// ── CONTROL CENTRALIZADO DEL TOOLTIP GLOBAL FIJO ─────────────────────────────
 const gTooltip = document.getElementById("global-tooltip");
 
 function showGlobalTooltip(e) {
   const key = e.currentTarget.getAttribute("data-key");
-  const cache = TOOLTIP_DATA[key];
-  if (!cache) return;
+  const htmlContent = TOOLTIP_DATA[key];
+  if (!htmlContent) return;
   
-  let itemsArr = [];
-  cache.rows.forEach(r => {
-    itemsArr.push(`<div class="popup-item"><span class="p-name">${r.fi}</span><span class="p-val">${r.v.toFixed(1)} mm</span></div>`);
-  });
-  
-  gTooltip.innerHTML = `<div class="popup-hdr">Desglose Fincas (${cache.year})</div>` + itemsArr.join("");
+  gTooltip.innerHTML = htmlContent;
   gTooltip.style.display = "block";
   moveGlobalTooltip(e);
 }
 
 function moveGlobalTooltip(e) {
-  const tooltipWidth = 240; 
-  const tooltipHeight = gTooltip.offsetHeight || 90;
+  const tooltipWidth = 250; 
+  const tooltipHeight = gTooltip.offsetHeight || 100;
   
-  // Usamos clientX/Y (coordenadas fijas de pantalla) para acoplarlo al "position: fixed"
   let posX = e.clientX - (tooltipWidth / 2);
   let posY = e.clientY - tooltipHeight - 16; 
   
-  // Control anti-desborde horizontal derecho
   if ((posX + tooltipWidth) > window.innerWidth) {
     posX = window.innerWidth - tooltipWidth - 20;
   }
-  // Control anti-desborde horizontal izquierdo
   if (posX < 0) posX = 10;
   
-  // Control anti-desborde vertical superior
   if (posY < 0) {
-    posY = e.clientY + 20; // Si se sale arriba, se muestra abajo del cursor
+    posY = e.clientY + 20;
   }
 
   gTooltip.style.left = posX + "px";
