@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pluviosidad · Análisis Histórico por Mes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --font-sans:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --color-text-primary:#111827;
+  --color-text-secondary:#6b7280;
+  --color-text-success:#166534;
+  --color-background-primary:#ffffff;
+  --color-background-secondary:#f3f4f6;
+  --color-background-success:#dcfce7;
+  --color-border-secondary:#d1d5db;
+  --color-border-tertiary:#e5e7eb;
+  --border-radius-md:6px;
+  --border-radius-lg:10px;
+}
+body{font-family:var(--font-sans);background:var(--color-background-primary);padding:12px}
+.wrap{font-family:var(--font-sans);padding:0 0 16px}
+.hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 0 12px}
+.hdr-title{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.badge{font-size:11px;padding:3px 10px;border-radius:20px;background:var(--color-background-success);color:var(--color-text-success);font-weight:500}
+
+/* FILTROS */
+.filters-bar{display:flex;flex-wrap:wrap;gap:14px;padding:10px 14px;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);margin-bottom:14px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:3px}
+.fg label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-secondary);font-weight:500}
+select{font-size:12px;padding:4px 8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);height:28px;width:140px}
+
+/* CHECKLIST dropdown */
+.chk-wrap{position:relative;width:140px}
+.chk-btn{font-size:12px;padding:4px 8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);height:28px;width:100%;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-sans)}
+.chk-list{position:absolute;top:32px;left:0;min-width:160px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px;z-index:999;display:none;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+.chk-list.open{display:block}
+.chk-list li{list-style:none;font-size:12px;padding:3px 4px;color:var(--color-text-primary);cursor:pointer}
+.chk-list li label{display:flex;align-items:center;gap:6px;cursor:pointer}
+
+/* BOTÓN LIMPIAR */
+.clear-btn{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:12px;font-weight:500;cursor:pointer;height:28px}
+.clear-btn:hover{background:#dc2626}
+
+/* KPI SUMMARY TABLE */
+.kpi-table-wrap{margin-bottom:14px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);overflow:hidden}
+.kpi-table{width:100%;border-collapse:collapse;font-size:11px}
+.kpi-table th.row-label{background:var(--color-background-secondary);font-weight:500;color:var(--color-text-secondary);padding:7px 10px;text-align:left;border-right:0.5px solid var(--color-border-tertiary);font-size:10px}
+.kpi-table th.yr-head{background:#1a56a4;color:#fff;font-weight:500;padding:6px 8px;text-align:center;border-right:0.5px solid rgba(255,255,255,.15);font-size:11px;white-space:nowrap}
+.kpi-table th.yr-head.cur{background:#0d3d7a}
+.kpi-table td.row-label{background:var(--color-background-secondary);font-weight:500;color:var(--color-text-secondary);padding:6px 10px;border-right:0.5px solid var(--color-border-tertiary);white-space:nowrap;font-size:11px;border-top:0.5px solid var(--color-border-tertiary)}
+.kpi-table td.kv{text-align:center;padding:5px 8px;border-top:0.5px solid var(--color-border-tertiary);border-right:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-primary)}
+.kpi-table td.kv.has{font-weight:500}
+.bar-cell{display:flex;align-items:center;justify-content:center;gap:4px}
+.bar-bg{width:32px;height:10px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden;flex-shrink:0}
+.bar-fill{height:100%;background:#3780cc;border-radius:2px;transition:width .3s}
+.bar-fill.hi{background:#1a56a4}
+
+/* PIVOT TABLE */
+.section-label{font-size:11px;color:var(--color-text-secondary);font-weight:500;margin-bottom:6px}
+.tbl-wrap{overflow-x:auto;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg)}
+table.pivot{border-collapse:collapse;width:100%;font-size:11px}
+table.pivot thead th{background:#1a56a4;color:#fff;font-weight:500;padding:7px 8px;text-align:center;border-right:0.5px solid rgba(255,255,255,.15);white-space:nowrap;font-size:10px}
+table.pivot thead th:first-child{background:var(--color-background-secondary);color:var(--color-text-secondary);text-align:left;border-right:0.5px solid var(--color-border-tertiary)}
+table.pivot thead th.cur{background:#0d3d7a}
+table.pivot tbody td{padding:5px 8px;text-align:center;border-bottom:0.5px solid var(--color-border-tertiary);border-right:0.5px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-primary)}
+table.pivot tbody td:first-child{text-align:left;font-weight:500;color:var(--color-text-secondary);background:var(--color-background-secondary);white-space:nowrap;border-right:0.5px solid var(--color-border-tertiary);font-size:10px}
+table.pivot tbody tr:last-child td{border-bottom:none}
+.cv{background:#dbeafe;color:#1e3a5f;font-weight:500;border-radius:2px;padding:1px 3px}
+.cv2{background:#bfdbfe;color:#1e3a5f;font-weight:600;border-radius:2px;padding:1px 3px}
+.total-hidden .total-col{display:none}
+.total-hidden thead th.total-col{display:none}
+
+/* Igualar ancho entre columna Año y Día */
+.kpi-table th.row-label,
+.kpi-table td.row-label,
+table.pivot thead th:first-child,
+table.pivot tbody td:first-child {
+  width: 90px;
+  min-width: 90px;
+  max-width: 90px;
+  text-align: left;
+  white-space: nowrap;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hdr">
+    <div class="hdr-title">Pluviosidad · Análisis Histórico por Mes</div>
+    <span class="badge">INFOAGRO · Histórico</span>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="filters-bar">
+    <div class="fg">
+      <label>Mes</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="selMes"></select>
+        <button class="clear-btn" onclick="clearSingle('selMes')">🔄</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Sector</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="selSector"><option value="">Todos</option></select>
+        <button class="clear-btn" onclick="clearSingle('selSector')">🔄</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Compañía</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="selCo"><option value="">Todas</option></select>
+        <button class="clear-btn" onclick="clearSingle('selCo')">🔄</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Finca</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="chk-wrap">
+          <button class="chk-btn" id="chkFincaBtn" onclick="toggleChk('chkFincaList','chkFincaBtn')">Todas las fincas</button>
+          <ul class="chk-list" id="chkFincaList"></ul>
+        </div>
+        <button class="clear-btn" onclick="clearChecklist('chkFincaList','chkFincaBtn','fincas')">🔄</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Años</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div class="chk-wrap">
+          <button class="chk-btn" id="chkYearBtn" onclick="toggleChk('chkYearList','chkYearBtn')">Todos los años</button>
+          <ul class="chk-list" id="chkYearList"></ul>
+        </div>
+        <button class="clear-btn" onclick="clearChecklist('chkYearList','chkYearBtn','años')">🔄</button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label>Columna Total</label>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)">
+        <input type="checkbox" id="chkTotalCol" checked>
+        <span>Mostrar Total</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI TABLE (resumen por año) -->
+  <div class="kpi-table-wrap">
+    <table class="kpi-table" id="kpiTable"></table>
+  </div>
+
+  <!-- PIVOT TABLE días × años -->
+  <div class="section-label" id="pivotLabel">Promedio de lluvia · días del mes × año</div>
+  <div class="tbl-wrap" id="pivotWrap">
+    <table class="pivot">
+      <thead id="pivotHead"></thead>
+      <tbody id="pivotBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let RAW=[];
+
+const MESES_NOM={
+  "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
+  "05":"Mayo","06":"Junio","07":"Julio","08":"Agosto",
+  "09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"
+};
+
+function getM(f){return f.split("-")[1]}
+function getY(f){return parseInt(f.split("-")[0])}
+function getD(f){return parseInt(f.split("-")[2])}
+function unique(arr,k){return[...new Set(arr.map(r=>r[k]).filter(Boolean))].sort()}
+
+async function loadData(){
+  const url="https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json";
+  const resp=await fetch(url+"?cache="+Date.now());
+  const json=await resp.json();
+  RAW=json.result.map(r=>{
+    const fecha=r.x_studio_fecha;
+    const finca=Array.isArray(r.x_studio_finca)?r.x_studio_finca[1]:r.x_studio_finca;
+    const sector=Array.isArray(r.x_studio_sector_1)?r.x_studio_sector_1[1]:r.x_studio_sector_1;
+    const co=Array.isArray(r.x_studio_company_id)?r.x_studio_company_id[1]:r.x_studio_company_id;
+    const v=Number(r.x_studio_cantidad_promedio||0);
+    return {f:fecha,fi:finca,se:sector,co:co,v:v};
+  });
+  initFilters();
+  render();
+}
+
+function initFilters(){
+  const mesEl=document.getElementById("selMes");
+  mesEl.innerHTML="";
+  const meses=[...new Set(RAW.map(r=>getM(r.f)))].sort();
+  meses.forEach(m=>{
+    const o=document.createElement("option");
+    o.value=m;
+    o.textContent=MESES_NOM[m]||m;
+    mesEl.appendChild(o);
+  });
+
+  const coEl=document.getElementById("selCo");
+  coEl.innerHTML='<option value="">Todas</option>';
+  unique(RAW,"co").forEach(c=>{
+    const o=document.createElement("option");
+    o.value=c;o.textContent=c;coEl.appendChild(o);
+  });
+
+  populateCascadeFilters();
+  populateYearChecklist();
+
+  document.getElementById("chkTotalCol").addEventListener("change",render);
+  ["selMes","selSector","selCo"].forEach(id=>{
+    document.getElementById(id).addEventListener("change",()=>{
+      populateCascadeFilters();
+      render();
+    });
+  });
+}
+
+function populateCascadeFilters(){
+  const co=document.getElementById("selCo").value;
+  const base=RAW.filter(r=>!co||r.co===co);
+
+  const secEl=document.getElementById("selSector");
+  const curSec=secEl.value;
+  secEl.innerHTML='<option value="">Todos</option>';
+  unique(base,"se").forEach(s=>{
+    const o=document.createElement("option");
+    o.value=s;o.textContent=s;secEl.appendChild(o);
+  });
+  if(curSec && [...secEl.options].some(o=>o.value===curSec)) secEl.value=curSec;
+
+  const se=secEl.value;
+  const baseFi=base.filter(r=>!se||r.se===se);
+  const ul=document.getElementById("chkFincaList");
+  ul.innerHTML="";
+  unique(baseFi,"fi").forEach(fi=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<label><input type="checkbox" value="${fi}"> ${fi}</label>`;
+    li.querySelector("input").addEventListener("change",()=>{
+      updateChkBtn("chkFincaList","chkFincaBtn","fincas");
+      render();
+    });
+    ul.appendChild(li);
+  });
+  updateChkBtn("chkFincaList","chkFincaBtn","fincas");
+}
+
+function populateYearChecklist(){
+  const years=[...new Set(RAW.map(r=>getY(r.f)))].sort();
+  const ul=document.getElementById("chkYearList");
+  ul.innerHTML="";
+  years.forEach(y=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<label><input type="checkbox" value="${y}" checked> ${y}</label>`;
+    li.querySelector("input").addEventListener("change",()=>{
+      updateChkBtn("chkYearList","chkYearBtn","años");
+      render();
+    });
+    ul.appendChild(li);
+  });
+  updateChkBtn("chkYearList","chkYearBtn","años");
+}
+
+function toggleChk(listId,btnId){
+  const l=document.getElementById(listId);
+  l.classList.toggle("open");
+}
+document.addEventListener("click",e=>{
+  document.querySelectorAll(".chk-wrap").forEach(w=>{
+    const list=w.querySelector(".chk-list");
+    if(w && !w.contains(e.target)){
+      list.classList.remove("open");
+      if(list.id==="chkFincaList") updateChkBtn("chkFincaList","chkFincaBtn","fincas");
+      if(list.id==="chkYearList") updateChkBtn("chkYearList","chkYearBtn","años");
+    }
+  });
+});
+
+function getSelFromList(listId){
+  return Array.from(document.querySelectorAll(`#${listId} input:checked`)).map(x=>x.value);
+}
+
+function updateChkBtn(listId,btnId,labelType){
+  const sel=getSelFromList(listId);
+  const btn=document.getElementById(btnId);
+  if(!sel.length){
+    btn.textContent=labelType==="fincas"?"Todas las fincas":"Todos los años";
+  }else if(sel.length<=2){
+    btn.textContent=sel.join(", ");
+  }else{
+    btn.textContent=sel.length+" "+labelType+" seleccionados";
+  }
+}
+
+function clearSingle(id){
+  const el=document.getElementById(id);
+  if(el.tagName==="SELECT"){
+    el.selectedIndex=0;
+  }
+  populateCascadeFilters();
+  render();
+}
+
+function clearChecklist(listId,btnId,labelType){
+  document.querySelectorAll(`#${listId} input`).forEach(i=>i.checked=false);
+  updateChkBtn(listId,btnId,labelType);
+  render();
+}
+
+function getFiltered(){
+  const mes=document.getElementById("selMes").value;
+  const se=document.getElementById("selSector").value;
+  const co=document.getElementById("selCo").value;
+  const selFi=getSelFromList("chkFincaList");
+  const selYears=getSelFromList("chkYearList").map(y=>parseInt(y));
+  return RAW.filter(r=>
+    getM(r.f)===mes &&
+    (!se||r.se===se)&&
+    (!co||r.co===co)&&
+    (!selFi.length||selFi.includes(r.fi)) &&
+    (!selYears.length||selYears.includes(getY(r.f)))
+  );
+}
+
+/* Agrupa por fecha para evitar duplicados en el total mensual */
+function sumByDate(rows){
+  const map=new Map();
+  rows.forEach(r=>{
+    if(!map.has(r.f)) map.set(r.f,r.v);
+    else map.set(r.f,map.get(r.f)+r.v);
+  });
+  return [...map.values()].reduce((s,v)=>s+v,0);
+}
+
+function buildKPI(data){
+  const years=[...new Set(data.map(r=>getY(r.f)))].sort();
+  if(!years.length){document.getElementById("kpiTable").innerHTML="";return}
+
+  let html=`<thead><tr><th class="row-label">Año</th>`;
+  years.forEach(y=>html+=`<th class="yr-head">${y}</th>`);
+  html+=`</tr></thead><tbody>`;
+
+  const kpis=[
+    {label:"Cantidad de Mm en el mes", fn:(rows)=>sumByDate(rows).toFixed(0), tipo:"bar"},
+    {label:"Cant. días de lluvia",      fn:(rows)=>[...new Set(rows.map(r=>r.f))].length, tipo:"num"},
+    {label:"Promedio Mm por evento",    fn:(rows)=>rows.length?( sumByDate(rows)/[...new Set(rows.map(r=>r.f))].length ).toFixed(0):"0", tipo:"bar"},
+  ];
+
+  kpis.forEach(k=>{
+    const vals=years.map(y=>({y,val:+k.fn(data.filter(r=>getY(r.f)===y))}));
+    const maxV=Math.max(...vals.map(x=>x.val),1);
+    html+=`<tr><td class="row-label">${k.label}</td>`;
+    vals.forEach(({y,val})=>{
+      const pct=Math.round((val/maxV)*100);
+      if(k.tipo==="bar"){
+        html+=`<td class="kv${val>0?" has":""}">
+          <div class="bar-cell">
+            <div class="bar-bg"><div class="bar-fill${pct>75?" hi":""}" style="width:${pct}%"></div></div>
+            <span>${val}</span>
+          </div></td>`;
+      } else {
+        html+=`<td class="kv${val>0?" has":""}">${val||""}</td>`;
+      }
+    });
+    html+=`</tr>`;
+  });
+  html+=`</tbody>`;
+  document.getElementById("kpiTable").innerHTML=html;
+}
+
+function buildPivot(data){
+  const mes=document.getElementById("selMes").value;
+  const years=[...new Set(data.map(r=>getY(r.f)))].sort();
+  const head=document.getElementById("pivotHead");
+  const body=document.getElementById("pivotBody");
+  head.innerHTML="";body.innerHTML="";
+
+  if(!years.length||!data.length){
+    head.innerHTML=`<tr><th>Día</th><th>Sin datos</th></tr>`;return;
+  }
+
+  const anyYear=years[0];
+  const daysInMonth=new Date(anyYear,parseInt(mes),0).getDate();
+  const allVals=data.map(r=>r.v);
+  const sorted=[...allVals].sort((a,b)=>a-b);
+  const p75=sorted[Math.floor(sorted.length*0.75)]||0;
+
+  const showTotal=document.getElementById("chkTotalCol").checked;
+
+  let h=`<tr><th>Día</th>`;
+  years.forEach(y=>h+=`<th class="${y===anyYear?"cur":""}">${y}</th>`);
+  if(showTotal) h+=`<th class="total-col">Total</th>`;
+  h+=`</tr>`;
+  head.innerHTML=h;
+
+  for(let d=1;d<=daysInMonth;d++){
+    const anyData=years.some(y=>data.some(r=>getY(r.f)===y&&getD(r.f)===d));
+    if(!anyData) continue;
+    const label=`${d}-${(MESES_NOM[mes]||mes).slice(0,3).toLowerCase()}`;
+    let tr=`<tr><td>${label}</td>`;
+    let totalDia=0;
+    years.forEach(y=>{
+      const rows=data.filter(r=>getY(r.f)===y&&getD(r.f)===d);
+      const sum=rows.reduce((s,r)=>s+r.v,0);
+      const avg=rows.length? sum/rows.length : 0;
+      totalDia+=sum;
+      if(avg>0){
+        const cls=avg>=p75?"cv2":"cv";
+        tr+=`<td><span class="${cls}">${avg.toFixed(1)}</span></td>`;
+      } else {
+        tr+=`<td></td>`;
+      }
+    });
+    if(showTotal){
+      tr+=`<td class="total-col">${totalDia>0?totalDia.toFixed(1):""}</td>`;
+    }
+    tr+=`</tr>`;
+    body.insertAdjacentHTML("beforeend",tr);
+  }
+
+  if(showTotal){
+    let tot=`<tr style="border-top:1px solid var(--color-border-secondary)"><td style="font-weight:500;font-size:10px;color:var(--color-text-secondary);background:var(--color-background-secondary)">Total</td>`;
+    years.forEach(y=>{
+      const sum=sumByDate(data.filter(r=>getY(r.f)===y));
+      tot+=`<td style="font-weight:500;font-size:11px;color:var(--color-text-primary);border-top:0.5px solid var(--color-border-secondary)">${sum>0?sum.toFixed(0):""}</td>`;
+    });
+    const totalGlobal=sumByDate(data);
+    tot+=`<td class="total-col" style="font-weight:500;font-size:11px;color:var(--color-text-primary);border-top:0.5px solid var(--color-border-secondary)">${totalGlobal.toFixed(0)}</td>`;
+    tot+=`</tr>`;
+    body.insertAdjacentHTML("beforeend",tot);
+  }
+
+  const mn=MESES_NOM[mes]||mes;
+  document.getElementById("pivotLabel").textContent=`Promedio de lluvia · días de ${mn} × año (promedio por evento del día, Mm)`;
+
+  const wrap=document.getElementById("pivotWrap");
+  if(showTotal) wrap.classList.remove("total-hidden");
+  else wrap.classList.add("total-hidden");
+}
+
+function render(){
+  const data=getFiltered();
+  buildKPI(data);
+  buildPivot(data);
+}
+
+loadData();
+</script>
+</body>
+</html>
