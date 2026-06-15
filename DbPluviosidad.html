@@ -123,6 +123,14 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 }
 .btn-excel:hover{background:#15803d}
 
+/* NUEVO BOTÓN: CONMUTADOR DE FORMATO DE VISTA */
+.btn-toggle-view {
+  background: var(--brand-blue); color: white; border: none; font-weight: 600;
+  padding: 0 14px; height: 36px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: background .15s;
+}
+.btn-toggle-view:hover { background: #026ca3; }
+
 .toggle-total{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);height:36px;cursor:pointer;user-select:none;font-weight:500}
 .toggle-total input{accent-color:var(--brand-dark);width:15px;height:15px;cursor:pointer}
 .filter-divider{width:1px;height:36px;background:var(--border-color);align-self:flex-end;margin:0 4px;flex-shrink:0}
@@ -253,6 +261,51 @@ table.pivot tbody td:first-child{
 }
 table.pivot tbody tr:hover td{background: #f8fafc}
 table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
+
+/* ── CALENDAR STRUCTURE STYLE (ACCUWEATHER CALENDAR VIEW) ────────────────── */
+.calendar-wrapper {
+  background: var(--card-bg); border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); box-shadow: var(--shadow-md); overflow: hidden;
+}
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); background: #f1f5f9;
+  border-bottom: 1px solid var(--border-color);
+}
+.weekday {
+  text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted);
+  padding: 12px 0; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid var(--border-color);
+}
+.weekday:last-child { border-right: none; }
+.calendar-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+
+.calendar-day-cell {
+  min-height: 110px; padding: 10px; border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column;
+  justify-content: space-between; background: #ffffff; position: relative;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+.calendar-day-cell:nth-child(7n) { border-right: none; }
+.calendar-day-cell.empty { background: #f8fafc; cursor: default; }
+
+.day-number { font-size: 12px; font-weight: 700; color: var(--text-muted); align-self: flex-start; }
+.calendar-day-cell.has-rain .day-number { color: var(--brand-dark); }
+
+.day-weather-info { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.weather-icon { font-size: 20px; }
+.weather-val { font-size: 14px; font-weight: 700; }
+
+.calendar-day-cell.has-rain { cursor: pointer; }
+.calendar-day-cell.has-rain:hover { z-index: 10; box-shadow: inset 0 0 0 2px var(--brand-blue); transform: scale(1.02); }
+
+/* Mapa de calor climatológico */
+.rain-light { background: rgba(2, 132, 199, 0.04); }
+.rain-medium { background: rgba(2, 132, 199, 0.10); }
+.rain-heavy { background: rgba(2, 132, 199, 0.18); }
+.rain-extreme { background: rgba(2, 132, 199, 0.30); }
+.rain-light .weather-val { color: #0284c7; }
+.rain-medium .weather-val { color: #0369a1; }
+.rain-heavy .weather-val { color: #075985; }
+.rain-extreme .weather-val { color: #1e3a8a; }
 
 /* SMART DATA BADGES */
 .cell-interactive {
@@ -394,7 +447,10 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
       <div class="fg">
         <div class="fg-label">Visualización y Reporte</div>
         <div class="fg-inner">
-          <label class="toggle-total">
+          <button class="btn-toggle-view" id="btnToggleView" onclick="toggleViewMode()">
+            <span>📅 Ver Calendario</span>
+          </button>
+          <label class="toggle-total" id="chkTotalColWrap">
             <input type="checkbox" id="chkTotalCol" checked>
             Mostrar media total
           </label>
@@ -411,13 +467,29 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
     <div class="loading"><div class="spinner"></div> Cargando matriz de datos e indicadores...</div>
   </div>
 
-  <div class="pivot-section">
+  <div class="pivot-section" id="viewTableSection">
     <div class="pivot-label" id="pivotLabel">Distribución de lluvia diaria por año</div>
     <div class="tbl-wrap" id="pivotWrap">
       <table class="pivot">
         <thead id="pivotHead"></thead>
         <tbody id="pivotBody"></tbody>
       </table>
+    </div>
+  </div>
+
+  <div class="pivot-section" id="viewCalendarSection" style="display: none;">
+    <div class="pivot-label" id="calendarLabel">Calendario de Distribución Mensual Climatológica</div>
+    <div class="calendar-wrapper">
+      <div class="calendar-weekdays">
+        <div class="weekday">Dom</div>
+        <div class="weekday">Lun</div>
+        <div class="weekday">Mar</div>
+        <div class="weekday">Mié</div>
+        <div class="weekday">Jue</div>
+        <div class="weekday">Vie</div>
+        <div class="weekday">Sáb</div>
+      </div>
+      <div class="calendar-days-grid" id="calendarGrid"></div>
     </div>
   </div>
 
@@ -428,6 +500,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 <script>
 let RAW=[];
 let TOOLTIP_DATA={}; 
+let CURRENT_VIEW = "table"; // Control de formato activo: "table" o "calendar"
 
 const MESES_NOM={
   "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
@@ -439,6 +512,29 @@ function getM(f){return f.split("-")[1]}
 function getY(f){return parseInt(f.split("-")[0])}
 function getD(f){return parseInt(f.split("-")[2])}
 function unique(arr,k){return[...new Set(arr.map(r=>r[k]).filter(Boolean))].sort()}
+
+// FUNCIÓN INTERACTIVA CONMUTADORA DE VISTA
+function toggleViewMode() {
+  const btn = document.getElementById("btnToggleView");
+  const tblSec = document.getElementById("viewTableSection");
+  const calSec = document.getElementById("viewCalendarSection");
+  const chkTotalWrap = document.getElementById("chkTotalColWrap");
+
+  if (CURRENT_VIEW === "table") {
+    CURRENT_VIEW = "calendar";
+    btn.innerHTML = "<span>📊 Ver Tabla Matrix</span>";
+    tblSec.style.display = "none";
+    calSec.style.display = "block";
+    chkTotalWrap.style.visibility = "hidden"; 
+  } else {
+    CURRENT_VIEW = "table";
+    btn.innerHTML = "<span>📅 Ver Calendario</span>";
+    tblSec.style.display = "block";
+    calSec.style.display = "none";
+    chkTotalWrap.style.visibility = "visible";
+  }
+  render();
+}
 
 function avgDay(rows){
   if(!rows.length) return 0;
@@ -891,6 +987,99 @@ function buildPivot(data){
   else pivotTable.classList.add("total-hidden");
 }
 
+// ── NUEVA FUNCIÓN: RENDERIZADO DEL CALENDARIO DINÁMICO ACCUWEATHER ────────────
+function buildCalendar(data) {
+  const grid = document.getElementById("calendarGrid");
+  grid.innerHTML = "";
+
+  const mesStr = document.getElementById("selMes").value;
+  const yearsAvailable = [...new Set(data.map(r => getY(r.f)))].sort();
+  
+  if (!yearsAvailable.length || !data.length) {
+    grid.innerHTML = `<div class="empty-msg" style="grid-column: span 7;">Sin registros estructurados disponibles para armar la cuadrícula mensual.</div>`;
+    return;
+  }
+
+  // Toma el primer año marcado del filtro de checkboxes para aislar el calendario mensual
+  const activeYear = yearsAvailable[0];
+  document.getElementById("calendarLabel").textContent = `Calendario de Precipitaciones · Distribución Mensual: ${MESES_NOM[mesStr]} de ${activeYear} (Valores Promedio en mm)`;
+
+  const firstDayIndex = new Date(activeYear, parseInt(mesStr) - 1, 1).getDay();
+  const daysInMonth = new Date(activeYear, parseInt(mesStr), 0).getDate();
+
+  const cellVals = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const r = data.filter(x => getY(x.f) === activeYear && getD(x.f) === d);
+    if (r.length) cellVals.push(avgDay(r));
+  }
+  const sorted = [...cellVals].sort((a, b) => a - b);
+  const p75 = sorted[Math.floor(sorted.length * 0.75)] || 0;
+
+  // 1. Días del mes anterior (Vacíos)
+  for (let i = 0; i < firstDayIndex; i++) {
+    let emptyCell = document.createElement("div");
+    emptyCell.className = "calendar-day-cell empty";
+    grid.appendChild(emptyCell);
+  }
+
+  // 2. Días activos del mes
+  for (let d = 1; d <= daysInMonth; d++) {
+    let dayCell = document.createElement("div");
+    dayCell.className = "calendar-day-cell";
+
+    let numLabel = document.createElement("div");
+    numLabel.className = "day-number";
+    numLabel.textContent = d;
+    dayCell.appendChild(numLabel);
+
+    const dayRows = data.filter(r => getY(r.f) === activeYear && getD(r.f) === d);
+    const val = avgDay(dayRows);
+
+    let infoDiv = document.createElement("div");
+    infoDiv.className = "day-weather-info";
+
+    if (val > 0) {
+      dayCell.classList.add("has-rain");
+
+      if (val <= 2) dayCell.classList.add("rain-light");
+      else if (val <= p75) dayCell.classList.add("rain-medium");
+      else if (val <= p75 * 1.5) dayCell.classList.add("rain-heavy");
+      else dayCell.classList.add("rain-extreme");
+
+      infoDiv.innerHTML = `<span class="weather-icon">🌧️</span><span class="weather-val">${val.toFixed(1)} <span style="font-size:10px; font-weight:500;">mm</span></span>`;
+
+      const cellKey = `cal_cell_${d}_${activeYear}`;
+      let itemsArr = [];
+      dayRows.forEach(r => {
+        itemsArr.push(`<div class="popup-item"><span class="p-name">${r.fi}</span><span class="p-val">${r.v.toFixed(1)} mm</span></div>`);
+      });
+
+      TOOLTIP_DATA[cellKey] = `<div class="popup-hdr">Desglose Fincas (Día ${d})</div>` + itemsArr.join("");
+      dayCell.setAttribute("data-key", cellKey);
+
+      dayCell.addEventListener("mouseenter", showGlobalTooltip);
+      dayCell.addEventListener("mousemove", moveGlobalTooltip);
+      dayCell.addEventListener("mouseleave", hideGlobalTooltip);
+    } else {
+      infoDiv.innerHTML = `<span class="weather-icon" style="color: #cbd5e1;">☀️</span><span class="weather-val" style="color: #cbd5e1; font-size:11px; font-weight:500;">Seco</span>`;
+    }
+
+    dayCell.appendChild(infoDiv);
+    grid.appendChild(dayCell);
+  }
+
+  // 3. Rellenar celdas finales sobrantes
+  const totalCells = firstDayIndex + daysInMonth;
+  const rem = totalCells % 7;
+  if (rem > 0) {
+    for (let i = 0; i < (7 - rem); i++) {
+      let emptyCell = document.createElement("div");
+      emptyCell.className = "calendar-day-cell empty";
+      grid.appendChild(emptyCell);
+    }
+  }
+}
+
 // ── CONTROL CENTRALIZADO DEL TOOLTIP GLOBAL FIJO ─────────────────────────────
 const gTooltip = document.getElementById("global-tooltip");
 
@@ -931,7 +1120,12 @@ function hideGlobalTooltip() {
 function render(){
   const data=getFiltered();
   buildKPI(data);
-  buildPivot(data);
+  
+  if (CURRENT_VIEW === "table") {
+    buildPivot(data);
+  } else {
+    buildCalendar(data);
+  }
 }
 
 function exportPivotToExcel(){
