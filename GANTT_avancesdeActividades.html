@@ -51,7 +51,7 @@
     .hdr-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
     .hdr-sub { font-size: 12px; color: #b7e4c7; font-weight: 400; }
 
-    /* CONTENEDOR DE FILTROS ULTRA-COMPACTO (ANTI-GRID LINEAL) */
+    /* CONTENEDOR DE FILTROS ULTRA-COMPACTO */
     .filters-inline-container {
       background: var(--grad-soft-bg);
       border-radius: 16px;
@@ -91,7 +91,7 @@
       padding: 0 8px;
     }
 
-    /* MINI BOTONES DE REESTABLECIMIENTO CIRCULARES */
+    /* MINI BOTONES CIRCULARES */
     .btn-reset-individual {
       background: #ffffff;
       border: 1px solid rgba(163, 177, 198, 0.3);
@@ -117,7 +117,7 @@
     .btn-organic-action.clear-all { background: var(--grad-naranja); }
     .btn-organic-action:hover { transform: translateY(-1px); color: white; }
 
-    /* TABLA PIVOT VERTICAL OPTIMIZADA */
+    /* TABLA PIVOT VERTICAL */
     .table-responsive-organic {
       overflow-x: auto;
       max-height: 680px;
@@ -178,10 +178,11 @@
     }
     table.pivot-gantt tbody tr:nth-child(even) { background-color: #f8faf9; }
 
+    /* BADGE PURAMENTE NUMÉRICO */
     .mzn-badge-container {
       background: rgba(82, 183, 136, 0.12);
       color: #1b4332;
-      padding: 4px 10px;
+      padding: 4px 12px;
       border-radius: 30px;
       font-weight: 700;
       display: inline-block;
@@ -274,7 +275,7 @@
       <div class="d-flex gap-1">
         <select id="filterFechaTipo" class="form-select" onchange="toggleFechaInputs()">
           <option value="all">Histórico</option>
-          <option value="este_mes">Este Mes</option>
+          <option value="este_mes" selected>Este Mes</option>
           <option value="mes_pasado">Mes Pasado</option>
           <option value="ano_curso">Año Curso</option>
           <option value="personalizada">Rango...</option>
@@ -346,18 +347,11 @@
         };
       }).filter(r => r.fecha !== "");
 
-      calculateTimeline();
       initFilters();
       renderMatrix();
     } catch (e) {
       document.getElementById("matrixContainer").innerHTML = `<div class="alert alert-danger text-center m-3">⚠️ Error al sincronizar odoo.json de GitHub.</div>`;
     }
-  }
-
-  let FECHAS_CABECERA = [];
-  function calculateTimeline() {
-    if(!DB_RAW.length) return;
-    FECHAS_CABECERA = [...new Set(DB_RAW.map(r => r.fecha))].sort();
   }
 
   function initFilters() {
@@ -382,19 +376,22 @@
   }
 
   function resetSingleFilter(id) {
-    document.getElementById(id).selectedIndex = 0;
-    if(id === "filterFechaTipo") {
+    if (id === "filterFechaTipo") {
+      document.getElementById(id).value = "este_mes";
       document.getElementById("customDateInputs").style.display = "none";
       document.getElementById("filterFechaDesde").value = "";
       document.getElementById("filterFechaHasta").value = "";
+    } else {
+      document.getElementById(id).selectedIndex = 0;
     }
     renderMatrix();
   }
 
   function resetAllFilters() {
-    ["filterCompaia", "filterProveedor", "filterSector", "filterCiclo", "filterFinca", "filterActividad", "filterFechaTipo"].forEach(id => {
+    ["filterCompaia", "filterProveedor", "filterSector", "filterCiclo", "filterFinca", "filterActividad"].forEach(id => {
       document.getElementById(id).selectedIndex = 0;
     });
+    document.getElementById("filterFechaTipo").value = "este_mes";
     document.getElementById("customDateInputs").style.display = "none";
     document.getElementById("filterFechaDesde").value = "";
     document.getElementById("filterFechaHasta").value = "";
@@ -449,7 +446,7 @@
 
     const container = document.getElementById("matrixContainer");
     if(!filtered.length) {
-      container.innerHTML = `<div class="p-5 text-center text-muted fw-medium">No se encontraron registros.</div>`;
+      container.innerHTML = `<div class="p-5 text-center text-muted fw-medium">No se encontraron registros para los filtros seleccionados.</div>`;
       return;
     }
 
@@ -494,7 +491,8 @@
       html += `<tr><td class="col-fecha-sticky">${formatToCustomDate(fechaBase)}</td>`;
       llavesColumnas.forEach(colKey => {
         const val = (matrizValores[fechaBase] && matrizValores[fechaBase][colKey]) ? matrizValores[fechaBase][colKey] : 0;
-        html += val > 0 ? `<td><div class="mzn-badge-container">${val.toFixed(1)} Mzn</div></td>` : `<td>—</td>`;
+        // MEJORA SOLICITADA: Muestra solo el valor de número redondeado a un decimal y un guion claro "-" en caso de estar vacío
+        html += val > 0 ? `<td><div class="mzn-badge-container">${val.toFixed(1)}</div></td>` : `<td>-</td>`;
       });
       html += `</tr>`;
     });
