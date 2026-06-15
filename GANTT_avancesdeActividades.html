@@ -10,20 +10,18 @@
 
   <style>
     :root {
-      /* Organic & Fluid Palette */
       --bg-organic: #f4f7f5;
       --text-main: #1e293b;
       --text-muted: #64748b;
       
-      /* Gradientes Orgánicos */
       --grad-header: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
       --grad-verde: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%);
       --grad-naranja: linear-gradient(135deg, #e76f51 0%, #f4a261 100%);
       --grad-soft-bg: linear-gradient(180deg, #ffffff 0%, #f8faf9 100%);
 
-      --radius-organic: 24px 8px 24px 12px;
       --shadow-sm: 0 4px 20px -2px rgba(45, 106, 79, 0.05);
       --shadow-md: 0 10px 30px -5px rgba(27, 67, 50, 0.08);
+      --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
     }
 
     body {
@@ -39,7 +37,6 @@
       margin: 0 auto;
     }
 
-    /* ENCABEZADO LÍQUIDO COMPACTADO */
     .page-hdr-container {
       background: var(--grad-header);
       border-radius: 20px 8px 20px 8px;
@@ -51,7 +48,7 @@
     .hdr-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
     .hdr-sub { font-size: 12px; color: #b7e4c7; font-weight: 400; }
 
-    /* CONTENEDOR DE FILTROS ULTRA-COMPACTO */
+    /* CONTENEDOR DE FILTROS HORIZONTAL */
     .filters-inline-container {
       background: var(--grad-soft-bg);
       border-radius: 16px;
@@ -70,7 +67,8 @@
       flex-direction: column;
       gap: 4px;
       flex: 1;
-      min-width: 160px;
+      min-width: 165px;
+      position: relative;
     }
 
     .fg-label {
@@ -80,18 +78,67 @@
       color: var(--text-muted);
       font-weight: 700;
     }
-    
-    .form-select, .form-control {
+
+    /* ESTILADO DE DROPDOWNS MULTISELECT PERSONALIZADOS */
+    .multiselect-btn {
+      background-color: #ffffff;
+      border: 1px solid rgba(163, 177, 198, 0.3);
+      border-radius: 10px 4px 10px 4px;
+      color: var(--text-main);
+      font-size: 12px;
+      height: 36px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      width: 100%;
+      user-select: none;
+      text-align: left;
+    }
+    .multiselect-btn::after {
+      content: '▼'; font-size: 8px; color: var(--text-muted); margin-left: 6px;
+    }
+
+    .multiselect-dropdown {
+      position: absolute;
+      top: 105%;
+      left: 0;
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid rgba(82, 183, 136, 0.2);
+      border-radius: 8px;
+      box-shadow: var(--shadow-lg);
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 6px;
+      display: none;
+    }
+    .multiselect-dropdown.show { display: block; }
+
+    .multiselect-option {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      user-select: none;
+    }
+    .multiselect-option:hover { background-color: rgba(82, 183, 136, 0.1); }
+    .multiselect-option input { cursor: pointer; }
+
+    .form-control, .form-select-native {
       background-color: #ffffff !important;
       border: 1px solid rgba(163, 177, 198, 0.3) !important;
       border-radius: 10px 4px 10px 4px !important;
       color: var(--text-main) !important;
       font-size: 12px;
       height: 36px;
-      padding: 0 8px;
     }
 
-    /* MINI BOTONES CIRCULARES */
     .btn-reset-individual {
       background: #ffffff;
       border: 1px solid rgba(163, 177, 198, 0.3);
@@ -107,7 +154,6 @@
     }
     .btn-reset-individual:hover { color: #e76f51; border-color: #e76f51; transform: rotate(-180deg); }
 
-    /* ACCIONES COMPACTAS */
     .btn-organic-action {
       border: none; height: 36px; border-radius: 10px 4px 10px 4px;
       font-weight: 600; font-size: 12px; padding: 0 14px;
@@ -155,7 +201,6 @@
       color: var(--text-muted);
     }
     
-    /* Columna de fecha estática pegajosa */
     table.pivot-gantt th.col-fecha-sticky, 
     table.pivot-gantt td.col-fecha-sticky {
       position: sticky;
@@ -178,7 +223,7 @@
     }
     table.pivot-gantt tbody tr:nth-child(even) { background-color: #f8faf9; }
 
-    /* BADGE PURAMENTE NUMÉRICO */
+    .cell-interactive { cursor: pointer; display: inline-block; width: 100%; }
     .mzn-badge-container {
       background: rgba(82, 183, 136, 0.12);
       color: #1b4332;
@@ -189,11 +234,20 @@
       font-size: 11px;
     }
 
-    .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; }
-    .spinner-blob {
-      width: 14px; height: 14px; background-color: #2d6a4f;
-      border-radius: 50%; animation: morphBlob 1.4s infinite ease-in-out alternate;
+    /* TOOLTIP POP-UP - Aumentado a 320px para la nueva etiqueta */
+    #global-gantt-tooltip {
+      position: fixed; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(6px);
+      color: #ffffff; padding: 12px 14px; border-radius: 12px; box-shadow: var(--shadow-lg);
+      width: 320px; z-index: 999999; pointer-events: none; text-align: left;
     }
+    .popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 6px; margin-bottom: 8px; font-weight: 700; }
+    .popup-block { margin-bottom: 8px; }
+    .popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; gap: 8px; }
+    .popup-item .p-label { color: #cbd5e1; flex-shrink: 0; }
+    .popup-item .p-val { font-weight: 600; color: #38bdf8; text-align: right; }
+
+    .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; }
+    .spinner-blob { width: 14px; height: 14px; background-color: #2d6a4f; border-radius: 50%; animation: morphBlob 1.4s infinite ease-in-out alternate; }
     @keyframes morphBlob { 0% { transform: scale(0.8); } 100% { transform: scale(1.2); } }
   </style>
 </head>
@@ -204,7 +258,7 @@
   <div class="page-hdr-container d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
     <div>
       <div class="hdr-title">🌱 Matriz de Labores Diarias por Finca y Actividad</div>
-      <div class="hdr-sub">Análisis continuo de avance físico (Manzanas) de campo</div>
+      <div class="hdr-sub">Análisis continuo de avance físico (Manzanas) con selección múltiple en cascada</div>
     </div>
     <div class="d-flex gap-2">
       <button class="btn-organic-action clear-all" onclick="resetAllFilters()">↺ Limpiar</button>
@@ -212,11 +266,11 @@
     </div>
   </div>
 
-  <div class="filters-inline-container">
+  <div class="filters-inline-container" onclick="closeDropdownsEvent(event)">
     
     <div class="filter-item-wrap" style="flex: 1.2; min-width: 220px;">
       <div class="fg-label">🔀 Orden de Estructura</div>
-      <select id="pivotGroupingOrder" class="form-select" onchange="renderMatrix()">
+      <select id="pivotGroupingOrder" class="form-select-native form-control" onchange="renderMatrix()">
         <option value="finca_actividad">Finca  ➔  Actividad Realizada</option>
         <option value="actividad_finca">Actividad Realizada  ➔  Finca</option>
       </select>
@@ -225,62 +279,68 @@
     <div class="filter-item-wrap">
       <div class="fg-label">Compañía</div>
       <div class="d-flex gap-1">
-        <select id="filterCompaia" class="form-select" onchange="renderMatrix()"></select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterCompaia')">↺</button>
+        <div class="multiselect-btn" id="btnCompaia" onclick="toggleDropdown(event, 'dropCompaia')">Todas</div>
+        <div class="multiselect-dropdown" id="dropCompaia"></div>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('Compaia')">↺</button>
       </div>
     </div>
 
     <div class="filter-item-wrap">
       <div class="fg-label">Proveedor</div>
       <div class="d-flex gap-1">
-        <select id="filterProveedor" class="form-select" onchange="renderMatrix()"></select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterProveedor')">↺</button>
+        <div class="multiselect-btn" id="btnProveedor" onclick="toggleDropdown(event, 'dropProveedor')">Todos</div>
+        <div class="multiselect-dropdown" id="dropProveedor"></div>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('Proveedor')">↺</button>
       </div>
     </div>
 
     <div class="filter-item-wrap">
       <div class="fg-label">Sector</div>
       <div class="d-flex gap-1">
-        <select id="filterSector" class="form-select" onchange="renderMatrix()"></select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterSector')">↺</button>
+        <div class="multiselect-btn" id="btnSector" onclick="toggleDropdown(event, 'dropSector')">Todos</div>
+        <div class="multiselect-dropdown" id="dropSector"></div>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('Sector')">↺</button>
       </div>
     </div>
 
     <div class="filter-item-wrap">
       <div class="fg-label">Ciclo</div>
       <div class="d-flex gap-1">
-        <select id="filterCiclo" class="form-select" onchange="renderMatrix()"></select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterCiclo')">↺</button>
+        <div class="multiselect-btn" id="btnCiclo" onclick="toggleDropdown(event, 'dropCiclo')">Todos</div>
+        <div class="multiselect-dropdown" id="dropCiclo"></div>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('Ciclo')">↺</button>
       </div>
     </div>
 
     <div class="filter-item-wrap">
       <div class="fg-label">Finca</div>
       <div class="d-flex gap-1">
-        <select id="filterFinca" class="form-select" onchange="renderMatrix()"></select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterFinca')">↺</button>
+        <div class="multiselect-btn" id="btnFinca" onclick="toggleDropdown(event, 'dropFinca')">Todas</div>
+        <div class="multiselect-dropdown" id="dropFinca"></div>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('Finca')">↺</button>
       </div>
     </div>
 
     <div class="filter-item-wrap">
       <div class="fg-label">Actividad</div>
       <div class="d-flex gap-1">
-        <select id="filterActividad" class="form-select" onchange="renderMatrix()"></select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterActividad')">↺</button>
+        <div class="multiselect-btn" id="btnActividad" onclick="toggleDropdown(event, 'dropActividad')">Todas</div>
+        <div class="multiselect-dropdown" id="dropActividad"></div>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('Actividad')">↺</button>
       </div>
     </div>
 
     <div class="filter-item-wrap">
       <div class="fg-label">Período</div>
       <div class="d-flex gap-1">
-        <select id="filterFechaTipo" class="form-select" onchange="toggleFechaInputs()">
+        <select id="filterFechaTipo" class="form-select-native form-control w-100" onchange="toggleFechaInputs()">
           <option value="all">Histórico</option>
           <option value="este_mes" selected>Este Mes</option>
           <option value="mes_pasado">Mes Pasado</option>
           <option value="ano_curso">Año Curso</option>
           <option value="personalizada">Rango...</option>
         </select>
-        <button class="btn-reset-individual" onclick="resetSingleFilter('filterFechaTipo')">↺</button>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('FechaTipo')">↺</button>
       </div>
     </div>
 
@@ -310,10 +370,16 @@
 
 </div>
 
+<div id="global-gantt-tooltip"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
   let DB_RAW = [];
+  let TOOLTIP_REGISTRY = {};
+  
+  // Estructura de Selección del Usuario (Vacio = Todo seleccionado)
+  let SELECCIONES = { compaia: [], proveedor: [], sector: [], ciclo: [], finca: [], actividad: [] };
   const MESES_ABR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
   function formatToCustomDate(dateStr) {
@@ -335,38 +401,118 @@
       if(!records.length && json.records) records = json.records;
 
       DB_RAW = records.map(r => {
+        const ordenArr = Array.isArray(r.x_orden_campo_id) ? r.x_orden_campo_id : [0, "—"];
         return {
+          id: r.id,
+          orden: ordenArr[1] || "—",
+          turno: !r.x_name ? "Único / General" : r.x_name,
           compaia: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[1] : (r.x_studio_compaia || "Sin Compañía"),
           proveedor: Array.isArray(r.x_studio_proveedor_del_servicio) ? r.x_studio_proveedor_del_servicio[1] : (r.x_studio_proveedor_del_servicio || "Sin Proveedor"),
           sector: Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[1] : (r.x_studio_sector_1 || "Sin Sector"),
           ciclo: Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : (r.x_studio_ciclo || "Sin Ciclo"),
           finca: Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : (r.x_studio_finca || "Sin Finca"),
+          lote_agricola: Array.isArray(r.x_studio_lote_agricola) ? r.x_studio_lote_agricola[1] : (r.x_studio_lote_agricola || "Sin Lote"),
           actividad: Array.isArray(r.x_studio_activiadad_realizada) ? r.x_studio_activiadad_realizada[1] : (r.x_studio_activiadad_realizada || "Sin Actividad"),
           avance: Number(r.x_studio_avance_mzn || 0),
           fecha: r.x_studio_fecha || "" 
         };
       }).filter(r => r.fecha !== "");
 
-      initFilters();
+      buildCascadingFilters();
       renderMatrix();
     } catch (e) {
       document.getElementById("matrixContainer").innerHTML = `<div class="alert alert-danger text-center m-3">⚠️ Error al sincronizar odoo.json de GitHub.</div>`;
     }
   }
 
-  function initFilters() {
-    const fillCombo = (id, prop, defTxt) => {
-      const vals = [...new Set(DB_RAW.map(r => r[prop]))].filter(Boolean).sort();
-      const select = document.getElementById(id);
-      select.innerHTML = `<option value="">${defTxt}</option>`;
-      vals.forEach(v => { select.innerHTML += `<option value="${v}">${v}</option>`; });
+  // LÓGICA DE FILTRADO EN CASCADA CON SELECCIÓN MÚLTIPLE
+  function buildCascadingFilters() {
+    const getOptionsFor = (prop) => {
+      const dataFiltered = DB_RAW.filter(r => {
+        for (let key in SELECCIONES) {
+          if (key !== prop && SELECCIONES[key].length > 0 && !SELECCIONES[key].includes(r[key])) {
+            return false;
+          }
+        }
+        return true;
+      });
+      return [...new Set(dataFiltered.map(r => r[prop]))].filter(Boolean).sort();
     };
-    fillCombo("filterCompaia", "compaia", "Compañía");
-    fillCombo("filterProveedor", "proveedor", "Proveedor");
-    fillCombo("filterSector", "sector", "Sector");
-    fillCombo("filterCiclo", "ciclo", "Ciclo");
-    fillCombo("filterFinca", "finca", "Finca");
-    fillCombo("filterActividad", "actividad", "Actividad");
+
+    const updateDropdown = (idDrop, idBtn, prop) => {
+      const dropdown = document.getElementById(idDrop);
+      const btn = document.getElementById(idBtn);
+      const validOptions = getOptionsFor(prop);
+
+      const prevChecked = SELECCIONES[prop];
+
+      dropdown.innerHTML = "";
+      validOptions.forEach(val => {
+        const isChecked = prevChecked.includes(val);
+        const item = document.createElement("div");
+        item.className = "multiselect-option";
+        item.innerHTML = `<input type="checkbox" data-prop="${prop}" value="${val}" ${isChecked ? 'checked' : ''}> <span>${val}</span>`;
+        
+        item.addEventListener("click", (e) => {
+          if(e.target.tagName !== "INPUT") {
+            const cb = item.querySelector("input");
+            cb.checked = !cb.checked;
+            handleCheckboxChange(cb);
+          }
+        });
+        item.querySelector("input").addEventListener("change", (e) => {
+          handleCheckboxChange(e.target);
+        });
+
+        dropdown.appendChild(item);
+      });
+
+      if (prevChecked.length === 0) {
+        btn.textContent = "Todos";
+      } else if (prevChecked.length === 1) {
+        btn.textContent = prevChecked[0];
+      } else {
+        btn.textContent = `${prevChecked.length} Seleccionados`;
+      }
+    };
+
+    updateDropdown("dropCompaia", "btnCompaia", "compaia");
+    updateDropdown("dropProveedor", "btnProveedor", "proveedor");
+    updateDropdown("dropSector", "btnSector", "sector");
+    updateDropdown("dropCiclo", "btnCiclo", "ciclo");
+    updateDropdown("dropFinca", "btnFinca", "finca");
+    updateDropdown("dropActividad", "btnActividad", "actividad");
+  }
+
+  function handleCheckboxChange(cb) {
+    const prop = cb.getAttribute("data-prop");
+    const val = cb.value;
+
+    if(cb.checked) {
+      if(!SELECCIONES[prop].includes(val)) SELECCIONES[prop].push(val);
+    } else {
+      SELECCIONES[prop] = SELECCIONES[prop].filter(v => v !== val);
+    }
+
+    buildCascadingFilters();
+    renderMatrix();
+  }
+
+  // CONTROL INTERACTIVO DE MENÚS FLOTANTES
+  function toggleDropdown(e, idDrop) {
+    e.stopPropagation();
+    const dropdown = document.getElementById(idDrop);
+    const wasOpen = dropdown.classList.contains("show");
+    closeAllDropdowns();
+    if(!wasOpen) dropdown.classList.add("show");
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll(".multiselect-dropdown").forEach(d => d.classList.remove("show"));
+  }
+
+  function closeDropdownsEvent(e) {
+    if(!e.target.closest(".filter-item-wrap")) closeAllDropdowns();
   }
 
   function toggleFechaInputs() {
@@ -376,35 +522,31 @@
   }
 
   function resetSingleFilter(id) {
-    if (id === "filterFechaTipo") {
-      document.getElementById(id).value = "este_mes";
+    if (id === "FechaTipo") {
+      document.getElementById("filterFechaTipo").value = "este_mes";
       document.getElementById("customDateInputs").style.display = "none";
       document.getElementById("filterFechaDesde").value = "";
       document.getElementById("filterFechaHasta").value = "";
     } else {
-      document.getElementById(id).selectedIndex = 0;
+      const prop = id.toLowerCase();
+      SELECCIONES[prop] = [];
     }
+    buildCascadingFilters();
     renderMatrix();
   }
 
   function resetAllFilters() {
-    ["filterCompaia", "filterProveedor", "filterSector", "filterCiclo", "filterFinca", "filterActividad"].forEach(id => {
-      document.getElementById(id).selectedIndex = 0;
-    });
+    for(let key in SELECCIONES) SELECCIONES[key] = [];
     document.getElementById("filterFechaTipo").value = "este_mes";
     document.getElementById("customDateInputs").style.display = "none";
     document.getElementById("filterFechaDesde").value = "";
     document.getElementById("filterFechaHasta").value = "";
+    buildCascadingFilters();
     renderMatrix();
   }
 
+  // MOTOR DE CÁLCULO Y RENDERIZADO
   function renderMatrix() {
-    const fComp = document.getElementById("filterCompaia").value;
-    const fProv = document.getElementById("filterProveedor").value;
-    const fSec = document.getElementById("filterSector").value;
-    const fCic = document.getElementById("filterCiclo").value;
-    const fFin = document.getElementById("filterFinca").value;
-    const fAct = document.getElementById("filterActividad").value;
     const fFechaTipo = document.getElementById("filterFechaTipo").value;
     const orderMode = document.getElementById("pivotGroupingOrder").value;
 
@@ -412,14 +554,17 @@
     const curYear = hoy.getFullYear();
     const curMonth = hoy.getMonth();
 
-    const filtered = DB_RAW.filter(r => {
-      if(fComp && r.compaia !== fComp) return false;
-      if(fProv && r.proveedor !== fProv) return false;
-      if(fSec && r.sector !== fSec) return false;
-      if(fCic && r.ciclo !== fCic) return false;
-      if(fFin && r.finca !== fFin) return false;
-      if(fAct && r.actividad !== fAct) return false;
+    TOOLTIP_REGISTRY = {};
 
+    const filtered = DB_RAW.filter(r => {
+      // Validar selecciones múltiples acumuladas
+      for (let prop in SELECCIONES) {
+        if (SELECCIONES[prop].length > 0 && !SELECCIONES[prop].includes(r[prop])) {
+          return false;
+        }
+      }
+
+      // Validar Período de Tiempo
       if(fFechaTipo !== "all" && r.fecha) {
         const parts = r.fecha.split("-");
         if(parts.length === 3) {
@@ -462,10 +607,24 @@
 
     const llavesColumnas = Object.keys(columnasMapeadas).sort();
     const matrizValores = {};
+    
     filtered.forEach(r => {
       const colKey = (orderMode === "finca_actividad") ? `${r.finca}|||${r.actividad}` : `${r.actividad}|||${r.finca}`;
+      
       if(!matrizValores[r.fecha]) matrizValores[r.fecha] = {};
       matrizValores[r.fecha][colKey] = (matrizValores[r.fecha][colKey] || 0) + r.avance;
+
+      // Inyectar datos en la memoria del Popup (¡Aquí se captura el Ciclo también!)
+      const popupId = `pop_${r.fecha}_${colKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      if(!TOOLTIP_REGISTRY[popupId]) TOOLTIP_REGISTRY[popupId] = [];
+      TOOLTIP_REGISTRY[popupId].push({
+        orden: r.orden,
+        turno: r.turno,
+        proveedor: r.proveedor,
+        ciclo: r.ciclo,          // Captura del ciclo agregada
+        lote: r.lote_agricola,
+        avance: r.avance
+      });
     });
 
     const bloquesPadre = {};
@@ -491,8 +650,16 @@
       html += `<tr><td class="col-fecha-sticky">${formatToCustomDate(fechaBase)}</td>`;
       llavesColumnas.forEach(colKey => {
         const val = (matrizValores[fechaBase] && matrizValores[fechaBase][colKey]) ? matrizValores[fechaBase][colKey] : 0;
-        // MEJORA SOLICITADA: Muestra solo el valor de número redondeado a un decimal y un guion claro "-" en caso de estar vacío
-        html += val > 0 ? `<td><div class="mzn-badge-container">${val.toFixed(1)}</div></td>` : `<td>-</td>`;
+        if(val > 0) {
+          const pId = `pop_${fechaBase}_${colKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          html += `<td>
+                    <div class="cell-interactive" data-popup-id="${pId}" onmouseenter="showPopup(event)" onmousemove="movePopup(event)" onmouseleave="hidePopup()">
+                      <div class="mzn-badge-container">${val.toFixed(1)}</div>
+                    </div>
+                   </td>`;
+        } else {
+          html += `<td>-</td>`;
+        }
       });
       html += `</tr>`;
     });
@@ -501,12 +668,59 @@
     container.innerHTML = html;
   }
 
+  // ── SCRIPT DEL POP-UP FLOTANTE (Con Proveedor de Servicio y Ciclo) ──
+  const popupEl = document.getElementById("global-gantt-tooltip");
+
+  function showPopup(e) {
+    const key = e.currentTarget.getAttribute("data-popup-id");
+    const dataset = TOOLTIP_REGISTRY[key];
+    if (!dataset) return;
+
+    let content = `<div class="popup-hdr">Desglose de Operaciones</div>`;
+    dataset.forEach(item => {
+      content += `
+        <div class="popup-block">
+          <div class="popup-item"><span class="p-label">N° Orden:</span><span class="p-val">#${item.orden}</span></div>
+          <div class="popup-item"><span class="p-label">Turno:</span><span class="p-val">${item.turno}</span></div>
+          <div class="popup-item"><span class="p-label">Proveedor de Servicio:</span><span class="p-val">${item.proveedor}</span></div>
+          <div class="popup-item"><span class="p-label">Ciclo:</span><span class="p-val">${item.ciclo}</span></div>
+          <div class="popup-item"><span class="p-label">Lote:</span><span class="p-val">${item.lote}</span></div>
+          <div class="popup-item"><span class="p-label">Avance:</span><span class="p-val" style="color:#4ade80;">${item.avance.toFixed(1)} Mzn</span></div>
+        </div>
+        ${dataset.length > 1 ? '<hr style="margin:6px 0; opacity:0.15; border-color:#fff;">' : ''}
+      `;
+    });
+
+    popupEl.innerHTML = content;
+    popupEl.style.display = "block";
+    movePopup(e);
+  }
+
+  function movePopup(e) {
+    // Ampliado a 320px para ajustar el nombre de la etiqueta "Proveedor de Servicio"
+    const width = 320; 
+    const height = popupEl.offsetHeight || 140;
+    let left = e.clientX - (width / 2);
+    let top = e.clientY - height - 15;
+    if (left + width > window.innerWidth) left = window.innerWidth - width - 15;
+    if (left < 0) left = 15;
+    if (top < 0) top = e.clientY + 20;
+
+    popupEl.style.left = left + "px";
+    popupEl.style.top = top + "px";
+  }
+
+  function hidePopup() { popupEl.style.display = "none"; }
+
   function exportPivotToExcel() {
     const table = document.querySelector("table.pivot-gantt");
     if(!table) return;
     const wb = XLSX.utils.table_to_book(table, { raw: false });
     XLSX.writeFile(wb, `INFOAGRO_MATRIZ_DIARIA_LABORES.xlsx`);
   }
+
+  // Cerrar menús al hacer clic fuera
+  document.addEventListener("click", () => closeAllDropdowns());
 
   loadData();
 </script>
