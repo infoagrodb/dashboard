@@ -18,9 +18,6 @@
   --text-main: #1e293b;        /* Slate 800 */
   --text-muted: #64748b;       /* Slate 500 */
   
-  --green-bg: #f0fdf4;
-  --green-txt: #166534;
-  
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -45,7 +42,7 @@ body{
   margin: 0 auto;
 }
 
-/* HEADER STYLE (AccuWeather Inspired) */
+/* HEADER STYLE */
 .page-hdr{
   display: flex;
   align-items: center;
@@ -130,7 +127,7 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 .toggle-total input{accent-color:var(--brand-dark);width:15px;height:15px;cursor:pointer}
 .filter-divider{width:1px;height:36px;background:var(--border-color);align-self:flex-end;margin:0 4px;flex-shrink:0}
 
-/* EXECUTiVE KPI CARDS (Grid replace) */
+/* EXECUTIVE KPI CARDS */
 .kpi-section { margin-bottom: 24px; }
 .kpi-grid {
   display: grid;
@@ -165,7 +162,6 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 .kpi-year-val { font-size: 15px; font-weight: 700; color: var(--brand-dark); }
 .kpi-card.accent .kpi-year-val { color: var(--brand-orange); }
 
-/* MINI PROGRESS BAR FOR METRICS */
 .mini-bar-bg { width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 4px; overflow: hidden; }
 .mini-bar-fill { height: 100%; background: var(--brand-blue); border-radius: 2px; }
 .kpi-card.accent .mini-bar-fill { background: var(--brand-orange); }
@@ -223,9 +219,63 @@ table.pivot tfoot td:first-child{
   position: sticky; left: 0; z-index: 10; border-right:2px solid var(--border-color);
 }
 
-/* SMART DATA BADGES (Heatmap effect stylized) */
-.cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 6px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
-.cv2{background:rgba(249, 115, 22, 0.12);color:#c2410c;font-weight:700;border-radius:4px;padding:2px 6px;display:inline-block; border: 1px solid rgba(249, 115, 22, 0.25)}
+/* SMART DATA BADGES */
+.cell-interactive {
+  cursor: pointer;
+  display: inline-block;
+  transition: transform 0.1s ease;
+  user-select: none;
+}
+.cell-interactive:hover {
+  transform: scale(1.08);
+}
+
+.cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 8px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
+.cv2{background:rgba(249, 115, 22, 0.12);color:#c2410c;font-weight:700;border-radius:4px;padding:2px 8px;display:inline-block; border: 1px solid rgba(249, 115, 22, 0.25)}
+
+/* DEFINITIVE FIXED TOOLTIP (AccuWeather Premium Blur - Escaped from Overflow) */
+#global-tooltip {
+  position: fixed;
+  display: none;
+  background: rgba(15, 23, 42, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #ffffff;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15);
+  width: 240px;
+  text-align: left;
+  z-index: 999999;
+  pointer-events: none;
+}
+.popup-hdr {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+.popup-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  padding: 3px 0;
+}
+.popup-item .p-name {
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+.popup-item .p-val {
+  font-weight: 700;
+  color: #38bdf8;
+}
 
 .total-hidden .total-col{display:none}
 
@@ -339,8 +389,11 @@ table.pivot tfoot td:first-child{
 
 </div>
 
+<div id="global-tooltip"></div>
+
 <script>
 let RAW=[];
+let TOOLTIP_DATA={}; // Repositorio estructurado en memoria para los tooltips
 
 const MESES_NOM={
   "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
@@ -386,11 +439,25 @@ async function loadData(){
 function initFilters(){
   const mesEl=document.getElementById("selMes");
   mesEl.innerHTML="";
-  [...new Set(RAW.map(r=>getM(r.f)))].sort().forEach(m=>{
+  
+  const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
+  
+  mesesDisponibles.forEach(m=>{
     const o=document.createElement("option");
     o.value=m; o.textContent=MESES_NOM[m]||m;
     mesEl.appendChild(o);
   });
+
+  const hoy = new Date();
+  const mesActualStr = String(hoy.getMonth() + 1).padStart(2, '0');
+
+  if(mesesDisponibles.includes(mesActualStr)) {
+    mesEl.value = mesActualStr;
+  } else {
+    if(mesesDisponibles.length > 0) {
+      mesEl.value = mesesDisponibles[0];
+    }
+  }
 
   const coEl=document.getElementById("selCo");
   coEl.innerHTML='<option value="">Todas</option>';
@@ -484,7 +551,14 @@ function updateChkBtn(listId,btnId,labelType){
 }
 
 function clearSingle(id){
-  document.getElementById(id).selectedIndex=0;
+  if(id === "selMes") {
+    const hoy = new Date();
+    const mesActualStr = String(hoy.getMonth() + 1).padStart(2, '0');
+    const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
+    document.getElementById(id).value = mesesDisponibles.includes(mesActualStr) ? mesActualStr : mesesDisponibles[0];
+  } else {
+    document.getElementById(id).selectedIndex=0;
+  }
   populateCascadeFilters();
   render();
 }
@@ -510,7 +584,6 @@ function getFiltered(){
   );
 }
 
-// ── REDISEÑO DE TARJETAS KPI (Ejecutivas) ──────────────────────────────────────
 function buildKPI(data){
   const wrap=document.getElementById("kpiWrap");
   const years=[...new Set(data.map(r=>getY(r.f)))].sort();
@@ -569,7 +642,7 @@ function buildKPI(data){
   wrap.innerHTML=html;
 }
 
-// ── TABLA DINÁMICA MEJORADA ───────────────────────────────────────────────────
+// ── TABLA DINÁMICA CON CAPTURA DE EVENTOS INTEGRAL ───────────────────────────
 function buildPivot(data){
   const mes=document.getElementById("selMes").value;
   const showTotal=document.getElementById("chkTotalCol").checked;
@@ -577,7 +650,9 @@ function buildPivot(data){
   const head=document.getElementById("pivotHead");
   const body=document.getElementById("pivotBody");
   const foot=document.getElementById("pivotFoot");
+  
   head.innerHTML=""; body.innerHTML=""; foot.innerHTML="";
+  TOOLTIP_DATA={}; // Resetear almacén de datos
 
   if(!years.length||!data.length){
     body.innerHTML=`<tr><td colspan="2" class="empty-msg">Sin registros estructurados disponibles.</td></tr>`;
@@ -597,43 +672,72 @@ function buildPivot(data){
   const sorted=[...cellVals].sort((a,b)=>a-b);
   const p75=sorted[Math.floor(sorted.length*0.75)]||0;
 
-  // HEAD
+  // CONSTRUCCIÓN HEAD
   let h=`<tr><th>Día</th>`;
   years.forEach(y=>h+=`<th>Año ${y}</th>`);
   if(showTotal) h+=`<th class="total-col">Media Histórica</th>`;
   h+=`</tr>`;
   head.innerHTML=h;
 
-  // BODY
+  // CONSTRUCCIÓN BODY
   for(let d=1;d<=daysInMonth;d++){
     const anyData=years.some(y=>data.some(r=>getY(r.f)===y&&getD(r.f)===d));
     if(!anyData) continue;
 
     const mStr=(MESES_NOM[mes]||mes).slice(0,3).toUpperCase();
-    let tr=`<tr><td>${d} - ${mStr}</td>`;
+    let tr=document.createElement("tr");
+    
+    let tdDia=document.createElement("td");
+    tdDia.textContent=`${d} - ${mStr}`;
+    tr.appendChild(tdDia);
+
     let totalDia=0; let cols=0;
 
     years.forEach(y=>{
       const rows=data.filter(r=>getY(r.f)===y&&getD(r.f)===d);
       const val=avgDay(rows);
       if(rows.length){ totalDia+=val; cols++; }
+      
+      let tdCell=document.createElement("td");
+
       if(val>0){
         const cls=val>=p75?"cv2":"cv";
-        tr+=`<td><span class="${cls}">${val.toFixed(1)}</span></td>`;
+        let wrapper = document.createElement("div");
+        wrapper.className = `cell-interactive ${cls}`;
+        wrapper.textContent = val.toFixed(1);
+        
+        // Asignación de una llave única en memoria para identificar la celda
+        const cellKey = `c_${d}_${y}`;
+        TOOLTIP_DATA[cellKey] = { year: y, rows: rows };
+        wrapper.setAttribute("data-key", cellKey);
+        
+        // Escucha de eventos nativa libre de strings HTML corruptos
+        wrapper.addEventListener("mouseenter", showGlobalTooltip);
+        wrapper.addEventListener("mousemove", moveGlobalTooltip);
+        wrapper.addEventListener("mouseleave", hideGlobalTooltip);
+
+        tdCell.appendChild(wrapper);
       } else {
-        tr+=`<td><span style="color:#cbd5e1">—</span></td>`;
+        let spanBlank = document.createElement("span");
+        spanBlank.style.color = "#cbd5e1";
+        spanBlank.textContent = "—";
+        tdCell.appendChild(spanBlank);
       }
+      tr.appendChild(tdCell);
     });
 
     if(showTotal){
       const tdVal=cols>0?totalDia/cols:0;
-      tr+=`<td class="total-col" style="font-weight:700;">${tdVal>0?tdVal.toFixed(1):"—"}</td>`;
+      let tdTotal=document.createElement("td");
+      tdTotal.className = "total-col";
+      tdTotal.style.fontWeight = "700";
+      tdTotal.textContent = tdVal>0?tdVal.toFixed(1):"—";
+      tr.appendChild(tdTotal);
     }
-    tr+=`</tr>`;
-    body.insertAdjacentHTML("beforeend",tr);
+    body.appendChild(tr);
   }
 
-  // FOOTER
+  // CONSTRUCCIÓN FOOTER
   let tf=`<tr><td>Total Precipitación</td>`;
   let grandTotal=0; let grandCols=0;
   years.forEach(y=>{
@@ -654,6 +758,52 @@ function buildPivot(data){
   const pivotTable=document.querySelector("table.pivot");
   if(showTotal) pivotTable.classList.remove("total-hidden");
   else pivotTable.classList.add("total-hidden");
+}
+
+// ── CONTROL DEL TOOLTIP GLOBAL BASADO EN CLIENT-COORDINATES ──────────────────
+const gTooltip = document.getElementById("global-tooltip");
+
+function showGlobalTooltip(e) {
+  const key = e.currentTarget.getAttribute("data-key");
+  const cache = TOOLTIP_DATA[key];
+  if (!cache) return;
+  
+  let itemsArr = [];
+  cache.rows.forEach(r => {
+    itemsArr.push(`<div class="popup-item"><span class="p-name">${r.fi}</span><span class="p-val">${r.v.toFixed(1)} mm</span></div>`);
+  });
+  
+  gTooltip.innerHTML = `<div class="popup-hdr">Desglose Fincas (${cache.year})</div>` + itemsArr.join("");
+  gTooltip.style.display = "block";
+  moveGlobalTooltip(e);
+}
+
+function moveGlobalTooltip(e) {
+  const tooltipWidth = 240; 
+  const tooltipHeight = gTooltip.offsetHeight || 90;
+  
+  // Usamos clientX/Y (coordenadas fijas de pantalla) para acoplarlo al "position: fixed"
+  let posX = e.clientX - (tooltipWidth / 2);
+  let posY = e.clientY - tooltipHeight - 16; 
+  
+  // Control anti-desborde horizontal derecho
+  if ((posX + tooltipWidth) > window.innerWidth) {
+    posX = window.innerWidth - tooltipWidth - 20;
+  }
+  // Control anti-desborde horizontal izquierdo
+  if (posX < 0) posX = 10;
+  
+  // Control anti-desborde vertical superior
+  if (posY < 0) {
+    posY = e.clientY + 20; // Si se sale arriba, se muestra abajo del cursor
+  }
+
+  gTooltip.style.left = posX + "px";
+  gTooltip.style.top = posY + "px";
+}
+
+function hideGlobalTooltip() {
+  gTooltip.style.display = "none";
 }
 
 function render(){
