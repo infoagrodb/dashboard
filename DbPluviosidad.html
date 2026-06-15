@@ -187,20 +187,42 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 }
 table.pivot{border-collapse:collapse;width:100%;font-size:12px; color: var(--text-main)}
 
+/* CONFIGURACIÓN DEL ENCABEZADO MULTIFILA */
 table.pivot thead th{
   background: #f1f5f9;color: var(--text-main);font-weight:700;
-  padding:10px 12px;text-align:center;
-  border-bottom: 2px solid var(--border-color);
+  padding:8px 12px;text-align:center;
+  border-bottom: 1px solid var(--border-color);
   border-right:1px solid var(--border-color);
-  white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.04em
+  white-space:nowrap;font-size:11px;text-transform:uppercase;letter-spacing:.04em;
 }
-table.pivot thead th:first-child{
+table.pivot thead tr.hdr-titles th{
+  padding:10px 12px;
+}
+table.pivot thead tr.hdr-titles th:first-child{
   background:#f8fafc;color:var(--text-main);text-align:left;
   border-right:2px solid var(--border-color);
   width:140px;min-width:140px;position: sticky; left: 0; z-index: 10;
 }
-table.pivot thead th.total-col{background:#e2e8f0; color: var(--brand-dark)}
+table.pivot thead tr.hdr-totals th{
+  background: #e2e8f0;
+  color: var(--brand-dark);
+  font-size: 12px;
+  font-weight: 800;
+  border-bottom: 2px solid var(--brand-dark);
+}
+table.pivot thead tr.hdr-totals th:first-child{
+  text-align:left;
+  color: var(--brand-dark);
+  background:#cbd5e1;
+  position: sticky; left: 0; z-index: 10;
+  border-right:2px solid var(--border-color);
+  font-size: 10px;
+  letter-spacing: .05em;
+}
+table.pivot thead th.total-col{background:#cbd5e1; color: var(--brand-dark)}
+table.pivot thead tr.hdr-totals th.total-col{color: var(--brand-orange); background: #cbd5e1;}
 
+/* CUERPO DE LA TABLA */
 table.pivot tbody td{
   padding:8px 12px;text-align:center;
   border-bottom:1px solid var(--border-color);border-right:1px solid var(--border-color);
@@ -214,17 +236,6 @@ table.pivot tbody td:first-child{
 }
 table.pivot tbody tr:hover td{background: #f8fafc}
 table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
-
-table.pivot tfoot td{
-  border-top:2px solid var(--brand-dark);
-  background:#f1f5f9;font-weight:700;font-size:12px;
-  padding:10px 12px;text-align:center;color:var(--brand-dark);
-}
-table.pivot tfoot td:first-child{
-  text-align:left;color:var(--brand-dark);font-size:11px;
-  text-transform:uppercase;letter-spacing:.04em;background:#e2e8f0;
-  position: sticky; left: 0; z-index: 10; border-right:2px solid var(--border-color);
-}
 
 /* SMART DATA BADGES */
 .cell-interactive {
@@ -389,7 +400,6 @@ table.pivot tfoot td:first-child{
       <table class="pivot">
         <thead id="pivotHead"></thead>
         <tbody id="pivotBody"></tbody>
-        <tfoot id="pivotFoot"></tfoot>
       </table>
     </div>
   </div>
@@ -431,9 +441,7 @@ async function loadData(){
     const resp=await fetch(url+"?cache="+Date.now());
     const json=await resp.json();
     
-    // RED DE SEGURIDAD PARSEO: Detecta arreglos directos o envolturas clásicas de API de Odoo
     const records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
-    
     if(!records.length && json.records) records = json.records;
 
     RAW=records.map(r=>{
@@ -721,15 +729,15 @@ function buildKPI(data){
   wrap.appendChild(containerGrid);
 }
 
+// ── TABLA DINÁMICA CON FILA DE TOTALES ACUMULADOS EN EL ENCABEZADO SUPERIOR ──
 function buildPivot(data){
   const mes=document.getElementById("selMes").value;
   const showTotal=document.getElementById("chkTotalCol").checked;
   const years=[...new Set(data.map(r=>getY(r.f)))].sort();
   const head=document.getElementById("pivotHead");
   const body=document.getElementById("pivotBody");
-  const foot=document.getElementById("pivotFoot");
   
-  head.innerHTML=""; body.innerHTML=""; foot.innerHTML="";
+  head.innerHTML=""; body.innerHTML="";
 
   if(!years.length||!data.length){
     body.innerHTML=`<tr><td colspan="2" class="empty-msg">Sin registros estructurados disponibles.</td></tr>`;
@@ -749,14 +757,55 @@ function buildPivot(data){
   const sorted=[...cellVals].sort((a,b)=>a-b);
   const p75=sorted[Math.floor(sorted.length*0.75)]||0;
 
-  // HEAD
-  let h=`<tr><th>Día</th>`;
-  years.forEach(y=>h+=`<th>Año ${y}</th>`);
-  if(showTotal) h+=`<th class="total-col">Media Histórica</th>`;
-  h+=`</tr>`;
-  head.innerHTML=h;
+  // FILA 1 ENCABEZADO: TÍTULOS DE LAS COLUMNAS CLÁSICAS
+  let trTitles = document.createElement("tr");
+  trTitles.className = "hdr-titles";
+  
+  let thDiaLabel = document.createElement("th");
+  thDiaLabel.textContent = "Día / Período";
+  trTitles.appendChild(thDiaLabel);
 
-  // BODY
+  years.forEach(y=>{
+    let thY = document.createElement("th");
+    thY.textContent = `Año ${y}`;
+    trTitles.appendChild(thY);
+  });
+  if(showTotal){
+    let thMediaLabel = document.createElement("th");
+    thMediaLabel.className = "total-col";
+    thMediaLabel.textContent = "Media Histórica";
+    trTitles.appendChild(thMediaLabel);
+  }
+  head.appendChild(trTitles);
+
+  // FILA 2 ENCABEZADO: VALORES DE TOTAL PRECIPITACIÓN ACUMULADA
+  let trTotals = document.createElement("tr");
+  trTotals.className = "hdr-totals";
+
+  let thTotalTitle = document.createElement("th");
+  thTotalTitle.textContent = "Total Precipitación";
+  trTotals.appendChild(thTotalTitle);
+
+  let grandTotal=0; let grandCols=0;
+  years.forEach(y=>{
+    const val=totalMes(data.filter(r=>getY(r.f)===y));
+    grandTotal+=val; grandCols++;
+    
+    let thYTotal = document.createElement("th");
+    thYTotal.textContent = `${val>0?val.toFixed(1):"0.0"} mm`;
+    trTotals.appendChild(thYTotal);
+  });
+
+  if(showTotal){
+    const gt=grandCols>0?grandTotal/grandCols:0;
+    let thGrandTotal = document.createElement("th");
+    thGrandTotal.className = "total-col";
+    thGrandTotal.textContent = `${gt>0?gt.toFixed(1):"0.0"} mm`;
+    trTotals.appendChild(thGrandTotal);
+  }
+  head.appendChild(trTotals);
+
+  // CONSTRUCCIÓN DEL CUERPO (DISTRIBUCIÓN DIARIA DE LLUVIA)
   for(let d=1;d<=daysInMonth;d++){
     const anyData=years.some(y=>data.some(r=>getY(r.f)===y&&getD(r.f)===d));
     if(!anyData) continue;
@@ -817,21 +866,6 @@ function buildPivot(data){
     }
     body.appendChild(tr);
   }
-
-  // FOOTER
-  let tf=`<tr><td>Total Precipitación</td>`;
-  let grandTotal=0; let grandCols=0;
-  years.forEach(y=>{
-    const val=totalMes(data.filter(r=>getY(r.f)===y));
-    grandTotal+=val; grandCols++;
-    tf+=`<td><span style="font-size:13px; font-weight:800;">${val>0?val.toFixed(1):"0.0"} mm</span></td>`;
-  });
-  if(showTotal){
-    const gt=grandCols>0?grandTotal/grandCols:0;
-    tf+=`<td class="total-col" style="color:var(--brand-orange); font-size:13px; font-weight:800;">${gt>0?gt.toFixed(1):"0.0"} mm</td>`;
-  }
-  tf+=`</tr>`;
-  foot.innerHTML=tf;
 
   const mn=MESES_NOM[mes]||mes;
   document.getElementById("pivotLabel").textContent=`Análisis de Precipitaciones Diarias · Mensualizado: Días de ${mn} × Año (Valores en mm)`;
