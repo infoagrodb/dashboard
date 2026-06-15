@@ -1,999 +1,875 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Indicadores Operativos — División Agrícola Comasa</title>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard de Seguimiento - Division Agricola Comasa</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 <style>
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#f4f5f0;
-  --surface:#ffffff;
-  --surface2:#f0f1ec;
-  --border:#e2e3dc;
-  --border2:#d0d1c8;
-  --text:#1a1c18;
-  --muted:#6b6d66;
-  --faint:#9a9c94;
-  --green:#1e7d3a;
-  --green-bg:#e8f5ec;
-  --green-mid:#4caf6e;
-  --blue:#1a5fa8;
-  --blue-bg:#e6f0fb;
-  --amber:#8a5a00;
-  --amber-bg:#fdf3dc;
-  --amber-mid:#e0a020;
-  --red:#b91c1c;
-  --red-bg:#fdeaea;
-  --red-mid:#ef4444;
-  --teal:#0e7490;
-  --teal-bg:#e0f7fa;
-  --purple:#6d28d9;
-  --purple-bg:#ede9fe;
-  --r:10px;
-  --r-sm:6px;
-}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-html{scroll-behavior:smooth}
-body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.55;min-height:100vh}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Inter', "Segoe UI", Arial, sans-serif; background: #F3F4F6; color: #1E293B; padding: 24px; }
 
-/* HEADER */
-.header{background:var(--text);padding:0 36px;display:flex;align-items:stretch;justify-content:space-between;position:sticky;top:0;z-index:200}
-.header-brand{display:flex;align-items:center;gap:14px;padding:16px 0}
-.header-logo{width:38px;height:38px;background:var(--green-mid);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:#fff;flex-shrink:0;letter-spacing:-.5px}
-.header-title{font-size:15px;font-weight:600;color:#fff;line-height:1.2}
-.header-sub{font-size:11px;color:#9ca3af;font-weight:300;margin-top:1px}
-.header-meta{display:flex;align-items:center;gap:8px}
-.header-tag{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#d1d5db;padding:4px 12px;border-radius:20px;font-size:11px;font-family:'IBM Plex Mono',monospace}
-.header-tag.green{background:rgba(76,175,110,.15);border-color:rgba(76,175,110,.35);color:#6ee7a0}
+/* === HEADER EXECUTIVE === */
+.header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px; margin-bottom:24px; padding: 20px 24px; background: #0F2537; color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06); border-bottom: 4px solid #C5A059; }
+.header-left .org { font-size:12px; color:#94A3B8; letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px; font-weight: 500;}
+.header-left h1 { font-size:22px; font-weight:600; color:#ffffff; margin: 0;}
+.live { display:flex; align-items:center; gap:8px; font-size:13px; color:#CBD5E1; }
+.dot { width:10px; height:10px; border-radius:50%; background:#10B981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
+.dot.error{background:#EF4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);} 
+.dot.loading{background:#F59E0B; box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2);}
+.refresh-btn { font-size:13px; font-weight: 500; padding:8px 16px; border-radius:6px; border:none; background:#C5A059; color:#fff; cursor:pointer; margin-top:8px; transition: background 0.2s, transform 0.1s; }
+.refresh-btn:hover{background:#B08D4B; transform: translateY(-1px);}
 
-/* NAV */
-.nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 36px;display:flex;gap:0;overflow-x:auto;position:sticky;top:72px;z-index:190}
-.nav-tab{padding:13px 20px;font-size:13px;font-weight:400;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;transition:all .18s;user-select:none;display:flex;align-items:center;gap:7px}
-.nav-tab:hover{color:var(--text)}
-.nav-tab.active{color:var(--green);border-bottom-color:var(--green);font-weight:500}
-.nav-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.6}
+/* === FILTERS MODERNS === */
+.filters { background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid #E2E8F0; margin-bottom: 24px; display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; position:relative; z-index:50; }
+.filters label{ display:block; font-size:12px; font-weight: 600; color:#475569; margin-bottom:6px; text-transform: uppercase; letter-spacing: 0.02em;}
+.filters select, .msel-btn { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #CBD5E1; background:#F8FAFC; font-size:13px; color: #1E293B; font-family: inherit; transition: all 0.2s; cursor:pointer;}
+.filters select:focus, .msel-btn:focus { outline:none; border-color:#C5A059; background: #ffffff; box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); }
+.msel { position:relative; }
+.msel-btn { text-align:left; }
+.msel-panel { display:none; position:absolute; top:calc(100% + 4px); left:0; background:#ffffff; border:1px solid #E2E8F0; border-radius:8px; box-shadow:0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); padding:8px; max-height:260px; overflow:auto; min-width:240px; z-index:60; }
+.msel-panel.open{ display:block; }
+.msel-item{ display:flex; align-items:center; gap:8px; padding:6px 8px; font-size:13px; border-radius:6px; cursor:pointer; color: #334155; transition: background 0.1s;}
+.msel-item label{ display:flex; align-items:center; gap:8px; cursor:pointer; width:100%; font-weight: 400; text-transform: none; margin: 0;}
+.msel-item input[type="checkbox"] { accent-color: #0F2537; width: 14px; height: 14px; cursor: pointer;}
+.msel-item:hover{ background:#F1F5F9; }
 
-/* MAIN */
-.main{padding:28px 36px;max-width:1380px;margin:0 auto}
-.section{display:none}.section.active{display:block}
+/* === CHIPS === */
+.chips { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; min-height:10px; }
+.chip { background:#E0E7FF; color:#3730A3; border-radius:16px; padding:6px 12px; font-size:12px; font-weight: 500; display:flex; align-items:center; gap:8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+.chip button{ border:none; background:rgba(55, 48, 163, 0.1); border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor:pointer; font-weight:700; color:#3730A3; transition: background 0.2s; }
+.chip button:hover { background:rgba(55, 48, 163, 0.2); }
 
-/* FILTER BAR */
-.filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:22px;flex-wrap:wrap}
-.filter-label{font-size:11px;color:var(--faint);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-right:2px}
-.filter-btn{background:var(--surface);border:1px solid var(--border2);color:var(--muted);padding:5px 14px;border-radius:20px;font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;font-family:'IBM Plex Sans',sans-serif}
-.filter-btn:hover{border-color:var(--green);color:var(--green)}
-.filter-btn.active{background:var(--green-bg);border-color:var(--green);color:var(--green);font-weight:600}
+/* === TABS EXECUTIVE === */
+.tabs { display:flex; gap:24px; margin-bottom:24px; border-bottom:2px solid #E2E8F0; padding-bottom: 2px;}
+.tab-btn { padding:10px 4px; font-size:14px; font-family: inherit; font-weight: 500; border:none; background:none; cursor:pointer; color:#64748B; border-bottom:3px solid transparent; margin-bottom:-4px; transition:all 0.2s; }
+.tab-btn:hover { color: #0F2537; }
+.tab-btn.active{ color:#0F2537; font-weight:600; border-bottom-color:#C5A059; }
+.tab-panel{ display:none; } .tab-panel.active{ display:block; animation: fadeIn 0.3s ease-in-out; }
 
-/* KPIs */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:24px}
-.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;position:relative;overflow:hidden;transition:box-shadow .2s}
-.kpi:hover{box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.kpi-stripe{position:absolute;top:0;left:0;right:0;height:3px;border-radius:var(--r) var(--r) 0 0}
-.kpi-label{font-size:11px;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;font-weight:500;margin-bottom:9px}
-.kpi-value{font-size:26px;font-weight:600;color:var(--text);font-family:'IBM Plex Mono',monospace;line-height:1}
-.kpi-unit{font-size:13px;font-weight:400;color:var(--muted);margin-left:2px}
-.kpi-badge{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:500;margin-top:8px;padding:2px 8px;border-radius:4px}
-.badge-up{background:var(--red-bg);color:var(--red)}
-.badge-down{background:var(--green-bg);color:var(--green)}
-.badge-neutral{background:var(--surface2);color:var(--muted)}
-.kpi-sub{font-size:11px;color:var(--faint);margin-top:3px}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-/* CARDS */
-.grid{display:grid;gap:14px;margin-bottom:14px}
-.g2{grid-template-columns:1fr 1fr}
-.g3{grid-template-columns:1fr 1fr 1fr}
-.g1{grid-template-columns:1fr}
-.span2{grid-column:span 2}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:20px 22px;transition:box-shadow .2s}
-.card:hover{box-shadow:0 4px 16px rgba(0,0,0,.07)}
-.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:3px}
-.card-sub{font-size:12px;color:var(--muted);margin-bottom:14px}
+/* === KPIs MODERNS === */
+.kpi-container{ display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:24px; }
+.kpi{ background:white; border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06); border-left:4px solid #0F2537; display: flex; flex-direction: column; justify-content: center;}
+.kpi.bad{ border-left-color:#DC2626; }
+.kpi-label{ font-size:12px; font-weight: 600; color:#64748B; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom:8px; }
+.kpi-val{ font-size:28px; font-weight:700; color: #0F172A; line-height: 1.1;}
+.kpi-sub{ font-size:12px; color:#94A3B8; margin-top:8px; font-weight: 500;}
+.kpi-status{ display:inline-flex; align-items: center; justify-content: center; font-size:11px; font-weight:600; margin-top:12px; padding:4px 10px; border-radius:12px; width: fit-content; letter-spacing: 0.02em;}
+.status-ok{background:#D1FAE5;color:#065F46;} 
+.status-bad{background:#FEE2E2;color:#991B1B;} 
+.status-na{background:#F1F5F9;color:#475569;}
+.kpi-group-title{ font-size:15px; font-weight:700; color:#0F2537; margin:24px 0 12px; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px;}
 
-/* LEGEND */
-.legend{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px}
-.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
-.leg-sq{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+/* === CARDS & LAYOUT === */
+.section-title{ font-size:15px; font-weight:700; color:#0F2537; text-transform:uppercase; letter-spacing:1px; margin:32px 0 16px; border-left:4px solid #C5A059; padding-left:12px; display: flex; align-items: center;}
+.card{ background:white; border-radius:12px; padding:20px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); border: 1px solid #F1F5F9;}
+.card-title{ font-size:14px; font-weight:600; color:#334155; margin-bottom:16px; border-bottom: 1px solid #F1F5F9; padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;}
+.grid2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px; }
+.grid1{ margin-bottom:20px; }
+.legend{ display:flex; gap:16px; flex-wrap:wrap; margin-top:12px; font-size:12px; color:#475569; font-weight: 500;}
+.legend span{ display:flex; align-items:center; gap:6px; }
+.ldot{ width:10px; height:10px; border-radius:50%; }
+.ldash{ width:16px; height:0; border-top:2px dashed #DC2626; }
+.status-msg,.error-msg{ text-align:center; padding:40px; font-size:14px; color:#64748B; background: white; border-radius: 12px; box-shadow:0 1px 3px rgba(0,0,0,0.1); font-weight: 500;}
+.error-msg{ color:#DC2626; border-left: 4px solid #DC2626;}
+footer{ text-align:center; margin-top:32px; font-size:12px; color:#94A3B8; font-weight: 500; padding-bottom: 20px;}
 
-/* INSIGHT */
-.insight{display:flex;gap:9px;padding:10px 13px;margin-top:13px;font-size:12px;color:var(--muted);line-height:1.55;border-radius:0 var(--r-sm) var(--r-sm) 0}
-.insight strong{color:var(--text);font-weight:500}
-.ins-green{background:var(--green-bg);border-left:3px solid var(--green)}
-.ins-amber{background:var(--amber-bg);border-left:3px solid var(--amber-mid)}
-.ins-red{background:var(--red-bg);border-left:3px solid var(--red-mid)}
-.ins-blue{background:var(--blue-bg);border-left:3px solid var(--blue)}
+/* === TABLES EXECUTIVE BADGES === */
+table.alert-table{ width:100%; border-collapse:separate; border-spacing: 0; font-size:13px; }
+table.alert-table th, table.alert-table td{ padding:10px 12px; border-bottom:1px solid #E2E8F0; text-align:right; }
+table.alert-table th{ text-align:center; cursor:pointer; background:#F8FAFC; font-size:12px; font-weight: 600; color: #475569; white-space:nowrap; text-transform: uppercase; letter-spacing: 0.02em; border-top: 1px solid #E2E8F0; transition: background 0.2s;}
+table.alert-table th:hover { background: #F1F5F9; }
+table.alert-table td:first-child, table.alert-table td:nth-child(2), table.alert-table th:first-child, table.alert-table th:nth-child(2){ text-align:left; }
+table.alert-table tr.subtotal{ font-weight:700; background:#F8FAFC; color: #0F2537;}
+table.alert-table tr.total{ font-weight:700; background:#E0E7FF; color: #1E3A8A;}
+table.alert-table tbody tr:hover td { background: #F8FAFC; }
 
-/* ALERT */
-.alert{background:var(--red-bg);border:1px solid rgba(185,28,28,.2);border-radius:var(--r);padding:12px 16px;margin-bottom:22px;display:flex;align-items:flex-start;gap:10px;font-size:13px;color:var(--red)}
-.alert-icon{width:20px;height:20px;background:var(--red);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0;margin-top:1px}
-.alert strong{color:var(--red)}
+/* The Pill Badges for Table Status */
+td.cell-ok { color: #059669 !important; font-weight: 600; }
+td.cell-bad { color: #DC2626 !important; font-weight: 600; }
+td.cell-warn { color: #D97706 !important; font-weight: 600; }
+.toggle-row{ display:flex; align-items:center; gap:8px; margin-bottom:16px; font-size:13px; font-weight: 500; color: #334155;}
+.toggle-row input { accent-color: #0F2537; width: 14px; height: 14px; cursor: pointer;}
 
-/* SECTION LABEL */
-.sec-label{font-size:11px;color:var(--faint);letter-spacing:.07em;text-transform:uppercase;font-weight:500;border-bottom:1px solid var(--border);padding-bottom:8px;margin:24px 0 16px}
+table.heat-table{ width:100%; border-collapse:separate; border-spacing: 0; font-size:12px; }
+table.heat-table th,table.heat-table td{ padding:8px 10px; text-align:center; border:1px solid #E2E8F0; white-space:nowrap; }
+table.heat-table th{ background:#0F2537; color: white; font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em;}
+table.heat-table td:first-child{ text-align:left; font-weight:600; background:#F8FAFC; position:sticky; left:0; border-right: 2px solid #CBD5E1; color: #0F2537;}
+table.heat-table tbody tr:hover td:not(:first-child) { opacity: 0.8; }
 
-/* TABLE */
-.tbl{width:100%;border-collapse:collapse;font-size:12px}
-.tbl th{padding:8px 10px;text-align:left;color:var(--faint);font-weight:500;letter-spacing:.05em;text-transform:uppercase;font-size:10px;border-bottom:1px solid var(--border);background:var(--surface2)}
-.tbl td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
-.tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:var(--surface2)}
-.pill{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500;font-family:'IBM Plex Mono',monospace}
-.p-red{background:var(--red-bg);color:var(--red)}
-.p-green{background:var(--green-bg);color:var(--green)}
-.p-amber{background:var(--amber-bg);color:var(--amber)}
-.p-blue{background:var(--blue-bg);color:var(--blue)}
-.p-purple{background:var(--purple-bg);color:var(--purple)}
-
-/* SEMAFORO */
-.semaforo{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:4px;vertical-align:middle}
-.s-red{background:var(--red-mid)}
-.s-amber{background:var(--amber-mid)}
-.s-green{background:var(--green-mid)}
-
-/* PROGRESS */
-.prog-bar{height:6px;background:var(--surface2);border-radius:3px;margin-top:4px;overflow:hidden}
-.prog-fill{height:100%;border-radius:3px;transition:width .6s ease}
-
-@media(max-width:900px){
-  .g2,.g3{grid-template-columns:1fr}
-  .span2{grid-column:span 1}
-  .main{padding:16px}
-  .header{padding:0 16px}
-  .nav{padding:0 16px}
-}
+@media (max-width:800px){ .grid2{ grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
 
-<header class="header">
-  <div class="header-brand">
-    <div class="header-logo">DA</div>
-    <div>
-      <div class="header-title">División Agrícola Comasa</div>
-      <div class="header-sub">Dashboard de Indicadores Operativos — Siembra de Maní</div>
+<div class="header">
+  <div class="header-left">
+    <div class="org">Productor: Division Agricola Comasa</div>
+    <h1>Dashboard de Seguimiento de Actividades</h1>
+  </div>
+  <div style="text-align:right">
+    <div class="live"><div class="dot loading" id="status-dot"></div><span id="update-time">Conectando con Google Sheets...</span></div>
+    <button class="refresh-btn" onclick="init()">Actualizar datos</button>
+  </div>
+</div>
+
+<div class="filters">
+  <div><label>Ciclo</label><select id="sel-ciclo" onchange="onCicloChange()"></select></div>
+  <div><label>Actividad (Combinar)</label>
+    <div class="msel">
+      <button type="button" class="msel-btn" id="btn-actividad" onclick="togglePanel('panel-actividad')"></button>
+      <div class="msel-panel" id="panel-actividad"></div>
     </div>
   </div>
-  <div class="header-meta">
-    <span class="header-tag">Ciclos 2022 – 2025</span>
-    <span class="header-tag green">● 6 Indicadores</span>
-  </div>
-</header>
-
-<nav class="nav">
-  <div class="nav-tab active" onclick="goTab('resumen',this)"><span class="nav-dot"></span>Resumen</div>
-  <div class="nav-tab" onclick="goTab('dh',this)"><span class="nav-dot"></span>Días Hombre / Mzn</div>
-  <div class="nav-tab" onclick="goTab('diesel',this)"><span class="nav-dot"></span>Diesel / Mzn</div>
-  <div class="nav-tab" onclick="goTab('horas',this)"><span class="nav-dot"></span>Horas Máquina / Mzn</div>
-  <div class="nav-tab" onclick="goTab('labor',this)"><span class="nav-dot"></span>Indicadores por Labor</div>
-  <div class="nav-tab" onclick="goTab('fincas',this)"><span class="nav-dot"></span>Comparativa por Finca</div>
-  <div class="nav-tab" onclick="goTab('kl',this)"><span class="nav-dot"></span>Insumos KL/Mzn</div>
-</nav>
-
-<main class="main">
-
-<!-- ══════ TAB: RESUMEN ══════ -->
-<section id="tab-resumen" class="section active">
-  <div class="alert">
-    <div class="alert-icon">!</div>
-    <div><strong>Hallazgo crítico:</strong> En Maní 2024 los tres indicadores de siembra empeoraron simultáneamente: diesel subió +29.5%, horas máquina +19.7% y días hombre +35.6% por manzana. Requiere análisis urgente de causas raíz.</div>
-  </div>
-
-  <div class="kpi-grid">
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--green)"></div>
-      <div class="kpi-label">DH / mzn — Siembra 2025</div>
-      <div class="kpi-value">1.116<span class="kpi-unit">DH</span></div>
-      <div class="kpi-badge badge-up">▲ 6% vs 2024</div>
-      <div class="kpi-sub">Meta recomendada: ≤ 0.94 DH/mzn</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--blue)"></div>
-      <div class="kpi-label">Diesel / mzn — Siembra 2025</div>
-      <div class="kpi-value">7.739<span class="kpi-unit">lts</span></div>
-      <div class="kpi-badge badge-down">▼ 15% mejora vs 2024</div>
-      <div class="kpi-sub">Meta: mantener ≤ 7.03 (nivel 2023)</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--amber-mid)"></div>
-      <div class="kpi-label">Hrs máquina / mzn — 2025</div>
-      <div class="kpi-value">0.990<span class="kpi-unit">hrs</span></div>
-      <div class="kpi-badge badge-down">▼ 14.6% mejora vs 2024</div>
-      <div class="kpi-sub">Mejor valor del período 2024-2025</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--red-mid)"></div>
-      <div class="kpi-label">Pico máx. DH/mzn registrado</div>
-      <div class="kpi-value">1.116<span class="kpi-unit">DH</span></div>
-      <div class="kpi-badge badge-up">Maní 2025</div>
-      <div class="kpi-sub">vs 0.794 DH/mzn en Maní 2023</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--teal)"></div>
-      <div class="kpi-label">Total mzn sembradas (2025)</div>
-      <div class="kpi-value">2,767<span class="kpi-unit">mzn</span></div>
-      <div class="kpi-badge badge-neutral">▼ 11.7% vs 2024</div>
-      <div class="kpi-sub">Máximo histórico: 3,135 mzn (2024)</div>
+  <div><label>Sector (Comparar)</label>
+    <div class="msel">
+      <button type="button" class="msel-btn" id="btn-sector" onclick="togglePanel('panel-sector')"></button>
+      <div class="msel-panel" id="panel-sector"></div>
     </div>
   </div>
-
-  <p class="sec-label">Los 6 indicadores operativos — Siembra</p>
-
-  <div class="grid g2">
-    <!-- G1: Los 3 ratios por ciclo -->
-    <div class="card">
-      <div class="card-title">Evolución de los 3 indicadores de eficiencia en Siembra</div>
-      <div class="card-sub">Comparativa de DH/mzn, Diesel/mzn y Hrs máquina/mzn por ciclo (índice base 2023 = 1.0)</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>DH / mzn</span>
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Diesel / mzn</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Hrs máq. / mzn</span>
-      </div>
-      <div style="position:relative;height:250px"><canvas id="g1" role="img" aria-label="Evolución indicadores siembra indexados"></canvas></div>
-      <div class="insight ins-amber">En 2024 los <strong>3 indicadores empeoraron a la vez</strong>. En 2025 el diesel y horas máquina mejoraron, pero los días hombre siguen en máximo histórico, lo que sugiere un problema de productividad laboral.</div>
-    </div>
-
-    <!-- G2: Radar comparativo -->
-    <div class="card">
-      <div class="card-title">Perfil de eficiencia operativa — Siembra</div>
-      <div class="card-sub">Radar comparativo por ciclo (menor área = más eficiente)</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#4caf6e"></span>Maní 2023</span>
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:250px"><canvas id="g2" role="img" aria-label="Radar de eficiencia operativa siembra"></canvas></div>
-      <div class="insight ins-blue">El ciclo <strong>2023 fue el más eficiente</strong> en todos los ejes. El 2024 muestra el área más grande (peor desempeño). El 2025 mejora en diesel y máquina pero no en mano de obra.</div>
-    </div>
+  <div><label>Periodo</label>
+    <select id="sel-periodo" onchange="state.periodo=this.value; render()">
+      <option value="10">Últimos 10 días</option>
+      <option value="20">Últimos 20 días</option>
+      <option value="30">Últimos 30 días</option>
+      <option value="todo" selected>Todo el ciclo</option>
+    </select>
   </div>
+  <div><label>Comparar con ciclo</label><select id="sel-compare" onchange="render()"><option value="">Ninguno</option></select></div>
+</div>
 
-  <div class="grid g1">
-    <!-- G3: Mzn sembradas + total DH side by side -->
-    <div class="card">
-      <div class="card-title">Manzanas sembradas vs Total días hombre empleados — Siembra</div>
-      <div class="card-sub">Relación entre área trabajada y fuerza laboral usada en la actividad de siembra</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>Manzanas sembradas</span>
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Total días hombre</span>
-      </div>
-      <div style="position:relative;height:220px"><canvas id="g3" role="img" aria-label="Manzanas vs dias hombre siembra"></canvas></div>
-      <div class="insight ins-red">En <strong>2024 se sembraron solo 60 mzn más que en 2023 (+2%)</strong>, pero el total de DH de todo el ciclo fue <strong>46,478 vs 49,669 en 2023</strong>. El indicador global DH/mzn pasó de 16.15 a 14.83, una ligera mejora. El alza en 2025 (17.04) refleja más mano de obra por unidad de área producida.</div>
-    </div>
-  </div>
-</section>
+<div class="chips" id="chips"></div>
 
-<!-- ══════ TAB: DÍAS HOMBRE ══════ -->
-<section id="tab-dh" class="section">
-  <p class="sec-label">Indicador 1 — Días hombre por manzana de siembra</p>
+<div class="tabs">
+  <button class="tab-btn active" onclick="showTab('resumen')">Resumen Operativo</button>
+  <button class="tab-btn" onclick="showTab('avanzado')">Análisis Avanzado</button>
+  <button class="tab-btn" onclick="showTab('equipos')">Equipos</button>
+</div>
 
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--green)"></div><div class="kpi-label">DH/mzn — Maní 2022</div><div class="kpi-value">13.84</div><div class="kpi-sub">Total DH ciclo ÷ mzn siembra</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:#9ca3af"></div><div class="kpi-label">DH/mzn — Maní 2023</div><div class="kpi-value">16.15</div><div class="kpi-badge badge-up">▲ 16.7% vs 2022</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--blue)"></div><div class="kpi-label">DH/mzn — Maní 2024</div><div class="kpi-value">14.83</div><div class="kpi-badge badge-down">▼ 8.2% mejora vs 2023</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--red-mid)"></div><div class="kpi-label">DH/mzn — Maní 2025</div><div class="kpi-value">17.04</div><div class="kpi-badge badge-up">▲ 14.9% vs 2024</div><div class="kpi-sub">Máximo del período</div></div>
-  </div>
+<div id="tab-resumen" class="tab-panel active">
+  <div id="content"><div class="status-msg">Cargando datos desde Google Sheets...</div></div>
+</div>
+<div id="tab-avanzado" class="tab-panel">
+  <div id="content-avanzado"><div class="status-msg">Cargando...</div></div>
+</div>
+<div id="tab-equipos" class="tab-panel">
+  <div id="content-equipos"><div class="status-msg">Cargando...</div></div>
+</div>
 
-  <div class="grid g2">
-    <!-- G4: DH/mzn por ciclo -->
-    <div class="card">
-      <div class="card-title">Días hombre por manzana — Siembra por ciclo</div>
-      <div class="card-sub">Cuántos días de trabajo se requieren por cada manzana sembrada</div>
-      <div style="position:relative;height:240px"><canvas id="g4" role="img" aria-label="DH por mzn siembra por ciclo"></canvas></div>
-      <div class="insight ins-red">El indicador <strong>no muestra mejora en 2025</strong> a pesar de reducir el área. Sugiere que la productividad del trabajador sigue baja: misma cantidad de mano de obra para menos tierra.</div>
-    </div>
-
-    <!-- G5: DH por puesto (2024 vs 2025) -->
-    <div class="card">
-      <div class="card-title">Composición de días hombre por tipo de puesto — Siembra</div>
-      <div class="card-sub">Distribución interna de la fuerza laboral entre operarios, jornaleros y ayudantes</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Maní 2023</span>
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:240px"><canvas id="g5" role="img" aria-label="DH por puesto en siembra"></canvas></div>
-      <div class="insight ins-blue">Los <strong>jornaleros dominan</strong> la siembra (63-73% del total de DH). El número de <strong>operadores de maquinaria</strong> creció de 238 DH en 2023 a 825 en 2024 (+247%), sin aumento proporcional de área.</div>
-    </div>
-  </div>
-
-  <!-- G6: DH/mzn por finca -->
-  <div class="grid g1">
-    <div class="card">
-      <div class="card-title">Días hombre por manzana según finca — Siembra 2024 vs 2025</div>
-      <div class="card-sub">Identificación de fincas con mayor demanda laboral por manzana sembrada (semáforo de eficiencia)</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:290px"><canvas id="g6" role="img" aria-label="DH por mzn por finca siembra"></canvas></div>
-      <div class="insight ins-amber"><strong>Palo de Pan (32.7)</strong> y <strong>Llano Verde (26.8)</strong> son las fincas con mayor carga laboral por mzn sembrada, considerando todo el ciclo. <strong>San Luis (10.3)</strong> y <strong>La Concha (15.1)</strong> son las más eficientes. La brecha entre la mejor y peor finca es de 3x.</div>
-    </div>
-  </div>
-
-  <!-- Tabla ranking -->
-  <div class="grid g2">
-    <div class="card">
-      <div class="card-title">Ranking de fincas — DH/mzn en Siembra 2024</div>
-      <div class="card-sub">Ordenado de mayor a menor consumo de mano de obra por manzana</div>
-      <table class="tbl">
-        <thead><tr><th>#</th><th>Finca</th><th>DH totales</th><th>Mzn</th><th>DH/mzn</th><th>Nivel</th></tr></thead>
-        <tbody>
-          <tr><td>1</td><td>Palo de Pan</td><td>138</td><td>56.75</td><td><span class="pill p-red">2.43</span></td><td><span class="semaforo s-red"></span>Crítico</td></tr>
-          <tr><td>2</td><td>Rancho Pando</td><td>396</td><td>203.5</td><td><span class="pill p-red">1.95</span></td><td><span class="semaforo s-red"></span>Crítico</td></tr>
-          <tr><td>3</td><td>Santa Isabel</td><td>206</td><td>118</td><td><span class="pill p-red">1.75</span></td><td><span class="semaforo s-red"></span>Alto</td></tr>
-          <tr><td>4</td><td>Llano Verde</td><td>145</td><td>91.5</td><td><span class="pill p-amber">1.58</span></td><td><span class="semaforo s-amber"></span>Medio</td></tr>
-          <tr><td>5</td><td>La Concha</td><td>781</td><td>564.3</td><td><span class="pill p-amber">1.38</span></td><td><span class="semaforo s-amber"></span>Medio</td></tr>
-          <tr><td>6</td><td>Miramar</td><td>501</td><td>425.3</td><td><span class="pill p-amber">1.18</span></td><td><span class="semaforo s-amber"></span>Normal</td></tr>
-          <tr><td>7</td><td>La Laguna</td><td>303</td><td>278</td><td><span class="pill p-amber">1.09</span></td><td><span class="semaforo s-amber"></span>Normal</td></tr>
-          <tr><td>8</td><td>Montana</td><td>201</td><td>205</td><td><span class="pill p-green">0.98</span></td><td><span class="semaforo s-green"></span>Óptimo</td></tr>
-          <tr><td>9</td><td>San Luis</td><td>98</td><td>113</td><td><span class="pill p-green">0.87</span></td><td><span class="semaforo s-green"></span>Óptimo</td></tr>
-          <tr><td>10</td><td>Quinta Maria</td><td>143</td><td>173</td><td><span class="pill p-green">0.83</span></td><td><span class="semaforo s-green"></span>Óptimo</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="card">
-      <div class="card-title">Días hombre mensual en Siembra</div>
-      <div class="card-sub">Distribución temporal de la carga laboral en el período de siembra</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Maní 2023</span>
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:220px"><canvas id="g6b" role="img" aria-label="DH mensual siembra por ciclo"></canvas></div>
-      <div class="insight ins-green">La siembra se concentra en <strong>julio-agosto</strong>. En 2024 la carga se extendió más en agosto (+92% vs 2023 en ese mes), lo que pudo generar ineficiencia por fatiga o desorientación del personal.</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════ TAB: DIESEL ══════ -->
-<section id="tab-diesel" class="section">
-  <p class="sec-label">Indicador 2 — Litros de diesel por manzana de siembra</p>
-
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--green)"></div><div class="kpi-label">Diesel/mzn — 2022</div><div class="kpi-value">115.3<span class="kpi-unit">lts</span></div><div class="kpi-sub">Total lts ciclo ÷ mzn siembra</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:#9ca3af"></div><div class="kpi-label">Diesel/mzn — 2023</div><div class="kpi-value">125.5<span class="kpi-unit">lts</span></div><div class="kpi-badge badge-up">▲ 8.8% vs 2022</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--red-mid)"></div><div class="kpi-label">Diesel/mzn — 2024</div><div class="kpi-value">132.9<span class="kpi-unit">lts</span></div><div class="kpi-badge badge-up">▲ 5.9% — pico máx.</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--blue)"></div><div class="kpi-label">Diesel/mzn — 2025</div><div class="kpi-value">123.7<span class="kpi-unit">lts</span></div><div class="kpi-badge badge-down">▼ 6.9% mejora vs 2024</div></div>
-  </div>
-
-  <div class="grid g2">
-    <div class="card">
-      <div class="card-title">Litros de diesel por manzana — Siembra (4 ciclos)</div>
-      <div class="card-sub">Evolución del consumo de combustible en la actividad de siembra</div>
-      <div style="position:relative;height:250px"><canvas id="g7" role="img" aria-label="Diesel mzn siembra por ciclo"></canvas></div>
-      <div class="insight ins-red">El incremento de <strong>2.08 lts/mzn en 2024</strong> representa un sobrecosto de aproximadamente <strong>6,500 litros extras</strong> de diesel solo en siembra. A precio de mercado, un impacto financiero significativo.</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Diesel/mzn en Siembra — por finca, ciclos 2022 a 2025</div>
-      <div class="card-sub">Fincas con mayor consumo de combustible por manzana sembrada</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#4caf6e"></span>2022</span>
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>2023</span>
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>2025</span>
-      </div>
-      <div style="position:relative;height:250px"><canvas id="g8" role="img" aria-label="Diesel por mzn por finca siembra"></canvas></div>
-      <div class="insight ins-amber">Con el indicador corregido (todo el diesel del ciclo ÷ mzn sembradas), <strong>Quinta Maria y Montana</strong> son las fincas más eficientes (~85-101 lts/mzn). <strong>Llano Verde</strong> es consistentemente la más costosa en combustible (186-193 lts/mzn).</div>
-    </div>
-  </div>
-
-  <div class="grid g1">
-    <div class="card">
-      <div class="card-title">Ranking diesel/mzn por finca — Siembra 2024 (fincas con datos de Horas Máquina)</div>
-      <div class="card-sub">Visualización de eficiencia relativa — barra llena = más consumo de diesel</div>
-      <table class="tbl">
-        <thead><tr><th>Finca</th><th>Mzn</th><th>Lts diesel</th><th>Lts/mzn</th><th>Eficiencia relativa</th><th>Nivel</th></tr></thead>
-        <tbody id="diesel-finca-rows"></tbody>
-      </table>
-    </div>
-  </div>
-</section>
-
-<!-- ══════ TAB: HORAS MAQUINA ══════ -->
-<section id="tab-horas" class="section">
-  <p class="sec-label">Indicadores 4 y 5 — Horas máquina por manzana y por labor de siembra</p>
-
-  <div class="kpi-grid">
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--red-mid)"></div><div class="kpi-label">Hrs máq/mzn — 2024</div><div class="kpi-value">11.11<span class="kpi-unit">hrs</span></div><div class="kpi-badge badge-up">▲ pico máximo</div><div class="kpi-sub">Total hrs ciclo ÷ mzn siembra</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--green)"></div><div class="kpi-label">Hrs máq/mzn — 2025</div><div class="kpi-value">10.04<span class="kpi-unit">hrs</span></div><div class="kpi-badge badge-down">▼ 9.6% mejora vs 2024</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--blue)"></div><div class="kpi-label">Total hrs todas actividades 2024</div><div class="kpi-value">34,827<span class="kpi-unit">hrs</span></div><div class="kpi-sub">En 3,135 mzn sembradas</div></div>
-    <div class="kpi"><div class="kpi-stripe" style="background:var(--amber-mid)"></div><div class="kpi-label">Total hrs todas actividades 2025</div><div class="kpi-value">27,786<span class="kpi-unit">hrs</span></div><div class="kpi-badge badge-down">▼ 20.2% reducción</div></div>
-  </div>
-
-  <div class="grid g2">
-    <div class="card">
-      <div class="card-title">Horas máquina por manzana — Siembra 2024 vs 2025</div>
-      <div class="card-sub">Eficiencia del uso de maquinaria agrícola en la actividad de siembra por finca</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:280px"><canvas id="g9" role="img" aria-label="Horas maquina por mzn siembra por finca"></canvas></div>
-      <div class="insight ins-green">Con el indicador corregido (total horas del ciclo ÷ mzn sembradas), <strong>Quinta Maria (11.1 hrs/mzn)</strong> y <strong>Montana (10.1)</strong> son las más eficientes en 2024. <strong>Llano Verde (18.9)</strong> es la más intensiva en uso de maquinaria. En 2025 casi todas mejoraron.</div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Distribución de horas por tipo de equipo — Siembra</div>
-      <div class="card-sub">Cuántas horas aportó cada tipo de maquinaria en la labor de siembra</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:280px"><canvas id="g10" role="img" aria-label="Horas por tipo equipo siembra"></canvas></div>
-      <div class="insight ins-blue">El <strong>Tractor Pequeño domina</strong> absolutamente la siembra en ambos ciclos (93%+ de las horas). Una avería o mal rendimiento en esta flotilla impacta directamente todo el programa de siembra.</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════ TAB: POR LABOR ══════ -->
-<section id="tab-labor" class="section">
-  <p class="sec-label">Indicadores 5 y 6 — Horas máquina y diesel por labor agrícola</p>
-
-  <div class="grid g1">
-    <!-- G11: Hrs maquina por labor -->
-    <div class="card">
-      <div class="card-title">Horas máquina por manzana según labor agrícola — comparativa 2024 vs 2025</div>
-      <div class="card-sub">Identifica qué labores demandan más tiempo de maquinaria por manzana trabajada</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:300px"><canvas id="g11" role="img" aria-label="Horas maquina por mzn por labor"></canvas></div>
-      <div class="insight ins-red"><strong>Nivelación</strong> consume 4-5 veces más horas por manzana que cualquier otra labor. <strong>Siembra y Subsuelo</strong> son las segundas más intensivas. <strong>Fungicidas</strong> tienen el mejor ratio (menos de 0.35 hrs/mzn).</div>
-    </div>
-  </div>
-
-  <div class="grid g2">
-    <!-- G12: Total horas por labor -->
-    <div class="card">
-      <div class="card-title">Total de horas máquina por labor — 2024 vs 2025</div>
-      <div class="card-sub">Volumen absoluto de horas operadas por actividad agrícola</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>Maní 2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Maní 2025</span>
-      </div>
-      <div style="position:relative;height:300px"><canvas id="g12" role="img" aria-label="Total horas por labor 2024 vs 2025"></canvas></div>
-      <div class="insight ins-amber"><strong>Arranque y Siembra</strong> concentran el mayor bloque de horas absolutas. La Combina/Casamba redujo de 4,891 hrs a 0 en 2025 — confirmar si fue reemplazada o pospuesta.</div>
-    </div>
-
-    <!-- G13: Diesel/mzn por labor -->
-    <div class="card">
-      <div class="card-title">Litros de diesel por manzana según labor — 4 ciclos</div>
-      <div class="card-sub">Comparativa de consumo de combustible por tipo de actividad agrícola</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#4caf6e"></span>2022</span>
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>2023</span>
-        <span class="leg"><span class="leg-sq" style="background:#ef4444"></span>2024</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>2025</span>
-      </div>
-      <div style="position:relative;height:300px"><canvas id="g13" role="img" aria-label="Diesel por mzn por labor"></canvas></div>
-      <div class="insight ins-red"><strong>Combina 2024 (32.3 lts/mzn)</strong> rompió la tendencia histórica de ~14-16. Subsuelo y Nivelación son estructuralmente intensivos (~20-25 lts/mzn). Siembra mejoró en 2025 pero sigue por encima del mejor nivel (2023).</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════ TAB: POR FINCA ══════ -->
-<section id="tab-fincas" class="section">
-  <p class="sec-label">Comparativa integral por finca — los 3 indicadores principales de Siembra</p>
-
-  <div class="grid g1">
-    <!-- G14: Triple comparativa por finca 2024 -->
-    <div class="card">
-      <div class="card-title">Los 3 indicadores por finca — Siembra Maní 2024</div>
-      <div class="card-sub">DH/mzn · Diesel/mzn · Hrs máquina/mzn — indexados al promedio general para comparación directa (promedio = 1.0)</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>DH / mzn</span>
-        <span class="leg"><span class="leg-sq" style="background:#1a5fa8"></span>Diesel / mzn</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Hrs máq. / mzn</span>
-      </div>
-      <div style="position:relative;height:300px"><canvas id="g14" role="img" aria-label="Triple comparativa por finca 2024"></canvas></div>
-      <div class="insight ins-amber"><strong>Palo de Pan</strong> destaca negativamente en los 3 indicadores. <strong>La Concha</strong> y <strong>Quinta Maria</strong> tienen el mejor perfil integrado. Esta vista permite priorizar fincas para intervención.</div>
-    </div>
-  </div>
-
-  <div class="grid g2">
-    <!-- Tabla resumen integral -->
-    <div class="card span2">
-      <div class="card-title">Tabla resumen — Indicadores operativos por finca · Siembra 2024</div>
-      <div class="card-sub">Visión consolidada de los 3 indicadores para toma de decisiones a nivel de finca</div>
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>Finca</th>
-            <th>Mzn sembradas</th>
-            <th>DH totales</th>
-            <th>DH / mzn</th>
-            <th>Diesel / mzn</th>
-            <th>Hrs máq. / mzn</th>
-            <th>Perfil global</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td><strong>Palo de Pan</strong></td><td>56.75</td><td>138</td><td><span class="pill p-red">2.43</span></td><td><span class="pill p-red">10.91</span></td><td><span class="pill p-red">2.12</span></td><td>🔴 Crítico</td></tr>
-          <tr><td><strong>Rancho Pando</strong></td><td>203.5</td><td>396</td><td><span class="pill p-red">1.95</span></td><td><span class="pill p-amber">8.22</span></td><td><span class="pill p-amber">1.10</span></td><td>🔴 Alto</td></tr>
-          <tr><td><strong>Santa Isabel</strong></td><td>118</td><td>206</td><td><span class="pill p-red">1.75</span></td><td><span class="pill p-red">11.96</span></td><td><span class="pill p-red">1.81</span></td><td>🔴 Crítico</td></tr>
-          <tr><td><strong>Llano Verde</strong></td><td>91.5</td><td>145</td><td><span class="pill p-amber">1.58</span></td><td><span class="pill p-amber">9.56</span></td><td><span class="pill p-amber">1.38</span></td><td>🟡 Medio</td></tr>
-          <tr><td><strong>Miramar</strong></td><td>425.29</td><td>501</td><td><span class="pill p-amber">1.18</span></td><td><span class="pill p-amber">8.03</span></td><td><span class="pill p-amber">1.30</span></td><td>🟡 Medio</td></tr>
-          <tr><td><strong>La Laguna</strong></td><td>278</td><td>303</td><td><span class="pill p-amber">1.09</span></td><td><span class="pill p-amber">8.23</span></td><td><span class="pill p-amber">1.29</span></td><td>🟡 Normal</td></tr>
-          <tr><td><strong>La Concha</strong></td><td>564.3</td><td>781</td><td><span class="pill p-amber">1.38</span></td><td><span class="pill p-green">6.42</span></td><td><span class="pill p-amber">1.35</span></td><td>🟡 Normal</td></tr>
-          <tr><td><strong>Montana</strong></td><td>205</td><td>201</td><td><span class="pill p-green">0.98</span></td><td><span class="pill p-amber">7.43</span></td><td><span class="pill p-green">1.12</span></td><td>🟢 Bueno</td></tr>
-          <tr><td><strong>San Luis</strong></td><td>113</td><td>98</td><td><span class="pill p-green">0.87</span></td><td><span class="pill p-amber">8.12</span></td><td><span class="pill p-amber">1.29</span></td><td>🟢 Bueno</td></tr>
-          <tr><td><strong>Quinta Maria</strong></td><td>173</td><td>143</td><td><span class="pill p-green">0.83</span></td><td><span class="pill p-green">7.44</span></td><td><span class="pill p-green">1.12</span></td><td>🟢 Óptimo</td></tr>
-        </tbody>
-      </table>
-      <div class="insight ins-green" style="margin-top:14px"><strong>Quinta Maria y Montana</strong> son las referencias de eficiencia: bajo consumo de mano de obra, diesel moderado y buena productividad de maquinaria. Sus prácticas deberían documentarse y replicarse en las fincas con peor desempeño.</div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════ TAB: INSUMOS KL/MZN ══════ -->
-<section id="tab-kl" class="section">
-  <p class="sec-label">Indicador 3 — Kilo/Litros de insumos por manzana · Análisis 2018 – 2024</p>
-
-  <div class="kpi-grid">
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--purple)"></div>
-      <div class="kpi-label">Fungicidas KL/mzn — 2024</div>
-      <div class="kpi-value">31.79<span class="kpi-unit">KL</span></div>
-      <div class="kpi-badge badge-up">▲ vs 24.91 en 2018</div>
-      <div class="kpi-sub">Mayor consumo del período</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--green)"></div>
-      <div class="kpi-label">Fertilizantes Foliares — 2024</div>
-      <div class="kpi-value">8.34<span class="kpi-unit">KL</span></div>
-      <div class="kpi-badge badge-down">▼ vs 11.01 en 2018</div>
-      <div class="kpi-sub">Tendencia decreciente</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--teal)"></div>
-      <div class="kpi-label">Herbicidas KL/mzn — 2024</div>
-      <div class="kpi-value">10.65<span class="kpi-unit">KL</span></div>
-      <div class="kpi-badge badge-down">▼ vs 13.42 en 2018</div>
-      <div class="kpi-sub">Mejora sostenida 2018→2021</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--amber-mid)"></div>
-      <div class="kpi-label">Insecticidas KL/mzn — 2024</div>
-      <div class="kpi-value">0.48<span class="kpi-unit">KL</span></div>
-      <div class="kpi-badge badge-neutral">Estable</div>
-      <div class="kpi-sub">Bajo y constante todo el período</div>
-    </div>
-    <div class="kpi">
-      <div class="kpi-stripe" style="background:var(--blue)"></div>
-      <div class="kpi-label">Total insumos KL/mzn — 2024</div>
-      <div class="kpi-value">52.8<span class="kpi-unit">KL</span></div>
-      <div class="kpi-badge badge-down">▼ vs 59.3 en 2018</div>
-      <div class="kpi-sub">Excluye semilla</div>
-    </div>
-  </div>
-
-  <div class="grid g2">
-    <!-- GKL1: Fungicidas KL/mzn evolución -->
-    <div class="card">
-      <div class="card-title">Fungicidas — Kilo/Litros por manzana (2018–2024)</div>
-      <div class="card-sub">Evolución del consumo de fungicidas por unidad de área trabajada</div>
-      <div style="position:relative;height:240px"><canvas id="gkl1" role="img" aria-label="Fungicidas KL mzn por ciclo"></canvas></div>
-      <div class="insight ins-red">Los fungicidas representan el <strong>mayor componente de insumos</strong>. Subieron de 24.9 KL/mzn (2018) a un pico de <strong>34.2 en 2021</strong> y se estabilizaron en ~31-33 en los últimos ciclos. El incremento refleja mayor presión de enfermedades o ajuste de dosis.</div>
-    </div>
-
-    <!-- GKL2: Fertilizantes foliares -->
-    <div class="card">
-      <div class="card-title">Fertilizantes Foliares — Kilo/Litros por manzana (2018–2024)</div>
-      <div class="card-sub">Tendencia del uso de fertilizantes aplicados en las labores de fungicidas</div>
-      <div style="position:relative;height:240px"><canvas id="gkl2" role="img" aria-label="Fertilizantes foliares KL mzn por ciclo"></canvas></div>
-      <div class="insight ins-blue">Los fertilizantes foliares <strong>bajaron de 11.0 a 8.3 KL/mzn</strong> entre 2018 y 2024. La caída más pronunciada fue en 2021 (6.6 KL/mzn). Puede indicar optimización en dosis o cambios en el programa nutricional.</div>
-    </div>
-  </div>
-
-  <!-- GKL3: Comparativa todas las familias -->
-  <div class="grid g1">
-    <div class="card">
-      <div class="card-title">Comparativa de todas las familias de insumos — KL/mzn por ciclo (2018–2024)</div>
-      <div class="card-sub">Evolución simultánea de Fungicidas, Fertilizantes Foliares, Herbicidas e Insecticidas por manzana</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:#6d28d9"></span>Fungicidas</span>
-        <span class="leg"><span class="leg-sq" style="background:#1e7d3a"></span>Fert. Foliares</span>
-        <span class="leg"><span class="leg-sq" style="background:#0e7490"></span>Herbicidas</span>
-        <span class="leg"><span class="leg-sq" style="background:#e0a020"></span>Insecticidas</span>
-        <span class="leg"><span class="leg-sq" style="background:#9a9c94"></span>Adherente</span>
-      </div>
-      <div style="position:relative;height:300px"><canvas id="gkl3" role="img" aria-label="Comparativa familias insumos por ciclo"></canvas></div>
-      <div class="insight ins-amber">Los <strong>fungicidas dominan</strong> el consumo de insumos (~60% del total). Los herbicidas son el segundo rubro (~16-20%). La <strong>Semilla no está incluida</strong> en este análisis — se analiza por separado en el sistema de costos.</div>
-    </div>
-  </div>
-
-  <div class="grid g2">
-    <!-- GKL4: Herbicidas -->
-    <div class="card">
-      <div class="card-title">Herbicidas — KL/mzn por ciclo (2018–2024)</div>
-      <div class="card-sub">Tendencia de uso de herbicidas en el programa de aplicaciones</div>
-      <div style="position:relative;height:240px"><canvas id="gkl4" role="img" aria-label="Herbicidas KL mzn por ciclo"></canvas></div>
-      <div class="insight ins-blue">Los herbicidas mostraron una <strong>reducción consistente</strong> de 2018 a 2021 (13.4 → 7.7 KL/mzn), luego se incrementaron en 2022-2024. El dato atípico de 2023 se excluye del gráfico por contener registros de compost que distorsionan el indicador.</div>
-    </div>
-
-    <!-- GKL5: Total KL/mzn insumos vs mzn sembradas -->
-    <div class="card">
-      <div class="card-title">Total insumos KL/mzn vs manzanas sembradas — 2018–2024</div>
-      <div class="card-sub">Relación entre el nivel de aplicación de insumos y el área total trabajada</div>
-      <div style="position:relative;height:240px"><canvas id="gkl5" role="img" aria-label="Total KL mzn vs area sembrada"></canvas></div>
-      <div class="insight ins-purple" style="background:var(--purple-bg);border-left:3px solid var(--purple)">A medida que el <strong>área sembrada aumenta</strong> (de 1,637 mzn en 2019 a 2,377 en 2024), el consumo total de insumos por manzana <strong>tiende a disminuir</strong>, lo que indica economías de escala en la aplicación.</div>
-    </div>
-  </div>
-
-  <!-- GKL6: Fungicidas por finca -->
-  <div class="grid g1">
-    <div class="card">
-      <div class="card-title">Fungicidas KL/mzn por finca — ciclos 2022, 2023 y 2024</div>
-      <div class="card-sub">Variación en el consumo de fungicidas según la finca — identifica fincas con mayor presión de enfermedades o sobredosis</div>
-      <div class="legend">
-        <span class="leg"><span class="leg-sq" style="background:rgba(109,40,217,.75)"></span>Maní 2022</span>
-        <span class="leg"><span class="leg-sq" style="background:rgba(26,95,168,.75)"></span>Maní 2023</span>
-        <span class="leg"><span class="leg-sq" style="background:rgba(239,68,68,.75)"></span>Maní 2024</span>
-      </div>
-      <div style="position:relative;height:280px"><canvas id="gkl6" role="img" aria-label="Fungicidas KL mzn por finca"></canvas></div>
-      <div class="insight ins-amber"><strong>Paraíso</strong> muestra consumos muy por encima del promedio en 2022 (1.62 KL/mzn) y 2024 (1.08 KL/mzn). <strong>Quinta Maria y Santa Isabel</strong> son las fincas más eficientes con 0.59 KL/mzn consistentemente. Estas fincas son la referencia para optimizar el programa de fungicidas.</div>
-    </div>
-  </div>
-
-  <!-- Tabla resumen -->
-  <div class="grid g1">
-    <div class="card">
-      <div class="card-title">Resumen de KL/mzn por familia de insumo — todos los ciclos</div>
-      <div class="card-sub">Vista consolidada para comparar la evolución del consumo de cada grupo de insumos</div>
-      <table class="tbl">
-        <thead>
-          <tr><th>Grupo</th><th>Familia</th><th>2018</th><th>2019</th><th>2020</th><th>2021</th><th>2022</th><th>2023</th><th>2024</th><th>Tendencia</th></tr>
-        </thead>
-        <tbody>
-          <tr><td rowspan="2"><strong>Protectores de Cultivo</strong></td><td>Fungicidas</td><td>24.91</td><td>25.82</td><td>28.58</td><td><span class="pill p-red">34.21</span></td><td>30.79</td><td>33.14</td><td>31.79</td><td>🔴 ↑ creciente</td></tr>
-          <tr><td>Herbicidas</td><td>13.42</td><td>10.38</td><td>8.22</td><td>7.75</td><td>8.46</td><td>—</td><td>10.65</td><td>🟡 Variable</td></tr>
-          <tr><td rowspan="2"><strong>Fertilizantes</strong></td><td>Foliares</td><td>11.01</td><td>10.91</td><td>10.26</td><td>6.56</td><td>9.53</td><td>8.62</td><td><span class="pill p-green">8.34</span></td><td>🟢 ↓ mejora</td></tr>
-          <tr><td>Edáficos</td><td>9.02</td><td>20.33</td><td>6.16</td><td>—</td><td>0.02</td><td>2.60</td><td>0.08</td><td>🟡 Irregular</td></tr>
-          <tr><td><strong>Protectores</strong></td><td>Insecticidas</td><td>0.78</td><td>1.47</td><td>0.85</td><td>0.60</td><td>0.13</td><td>0.39</td><td>0.48</td><td>🟢 Estable bajo</td></tr>
-          <tr><td><strong>Total insumos</strong></td><td><strong>Excl. semilla</strong></td><td><strong>59.3</strong></td><td><strong>69.1</strong></td><td><strong>59.7</strong></td><td><strong>56.2</strong></td><td><strong>49.2</strong></td><td>—</td><td><strong>52.8</strong></td><td>🟢 ↓ mejora general</td></tr>
-        </tbody>
-      </table>
-      <div class="insight ins-green" style="margin-top:14px">El <strong>total de insumos por manzana (excl. semilla) ha bajado de 59.3 a 52.8 KL/mzn</strong> entre 2018 y 2024 — una mejora del 11%. El único componente que sigue subiendo son los fungicidas, lo que merece atención en el programa de manejo integrado de enfermedades.</div>
-    </div>
-  </div>
-</section>
-
-</main>
+<footer>Conectado en vivo a Google Sheets (Odoo_Ordenes_Campo) - Division Agricola Comasa - Proveedor de servicio: Comasa</footer>
 
 <script>
-function goTab(id, el){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
-  el.classList.add('active');
+/* ===================== CHART DEFAULTS EXECUTIVE ===================== */
+Chart.defaults.font.family = "'Inter', 'Segoe UI', Arial, sans-serif";
+Chart.defaults.color = "#64748B";
+Chart.defaults.plugins.tooltip.backgroundColor = "rgba(15, 37, 55, 0.9)";
+Chart.defaults.plugins.tooltip.titleFont = { size: 13, weight: 'bold' };
+Chart.defaults.plugins.tooltip.padding = 10;
+
+/* ===================== CONFIG ===================== */
+const SHEET_ID='1JvLHhYiZ9QpF5EQg1AWdXx-D7Y6kwno_LZWsB3sagig';
+const API_KEY='AIzaSyAzWECpeQSEq1cwVpuCf6kt_kklb5sEKf4';
+const TAB1='Avances y combustible del 2022 a la fecha';
+const TAB2='Combustible infoagro';
+
+const PRESUPUESTOS={
+ 'Arado/Romplona':{lts:18.18,hm:0.78},'Subsuelo':{lts:23.40,hm:1.28},'Grada':{lts:9.60,hm:0.45},
+ 'Mureo':{lts:8.84,hm:0.52},'Siembra':{lts:7.56,hm:1.17},'Quema':{lts:2.29,hm:0.34},
+ 'Sello':{lts:1.85,hm:0.29},'Post emergente':{lts:1.63,hm:0.29},'Fungicida I':{lts:2.39,hm:0.38},
+ 'Fungicida II':{lts:2.09,hm:0.31},'Fungicida III':{lts:1.74,hm:0.26},'Fungicida IV':{lts:1.61,hm:0.25},
+ 'Fungicida V':{lts:1.75,hm:0.28},'Fungicida VI':{lts:1.78,hm:0.34},'Fungicida VII':{lts:1.44,hm:0.23},
+ 'Fungicida VIII':{lts:1.90,hm:0.30},'Insecticida':{lts:2.54,hm:0.45},'Arranque':{lts:13.01,hm:1.54},
+ 'Combina':{lts:31.40,hm:1.00}
+};
+const ACT_ORDER_LIST=['Arado/Romplona','Subsuelo','Grada','Mureo','Siembra','Quema','Sello','Post emergente',
+ 'Fungicida I','Fungicida II','Fungicida III','Fungicida IV','Fungicida V','Fungicida VI','Fungicida VII','Fungicida VIII',
+ 'Insecticida','Arranque','Combina','Fertilizacion Mecanizada Caña','Nivelacion','Cultivadora','Riego',
+ 'Chapoda/Basureo/Limpia','Re-Siembra','Surcado'];
+
+const HM_CATS=['tractor pequeño','tractor mediano','tractor grande','combinas','combina'];
+
+/* Nuevos colores ejecutivos */
+const COLORS=['#1E3A8A','#0F766E','#B45309','#BE123C','#4338CA','#047857','#A16207','#9F1239','#15803D','#6D28D9'];
+const MESES_ES={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,set:8,oct:9,nov:10,dic:11};
+
+/* ===================== HELPERS ===================== */
+let raw1=[],raw2=[],charts={};
+let state={ciclo:'',actSel:[],secSel:[],periodo:'todo',compareCiclo:'',crossFinca:null,crossCat:null,crossWeek:null,actsAvail:[],secsAvail:[]};
+
+function destroy(id){ if(charts[id]){try{charts[id].destroy();}catch(e){}} }
+function toNum(v){ if(v===undefined||v===null||v==='') return 0; const s=String(v).replace(/,/g,''); const n=parseFloat(s); return isNaN(n)?0:n; }
+function get(o,...keys){ for(const k of keys){ if(o[k]!==undefined&&o[k]!=='') return o[k]; } return ''; }
+function norm(s){ return String(s||'').trim().toLowerCase(); }
+function parseDate(s){
+  if(!s) return null;
+  s=String(s).trim().toLowerCase();
+  let m=s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/); if(m) return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); if(m) return new Date(+m[3],+m[2]-1,+m[1]);
+  m=s.match(/^(\d{1,2})[\s\-]+de[\s\-]+([a-z]{3,})[\s\-]+de[\s\-]+(\d{4})$/);
+  if(m&&MESES_ES[m[2].slice(0,3)]!==undefined) return new Date(+m[3],MESES_ES[m[2].slice(0,3)],+m[1]);
+  m=s.match(/^(\d{1,2})[\s\-]+([a-z]{3,})[\s\-]+(\d{4})$/);
+  if(m&&MESES_ES[m[2].slice(0,3)]!==undefined) return new Date(+m[3],MESES_ES[m[2].slice(0,3)],+m[1]);
+  return null;
+}
+function dkey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtShort(d){ return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); }
+function isoWeek(d){
+  const dt=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const dn=(dt.getUTCDay()+6)%7; dt.setUTCDate(dt.getUTCDate()-dn+3);
+  const firstThu=new Date(Date.UTC(dt.getUTCFullYear(),0,4));
+  const wk=1+Math.round(((dt-firstThu)/86400000-3+((firstThu.getUTCDay()+6)%7))/7);
+  return dt.getUTCFullYear()+'-S'+String(wk).padStart(2,'0');
+}
+function isComasa(r){ return norm(get(r,'proveedor del servicio'))==='comasa' && norm(get(r,'compañia','compañía'))==='division agricola comasa'; }
+function rowAvance(r){ return toNum(get(r,'cant. avance mzn','cantidad avance mzn')); }
+function rowLts(r){ return toNum(get(r,'cant. lts diesel','cantidad diesel ltrs')); }
+function rowHme(r){ return toNum(get(r,'hora motor efectivo','hme')); }
+function isHmCat(r){ return HM_CATS.includes(norm(get(r,'categoria equipo'))); }
+
+function cicloInfo(c){
+  const m=c.match(/^(.*?)(\d{4})$/); const year=m?+m[2]:0; let base=(m?m[1]:c).trim().toLowerCase();
+  base=base.replace('invest. y des.','inv. desarrollo').replace('investigacion y desarrollo','inv. desarrollo');
+  let rank;
+  if(base.startsWith('mani')) rank=0;
+  else if(base.startsWith('servicio')) rank=1;
+  else if(base.startsWith('caña')||base.startsWith('cana')) rank=2;
+  else rank=3;
+  return {rank,base,year};
+}
+function cicloSort(a,b){
+  const A=cicloInfo(a),B=cicloInfo(b);
+  if(A.rank!==B.rank) return A.rank-B.rank;
+  if(A.rank===3 && A.base!==B.base) return A.base<B.base?-1:1;
+  return A.year-B.year;
+}
+function actRank(a){ const i=ACT_ORDER_LIST.indexOf(a); return i===-1?1000:i; }
+function actSort(a,b){ const ra=actRank(a),rb=actRank(b); if(ra!==rb) return ra-rb; return a<b?-1:1; }
+
+/* ===================== FETCH ===================== */
+async function fetchTab(tabName,range){
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(tabName+'!'+range)}?key=${API_KEY}`;
+  const res=await fetch(url);
+  if(!res.ok) throw new Error('HTTP '+res.status+' al leer '+tabName);
+  const json=await res.json();
+  return json.values||[];
+}
+function rowsToObjects(values){
+  if(!values.length) return [];
+  const header=values[0].map(h=>norm(h));
+  return values.slice(1).map(row=>{ const o={}; header.forEach((h,i)=>{ o[h]=row[i]!==undefined?row[i]:''; }); return o; });
 }
 
-const LIGHT={grid:'rgba(0,0,0,0.06)',tick:'#9a9c94'};
-function opts(extra={}){
-  return {
-    responsive:true,maintainAspectRatio:false,
-    animation:{duration:500,easing:'easeOutQuart'},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11,family:'IBM Plex Sans'}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11,family:'IBM Plex Sans'}}}},
-    ...extra
+async function init(){
+  const dot=document.getElementById('status-dot');
+  dot.className='dot loading'; document.getElementById('update-time').textContent='Conectando con Google Sheets...';
+  document.getElementById('content').innerHTML='<div class="status-msg">Cargando datos desde Google Sheets (puede tardar unos segundos)...</div>';
+  try{
+    const [v1,v2]=await Promise.all([fetchTab(TAB1,'A1:M'),fetchTab(TAB2,'A1:T')]);
+    raw1=rowsToObjects(v1); raw2=rowsToObjects(v2);
+    const ciclos=[...new Set(raw1.filter(isComasa).map(r=>get(r,'ciclo')))].filter(Boolean).sort(cicloSort);
+    const sel=document.getElementById('sel-ciclo'); sel.innerHTML='';
+    ciclos.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; sel.appendChild(o); });
+    const def=ciclos.find(c=>norm(c)==='mani 2026')||ciclos[0];
+    sel.value=def;
+    onCicloChange();
+    dot.className='dot';
+    document.getElementById('update-time').textContent='Conectado - actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+  }catch(err){
+    dot.className='dot error'; document.getElementById('update-time').textContent='Error de conexion';
+    document.getElementById('content').innerHTML=`<div class="error-msg">No se pudo conectar a Google Sheets: ${err.message}<br>Verifica tu conexion e intenta "Actualizar datos".</div>`;
+  }
+}
+
+/* ===================== SELECTORES ===================== */
+function onCicloChange(){
+  const ciclo=document.getElementById('sel-ciclo').value;
+  state.ciclo=ciclo;
+  const acts=[...new Set(raw1.filter(r=>isComasa(r)&&get(r,'ciclo')===ciclo).map(r=>get(r,'actividad')))].filter(Boolean).sort(actSort);
+  const secs=[...new Set(raw1.filter(r=>isComasa(r)&&get(r,'ciclo')===ciclo).map(r=>get(r,'sector')))].filter(Boolean).sort();
+  state.actsAvail=acts; state.secsAvail=secs;
+  state.actSel=[acts.includes('Arado/Romplona')?'Arado/Romplona':acts[0]];
+  state.secSel=[];
+  state.crossFinca=null; state.crossCat=null; state.crossWeek=null;
+  buildMultiselect('actividad',acts,state.actSel);
+  buildMultiselect('sector',secs,state.secSel);
+  const cmp=document.getElementById('sel-compare'); cmp.innerHTML='<option value="">Ninguno</option>';
+  const ciclosAll=[...new Set(raw1.filter(isComasa).map(r=>get(r,'ciclo')))].filter(c=>c&&c!==ciclo).sort(cicloSort);
+  ciclosAll.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; cmp.appendChild(o); });
+  render();
+}
+
+function togglePanel(id){
+  const panel=document.getElementById(id);
+  const wasOpen=panel.classList.contains('open');
+  let otherClosed=false;
+  document.querySelectorAll('.msel-panel').forEach(p=>{ if(p.id!==id && p.classList.contains('open')){ p.classList.remove('open'); otherClosed=true; } });
+  panel.classList.toggle('open');
+  if(wasOpen||otherClosed){ applyMultiselectFromDOM(); }
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.msel')){
+    let changed=false;
+    document.querySelectorAll('.msel-panel.open').forEach(p=>{ p.classList.remove('open'); changed=true; });
+    if(changed){ applyMultiselectFromDOM(); }
+  }
+});
+
+function buildMultiselect(kind,options,selArr){
+  const panel=document.getElementById('panel-'+kind);
+  panel.innerHTML='';
+  if(kind==='sector'){
+    const div=document.createElement('div'); div.className='msel-item';
+    const id='msel-sector-all';
+    div.innerHTML=`<label><input type="checkbox" id="${id}" data-kind="sector" data-all="1" ${selArr.length===0?'checked':''}> Todos los sectores</label>`;
+    div.querySelector('input').onclick=()=>{ document.querySelectorAll('#panel-sector input[data-kind="sector"]:not([data-all="1"])').forEach(c=>c.checked=false); };
+    panel.appendChild(div);
+  }
+  options.forEach(opt=>{
+    const div=document.createElement('div'); div.className='msel-item';
+    const checked=selArr.includes(opt);
+    const safeId='msel-'+kind+'-'+opt.replace(/[^a-zA-Z0-9]/g,'_');
+    div.innerHTML=`<label><input type="checkbox" id="${safeId}" data-kind="${kind}" value="${opt.replace(/"/g,'&quot;')}" ${checked?'checked':''}> ${opt}</label>`;
+    if(kind==='sector'){
+      div.querySelector('input').onclick=(e)=>{ if(e.target.checked){ const all=document.getElementById('msel-sector-all'); if(all) all.checked=false; } };
+    }
+    panel.appendChild(div);
+  });
+  updateMselLabel(kind);
+}
+
+function applyMultiselectFromDOM(){
+  const actChecked=[...document.querySelectorAll('#panel-actividad input[data-kind="actividad"]:checked')].map(c=>c.value);
+  const secAllChecked=document.getElementById('msel-sector-all')?.checked;
+  const secChecked=[...document.querySelectorAll('#panel-sector input[data-kind="sector"]:not([data-all="1"]):checked')].map(c=>c.value);
+
+  let newAct=actChecked;
+  let newSec=secAllChecked?[]:secChecked;
+
+  // mutua exclusividad: solo uno de los dos puede ser multi
+  if(newAct.length>1 && newSec.length>1) newSec=newSec.slice(0,1);
+  if(newSec.length>1 && newAct.length>1) newAct=newAct.slice(0,1);
+
+  const changed = JSON.stringify(newAct)!==JSON.stringify(state.actSel) || JSON.stringify(newSec)!==JSON.stringify(state.secSel);
+  state.actSel=newAct;
+  state.secSel=newSec;
+  if(changed){
+    buildMultiselect('actividad',state.actsAvail,state.actSel);
+    buildMultiselect('sector',state.secsAvail,state.secSel);
+    render();
+  } else {
+    updateMselLabel('actividad'); updateMselLabel('sector');
+  }
+}
+function afterSelChange(){
+  buildMultiselect('actividad',state.actsAvail,state.actSel);
+  buildMultiselect('sector',state.secsAvail,state.secSel);
+  render();
+}
+function updateMselLabel(kind){
+  const arr=kind==='actividad'?state.actSel:state.secSel;
+  const btn=document.getElementById('btn-'+kind);
+  if(kind==='sector' && arr.length===0){ btn.textContent='Todos los sectores'; return; }
+  btn.textContent = arr.length<=1 ? (arr[0]||'(ninguno)') : arr.length+' seleccionadas';
+}
+
+/* ===================== CHIPS (cross filter) ===================== */
+function renderChips(){
+  const c=document.getElementById('chips'); c.innerHTML='';
+  const add=(label,clearFn)=>{
+    const d=document.createElement('div'); d.className='chip';
+    d.innerHTML=`<span>${label}</span>`;
+    const b=document.createElement('button'); b.textContent='x'; b.onclick=clearFn;
+    d.appendChild(b); c.appendChild(d);
   };
+  if(state.crossFinca) add('Finca: '+state.crossFinca, ()=>{state.crossFinca=null; render();});
+  if(state.crossCat) add('Categoria equipo: '+state.crossCat, ()=>{state.crossCat=null; render();});
+  if(state.crossWeek) add('Semana: '+state.crossWeek, ()=>{state.crossWeek=null; render();});
 }
 
-// ─── G1: Índice comparativo 3 indicadores (base 2022=1) ───
-// CORREGIDO: numerador = TODAS las actividades, denominador = mzn siembra
-// DH/mzn:     2022=13.837, 2023=16.154, 2024=14.827, 2025=17.038
-// Diesel/mzn: 2022=115.3,  2023=125.5,  2024=132.9,  2025=123.7
-// Hrs/mzn:    2024=11.11,  2025=10.04   (solo 2 ciclos disponibles)
-const ciclos3=['Maní 2022','Maní 2023','Maní 2024','Maní 2025'];
-new Chart(document.getElementById('g1'),{
-  type:'line',
-  data:{labels:ciclos3,datasets:[
-    {label:'DH/mzn',data:[1,1.167,1.071,1.231],borderColor:'#1e7d3a',backgroundColor:'rgba(30,125,58,.08)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#1e7d3a',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
-    {label:'Diesel/mzn',data:[1,1.088,1.152,1.073],borderColor:'#1a5fa8',backgroundColor:'rgba(26,95,168,.05)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#1a5fa8',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5},
-    {label:'Hrs/mzn',data:[null,null,1,0.904],borderColor:'#e0a020',backgroundColor:'rgba(224,160,32,.05)',fill:true,tension:.3,pointRadius:5,pointBackgroundColor:'#e0a020',pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,font:{size:11},callback:v=>v.toFixed(2)+'x'},min:0.8,max:1.4}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>c.parsed.y?'  '+c.dataset.label+': '+c.parsed.y.toFixed(3)+'x vs 2022':null}}}}
-});
+/* ===================== TABS ===================== */
+function showTab(name){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  const idx = name==='resumen'?0:name==='avanzado'?1:2;
+  document.querySelectorAll('.tab-btn')[idx].classList.add('active');
+}
 
-// ─── G2: Radar comparativo ───
-new Chart(document.getElementById('g2'),{
-  type:'radar',
-  data:{
-    labels:['DH/mzn','Diesel/mzn','Hrs máq./mzn','Mzn sembradas','DH totales ciclo'],
-    datasets:[
-      {label:'2022',data:[13.837,115.3,null,2870,39706],borderColor:'#4caf6e',backgroundColor:'rgba(76,175,110,.12)',borderWidth:2,pointRadius:3},
-      {label:'2024',data:[14.827,132.9,11.11,3135,46478],borderColor:'#ef4444',backgroundColor:'rgba(239,68,68,.10)',borderWidth:2,pointRadius:3},
-      {label:'2025',data:[17.038,123.7,10.04,2767,47143],borderColor:'#e0a020',backgroundColor:'rgba(224,160,32,.10)',borderWidth:2,pointRadius:3}
-    ]
-  },
-  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
-    scales:{r:{grid:{color:'rgba(0,0,0,0.07)'},ticks:{display:false},pointLabels:{font:{size:10,family:'IBM Plex Sans'},color:'#6b6d66'}}}}
-});
+/* ===================== DATA CORE ===================== */
+function rowsFor(raw,ciclo,sector,actList){
+  return raw.filter(r=>isComasa(r) && get(r,'ciclo')===ciclo && actList.includes(get(r,'actividad')) && (sector===null||get(r,'sector')===sector));
+}
+function applyCross(rows,isTab2){
+  return rows.filter(r=>{
+    if(state.crossFinca && get(r,'finca')!==state.crossFinca) return false;
+    if(state.crossCat && isTab2 && norm(get(r,'categoria equipo'))!==norm(state.crossCat)) return false;
+    if(state.crossWeek){ const d=parseDate(get(r,'fecha')); if(!d||isoWeek(d)!==state.crossWeek) return false; }
+    return true;
+  });
+}
+function maxDateOf(rows){
+  let maxD=null; rows.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(d&&(!maxD||d>maxD)) maxD=d; }); return maxD;
+}
+function applyPeriodo(rows,periodo,maxD){
+  if(periodo==='todo'||!maxD) return rows;
+  const minD=new Date(maxD); minD.setDate(minD.getDate()-(parseInt(periodo)-1));
+  return rows.filter(r=>{ const d=parseDate(get(r,'fecha')); return d&&d>=minD&&d<=maxD; });
+}
+function buildGroupSeries(rows1g,rows2g){
+  const byDate={};
+  rows1g.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(!d) return; const k=dkey(d); if(!byDate[k]) byDate[k]={mz:0,lts:0,hm:0,date:d}; byDate[k].mz+=rowAvance(r); byDate[k].lts+=rowLts(r); });
+  rows2g.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(!d) return; const k=dkey(d); if(!byDate[k]) byDate[k]={mz:0,lts:0,hm:0,date:d}; byDate[k].hm+=rowHme(r); });
+  const dates=Object.keys(byDate).sort();
+  let accMz=0,accLts=0,accHm=0; const cum={};
+  dates.forEach(k=>{ accMz+=byDate[k].mz; accLts+=byDate[k].lts; accHm+=byDate[k].hm; cum[k]={accMz,accLts,accHm}; });
+  const totalMz=accMz,totalLts=accLts,totalHm=accHm;
+  const byFinca={}; rows1g.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; byFinca[f]=(byFinca[f]||0)+rowAvance(r); });
+  const byWeek={};
+  rows1g.forEach(r=>{ const d=parseDate(get(r,'fecha')); if(!d) return; const w=isoWeek(d); if(!byWeek[w]) byWeek[w]={lts:0,mz:0}; byWeek[w].lts+=rowLts(r); byWeek[w].mz+=rowAvance(r); });
+  return {byDate,dates,cum,totalMz,totalLts,totalHm,byFinca,byWeek};
+}
+function forwardFill(dates,cum,field,unionDate){
+  let val=0;
+  for(const d of dates){ if(d<=unionDate) val=cum[d][field]; else break; }
+  return val;
+}
+function weightedPpto(rows1g,actList){
+  const mzByAct={};
+  rows1g.forEach(r=>{ const a=get(r,'actividad'); mzByAct[a]=(mzByAct[a]||0)+rowAvance(r); });
+  let sumMzLts=0,sumMzHm=0,sumMzL=0,sumMzH=0;
+  actList.forEach(a=>{ const p=PRESUPUESTOS[a]; const mz=mzByAct[a]||0; if(p&&mz>0){ sumMzLts+=mz*p.lts; sumMzL+=mz; sumMzHm+=mz*p.hm; sumMzH+=mz; } });
+  return { lts: sumMzL>0?sumMzLts/sumMzL:undefined, hm: sumMzH>0?sumMzHm/sumMzH:undefined };
+}
+function statusBadge(real,ppto,hayDatos){
+  if(!hayDatos||ppto===undefined) return {cls:'status-na',txt:'Sin presupuesto'};
+  const dif=real-ppto;
+  if(Math.abs(dif)<=ppto*0.05) return {cls:'status-ok',txt:'En meta'};
+  if(dif>0) return {cls:'status-bad',txt:'Sobre presupuesto'};
+  return {cls:'status-ok',txt:'Bajo presupuesto'};
+}
 
-// ─── G3: Mzn vs DH total ───
-const ciclos4=['Maní 2023','Maní 2024','Maní 2025'];
-new Chart(document.getElementById('g3'),{
-  type:'bar',
-  data:{labels:ciclos4,datasets:[
-    {type:'bar',label:'Manzanas',data:[3075,3135,2767],backgroundColor:['#4caf6e','#ef4444','#e0a020'],borderRadius:4,borderWidth:0,yAxisID:'y'},
-    {type:'line',label:'Días hombre',data:[39706,46478,47143],borderColor:'#1a5fa8',backgroundColor:'rgba(26,95,168,.1)',borderWidth:2.5,pointRadius:5,pointBackgroundColor:'#1a5fa8',pointBorderColor:'#fff',pointBorderWidth:2,tension:.3,yAxisID:'y2'}
-  ]},
-  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:'#1e7d3a',font:{size:11},callback:v=>v.toLocaleString()+' mzn'},position:'left',min:2400},
-      y2:{grid:{display:false},ticks:{color:'#1a5fa8',font:{size:11},callback:v=>(v/1000).toFixed(1)+'K DH'},position:'right',min:35000}}}
-});
+/* ===================== DATALABELS HELPERS ===================== */
+function lineLabelOpts(){
+  return { display:(ctx)=>{ const data=ctx.dataset.data; const n=data.length; const i=ctx.dataIndex; if(data[i]==null) return false;
+      const step=Math.max(1,Math.ceil(n/6)); return i===n-1||i%step===0; },
+    formatter:(v)=> typeof v==='number'? v.toFixed(2):v, font:{size:10, weight: '500'}, color:'#64748B', align:'top' };
+}
+function barLabelOpts(fmt){ return { display:true, formatter:fmt||((v)=>v.toFixed(1)), font:{size:10, weight: '600'}, color:'#334155', anchor:'end', align:'end' }; }
 
-// ─── G4: DH/mzn por ciclo ───
-new Chart(document.getElementById('g4'),{
-  type:'bar',
-  data:{labels:ciclos4,datasets:[{label:'DH/mzn',data:[16.154,14.827,17.038],backgroundColor:['#4caf6e','#ef4444','#e0a020'],borderRadius:5,borderWidth:0}]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' DH'},min:12,max:19}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' DH/mzn'}}}}
-});
+/* ===================== RENDER MASTER ===================== */
+function render(){
+  if(!raw1.length) return;
+  updateMselLabel('actividad'); updateMselLabel('sector'); renderChips();
+  const ciclo=state.ciclo, actSel=state.actSel, periodo=state.periodo;
+  if(actSel.length===0){
+    document.getElementById('content').innerHTML='<div class="status-msg">Selecciona al menos una actividad para ver el dashboard.</div>';
+    document.getElementById('content-avanzado').innerHTML='';
+    document.getElementById('content-equipos').innerHTML='';
+    return;
+  }
+  const secGroups = state.secSel.length>0 ? state.secSel : [null];
 
-// ─── G5: DH por puesto ───
-const puestos=['Jornalero','Op. Maquinaria','Ayud. Campo'];
-new Chart(document.getElementById('g5'),{
-  type:'bar',
-  data:{labels:puestos,datasets:[
-    {label:'2023',data:[1774,238,148],backgroundColor:'rgba(26,95,168,.8)',borderRadius:4,borderWidth:0},
-    {label:'2024',data:[1942,825,519],backgroundColor:'rgba(239,68,68,.8)',borderRadius:4,borderWidth:0},
-    {label:'2025',data:[1983,653,406],backgroundColor:'rgba(224,160,32,.8)',borderRadius:4,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v+' DH'}}}}
-});
+  const allR1 = rowsFor(raw1,ciclo,null,actSel);
+  const globalMax = maxDateOf(allR1);
 
-// ─── G6: DH/mzn por finca ───
-// CORREGIDO: DH de TODAS las actividades / mzn siembra de esa finca
-const fincas6=['Palo de Pan','Llano Verde','La Laguna','Sta. Isabel','R. Pando','Q. Maria','Montana','Miramar','La Concha','San Luis'];
-new Chart(document.getElementById('g6'),{
-  type:'bar',
-  data:{labels:fincas6,datasets:[
-    {label:'2024',data:[32.74,26.82,23.29,23.22,22.61,18.14,16.66,15.97,15.06,10.26],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[19.57,22.67,19.14,20.52,19.09,17.58,18.67,16.70,27.59,15.48],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' DH'}}}}
-});
+  const groups = secGroups.map(sec=>{
+    let r1=applyCross(rowsFor(raw1,ciclo,sec,actSel),false);
+    r1=applyPeriodo(r1,periodo,globalMax);
+    let r2=applyCross(rowsFor(raw2,ciclo,sec,actSel).filter(isHmCat),true);
+    r2=applyPeriodo(r2,periodo,globalMax);
+    const series=buildGroupSeries(r1,r2);
+    const ppto=weightedPpto(r1,actSel);
+    return {sector:sec||'Todos',r1,r2,series,ppto};
+  });
 
-// ─── G6b: DH mensual ───
-new Chart(document.getElementById('g6b'),{
-  type:'bar',
-  data:{labels:['Jun','Jul','Ago'],datasets:[
-    {label:'2023',data:[112,2313,16],backgroundColor:'rgba(26,95,168,.8)',borderRadius:3,borderWidth:0},
-    {label:'2024',data:[0,1853,1407],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[0,1861,1222],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v+' DH'}}}}
-});
 
-// ─── G7: Diesel/mzn por ciclo ───
-const ciclos_all=['Maní 2022','Maní 2023','Maní 2024','Maní 2025'];
-new Chart(document.getElementById('g7'),{
-  type:'bar',
-  data:{labels:ciclos_all,datasets:[{label:'Diesel/mzn',data:[115.3,125.5,132.9,123.7],backgroundColor:['#4caf6e','#1a5fa8','#ef4444','#e0a020'],borderRadius:5,borderWidth:0}]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' lts'},min:105,max:140}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>'  '+c.parsed.y.toFixed(1)+' lts/mzn'}}}}
-});
+  try{ renderResumen(groups); }catch(e){ document.getElementById('content').innerHTML='<div class="error-msg">Error en Resumen Operativo: '+e.message+'<br><pre style="text-align:left;white-space:pre-wrap;font-size:10px">'+(e.stack||'')+'</pre></div>'; console.error(e); }
+  try{ renderAvanzado(groups); }catch(e){ document.getElementById('content-avanzado').innerHTML='<div class="error-msg">Error en Analisis Avanzado: '+e.message+'<br><pre style="text-align:left;white-space:pre-wrap;font-size:10px">'+(e.stack||'')+'</pre></div>'; console.error(e); }
+  try{ renderEquipos(groups); }catch(e){ document.getElementById('content-equipos').innerHTML='<div class="error-msg">Error en Equipos: '+e.message+'<br><pre style="text-align:left;white-space:pre-wrap;font-size:10px">'+(e.stack||'')+'</pre></div>'; console.error(e); }
+}
 
-// ─── G8: Diesel/mzn por finca ───
-// CORREGIDO: litros TODAS las actividades / mzn siembra de esa finca
-const fincas8=['Q. Maria','Montana','Mercedes','Sta. Isabel','La Concha','Miramar','La Laguna','San Luis','R. Pando','Llano Verde'];
-new Chart(document.getElementById('g8'),{
-  type:'bar',
-  data:{labels:fincas8,datasets:[
-    {label:'2024',data:[85.40,100.72,100.65,84.50,143.03,135.96,145.84,149.58,165.22,185.77],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[81.76,104.62,106.19,137.72,134.41,135.11,136.10,123.77,162.35,192.53],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' lts'}}}}
-});
+/* ===================== TAB: RESUMEN OPERATIVO ===================== */
+function renderResumen(groups){
+  let unionDates=new Set();
+  groups.forEach(g=>g.series.dates.forEach(d=>unionDates.add(d)));
+  unionDates=[...unionDates].sort();
+  const labels=unionDates.map(k=>{
+    for(const g of groups){ if(g.series.byDate[k]) return fmtShort(g.series.byDate[k].date); }
+    return k;
+  });
 
-// ─── Tabla diesel por finca ───
-const dieselFincaData=[
-  {f:'Fca. Las Américas',mzn:189.3,lts:2917,ratio:15.41},
-  {f:'Rancho Pando GZP',mzn:159,lts:2425,ratio:15.25},
-  {f:'Santa Isabel',mzn:118,lts:1411,ratio:11.96},
-  {f:'Palo de Pan',mzn:56.75,lts:619,ratio:10.91},
-  {f:'Mercedes',mzn:483,lts:4859,ratio:10.06},
-  {f:'Llano Verde',mzn:91.5,lts:875,ratio:9.56},
-  {f:'Paraíso',mzn:66,lts:609,ratio:9.23},
-  {f:'La Laguna',mzn:278,lts:2289,ratio:8.23},
-  {f:'Rancho Pando',mzn:203.5,lts:1673,ratio:8.22},
-  {f:'Miramar',mzn:425.3,lts:3416,ratio:8.03},
-  {f:'Montana',mzn:205,lts:1523,ratio:7.43},
-  {f:'Quinta Maria',mzn:173,lts:1287,ratio:7.44},
-  {f:'La Concha',mzn:564.3,lts:3621,ratio:6.42},
-];
-const maxR=Math.max(...dieselFincaData.map(d=>d.ratio));
-const tbody=document.getElementById('diesel-finca-rows');
-dieselFincaData.forEach(d=>{
-  const pct=Math.round((d.ratio/maxR)*100);
-  const cls=d.ratio>11?'p-red':d.ratio>8?'p-amber':'p-green';
-  const icon=d.ratio>11?'🔴':d.ratio>8?'🟡':'🟢';
-  tbody.innerHTML+=`<tr><td>${d.f}</td><td>${d.mzn}</td><td>${d.lts.toLocaleString()}</td><td><span class="pill ${cls}">${d.ratio.toFixed(2)}</span></td><td><div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${d.ratio>11?'#ef4444':d.ratio>8?'#e0a020':'#4caf6e'}"></div></div></td><td>${icon}</td></tr>`;
-});
+  let kpiHtml='';
+  groups.forEach((g)=>{
+    const s=g.series, totalMz=s.totalMz,totalLts=s.totalLts,totalHm=s.totalHm;
+    const realLts=totalMz>0?totalLts/totalMz:0, realHm=totalMz>0?totalHm/totalMz:0;
+    const stLts=statusBadge(realLts,g.ppto.lts,totalLts>0), stHm=statusBadge(realHm,g.ppto.hm,totalHm>0);
+    const dias=s.dates.length, avg=dias>0?totalMz/dias:0;
+    if(groups.length>1) kpiHtml+=`<div class="kpi-group-title">Sector: ${g.sector}</div>`;
+    kpiHtml+=`<div class="kpi-container">
+      <div class="kpi"><div class="kpi-label">Avance acumulado</div><div class="kpi-val">${totalMz.toLocaleString('en-US',{maximumFractionDigits:1})} Mz</div><div class="kpi-sub">${dias} días con actividad</div></div>
+      <div class="kpi"><div class="kpi-label">Litros acumulados</div><div class="kpi-val">${totalLts.toLocaleString('en-US',{maximumFractionDigits:0})} L</div><div class="kpi-sub">Total combustible</div></div>
+      <div class="kpi"><div class="kpi-label">Avance promedio / día</div><div class="kpi-val">${avg.toFixed(2)}</div><div class="kpi-sub">Mz / día</div></div>
+      <div class="kpi ${stLts.cls==='status-bad'?'bad':''}"><div class="kpi-label">Lts/Mz ${g.ppto.lts!==undefined?'(Ppto. '+g.ppto.lts.toFixed(2)+')':''}</div><div class="kpi-val">${totalMz>0?realLts.toFixed(2):'-'}</div><div class="kpi-sub">${g.ppto.lts!==undefined?('Dif: '+(realLts-g.ppto.lts>=0?'+':'')+(realLts-g.ppto.lts).toFixed(2)):''}</div><span class="kpi-status ${stLts.cls}">${stLts.txt}</span></div>
+      <div class="kpi ${stHm.cls==='status-bad'?'bad':''}"><div class="kpi-label">HM/Mz ${g.ppto.hm!==undefined?'(Ppto. '+g.ppto.hm.toFixed(2)+')':''}</div><div class="kpi-val">${totalMz>0?realHm.toFixed(2):'-'}</div><div class="kpi-sub">${g.ppto.hm!==undefined?('Dif: '+(realHm-g.ppto.hm>=0?'+':'')+(realHm-g.ppto.hm).toFixed(2)):''}</div><span class="kpi-status ${stHm.cls}">${stHm.txt}</span></div>
+    </div>`;
+  });
 
-// ─── G9: Hrs máq/mzn siembra por finca ───
-// CORREGIDO: horas TODAS las actividades / mzn siembra de esa finca
-const fincas9=['Q. Maria','Montana','Sta. Isabel','La Laguna','La Concha','Palo de Pan','Miramar','San Luis','R. Pando','Llano Verde'];
-new Chart(document.getElementById('g9'),{
-  type:'bar',
-  data:{labels:fincas9,datasets:[
-    {label:'2024',data:[11.10,10.06,9.90,13.40,13.95,14.17,14.38,14.73,15.46,18.92],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[7.81,9.86,12.88,11.51,13.37,10.51,13.10,12.92,12.17,14.70],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' hrs'}}}}
-});
+  const tituloAct = state.actSel.length>1 ? state.actSel.join(' + ') : state.actSel[0];
+  document.getElementById('content').innerHTML = kpiHtml + `
+    <div class="section-title">1. Avance general del ciclo</div>
+    <div class="grid1 card"><div class="card-title"><span>Avance acumulado (Mz) - ${tituloAct}</span></div><div style="position:relative;width:100%;height:280px"><canvas id="c1"></canvas></div></div>
+    <div class="grid2">
+      <div class="card"><div class="card-title"><span>Manzanas por día</span></div><div style="position:relative;width:100%;height:220px"><canvas id="c2"></canvas></div></div>
+      <div class="card"><div class="card-title"><span>Avance por finca (Top 10)</span></div><div style="position:relative;width:100%;height:220px"><canvas id="c3"></canvas></div></div>
+    </div>
+    <div class="section-title">2. Eficiencia vs Presupuesto</div>
+    <div class="grid2">
+      <div class="card"><div class="card-title"><span>Lts/Mz Acumulado vs Presupuesto</span></div><div style="position:relative;width:100%;height:220px"><canvas id="c4"></canvas></div><div class="legend"><span><span class="ldot" style="background:#0F766E"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
+      <div class="card"><div class="card-title"><span>HM/Mz Acumulado vs Presupuesto</span></div><div style="position:relative;width:100%;height:220px"><canvas id="c5"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2563EB"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
+    </div>
+    <div class="grid2">
+      <div class="card"><div class="card-title"><span>Lts/Mz por Actividad vs Ppto</span></div><div style="position:relative;width:100%;height:260px"><canvas id="c6"></canvas></div><div class="legend"><span><span class="ldot" style="background:#0F766E"></span>Real</span><span><span class="ldot" style="background:#DC2626"></span>Presupuesto</span></div></div>
+      <div class="card"><div class="card-title"><span>HM/Mz por Actividad vs Ppto</span></div><div style="position:relative;width:100%;height:260px"><canvas id="c7"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2563EB"></span>Real</span><span><span class="ldot" style="background:#DC2626"></span>Presupuesto</span></div></div>
+    </div>
+    <div class="section-title">3. Recursos y Operación</div>
+    <div class="grid2">
+      <div class="card"><div class="card-title"><span>Horas Motor por Categoría</span></div><div style="position:relative;width:100%;height:240px"><canvas id="c8"></canvas></div><div class="legend" id="legend8"></div></div>
+      <div class="card"><div class="card-title"><span>Litros Despachados por Semana</span></div><div style="position:relative;width:100%;height:240px"><canvas id="c9"></canvas></div></div>
+    </div>
+    <div class="section-title">4. Tabla de Alertas por Finca</div>
+    <div class="card">
+      <div class="toggle-row"><label><input type="checkbox" id="chk-alertas" onchange="renderAlertTable(window._alertData)"> Mostrar solo alertas críticas y preventivas</label></div>
+      <div id="alert-table-wrap" style="overflow:auto"></div>
+    </div>
+  `;
 
-// ─── G10: Horas por tipo equipo ───
-const tipos10=['Combinas','Tractor Grande','Tractor Mediano','Tractor Pequeño'];
-new Chart(document.getElementById('g10'),{
-  type:'bar',
-  data:{labels:tipos10,datasets:[
-    {label:'Mani 2024 (Siembra)',data:[0,248,0,3386],backgroundColor:'rgba(239,68,68,.8)',borderRadius:4,borderWidth:0},
-    {label:'Mani 2025 (Siembra)',data:[0,0,0,2740],backgroundColor:'rgba(224,160,32,.8)',borderRadius:4,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:20}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toLocaleString()+' hrs'}}}}
-});
+  drawResumenCharts(groups,unionDates,labels);
+  buildAlertTable(groups);
+}
 
-// ─── G11: Hrs/mzn por labor ───
-const labs11=['Nivelación','Siembra','Subsuelo','Arranque','Arado','Combina','Mureo','Sello','Quema','Post em.','Grad','Fung. I','Fung. II','Fung. III'];
-new Chart(document.getElementById('g11'),{
-  type:'bar',
-  data:{labels:labs11,datasets:[
-    {label:'2024',data:[4.839,1.159,1.042,1.416,0.556,null,0.578,0.251,0.285,0.170,0.419,0.487,0.217,0.246],backgroundColor:'rgba(239,68,68,.75)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[3.040,0.990,1.287,1.303,0.628,1.258,0.414,0.248,0.289,0.241,0.372,0.316,0.251,0.220],backgroundColor:'rgba(224,160,32,.75)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:40,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(2)+' hrs/mzn'}}}}
-});
+function colorForGroup(i){ return COLORS[i%COLORS.length]; }
 
-// ─── G12: Total hrs por labor (horizontal) ───
-const labs12=['Combina/Casamba','Arranque','Siembra','Nivelación','Arado','Grad','Fung. I','Mureo','Fung. III','Quema','Fung. VI','Fung. II','Fung. V','Fung. IV'];
-new Chart(document.getElementById('g12'),{
-  type:'bar',
-  data:{labels:labs12,datasets:[
-    {label:'2024',data:[4891,4382,3634,3593,1628,1546,1526,1461,1411,1381,1355,1312,1185,1172],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[0,3605,2740,2961,1335,1417,1042,843,1188,1133,1271,1148,1128,1105],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:40,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toLocaleString()+' hrs'}}}}
-});
+function drawResumenCharts(groups,unionDates,labels){
+  destroy('c1');
+  const ds1=groups.map((g,i)=>({label:g.sector,data:unionDates.map(d=>forwardFill(g.series.dates,g.series.cum,'accMz',d)),
+    borderColor:colorForGroup(i),backgroundColor:groups.length===1?'rgba(30, 58, 138, 0.08)':'transparent',borderWidth:3,pointRadius:3,pointHoverRadius:6,fill:groups.length===1,tension:.3,
+    datalabels: groups.length===1?lineLabelOpts():{display:false}}));
+  charts.c1=new Chart(document.getElementById('c1'),{type:'line',data:{labels,datasets:ds1},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:groups.length>1}},scales:{x:{ticks:{font:{size:11},maxRotation:45,autoSkip:true,maxTicksLimit:16},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
 
-// ─── G13: Diesel/mzn por labor ───
-const labs13=['Siembra','Combina','Mureo','Arado','Nivelación','Arranque','Sello','Fung. I','Grad'];
-new Chart(document.getElementById('g13'),{
-  type:'bar',
-  data:{labels:labs13,datasets:[
-    {label:'2022',data:[7.463,14.065,9.721,20.821,20.306,11.095,1.684,2.103,11.116],backgroundColor:'rgba(76,175,110,.8)',borderRadius:3,borderWidth:0},
-    {label:'2023',data:[7.030,16.109,9.785,16.732,12.862,10.926,2.222,2.920,9.409],backgroundColor:'rgba(26,95,168,.8)',borderRadius:3,borderWidth:0},
-    {label:'2024',data:[9.106,32.276,9.418,17.670,24.614,11.450,1.927,3.776,9.698],backgroundColor:'rgba(239,68,68,.8)',borderRadius:3,borderWidth:0},
-    {label:'2025',data:[7.739,29.778,8.182,18.431,15.590,12.086,1.860,2.197,10.594],backgroundColor:'rgba(224,160,32,.8)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:30,font:{size:10}}},y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' lts'}}}}
-});
+  destroy('c2');
+  const ds2=groups.map((g,i)=>({label:g.sector,data:unionDates.map(d=>g.series.byDate[d]?+g.series.byDate[d].mz.toFixed(2):0),
+    backgroundColor:colorForGroup(i),borderRadius:4,datalabels:groups.length===1?barLabelOpts(v=>v?v.toFixed(1):''):{display:false}}));
+  charts.c2=new Chart(document.getElementById('c2'),{type:'bar',data:{labels,datasets:ds2},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:groups.length>1}},scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:14},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
 
-// ─── G14: Triple índice por finca 2024 ───
-const fincas14=['La Concha','La Laguna','Llano Verde','Miramar','Montana','Palo de Pan','Q. Maria','R. Pando','San Luis','Sta. Isabel'];
-const avgDH=1.053, avgD=9.106, avgH=1.159;
-const dh14=[1.38,1.09,1.58,1.18,0.98,2.43,0.83,1.95,0.87,1.75];
-const d14=[6.42,8.23,9.56,8.03,7.43,10.91,7.44,8.22,8.12,11.96];
-const h14=[1.35,1.291,1.377,1.296,1.117,2.115,1.121,1.096,1.292,1.805];
-new Chart(document.getElementById('g14'),{
-  type:'bar',
-  data:{labels:fincas14,datasets:[
-    {label:'DH/mzn (idx)',data:dh14.map(v=>(v/avgDH).toFixed(3)),backgroundColor:'rgba(30,125,58,.75)',borderRadius:3,borderWidth:0},
-    {label:'Diesel/mzn (idx)',data:d14.map(v=>(v/avgD).toFixed(3)),backgroundColor:'rgba(26,95,168,.75)',borderRadius:3,borderWidth:0},
-    {label:'Hrs máq/mzn (idx)',data:h14.map(v=>(v/avgH).toFixed(3)),backgroundColor:'rgba(224,160,32,.75)',borderRadius:3,borderWidth:0}
-  ]},
-  options:{...opts(),
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,callbacks:{label:c=>'  '+c.dataset.label+': '+parseFloat(c.parsed.y).toFixed(2)+'x vs promedio'}}},
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v+'x'},min:0,
-        afterDataLimits(axis){axis.max=Math.max(axis.max,2.5)}}}}
-});
+  destroy('c3');
+  const byFincaAll={};
+  groups.forEach(g=>Object.entries(g.series.byFinca).forEach(([f,v])=>{ byFincaAll[f]=(byFincaAll[f]||0)+v; }));
+  const fincaEntries=Object.entries(byFincaAll).filter(e=>e[1]>0).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  document.getElementById('c3').parentElement.style.height=Math.max(220,fincaEntries.length*36+60)+'px';
+  charts.c3=new Chart(document.getElementById('c3'),{type:'bar',data:{labels:fincaEntries.map(e=>e[0]),datasets:[{data:fincaEntries.map(e=>+e[1].toFixed(1)),backgroundColor:'#1E3A8A',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(1))}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}},beginAtZero:true},y:{ticks:{font:{size:11}}}},
+      onClick:(evt,els)=>{ if(els.length){ const f=fincaEntries[els[0].index][0]; state.crossFinca=state.crossFinca===f?null:f; render(); } }}});
 
-// ─── GKL1: Fungicidas KL/mzn ───
-const ciclosKL=['2018','2019','2020','2021','2022','2023','2024'];
-const fung_data=[24.91,25.82,28.58,34.21,30.79,33.14,31.79];
-new Chart(document.getElementById('gkl1'),{
-  type:'line',
-  data:{labels:ciclosKL,datasets:[{
-    label:'Fungicidas KL/mzn',
-    data:fung_data,
-    borderColor:'#6d28d9',backgroundColor:'rgba(109,40,217,.08)',
-    fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#6d28d9',
-    pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5
-  }]},
-  options:{...opts(),
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' KL'},min:20,max:38}},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
-      callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' KL/mzn'}}}}
-});
+  destroy('c4');
+  const ds4=[];
+  groups.forEach((g,i)=>{
+    ds4.push({label:'Real '+g.sector,data:unionDates.map(d=>{ const mz=forwardFill(g.series.dates,g.series.cum,'accMz',d); const lts=forwardFill(g.series.dates,g.series.cum,'accLts',d); return mz>0?+(lts/mz).toFixed(2):null; }),
+      borderColor:colorForGroup(i),backgroundColor:groups.length===1?'rgba(15, 118, 110, 0.08)':'transparent',borderWidth:2.5,pointRadius:3,fill:groups.length===1,tension:.3,
+      datalabels: groups.length===1?lineLabelOpts():{display:false}});
+  });
+  if(groups.length===1 && groups[0].ppto.lts!==undefined) ds4.push({label:'Presupuesto',data:labels.map(()=>groups[0].ppto.lts),borderColor:'#DC2626',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false,datalabels:{display:false}});
+  charts.c4=new Chart(document.getElementById('c4'),{type:'line',data:{labels,datasets:ds4},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:groups.length>1}},scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
 
-// ─── GKL2: Fertilizantes Foliares ───
-new Chart(document.getElementById('gkl2'),{
-  type:'line',
-  data:{labels:ciclosKL,datasets:[{
-    label:'Fert. Foliares KL/mzn',
-    data:[11.01,10.91,10.26,6.56,9.53,8.62,8.34],
-    borderColor:'#1e7d3a',backgroundColor:'rgba(30,125,58,.08)',
-    fill:true,tension:.35,pointRadius:5,pointBackgroundColor:'#1e7d3a',
-    pointBorderColor:'#fff',pointBorderWidth:2,borderWidth:2.5
-  }]},
-  options:{...opts(),
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' KL'},min:5,max:13}},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
-      callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' KL/mzn'}}}}
-});
+  destroy('c5');
+  const ds5=[];
+  groups.forEach((g,i)=>{
+    ds5.push({label:'Real '+g.sector,data:unionDates.map(d=>{ const mz=forwardFill(g.series.dates,g.series.cum,'accMz',d); const hm=forwardFill(g.series.dates,g.series.cum,'accHm',d); return mz>0?+(hm/mz).toFixed(3):null; }),
+      borderColor:colorForGroup(i),backgroundColor:groups.length===1?'rgba(37, 99, 235, 0.08)':'transparent',borderWidth:2.5,pointRadius:3,fill:groups.length===1,tension:.3,
+      datalabels: groups.length===1?lineLabelOpts():{display:false}});
+  });
+  if(groups.length===1 && groups[0].ppto.hm!==undefined) ds5.push({label:'Presupuesto',data:labels.map(()=>groups[0].ppto.hm),borderColor:'#DC2626',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false,datalabels:{display:false}});
+  charts.c5=new Chart(document.getElementById('c5'),{type:'line',data:{labels,datasets:ds5},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:groups.length>1}},scales:{x:{ticks:{font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
 
-// ─── GKL3: Todas las familias comparativa ───
-new Chart(document.getElementById('gkl3'),{
-  type:'bar',
-  data:{labels:ciclosKL,datasets:[
-    {label:'Fungicidas',      data:[24.91,25.82,28.58,34.21,30.79,33.14,31.79],backgroundColor:'rgba(109,40,217,.8)',borderWidth:0},
-    {label:'Fert. Foliares',  data:[11.01,10.91,10.26,6.56,9.53,8.62,8.34],  backgroundColor:'rgba(30,125,58,.8)',  borderWidth:0},
-    {label:'Herbicidas',      data:[13.42,10.38,8.22,7.75,8.46,0,10.65],      backgroundColor:'rgba(14,116,144,.8)', borderWidth:0},
-    {label:'Insecticidas',    data:[0.78,1.47,0.85,0.60,0.13,0.39,0.48],      backgroundColor:'rgba(224,160,32,.8)', borderWidth:0},
-    {label:'Adherente',       data:[0.05,0.04,0.02,0.04,0.05,0.07,0.03],      backgroundColor:'rgba(154,156,148,.8)',borderWidth:0},
-  ]},
-  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
-      callbacks:{label:c=>'  '+c.dataset.label+': '+c.parsed.y.toFixed(2)+' KL/mzn'}}},
-    scales:{
-      x:{stacked:true,grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
-      y:{stacked:true,grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(0)+' KL'}}}}
-});
+  let rows1All=[],rows2All=[];
+  const globalMaxAll = maxDateOf(rowsFor(raw1,state.ciclo,null,Object.keys(PRESUPUESTOS)));
+  (state.secSel.length>0?state.secSel:[null]).forEach(sec=>{
+    let r1=applyCross(rowsFor(raw1,state.ciclo,sec,Object.keys(PRESUPUESTOS)),false);
+    r1=applyPeriodo(r1,state.periodo,globalMaxAll);
+    let r2=applyCross(rowsFor(raw2,state.ciclo,sec,Object.keys(PRESUPUESTOS)).filter(isHmCat),true);
+    r2=applyPeriodo(r2,state.periodo,globalMaxAll);
+    rows1All=rows1All.concat(r1); rows2All=rows2All.concat(r2);
+  });
+  const actMz={},actLts={},actHm={};
+  rows1All.forEach(r=>{ const a=get(r,'actividad'); actMz[a]=(actMz[a]||0)+rowAvance(r); actLts[a]=(actLts[a]||0)+rowLts(r); });
+  rows2All.forEach(r=>{ const a=get(r,'actividad'); actHm[a]=(actHm[a]||0)+rowHme(r); });
+  const actsPresent=Object.keys(actMz).filter(a=>actMz[a]>0 && PRESUPUESTOS[a]).sort(actSort);
+  const actLtsMz=actsPresent.map(a=>+(actLts[a]/actMz[a]).toFixed(2));
+  const actHmMz=actsPresent.map(a=>+((actHm[a]||0)/actMz[a]).toFixed(3));
+  const actLtsPpto=actsPresent.map(a=>PRESUPUESTOS[a].lts);
+  const actHmPpto=actsPresent.map(a=>PRESUPUESTOS[a].hm);
 
-// ─── GKL4: Herbicidas ───
-new Chart(document.getElementById('gkl4'),{
-  type:'bar',
-  data:{labels:['2018','2019','2020','2021','2022','2024'],datasets:[{
-    label:'Herbicidas KL/mzn',
-    data:[13.42,10.38,8.22,7.75,8.46,10.65],
-    backgroundColor:['rgba(14,116,144,.75)','rgba(14,116,144,.75)','rgba(14,116,144,.75)','rgba(30,125,58,.75)','rgba(14,116,144,.75)','rgba(239,68,68,.75)'],
-    borderRadius:4,borderWidth:0
-  }]},
-  options:{...opts(),
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(1)+' KL'},min:5,max:16}},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6,
-      callbacks:{label:c=>'  '+c.parsed.y.toFixed(2)+' KL/mzn'}}}}
-});
+  destroy('c6');
+  charts.c6=new Chart(document.getElementById('c6'),{type:'bar',data:{labels:actsPresent,datasets:[
+    {label:'Real',data:actLtsMz,backgroundColor:'#0F766E',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(1))},
+    {label:'Presupuesto',data:actLtsPpto,backgroundColor:'#DC2626',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(1))}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11},maxRotation:60,minRotation:30}},y:{ticks:{font:{size:11}},beginAtZero:true}},
+    onClick:(evt,els)=>{ if(els.length){ const a=actsPresent[els[0].index]; state.actSel=[a]; afterSelChange(); } }}});
 
-// ─── GKL5: Total KL/mzn vs mzn sembradas ───
-const mznSembradas=[2264,1637,2125,2066,2137,2328,2377];
-const totalKLmzn=[59.3,69.1,59.7,56.2,49.2,null,52.8];
-new Chart(document.getElementById('gkl5'),{
-  type:'bar',
-  data:{labels:ciclosKL,datasets:[
-    {type:'bar',label:'Total KL/mzn',data:totalKLmzn,backgroundColor:['rgba(26,95,168,.7)','rgba(26,95,168,.7)','rgba(26,95,168,.7)','rgba(26,95,168,.7)','rgba(26,95,168,.7)',null,'rgba(26,95,168,.7)'],borderRadius:4,borderWidth:0,yAxisID:'y'},
-    {type:'line',label:'Mzn sembradas',data:mznSembradas,borderColor:'#e0a020',backgroundColor:'rgba(224,160,32,.08)',borderWidth:2,pointRadius:4,pointBackgroundColor:'#e0a020',pointBorderColor:'#fff',pointBorderWidth:2,tension:.3,yAxisID:'y2'}
-  ]},
-  options:{responsive:true,maintainAspectRatio:false,animation:{duration:500},
-    plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a1c18',titleColor:'#fff',bodyColor:'#9a9c94',borderColor:'#e2e3dc',borderWidth:1,padding:10,cornerRadius:6}},
-    scales:{
-      x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:'#1a5fa8',font:{size:11},callback:v=>v.toFixed(0)+' KL'},position:'left',min:35},
-      y2:{grid:{display:false},ticks:{color:'#e0a020',font:{size:11},callback:v=>v.toLocaleString()+' mzn'},position:'right',min:1200}}}
-});
+  destroy('c7');
+  charts.c7=new Chart(document.getElementById('c7'),{type:'bar',data:{labels:actsPresent,datasets:[
+    {label:'Real',data:actHmMz,backgroundColor:'#2563EB',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(2))},
+    {label:'Presupuesto',data:actHmPpto,backgroundColor:'#DC2626',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(2))}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11},maxRotation:60,minRotation:30}},y:{ticks:{font:{size:11}},beginAtZero:true}},
+    onClick:(evt,els)=>{ if(els.length){ const a=actsPresent[els[0].index]; state.actSel=[a]; afterSelChange(); } }}});
 
-// ─── GKL6: Fungicidas por finca ───
-const fincasKL=['La Concha','La Laguna','Mercedes','Miramar','Montana','Paraíso','Q. Maria','R. Pando','San Luis','Sta. Isabel'];
-new Chart(document.getElementById('gkl6'),{
-  type:'bar',
-  data:{labels:fincasKL,datasets:[
-    {label:'2022',data:[0.59,0.69,0.66,0.61,0.63,1.62,0.59,0.65,0.59,0.61],backgroundColor:'rgba(109,40,217,.75)',borderRadius:3,borderWidth:0},
-    {label:'2023',data:[0.69,0.69,0.70,0.66,0.65,0.69,0.59,0.67,0.59,0.61],backgroundColor:'rgba(26,95,168,.75)', borderRadius:3,borderWidth:0},
-    {label:'2024',data:[0.65,0.62,0.73,0.68,0.61,1.08,0.59,0.66,0.71,0.59],backgroundColor:'rgba(239,68,68,.75)',  borderRadius:3,borderWidth:0},
-  ]},
-  options:{...opts(),
-    scales:{x:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,maxRotation:35,font:{size:10}}},
-      y:{grid:{color:LIGHT.grid},ticks:{color:LIGHT.tick,callback:v=>v.toFixed(2)+' KL'}}}}
-});
+  destroy('c8');
+  const byCat={};
+  groups.forEach(g=>g.r2.forEach(r=>{ const c=get(r,'categoria equipo')||'Sin categoria'; byCat[c]=(byCat[c]||0)+rowHme(r); }));
+  const catEntries=Object.entries(byCat).filter(e=>e[1]>0);
+  const catTotal=catEntries.reduce((s,e)=>s+e[1],0);
+  charts.c8=new Chart(document.getElementById('c8'),{type:'doughnut',data:{labels:catEntries.map(e=>e[0]),datasets:[{data:catEntries.map(e=>+e[1].toFixed(1)),backgroundColor:catEntries.map((_,i)=>COLORS[i%COLORS.length]), borderWidth: 2, borderColor: '#ffffff'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},datalabels:{display:false}},cutout:'65%',
+      onClick:(evt,els)=>{ if(els.length){ const c=catEntries[els[0].index][0]; state.crossCat=state.crossCat===c?null:c; render(); } }}});
+  document.getElementById('legend8').innerHTML=catEntries.length? catEntries.map((e,i)=>`<span><span class="ldot" style="background:${COLORS[i%COLORS.length]}"></span>${e[0]} (${catTotal>0?Math.round(e[1]/catTotal*100):0}%)</span>`).join(''):'<span>Sin datos de horas motor en este filtro</span>';
+
+  destroy('c9');
+  const byWeek={};
+  groups.forEach(g=>Object.entries(g.series.byWeek).forEach(([w,v])=>{ byWeek[w]=(byWeek[w]||0)+v.lts; }));
+  const weekKeys=Object.keys(byWeek).sort();
+  charts.c9=new Chart(document.getElementById('c9'),{type:'bar',data:{labels:weekKeys,datasets:[{data:weekKeys.map(w=>+byWeek[w].toFixed(1)),backgroundColor:'#1E3A8A',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(0))}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}},
+      onClick:(evt,els)=>{ if(els.length){ const w=weekKeys[els[0].index]; state.crossWeek=state.crossWeek===w?null:w; render(); } }}});
+}
+
+/* ===================== TABLA DE ALERTAS (#16) ===================== */
+function buildAlertTable(groups){
+  const ppto = groups[0].ppto;
+  const pptoLts = PRESUPUESTOS[state.actSel[0]]?PRESUPUESTOS[state.actSel[0]].lts:ppto.lts;
+  const pptoHm = PRESUPUESTOS[state.actSel[0]]?PRESUPUESTOS[state.actSel[0]].hm:ppto.hm;
+
+  const data={};
+  groups.forEach(g=>{
+    g.r1.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; const sec=get(r,'sector')||g.sector;
+      if(!data[f]) data[f]={sector:sec,mz:0,lts:0,hmP:0,hmM:0,hmG:0,hmC:0};
+      data[f].mz+=rowAvance(r); data[f].lts+=rowLts(r);
+    });
+    g.r2.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; const sec=get(r,'sector')||g.sector; const cat=norm(get(r,'categoria equipo'));
+      if(!data[f]) data[f]={sector:sec,mz:0,lts:0,hmP:0,hmM:0,hmG:0,hmC:0};
+      if(cat==='tractor pequeño') data[f].hmP+=rowHme(r);
+      else if(cat==='tractor mediano') data[f].hmM+=rowHme(r);
+      else if(cat==='tractor grande') data[f].hmG+=rowHme(r);
+      else if(cat.startsWith('combina')) data[f].hmC+=rowHme(r);
+    });
+  });
+  window._alertData={data,pptoLts,pptoHm};
+  renderAlertTable(window._alertData);
+}
+function renderAlertTable(payload){
+  if(!payload) return;
+  const {data,pptoLts,pptoHm}=payload;
+  const onlyAlerts=document.getElementById('chk-alertas')?.checked;
+  const sectores={};
+  Object.entries(data).forEach(([finca,d])=>{
+    if(d.mz<=0 && d.lts<=0) return;
+    const totalHoras=d.hmP+d.hmM+d.hmG+d.hmC;
+    const ltsMz=d.mz>0?d.lts/d.mz:0; const hmMz=d.mz>0?totalHoras/d.mz:0;
+    const difLts=pptoLts!==undefined?ltsMz-pptoLts:null;
+    const difHm=pptoHm!==undefined?hmMz-pptoHm:null;
+    const alertLts = difLts!==null && pptoLts!==undefined && difLts>pptoLts*0.05;
+    const alertHm = difHm!==null && pptoHm!==undefined && difHm>pptoHm*0.05;
+    const estado = (alertLts&&alertHm)?'critico':(alertLts||alertHm)?'alerta':'ok';
+    if(onlyAlerts && estado==='ok') return;
+    if(!sectores[d.sector]) sectores[d.sector]={rows:[],tot:{mz:0,lts:0,hmP:0,hmM:0,hmG:0,hmC:0}};
+    sectores[d.sector].rows.push({finca,...d,totalHoras,ltsMz,hmMz,difLts,difHm,estado});
+    sectores[d.sector].tot.mz+=d.mz; sectores[d.sector].tot.lts+=d.lts;
+    sectores[d.sector].tot.hmP+=d.hmP; sectores[d.sector].tot.hmM+=d.hmM; sectores[d.sector].tot.hmG+=d.hmG; sectores[d.sector].tot.hmC+=d.hmC;
+  });
+
+  const fmt=(v,dec=1)=> v>0?v.toLocaleString('es',{maximumFractionDigits:dec,minimumFractionDigits:0}):'-';
+  const difCell=(dif,ppto,dec)=>{ if(dif===null||dif===undefined||ppto===undefined) return '<td>-</td>'; let cls='cell-ok'; if(dif>ppto*0.05) cls='cell-bad'; else if(dif<-ppto*0.05) cls='cell-ok'; else cls='cell-warn'; return `<td class="${cls}">${(dif>=0?'+':'')+dif.toFixed(dec)}</td>`; };
+
+  let html=`<table class="alert-table"><thead><tr>
+    <th onclick="sortAlert('sector')">Sector</th><th onclick="sortAlert('finca')">Finca</th>
+    <th onclick="sortAlert('mz')">Mzs Avance</th><th onclick="sortAlert('lts')">Total Litros</th>
+    <th>Lts/Mz Ppto</th><th onclick="sortAlert('ltsMz')">Lts/Mz Real</th><th onclick="sortAlert('difLts')">Dif Lts</th>
+    <th onclick="sortAlert('hmP')">HM T.Peq</th><th onclick="sortAlert('hmM')">HM T.Med</th><th onclick="sortAlert('hmG')">HM T.Gde</th><th onclick="sortAlert('hmC')">HM Combinas</th>
+    <th onclick="sortAlert('totalHoras')">Total Horas</th><th>HM/Mz Ppto</th><th onclick="sortAlert('hmMz')">HM/Mz Real</th>
+    <th onclick="sortAlert('estado')" style="text-align:center;">Estado</th>
+  </tr></thead><tbody>`;
+
+  const totGeneral={mz:0,lts:0,hmP:0,hmM:0,hmG:0,hmC:0};
+  Object.keys(sectores).sort().forEach(sec=>{
+    const g=sectores[sec];
+    if(window._sortKey) g.rows.sort((a,b)=>sortCompare(a,b,window._sortKey));
+    g.rows.forEach(r=>{
+      const estTxt = r.estado==='ok'?'ÓPTIMO':r.estado==='alerta'?'ALERTA':'CRÍTICO';
+      const estCls = r.estado==='ok'?'cell-ok':r.estado==='alerta'?'cell-warn':'cell-bad';
+      html+=`<tr><td>${sec}</td><td style="font-weight:600; color:#334155;">${r.finca}</td><td>${fmt(r.mz)}</td><td>${fmt(r.lts,0)}</td>
+        <td>${pptoLts!==undefined?pptoLts.toFixed(2):'-'}</td><td style="font-weight:600;">${fmt(r.ltsMz,2)}</td>
+        ${difCell(r.difLts,pptoLts,2)}
+        <td>${fmt(r.hmP)}</td><td>${fmt(r.hmM)}</td><td>${fmt(r.hmG)}</td><td>${fmt(r.hmC)}</td>
+        <td>${fmt(r.totalHoras)}</td><td>${pptoHm!==undefined?pptoHm.toFixed(2):'-'}</td><td style="font-weight:600;">${fmt(r.hmMz,2)}</td>
+        <td class="${estCls}" style="text-align:center;">${estTxt}</td></tr>`;
+    });
+    const t=g.tot; const totHoras=t.hmP+t.hmM+t.hmG+t.hmC; const ltsMz=t.mz>0?t.lts/t.mz:0; const hmMz=t.mz>0?totHoras/t.mz:0;
+    const difLtsT=pptoLts!==undefined?ltsMz-pptoLts:null, difHmT=pptoHm!==undefined?hmMz-pptoHm:null;
+    html+=`<tr class="subtotal"><td colspan="2">Total ${sec}</td><td>${fmt(t.mz)}</td><td>${fmt(t.lts,0)}</td><td>${pptoLts!==undefined?pptoLts.toFixed(2):'-'}</td><td>${fmt(ltsMz,2)}</td>${difCell(difLtsT,pptoLts,2)}
+      <td>${fmt(t.hmP)}</td><td>${fmt(t.hmM)}</td><td>${fmt(t.hmG)}</td><td>${fmt(t.hmC)}</td><td>${fmt(totHoras)}</td><td>${pptoHm!==undefined?pptoHm.toFixed(2):'-'}</td><td>${fmt(hmMz,2)}</td><td></td></tr>`;
+    totGeneral.mz+=t.mz; totGeneral.lts+=t.lts; totGeneral.hmP+=t.hmP; totGeneral.hmM+=t.hmM; totGeneral.hmG+=t.hmG; totGeneral.hmC+=t.hmC;
+  });
+  const totHorasG=totGeneral.hmP+totGeneral.hmM+totGeneral.hmG+totGeneral.hmC;
+  const ltsMzG=totGeneral.mz>0?totGeneral.lts/totGeneral.mz:0, hmMzG=totGeneral.mz>0?totHorasG/totGeneral.mz:0;
+  const difLtsG=pptoLts!==undefined?ltsMzG-pptoLts:null, difHmG=pptoHm!==undefined?hmMzG-pptoHm:null;
+  html+=`<tr class="total"><td colspan="2">TOTAL GENERAL</td><td>${fmt(totGeneral.mz)}</td><td>${fmt(totGeneral.lts,0)}</td><td>${pptoLts!==undefined?pptoLts.toFixed(2):'-'}</td><td>${fmt(ltsMzG,2)}</td>${difCell(difLtsG,pptoLts,2)}
+    <td>${fmt(totGeneral.hmP)}</td><td>${fmt(totGeneral.hmM)}</td><td>${fmt(totGeneral.hmG)}</td><td>${fmt(totGeneral.hmC)}</td><td>${fmt(totHorasG)}</td><td>${pptoHm!==undefined?pptoHm.toFixed(2):'-'}</td><td>${fmt(hmMzG,2)}</td><td></td></tr>`;
+  html+='</tbody></table>';
+  if(Object.keys(sectores).length===0) html='<div class="status-msg">Sin datos para los filtros actuales.</div>';
+  document.getElementById('alert-table-wrap').innerHTML=html;
+}
+function sortCompare(a,b,key){ const va=a[key],vb=b[key]; if(typeof va==='string') return va.localeCompare(vb); return (vb||0)-(va||0); }
+function sortAlert(key){ window._sortKey=key; renderAlertTable(window._alertData); }
+
+/* ===================== TAB: ANALISIS AVANZADO ===================== */
+function renderAvanzado(groups){
+  document.getElementById('content-avanzado').innerHTML=`
+    <div class="section-title">B1. Comparativo entre ciclos (Avance acumulado por día)</div>
+    <div class="card grid1"><div style="position:relative;width:100%;height:260px"><canvas id="cb1"></canvas></div><div class="legend" id="legendb1"></div></div>
+    <div class="section-title">B2. Lts/Mz por semana (No acumulado)</div>
+    <div class="card grid1"><div style="position:relative;width:100%;height:240px"><canvas id="cb2"></canvas></div><div class="legend"><span><span class="ldot" style="background:#0F766E"></span>Real Semanal</span><span><span class="ldash"></span>Presupuesto</span></div></div>
+    <div class="section-title">C1. Ranking de Eficiencia por Finca</div>
+    <div class="grid2">
+      <div class="card"><div class="card-title"><span>Diferencia Lts/Mz (Real vs Presupuesto)</span></div><div style="position:relative;width:100%;height:280px"><canvas id="cc1a"></canvas></div></div>
+      <div class="card"><div class="card-title"><span>Diferencia HM/Mz (Real vs Presupuesto)</span></div><div style="position:relative;width:100%;height:280px"><canvas id="cc1b"></canvas></div></div>
+    </div>
+    <div class="section-title">C2. Mapa de Calor: Finca x Actividad (Lts/Mz)</div>
+    <div class="card" style="overflow:auto"><div id="heatmap"></div></div>
+  `;
+  drawB1(groups);
+  drawB2(groups);
+  drawC1(groups);
+  drawC2();
+}
+
+/* B1: comparar ciclo actual vs ciclo de comparacion, por "dia del ciclo" */
+function drawB1(groups){
+  destroy('cb1');
+  const main=groups[0];
+  const seriesMain=main.series.dates.map(d=>main.series.cum[d].accMz);
+  let seriesCmp=[]; let pctTxt='';
+  const cmpCiclo=document.getElementById('sel-compare').value;
+  if(cmpCiclo){
+    const actCmp=state.actSel.filter(a=>raw1.some(r=>isComasa(r)&&get(r,'ciclo')===cmpCiclo&&get(r,'actividad')===a));
+    const actUse=actCmp.length?actCmp:state.actSel;
+    let r1=rowsFor(raw1,cmpCiclo,state.secSel[0]||null,actUse);
+    const s=buildGroupSeries(r1,[]);
+    seriesCmp=s.dates.map(d=>s.cum[d].accMz);
+    const n=Math.min(seriesMain.length,seriesCmp.length);
+    if(n>0){ const a=seriesMain[n-1],b=seriesCmp[n-1]; const pct=b>0?((a-b)/b*100):0;
+      pctTxt=`En el día ${n} del ciclo: ${state.ciclo}=${a.toFixed(1)} Mz vs ${cmpCiclo}=${b.toFixed(1)} Mz (${pct>=0?'+':''}${pct.toFixed(1)}%)`; }
+  }
+  const maxLen=Math.max(seriesMain.length,seriesCmp.length,1);
+  const labels=Array.from({length:maxLen},(_,i)=>'Día '+(i+1));
+  const datasets=[{label:state.ciclo,data:seriesMain,borderColor:'#1E3A8A',borderWidth:3,pointRadius:2,fill:false,tension:.3}];
+  if(cmpCiclo) datasets.push({label:cmpCiclo,data:seriesCmp,borderColor:'#DC2626',borderWidth:2,borderDash:[5,5],pointRadius:2,fill:false,tension:.3});
+  charts.cb1=new Chart(document.getElementById('cb1'),{type:'line',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true}},scales:{x:{ticks:{font:{size:11},maxRotation:45,autoSkip:true,maxTicksLimit:14},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+  document.getElementById('legendb1').innerHTML = cmpCiclo? `<span style="font-weight:600; color:#0F2537;">${pctTxt}</span>` : '<span>Selecciona un ciclo en "Comparar con ciclo" para ver el comparativo.</span>';
+}
+
+/* B2: lts/mz por semana */
+function drawB2(groups){
+  destroy('cb2');
+  const byWeek={};
+  groups.forEach(g=>Object.entries(g.series.byWeek).forEach(([w,v])=>{ if(!byWeek[w]) byWeek[w]={lts:0,mz:0}; byWeek[w].lts+=v.lts; byWeek[w].mz+=v.mz; }));
+  const weeks=Object.keys(byWeek).sort();
+  const vals=weeks.map(w=>byWeek[w].mz>0?+(byWeek[w].lts/byWeek[w].mz).toFixed(2):0);
+  const ppto=groups[0].ppto.lts;
+  charts.cb2=new Chart(document.getElementById('cb2'),{type:'bar',data:{labels:weeks,datasets:[
+    {label:'Real',data:vals,backgroundColor:'#0F766E',borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(1))},
+    ...(ppto!==undefined?[{type:'line',label:'Presupuesto',data:weeks.map(()=>ppto),borderColor:'#DC2626',borderWidth:2,borderDash:[5,5],pointRadius:0,fill:false,datalabels:{display:false}}]:[])
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}},grid:{display:false}},y:{ticks:{font:{size:11}},beginAtZero:true}}}});
+}
+
+/* C1: ranking diferencia lts/mz y hm/mz por finca */
+function drawC1(groups){
+  const ppto=groups[0].ppto;
+  const data={};
+  groups.forEach(g=>{
+    g.r1.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; if(!data[f]) data[f]={mz:0,lts:0,hm:0}; data[f].mz+=rowAvance(r); data[f].lts+=rowLts(r); });
+    g.r2.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; if(!data[f]) data[f]={mz:0,lts:0,hm:0}; data[f].hm+=rowHme(r); });
+  });
+  const entries=Object.entries(data).filter(([f,d])=>d.mz>0);
+  const ltsDif=entries.map(([f,d])=>({f,v:+((d.lts/d.mz)-(ppto.lts||0)).toFixed(2)})).sort((a,b)=>b.v-a.v);
+  const hmDif=entries.map(([f,d])=>({f,v:+((d.hm/d.mz)-(ppto.hm||0)).toFixed(3)})).sort((a,b)=>b.v-a.v);
+
+  destroy('cc1a');
+  charts.cc1a=new Chart(document.getElementById('cc1a'),{type:'bar',data:{labels:ltsDif.map(e=>e.f),datasets:[{data:ltsDif.map(e=>e.v),backgroundColor:ltsDif.map(e=>e.v>0?'#DC2626':'#0F766E'),borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(2))}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}});
+
+  destroy('cc1b');
+  charts.cc1b=new Chart(document.getElementById('cc1b'),{type:'bar',data:{labels:hmDif.map(e=>e.f),datasets:[{data:hmDif.map(e=>e.v),backgroundColor:hmDif.map(e=>e.v>0?'#DC2626':'#2563EB'),borderRadius:4,datalabels:barLabelOpts(v=>v.toFixed(2))}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11}}}}}});
+}
+
+/* C2: heatmap finca x actividad (lts/mz real), usando ciclo+sector+periodo, todas las actividades */
+function drawC2(){
+  const acts=Object.keys(PRESUPUESTOS).sort(actSort);
+  let r1All=[];
+  const globalMax = maxDateOf(rowsFor(raw1,state.ciclo,null,acts));
+  (state.secSel.length>0?state.secSel:[null]).forEach(sec=>{
+    let r1=rowsFor(raw1,state.ciclo,sec,acts);
+    r1=applyPeriodo(r1,state.periodo,globalMax);
+    r1All=r1All.concat(r1);
+  });
+  const data={};
+  r1All.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; const a=get(r,'actividad'); if(!data[f]) data[f]={}; if(!data[f][a]) data[f][a]={mz:0,lts:0}; data[f][a].mz+=rowAvance(r); data[f][a].lts+=rowLts(r); });
+  const fincas=Object.keys(data).filter(f=>Object.values(data[f]).some(v=>v.mz>0)).sort();
+
+  let html='<table class="heat-table"><thead><tr><th>Finca</th>'+acts.map(a=>`<th>${a}</th>`).join('')+'</tr></thead><tbody>';
+  fincas.forEach(f=>{
+    html+=`<tr><td>${f}</td>`;
+    acts.forEach(a=>{
+      const d=data[f][a];
+      if(!d||d.mz<=0){ html+='<td>-</td>'; return; }
+      const real=d.lts/d.mz, ppto=PRESUPUESTOS[a].lts;
+      const dif=real-ppto; let cls='cell-ok';
+      if(dif>ppto*0.05) cls='cell-bad'; else if(dif<-ppto*0.05) cls='cell-ok'; else cls='cell-warn';
+      html+=`<td class="${cls}">${real.toFixed(1)}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  if(!fincas.length) html='<div class="status-msg">Sin datos para los filtros actuales.</div>';
+  document.getElementById('heatmap').innerHTML=html;
+}
+
+/* ===================== TAB: EQUIPOS (D1) ===================== */
+function renderEquipos(groups){
+  const hasEquipo = raw2.length && raw2[0].hasOwnProperty('equipo');
+  if(!hasEquipo){
+    document.getElementById('content-equipos').innerHTML='<div class="card status-msg">La hoja "Combustible infoagro" no tiene una columna "Equipo" detectable. Solicita agregarla a la hoja para habilitar este análisis (HM y Litros por equipo individual).</div>';
+    return;
+  }
+  const data={};
+  groups.forEach(g=>g.r2.forEach(r=>{ const eq=get(r,'equipo')||'Sin equipo'; if(!data[eq]) data[eq]={hm:0,lts:0,cat:get(r,'categoria equipo')}; data[eq].hm+=rowHme(r); data[eq].lts+=rowLts(r); }));
+  const entries=Object.entries(data).filter(e=>e[1].hm>0||e[1].lts>0).sort((a,b)=>b[1].hm-a[1].hm);
+  let html=`<div class="section-title">D1. Horas Motor y Combustible por Equipo</div><div class="card" style="overflow:auto"><table class="alert-table"><thead><tr><th>Equipo</th><th>Categoría</th><th>HM Total</th><th>Litros Total</th><th>Lts/HM</th></tr></thead><tbody>`;
+  entries.forEach(([eq,d])=>{ html+=`<tr><td style="font-weight:600; color:#0F2537;">${eq}</td><td>${d.cat||'-'}</td><td>${d.hm.toFixed(1)}</td><td>${d.lts.toFixed(1)}</td><td style="font-weight:600;">${d.hm>0?(d.lts/d.hm).toFixed(2):'-'}</td></tr>`; });
+  html+='</tbody></table></div>';
+  if(!entries.length) html=`<div class="section-title">D1. Horas Motor y Combustible por Equipo</div><div class="card status-msg">Sin datos para los filtros actuales.</div>`;
+  document.getElementById('content-equipos').innerHTML=html;
+}
+
+init();
 </script>
 </body>
 </html>
