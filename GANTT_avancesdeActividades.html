@@ -2,907 +2,516 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>INFOAGRO · Avances Campo / Pivot Gantt</title>
+  <title>INFOAGRO · Monitoreo Cruzado de Avances</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
     :root {
-      --verde-oscuro:   #1a472a;
-      --verde-medio:    #2d6a4f;
-      --verde-claro:    #52b788;
-      --verde-suave:    #d8f3dc;
-      --verde-hover:    #b7e4c7;
-      --acento:         #40916c;
-      --acento-hover:   #1b4332;
-      --naranja:        #e76f51;
-      --naranja-suave:  #fde8e0;
-      --azul-suave:     #dde9f7;
-      --azul-texto:     #1d3557;
-      --gris-bg:        #f4f6f3;
-      --gris-borde:     #d1d9ce;
-      --gris-texto:     #4a5568;
-      --blanco:         #ffffff;
-      --sombra:         0 2px 8px rgba(26,71,42,0.10);
-    }
+      /* Organic & Fluid Palette */
+      --bg-organic: #f4f7f5;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      
+      /* Gradientes Orgánicos */
+      --grad-header: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+      --grad-verde: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%);
+      --grad-naranja: linear-gradient(135deg, #e76f51 0%, #f4a261 100%);
+      --grad-soft-bg: linear-gradient(180deg, #ffffff 0%, #f8faf9 100%);
 
-    *, *::before, *::after { box-sizing: border-box; }
+      --radius-organic: 24px 8px 24px 12px;
+      --shadow-sm: 0 4px 20px -2px rgba(45, 106, 79, 0.05);
+      --shadow-md: 0 10px 30px -5px rgba(27, 67, 50, 0.08);
+    }
 
     body {
-      background-color: var(--gris-bg);
-      font-family: 'Inter', system-ui, sans-serif;
-      color: #2d3748;
-      min-height: 100vh;
+      background-color: var(--bg-organic);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+      padding: 20px;
     }
 
-    /* ── HEADER ── */
-    header {
-      background: linear-gradient(135deg, var(--verde-oscuro) 0%, var(--verde-medio) 100%);
-      padding: 12px 28px;
+    .dashboard-container {
+      max-width: 1750px;
+      margin: 0 auto;
+    }
+
+    /* ENCABEZADO LÍQUIDO COMPACTADO */
+    .page-hdr-container {
+      background: var(--grad-header);
+      border-radius: 20px 8px 20px 8px;
+      padding: 16px 24px;
+      color: #ffffff;
+      box-shadow: 0 6px 20px -5px rgba(27, 67, 50, 0.2);
+      margin-bottom: 16px;
+    }
+    .hdr-title { font-size: 18px; font-weight: 700; letter-spacing: -0.02em; }
+    .hdr-sub { font-size: 12px; color: #b7e4c7; font-weight: 400; }
+
+    /* CONTENEDOR DE FILTROS ULTRA-COMPACTO (ANTI-GRID LINEAL) */
+    .filters-inline-container {
+      background: var(--grad-soft-bg);
+      border-radius: 16px;
+      box-shadow: var(--shadow-sm);
+      padding: 14px 20px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(82, 183, 136, 0.15);
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: 0 3px 10px rgba(26,71,42,0.25);
-    }
-
-    .logo {
-      font-size: 1rem;
-      font-weight: 600;
-      color: #fff;
-      letter-spacing: 0.3px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo::before {
-      content: '';
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--verde-claro);
-      box-shadow: 0 0 0 3px rgba(82,183,136,0.35);
-      display: inline-block;
-    }
-
-    .status-badge {
-      background-color: rgba(255,255,255,0.15);
-      color: #fff;
-      border: 1px solid rgba(255,255,255,0.3);
-      border-radius: 20px;
-      padding: 4px 14px;
-      font-size: 0.78rem;
-      font-weight: 500;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .status-badge::before {
-      content: '';
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #74c69d;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
-    }
-
-    /* ── SECCIÓN FILTROS ── */
-    .filters-section {
-      background: var(--blanco);
-      border-bottom: 2px solid var(--verde-suave);
-      padding: 14px 24px;
-    }
-
-    .filters-title {
-      font-size: 0.68rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--verde-medio);
-      font-weight: 600;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .filters-title::before {
-      content: '';
-      display: inline-block;
-      width: 14px;
-      height: 2px;
-      background: var(--verde-claro);
-      border-radius: 2px;
-    }
-
-    .filters-bar {
-      display: flex;
-      align-items: flex-end;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
+      align-items: flex-end;
     }
 
-    .filter-item {
+    .filter-item-wrap {
       display: flex;
       flex-direction: column;
+      gap: 4px;
+      flex: 1;
+      min-width: 160px;
     }
 
-    .filter-item label {
-      font-size: 0.68rem;
+    .fg-label {
+      font-size: 10px;
       text-transform: uppercase;
-      letter-spacing: 0.6px;
-      color: var(--gris-texto);
-      font-weight: 600;
-      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    
+    .form-select, .form-control {
+      background-color: #ffffff !important;
+      border: 1px solid rgba(163, 177, 198, 0.3) !important;
+      border-radius: 10px 4px 10px 4px !important;
+      color: var(--text-main) !important;
+      font-size: 12px;
+      height: 36px;
+      padding: 0 8px;
     }
 
-    /* ── DROPDOWN CHECKLIST ── */
-    .dropdown-checklist {
-      position: relative;
-      width: 170px;
+    /* MINI BOTONES DE REESTABLECIMIENTO CIRCULARES */
+    .btn-reset-individual {
+      background: #ffffff;
+      border: 1px solid rgba(163, 177, 198, 0.3);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+    .btn-reset-individual:hover { color: #e76f51; border-color: #e76f51; transform: rotate(-180deg); }
+
+    /* ACCIONES COMPACTAS */
+    .btn-organic-action {
+      border: none; height: 36px; border-radius: 10px 4px 10px 4px;
+      font-weight: 600; font-size: 12px; padding: 0 14px;
+      display: inline-flex; align-items: center; gap: 6px; color: white; transition: all 0.2s ease;
+    }
+    .btn-organic-action.excel { background: var(--grad-verde); }
+    .btn-organic-action.clear-all { background: var(--grad-naranja); }
+    .btn-organic-action:hover { transform: translateY(-1px); color: white; }
+
+    /* TABLA PIVOT VERTICAL OPTIMIZADA */
+    .table-responsive-organic {
+      overflow-x: auto;
+      max-height: 680px;
+      border-radius: 16px;
+      padding: 2px;
+      background: #ffffff;
+      border: 1px solid rgba(82, 183, 136, 0.12);
+      box-shadow: var(--shadow-md);
     }
 
-    .dropdown-checklist button.chk-btn {
+    table.pivot-gantt {
       width: 100%;
-      border-radius: 8px;
-      border: 1.5px solid var(--gris-borde);
-      background-color: var(--blanco);
-      padding: 5px 10px;
-      font-size: 0.8rem;
-      text-align: left;
-      color: var(--gris-texto);
-      font-family: inherit;
-      transition: border-color 0.15s, box-shadow 0.15s;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      cursor: pointer;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 12px;
+    }
+    
+    table.pivot-gantt thead th {
+      background: #f8faf9;
+      color: #1b4332;
+      font-weight: 700;
+      padding: 10px 12px;
+      text-align: center;
+      border-bottom: 2px solid rgba(82, 183, 136, 0.2);
+      border-right: 1px solid #e2e8f0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
-    .dropdown-checklist button.chk-btn:hover {
-      border-color: var(--verde-claro);
+    table.pivot-gantt thead tr.sub-hdr th {
+      top: 38px;
+      font-size: 11px;
+      background: #ffffff;
+      color: var(--text-muted);
     }
-
-    .dropdown-checklist button.chk-btn:focus {
-      outline: none;
-      border-color: var(--acento);
-      box-shadow: 0 0 0 3px rgba(64,145,108,0.18);
-    }
-
-    .dropdown-checklist ul.chk-list {
-      position: absolute;
-      top: calc(100% + 4px);
+    
+    /* Columna de fecha estática pegajosa */
+    table.pivot-gantt th.col-fecha-sticky, 
+    table.pivot-gantt td.col-fecha-sticky {
+      position: sticky;
       left: 0;
-      width: 100%;
-      background: var(--blanco);
-      border: 1.5px solid var(--gris-borde);
-      border-radius: 8px;
-      list-style: none;
-      padding: 6px;
-      margin: 0;
-      max-height: 220px;
-      overflow-y: auto;
-      display: none;
-      z-index: 1000;
-      box-shadow: 0 6px 20px rgba(26,71,42,0.12);
+      background: #f8faf9 !important;
+      z-index: 15;
+      font-weight: 700;
+      text-align: center;
+      border-right: 2px solid rgba(82, 183, 136, 0.2) !important;
+      width: 110px;
+      min-width: 110px;
     }
+    table.pivot-gantt thead th.col-fecha-sticky { z-index: 25; }
 
-    .dropdown-checklist ul.chk-list.show { display: block; }
-
-    .dropdown-checklist li {
-      font-size: 0.8rem;
-      padding: 3px 5px;
-      border-radius: 5px;
+    table.pivot-gantt tbody td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #f1f5f9;
+      border-right: 1px solid #f1f5f9;
+      text-align: center;
     }
+    table.pivot-gantt tbody tr:nth-child(even) { background-color: #f8faf9; }
 
-    .dropdown-checklist li:hover { background: var(--verde-suave); }
-
-    .dropdown-checklist li label {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      cursor: pointer;
-      margin: 0;
-      font-size: 0.8rem;
-      text-transform: none;
-      letter-spacing: 0;
-      color: #2d3748;
-      font-weight: 400;
-    }
-
-    .dropdown-checklist li input[type="checkbox"] {
-      accent-color: var(--acento);
-      width: 14px;
-      height: 14px;
-    }
-
-    .dropdown-checklist li input[type="radio"] {
-      accent-color: var(--acento);
-    }
-
-    /* ── FECHA PERSONALIZADA ── */
-    #fechaPersonalizada input[type="date"] {
-      font-size: 0.78rem;
-      border: 1.5px solid var(--gris-borde);
-      border-radius: 6px;
-      padding: 3px 6px;
-      font-family: inherit;
-      color: var(--gris-texto);
-    }
-
-    /* ── BOTÓN ACTUALIZAR ── */
-    .refresh-btn {
-      background-color: var(--acento);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 16px;
-      font-weight: 600;
-      font-size: 0.82rem;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-
-    .refresh-btn:hover  { background-color: var(--acento-hover); }
-    .refresh-btn:active { transform: scale(0.97); }
-    .refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-    /* ── TOGGLE MOSTRAR TOTAL ── */
-    .toggle-total {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      color: var(--gris-texto);
-    }
-
-    .toggle-total input[type="checkbox"] {
-      accent-color: var(--acento);
-      width: 15px;
-      height: 15px;
-    }
-
-    /* ── ÁREA DE RESULTADOS ── */
-    .results-section {
-      margin: 18px 20px;
-    }
-
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
-    .results-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--verde-medio);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .results-title::before {
-      content: '';
+    .mzn-badge-container {
+      background: rgba(82, 183, 136, 0.12);
+      color: #1b4332;
+      padding: 4px 10px;
+      border-radius: 30px;
+      font-weight: 700;
       display: inline-block;
-      width: 4px;
-      height: 16px;
-      background: var(--verde-claro);
-      border-radius: 2px;
+      font-size: 11px;
     }
 
-    .table-container {
-      background-color: var(--blanco);
-      border: 1px solid var(--gris-borde);
-      border-radius: 12px;
-      overflow: hidden;
-      box-shadow: var(--sombra);
+    .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 40px; gap: 12px; }
+    .spinner-blob {
+      width: 14px; height: 14px; background-color: #2d6a4f;
+      border-radius: 50%; animation: morphBlob 1.4s infinite ease-in-out alternate;
     }
-
-    /* ── TABLA ── */
-    #tablaPivot {
-      margin: 0;
-      border-collapse: collapse;
-      width: 100%;
-    }
-
-    /* Cabecera nivel 1 – Fincas */
-    #pivotHead tr:first-child th {
-      background: var(--verde-oscuro);
-      color: #e9f5ee;
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-align: center;
-      padding: 9px 10px;
-      border: 1px solid rgba(255,255,255,0.1);
-      letter-spacing: 0.4px;
-      white-space: nowrap;
-    }
-
-    /* Cabecera nivel 2 – Actividades */
-    #pivotHead tr:last-child th {
-      background: var(--verde-medio);
-      color: #d8f3dc;
-      font-size: 0.72rem;
-      font-weight: 500;
-      text-align: center;
-      padding: 7px 8px;
-      border: 1px solid rgba(255,255,255,0.12);
-      white-space: nowrap;
-    }
-
-    /* Celdas de datos */
-    tbody td {
-      border: 1px solid #e8ede8;
-      text-align: center;
-      padding: 5px 8px;
-      font-size: 0.8rem;
-      color: #3d4f3d;
-      transition: background 0.1s;
-    }
-
-    /* Columna fecha */
-    tbody td:first-child {
-      text-align: left;
-      background: #f7faf7;
-      color: var(--verde-oscuro);
-      font-weight: 600;
-      font-size: 0.78rem;
-      white-space: nowrap;
-      border-right: 2px solid var(--gris-borde);
-      padding-left: 14px;
-    }
-
-    tbody tr:hover td { background: #f0f9f3; }
-    tbody tr:hover td:first-child { background: #e6f4eb; }
-
-    /* ── VALORES POSITIVOS ── */
-    .valor-positivo {
-      background-color: #e6f4ec !important;
-      color: #1a5c35 !important;
-      font-weight: 600;
-    }
-
-    tbody tr:hover .valor-positivo { background-color: #c9ebd5 !important; }
-
-    /* ── COLUMNA TOTAL (por finca-día) ── */
-    td.col-total {
-      background: var(--azul-suave) !important;
-      color: var(--azul-texto) !important;
-      font-weight: 600;
-      border-left: 2px solid #a8c4e8 !important;
-    }
-
-    tbody tr:hover td.col-total { background: #c8dcf0 !important; }
-
-    /* ── FILA TOTAL GLOBAL ── */
-    .total-row td {
-      background: var(--verde-oscuro) !important;
-      color: #d8f3dc !important;
-      font-weight: 600;
-      border-color: rgba(255,255,255,0.1) !important;
-    }
-
-    .total-row td:first-child {
-      background: var(--verde-oscuro) !important;
-      color: #74c69d !important;
-      border-right-color: rgba(255,255,255,0.15) !important;
-    }
-
-    .total-row td.col-total {
-      background: #112a1b !important;
-      color: #95d5b2 !important;
-      border-left-color: rgba(255,255,255,0.15) !important;
-    }
-
-    /* ── SCROLLBAR ── */
-    .table-responsive::-webkit-scrollbar { height: 6px; }
-    .table-responsive::-webkit-scrollbar-track { background: #f1f1f1; }
-    .table-responsive::-webkit-scrollbar-thumb { background: var(--verde-claro); border-radius: 3px; }
-
-    /* ── BOTÓN EXCEL ── */
-    .excel-btn {
-      background-color: #1d6f42;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 6px 16px;
-      font-weight: 600;
-      font-size: 0.82rem;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      white-space: nowrap;
-    }
-    .excel-btn:hover  { background-color: #154f2f; }
-    .excel-btn:active { transform: scale(0.97); }
-    .excel-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    @keyframes morphBlob { 0% { transform: scale(0.8); } 100% { transform: scale(1.2); } }
   </style>
 </head>
-
 <body>
 
-<header>
-  <div class="logo">INFOAGRO · Avances Campo / Pivot Gantt</div>
-  <div class="status-badge">Operativo</div>
-</header>
+<div class="dashboard-container">
 
-<!-- ── FILTROS ── -->
-<div class="filters-section">
-  <div class="filters-title">Filtros</div>
-  <div class="filters-bar">
+  <div class="page-hdr-container d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
+    <div>
+      <div class="hdr-title">🌱 Matriz de Labores Diarias por Finca y Actividad</div>
+      <div class="hdr-sub">Análisis continuo de avance físico (Manzanas) de campo</div>
+    </div>
+    <div class="d-flex gap-2">
+      <button class="btn-organic-action clear-all" onclick="resetAllFilters()">↺ Limpiar</button>
+      <button class="btn-organic-action excel" onclick="exportPivotToExcel()">⬇︎ Excel</button>
+    </div>
+  </div>
 
-    <div class="filter-item">
-      <label>Compañía</label>
-      <div class="dropdown-checklist" id="filtroCompania"></div>
+  <div class="filters-inline-container">
+    
+    <div class="filter-item-wrap" style="flex: 1.2; min-width: 220px;">
+      <div class="fg-label">🔀 Orden de Estructura</div>
+      <select id="pivotGroupingOrder" class="form-select" onchange="renderMatrix()">
+        <option value="finca_actividad">Finca  ➔  Actividad Realizada</option>
+        <option value="actividad_finca">Actividad Realizada  ➔  Finca</option>
+      </select>
     </div>
 
-    <div class="filter-item">
-      <label>Proveedor</label>
-      <div class="dropdown-checklist" id="filtroProveedor"></div>
+    <div class="filter-item-wrap">
+      <div class="fg-label">Compañía</div>
+      <div class="d-flex gap-1">
+        <select id="filterCompaia" class="form-select" onchange="renderMatrix()"></select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterCompaia')">↺</button>
+      </div>
     </div>
 
-    <div class="filter-item">
-      <label>Sector</label>
-      <div class="dropdown-checklist" id="filtroSector"></div>
+    <div class="filter-item-wrap">
+      <div class="fg-label">Proveedor</div>
+      <div class="d-flex gap-1">
+        <select id="filterProveedor" class="form-select" onchange="renderMatrix()"></select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterProveedor')">↺</button>
+      </div>
     </div>
 
-    <div class="filter-item">
-      <label>Ciclo</label>
-      <div class="dropdown-checklist" id="filtroCiclo"></div>
+    <div class="filter-item-wrap">
+      <div class="fg-label">Sector</div>
+      <div class="d-flex gap-1">
+        <select id="filterSector" class="form-select" onchange="renderMatrix()"></select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterSector')">↺</button>
+      </div>
     </div>
 
-    <div class="filter-item">
-      <label>Finca</label>
-      <div class="dropdown-checklist" id="filtroFinca"></div>
+    <div class="filter-item-wrap">
+      <div class="fg-label">Ciclo</div>
+      <div class="d-flex gap-1">
+        <select id="filterCiclo" class="form-select" onchange="renderMatrix()"></select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterCiclo')">↺</button>
+      </div>
     </div>
 
-    <div class="filter-item">
-      <label>Actividad</label>
-      <div class="dropdown-checklist" id="filtroActividad"></div>
+    <div class="filter-item-wrap">
+      <div class="fg-label">Finca</div>
+      <div class="d-flex gap-1">
+        <select id="filterFinca" class="form-select" onchange="renderMatrix()"></select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterFinca')">↺</button>
+      </div>
     </div>
 
-    <div class="filter-item">
-      <label>Fecha</label>
-      <div class="dropdown-checklist" id="filtroFecha">
-        <button type="button" class="chk-btn">Este mes</button>
-        <ul class="chk-list">
-          <li><label><input type="radio" name="fechaRange" value="mes" checked> Este mes</label></li>
-          <li><label><input type="radio" name="fechaRange" value="mesPasado"> Mes pasado</label></li>
-          <li><label><input type="radio" name="fechaRange" value="anio"> Año en curso</label></li>
-          <li><label><input type="radio" name="fechaRange" value="personalizada"> Fecha personalizada</label></li>
-        </ul>
-        <div id="fechaPersonalizada" style="display:none; margin-top:6px; display:none; gap:4px; flex-wrap:wrap;">
-          <input type="date" id="fechaInicio" style="width:90px; font-size:0.78rem;">
-          <input type="date" id="fechaFin" style="width:90px; font-size:0.78rem;">
+    <div class="filter-item-wrap">
+      <div class="fg-label">Actividad</div>
+      <div class="d-flex gap-1">
+        <select id="filterActividad" class="form-select" onchange="renderMatrix()"></select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterActividad')">↺</button>
+      </div>
+    </div>
+
+    <div class="filter-item-wrap">
+      <div class="fg-label">Período</div>
+      <div class="d-flex gap-1">
+        <select id="filterFechaTipo" class="form-select" onchange="toggleFechaInputs()">
+          <option value="all">Histórico</option>
+          <option value="este_mes">Este Mes</option>
+          <option value="mes_pasado">Mes Pasado</option>
+          <option value="ano_curso">Año Curso</option>
+          <option value="personalizada">Rango...</option>
+        </select>
+        <button class="btn-reset-individual" onclick="resetSingleFilter('filterFechaTipo')">↺</button>
+      </div>
+    </div>
+
+    <div id="customDateInputs" style="display: none; flex: 1.5; min-width: 240px;">
+      <div class="d-flex gap-1">
+        <div class="w-50">
+          <div class="fg-label">Desde</div>
+          <input type="date" id="filterFechaDesde" class="form-control" onchange="renderMatrix()">
+        </div>
+        <div class="w-50">
+          <div class="fg-label">Hasta</div>
+          <input type="date" id="filterFechaHasta" class="form-control" onchange="renderMatrix()">
         </div>
       </div>
     </div>
 
-    <button id="btnActualizar" class="refresh-btn">🔄 Actualizar</button>
-
-    <div class="toggle-total">
-      <input type="checkbox" id="mostrarTotal" checked>
-      <label for="mostrarTotal" style="margin:0; cursor:pointer; font-weight:400;">Mostrar Total</label>
-    </div>
-
   </div>
-</div>
 
-<!-- ── RESULTADOS ── -->
-<div class="results-section">
-  <div class="results-header">
-    <div class="results-title">Avance Mzn por día, finca y actividad</div>
-    <button id="btnExcel" class="excel-btn">
-      📊 Descargar Excel
-    </button>
-  </div>
-  <div class="table-container">
-    <div class="table-responsive">
-      <table id="tablaPivot" class="table table-sm mb-0">
-        <thead id="pivotHead"></thead>
-        <tbody id="pivotBody"></tbody>
-      </table>
+  <div class="table-responsive-organic" id="matrixContainer">
+    <div class="loading-box text-center py-5">
+      <div class="loading-spinner">
+        <div class="spinner-blob"></div>
+      </div>
+      <span class="text-muted fw-medium d-block mt-2">Cargando datos operacionales...</span>
     </div>
   </div>
+
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
-async function cargarAvancesCampo() {
-  const url = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odoo.json";
-  const response = await fetch(url + "?cache=" + Date.now());
-  const json = await response.json();
-  const toRecord = (v) => Array.isArray(v) ? v[1] : null;
+  let DB_RAW = [];
+  const MESES_ABR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  return json.result.map(row => ({
-    Fecha: row.x_studio_fecha,
-    Finca: toRecord(row.x_studio_finca),
-    Ciclo: toRecord(row.x_studio_ciclo),
-    Actividad: toRecord(row.x_studio_activiadad_realizada),
-    Compañia: toRecord(row.x_studio_compaia),
-    Proveedor: toRecord(row.x_studio_proveedor_del_servicio),
-    Sector: toRecord(row.x_studio_sector_1),
-    AvanceMzn: Number(row.x_studio_avance_mzn || 0)
-  }));
-}
-
-let datosOriginal = [];
-
-function uniqueValues(arr, key) {
-  return [...new Set(arr.map(d => d[key]).filter(v => v))].sort();
-}
-
-function initChecklist(id, valores) {
-  const cont = document.getElementById(id);
-  cont.innerHTML = `
-    <button type="button" class="chk-btn">Seleccionar</button>
-    <ul class="chk-list"></ul>
-  `;
-  const btn = cont.querySelector(".chk-btn");
-  const ul = cont.querySelector(".chk-list");
-
-  valores.forEach(v => {
-    const li = document.createElement("li");
-    li.innerHTML = `<label><input type="checkbox" value="${v}"><span>${v}</span></label>`;
-    ul.appendChild(li);
-  });
-
-  btn.onclick = () => ul.classList.toggle("show");
-  ul.onclick = (e) => e.stopPropagation();
-
-  document.addEventListener("click", (e) => {
-    if (!cont.contains(e.target)) {
-      ul.classList.remove("show");
-      actualizarCascada();
-      aplicarFiltros();
-      actualizarTextoBoton(id);
-    }
-  });
-
-  ul.addEventListener("change", () => actualizarTextoBoton(id));
-}
-
-function actualizarTextoBoton(id) {
-  const cont = document.getElementById(id);
-  const btn = cont.querySelector(".chk-btn");
-  const seleccionados = getSelected(id);
-  if (seleccionados.length === 0) {
-    btn.textContent = "Seleccionar";
-  } else if (seleccionados.length <= 2) {
-    btn.textContent = seleccionados.join(", ");
-  } else {
-    btn.textContent = `${seleccionados.length} seleccionados`;
+  function formatToCustomDate(dateStr) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const yearShort = parts[0].substring(2); 
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    return `${parts[2].padStart(2, "0")}-${MESES_ABR[monthIdx] || parts[1]}-${yearShort}`;
   }
-}
 
-function getSelected(id) {
-  return Array.from(document.querySelectorAll(`#${id} input[type="checkbox"]:checked`))
-              .map(c => c.value);
-}
+  async function loadData() {
+    const url = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odoo.json";
+    try {
+      const response = await fetch(url + "?cache=" + Date.now());
+      const json = await response.json();
+      
+      let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+      if(!records.length && json.records) records = json.records;
 
-function setAllowedOptions(id, allowed) {
-  const ul = document.querySelector(`#${id} ul`);
-  const lis = ul.querySelectorAll("li");
-  lis.forEach(li => {
-    const valor = li.querySelector("input").value;
-    if (!allowed.length || allowed.includes(valor)) {
-      li.style.display = "block";
-    } else {
-      li.style.display = "none";
-      li.querySelector("input").checked = false;
+      DB_RAW = records.map(r => {
+        return {
+          compaia: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[1] : (r.x_studio_compaia || "Sin Compañía"),
+          proveedor: Array.isArray(r.x_studio_proveedor_del_servicio) ? r.x_studio_proveedor_del_servicio[1] : (r.x_studio_proveedor_del_servicio || "Sin Proveedor"),
+          sector: Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[1] : (r.x_studio_sector_1 || "Sin Sector"),
+          ciclo: Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : (r.x_studio_ciclo || "Sin Ciclo"),
+          finca: Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : (r.x_studio_finca || "Sin Finca"),
+          actividad: Array.isArray(r.x_studio_activiadad_realizada) ? r.x_studio_activiadad_realizada[1] : (r.x_studio_activiadad_realizada || "Sin Actividad"),
+          avance: Number(r.x_studio_avance_mzn || 0),
+          fecha: r.x_studio_fecha || "" 
+        };
+      }).filter(r => r.fecha !== "");
+
+      calculateTimeline();
+      initFilters();
+      renderMatrix();
+    } catch (e) {
+      document.getElementById("matrixContainer").innerHTML = `<div class="alert alert-danger text-center m-3">⚠️ Error al sincronizar odoo.json de GitHub.</div>`;
     }
-  });
-}
-
-function llenarFiltrosInicial(datos) {
-  initChecklist("filtroCompania", uniqueValues(datos, "Compañia"));
-  initChecklist("filtroProveedor", uniqueValues(datos, "Proveedor"));
-  initChecklist("filtroSector", uniqueValues(datos, "Sector"));
-  initChecklist("filtroCiclo", uniqueValues(datos, "Ciclo"));
-  initChecklist("filtroFinca", uniqueValues(datos, "Finca"));
-  initChecklist("filtroActividad", uniqueValues(datos, "Actividad"));
-}
-
-function actualizarCascada() {
-  const comp = getSelected("filtroCompania");
-  const prov = getSelected("filtroProveedor");
-  const sec  = getSelected("filtroSector");
-  const cic  = getSelected("filtroCiclo");
-  const fin  = getSelected("filtroFinca");
-
-  let base = datosOriginal.slice();
-  if (comp.length) base = base.filter(d => comp.includes(d.Compañia));
-  if (prov.length) base = base.filter(d => prov.includes(d.Proveedor));
-  if (sec.length)  base = base.filter(d => sec.includes(d.Sector));
-  if (cic.length)  base = base.filter(d => cic.includes(d.Ciclo));
-  if (fin.length)  base = base.filter(d => fin.includes(d.Finca));
-
-  setAllowedOptions("filtroProveedor", uniqueValues(base, "Proveedor"));
-  setAllowedOptions("filtroSector",    uniqueValues(base, "Sector"));
-  setAllowedOptions("filtroCiclo",     uniqueValues(base, "Ciclo"));
-  setAllowedOptions("filtroFinca",     uniqueValues(base, "Finca"));
-  setAllowedOptions("filtroActividad", uniqueValues(base, "Actividad"));
-}
-
-function configurarFiltroFecha() {
-  const cont = document.getElementById("filtroFecha");
-  const btn  = cont.querySelector(".chk-btn");
-  const ul   = cont.querySelector(".chk-list");
-  const fechaBox = document.getElementById("fechaPersonalizada");
-  const fi = document.getElementById("fechaInicio");
-  const ff = document.getElementById("fechaFin");
-
-  btn.onclick = () => ul.classList.toggle("show");
-  ul.onclick  = (e) => e.stopPropagation();
-
-  document.addEventListener("click", (e) => {
-    if (!cont.contains(e.target)) ul.classList.remove("show");
-  });
-
-  ul.addEventListener("change", (e) => {
-    const tipo = e.target.value;
-    btn.textContent = e.target.parentElement.textContent.trim();
-    ul.classList.remove("show");
-    if (tipo === "personalizada") {
-      fechaBox.style.display = "flex";
-    } else {
-      fechaBox.style.display = "none";
-      fi.value = "";
-      ff.value = "";
-    }
-    aplicarFiltros();
-  });
-
-  fi.addEventListener("change", aplicarFiltros);
-  ff.addEventListener("change", aplicarFiltros);
-}
-
-function parseFechaStr(str) {
-  if (!str) return null;
-  const [y,m,d] = str.split("-");
-  return new Date(Number(y), Number(m) - 1, Number(d));
-}
-
-function rangoFechaSeleccionado() {
-  const cont  = document.getElementById("filtroFecha");
-  const radio = cont.querySelector("input[name='fechaRange']:checked");
-  const tipo  = radio ? radio.value : "mes";
-  const hoy   = new Date();
-  let inicio, fin;
-
-  if (tipo === "mes") {
-    inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-    fin    = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
-  } else if (tipo === "mesPasado") {
-    const mesPasado = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
-    inicio = new Date(mesPasado.getFullYear(), mesPasado.getMonth(), 1);
-    fin    = new Date(mesPasado.getFullYear(), mesPasado.getMonth() + 1, 0);
-  } else if (tipo === "anio") {
-    inicio = new Date(hoy.getFullYear(), 0, 1);
-    fin    = new Date(hoy.getFullYear(), 11, 31);
-  } else if (tipo === "personalizada") {
-    const fi = document.getElementById("fechaInicio").value;
-    const ff = document.getElementById("fechaFin").value;
-    inicio = fi ? parseFechaStr(fi) : null;
-    fin    = ff ? parseFechaStr(ff) : null;
   }
-  return { tipo, inicio, fin };
-}
 
-function aplicarFiltros() {
-  const comp = getSelected("filtroCompania");
-  const prov = getSelected("filtroProveedor");
-  const sec  = getSelected("filtroSector");
-  const cic  = getSelected("filtroCiclo");
-  const fin  = getSelected("filtroFinca");
-  const act  = getSelected("filtroActividad");
-  const { tipo, inicio, fin: finFecha } = rangoFechaSeleccionado();
-
-  let filtrados = datosOriginal.slice();
-  if (comp.length) filtrados = filtrados.filter(d => comp.includes(d.Compañia));
-  if (prov.length) filtrados = filtrados.filter(d => prov.includes(d.Proveedor));
-  if (sec.length)  filtrados = filtrados.filter(d => sec.includes(d.Sector));
-  if (cic.length)  filtrados = filtrados.filter(d => cic.includes(d.Ciclo));
-  if (fin.length)  filtrados = filtrados.filter(d => fin.includes(d.Finca));
-  if (act.length)  filtrados = filtrados.filter(d => act.includes(d.Actividad));
-
-  if (tipo && inicio && finFecha) {
-    filtrados = filtrados.filter(d => {
-      const fd = parseFechaStr(d.Fecha);
-      if (!fd) return false;
-      return fd >= inicio && fd <= finFecha;
-    });
+  let FECHAS_CABECERA = [];
+  function calculateTimeline() {
+    if(!DB_RAW.length) return;
+    FECHAS_CABECERA = [...new Set(DB_RAW.map(r => r.fecha))].sort();
   }
-  construirPivot(filtrados);
-}
 
-function formatoFecha(f) {
-  if (!f) return "";
-  const [y,m,d] = f.split("-");
-  const meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
-  return `${d}-${meses[parseInt(m)-1]}-${y.slice(-2)}`;
-}
+  function initFilters() {
+    const fillCombo = (id, prop, defTxt) => {
+      const vals = [...new Set(DB_RAW.map(r => r[prop]))].filter(Boolean).sort();
+      const select = document.getElementById(id);
+      select.innerHTML = `<option value="">${defTxt}</option>`;
+      vals.forEach(v => { select.innerHTML += `<option value="${v}">${v}</option>`; });
+    };
+    fillCombo("filterCompaia", "compaia", "Compañía");
+    fillCombo("filterProveedor", "proveedor", "Proveedor");
+    fillCombo("filterSector", "sector", "Sector");
+    fillCombo("filterCiclo", "ciclo", "Ciclo");
+    fillCombo("filterFinca", "finca", "Finca");
+    fillCombo("filterActividad", "actividad", "Actividad");
+  }
 
-function construirPivot(datos) {
-  const mostrarTotal = document.getElementById("mostrarTotal").checked;
-  const fincas      = uniqueValues(datos, "Finca");
-  const actividades = uniqueValues(datos, "Actividad");
-  const fechas      = uniqueValues(datos, "Fecha");
+  function toggleFechaInputs() {
+    const tipo = document.getElementById("filterFechaTipo").value;
+    document.getElementById("customDateInputs").style.display = (tipo === "personalizada") ? "block" : "none";
+    renderMatrix();
+  }
 
-  const head = document.getElementById("pivotHead");
-  const body = document.getElementById("pivotBody");
-  head.innerHTML = "";
-  body.innerHTML = "";
-
-  if (!fincas.length || !actividades.length || !fechas.length) return;
-
-  let h1 = "<tr><th rowspan='2'>Fecha</th>";
-  fincas.forEach(f => {
-    const span = actividades.length + (mostrarTotal ? 1 : 0);
-    h1 += `<th colspan="${span}">${f}</th>`;
-  });
-  h1 += "</tr>";
-
-  let h2 = "<tr>";
-  fincas.forEach(() => {
-    actividades.forEach(a => h2 += `<th>${a}</th>`);
-    if (mostrarTotal) h2 += "<th>Total</th>";
-  });
-  h2 += "</tr>";
-  head.innerHTML = h1 + h2;
-
-  fechas.forEach(fecha => {
-    const fila = datos.filter(d => d.Fecha === fecha);
-    let tr = `<tr><td>${formatoFecha(fecha)}</td>`;
-
-    fincas.forEach(f => {
-      let totalFincaDia = 0;
-      actividades.forEach(a => {
-        const valor = fila
-          .filter(d => d.Finca === f && d.Actividad === a)
-          .reduce((s,d) => s + d.AvanceMzn, 0);
-        totalFincaDia += valor;
-        const clase = valor > 0 ? "valor-positivo" : "";
-        tr += `<td class="${clase}">${valor ? valor.toFixed(2) : ""}</td>`;
-      });
-      if (mostrarTotal) {
-        const claseTot = totalFincaDia > 0 ? "valor-positivo col-total" : "col-total";
-        tr += `<td class="${claseTot}">${totalFincaDia ? totalFincaDia.toFixed(2) : ""}</td>`;
-      }
-    });
-
-    tr += "</tr>";
-    body.insertAdjacentHTML("beforeend", tr);
-  });
-
-  let trTotal = "<tr class='total-row'><td><strong>Total</strong></td>";
-  fincas.forEach(f => {
-    let totalFinca = 0;
-    actividades.forEach(a => {
-      const val = datos
-        .filter(d => d.Finca === f && d.Actividad === a)
-        .reduce((s,d) => s + d.AvanceMzn, 0);
-      totalFinca += val;
-      const clase = val > 0 ? "valor-positivo" : "";
-      trTotal += `<td class="${clase}"><strong>${val ? val.toFixed(2) : ""}</strong></td>`;
-    });
-    if (mostrarTotal) {
-      const claseTot = totalFinca > 0 ? "col-total" : "col-total";
-      trTotal += `<td class="${claseTot}"><strong>${totalFinca.toFixed(2)}</strong></td>`;
+  function resetSingleFilter(id) {
+    document.getElementById(id).selectedIndex = 0;
+    if(id === "filterFechaTipo") {
+      document.getElementById("customDateInputs").style.display = "none";
+      document.getElementById("filterFechaDesde").value = "";
+      document.getElementById("filterFechaHasta").value = "";
     }
-  });
-  trTotal += "</tr>";
-  body.insertAdjacentHTML("afterbegin", trTotal);
-}
+    renderMatrix();
+  }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  datosOriginal = await cargarAvancesCampo();
-  llenarFiltrosInicial(datosOriginal);
-  configurarFiltroFecha();
-  construirPivot(datosOriginal);
-
-  document.getElementById("mostrarTotal").addEventListener("change", aplicarFiltros);
-
-  document.getElementById("btnActualizar").addEventListener("click", async () => {
-    const btn = document.getElementById("btnActualizar");
-    btn.textContent = "Actualizando...";
-    btn.disabled = true;
-    datosOriginal = await cargarAvancesCampo();
-    llenarFiltrosInicial(datosOriginal);
-    actualizarCascada();
-    aplicarFiltros();
-    btn.textContent = "🔄 Actualizar";
-    btn.disabled = false;
-  });
-
-  document.getElementById("btnExcel").addEventListener("click", () => {
-    descargarExcel();
-  });
-});
-
-function descargarExcel() {
-  const btn = document.getElementById("btnExcel");
-  btn.textContent = "Generando...";
-  btn.disabled = true;
-
-  try {
-    const tabla = document.getElementById("tablaPivot");
-
-    /* Construir array de arrays desde el DOM de la tabla */
-    const wb = XLSX.utils.book_new();
-    const wsData = [];
-
-    /* Cabeceras */
-    const filasCabecera = tabla.querySelectorAll("thead tr");
-    filasCabecera.forEach(fila => {
-      const row = [];
-      fila.querySelectorAll("th").forEach(th => {
-        const colspan = parseInt(th.getAttribute("colspan") || 1);
-        const rowspan = parseInt(th.getAttribute("rowspan") || 1);
-        row.push({ v: th.textContent.trim(), colspan, rowspan });
-      });
-      wsData.push(row);
+  function resetAllFilters() {
+    ["filterCompaia", "filterProveedor", "filterSector", "filterCiclo", "filterFinca", "filterActividad", "filterFechaTipo"].forEach(id => {
+      document.getElementById(id).selectedIndex = 0;
     });
+    document.getElementById("customDateInputs").style.display = "none";
+    document.getElementById("filterFechaDesde").value = "";
+    document.getElementById("filterFechaHasta").value = "";
+    renderMatrix();
+  }
 
-    /* Usar XLSX.utils.table_to_sheet para preservar la estructura exacta */
-    const ws = XLSX.utils.table_to_sheet(tabla, { raw: false });
+  function renderMatrix() {
+    const fComp = document.getElementById("filterCompaia").value;
+    const fProv = document.getElementById("filterProveedor").value;
+    const fSec = document.getElementById("filterSector").value;
+    const fCic = document.getElementById("filterCiclo").value;
+    const fFin = document.getElementById("filterFinca").value;
+    const fAct = document.getElementById("filterActividad").value;
+    const fFechaTipo = document.getElementById("filterFechaTipo").value;
+    const orderMode = document.getElementById("pivotGroupingOrder").value;
 
-    /* Estilo de columnas (ancho automático aproximado) */
-    const colWidths = [];
-    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-    for (let C = range.s.c; C <= range.e.c; C++) {
-      let maxLen = 10;
-      for (let R = range.s.r; R <= range.e.r; R++) {
-        const cell = ws[XLSX.utils.encode_cell({ r: R, c: C })];
-        if (cell && cell.v) {
-          const len = String(cell.v).length;
-          if (len > maxLen) maxLen = len;
+    const hoy = new Date();
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth();
+
+    const filtered = DB_RAW.filter(r => {
+      if(fComp && r.compaia !== fComp) return false;
+      if(fProv && r.proveedor !== fProv) return false;
+      if(fSec && r.sector !== fSec) return false;
+      if(fCic && r.ciclo !== fCic) return false;
+      if(fFin && r.finca !== fFin) return false;
+      if(fAct && r.actividad !== fAct) return false;
+
+      if(fFechaTipo !== "all" && r.fecha) {
+        const parts = r.fecha.split("-");
+        if(parts.length === 3) {
+          const rYear = parseInt(parts[0], 10);
+          const rMonth = parseInt(parts[1], 10) - 1; 
+          if(fFechaTipo === "este_mes") {
+            if(rYear !== curYear || rMonth !== curMonth) return false;
+          } else if(fFechaTipo === "mes_pasado") {
+            let targetMonth = curMonth - 1; let targetYear = curYear;
+            if(targetMonth < 0) { targetMonth = 11; targetYear--; }
+            if(rYear !== targetYear || rMonth !== targetMonth) return false;
+          } else if(fFechaTipo === "ano_curso") {
+            if(rYear !== curYear) return false;
+          } else if(fFechaTipo === "personalizada") {
+            const desde = document.getElementById("filterFechaDesde").value;
+            const hasta = document.getElementById("filterFechaHasta").value;
+            if(desde && r.fecha < desde) return false;
+            if(hasta && r.fecha > hasta) return false;
+          }
         }
       }
-      colWidths.push({ wch: Math.min(maxLen + 2, 30) });
+      return true;
+    });
+
+    const container = document.getElementById("matrixContainer");
+    if(!filtered.length) {
+      container.innerHTML = `<div class="p-5 text-center text-muted fw-medium">No se encontraron registros.</div>`;
+      return;
     }
-    ws["!cols"] = colWidths;
 
-    /* Nombre de hoja con fecha actual */
-    const hoy = new Date();
-    const fechaHoja = `${hoy.getDate().toString().padStart(2,"0")}-${(hoy.getMonth()+1).toString().padStart(2,"0")}-${hoy.getFullYear()}`;
-    const nombreHoja = `Avances ${fechaHoja}`;
+    const listaFechasBase = [...new Set(filtered.map(r => r.fecha))].sort();
+    const columnasMapeadas = {}; 
+    filtered.forEach(r => {
+      const key = (orderMode === "finca_actividad") ? `${r.finca}|||${r.actividad}` : `${r.actividad}|||${r.finca}`;
+      columnasMapeadas[key] = { 
+        padre: (orderMode === "finca_actividad") ? r.finca : r.actividad, 
+        hijo: (orderMode === "finca_actividad") ? r.actividad : r.finca 
+      };
+    });
 
-    XLSX.utils.book_append_sheet(wb, ws, nombreHoja);
+    const llavesColumnas = Object.keys(columnasMapeadas).sort();
+    const matrizValores = {};
+    filtered.forEach(r => {
+      const colKey = (orderMode === "finca_actividad") ? `${r.finca}|||${r.actividad}` : `${r.actividad}|||${r.finca}`;
+      if(!matrizValores[r.fecha]) matrizValores[r.fecha] = {};
+      matrizValores[r.fecha][colKey] = (matrizValores[r.fecha][colKey] || 0) + r.avance;
+    });
 
-    /* Nombre del archivo */
-    const nombreArchivo = `INFOAGRO_Avances_Campo_${fechaHoja}.xlsx`;
-    XLSX.writeFile(wb, nombreArchivo);
+    const bloquesPadre = {};
+    llavesColumnas.forEach(k => {
+      const p = columnasMapeadas[k].padre;
+      bloquesPadre[p] = (bloquesPadre[p] || 0) + 1;
+    });
 
-  } catch(e) {
-    console.error("Error al generar Excel:", e);
-    alert("Ocurrió un error al generar el archivo Excel.");
+    let html = `<table class="pivot-gantt"><thead><tr>`;
+    html += `<th rowspan="2" class="col-fecha-sticky">Fecha</th>`;
+
+    Object.keys(bloquesPadre).sort().forEach(padre => {
+      html += `<th colspan="${bloquesPadre[padre]}">${padre}</th>`;
+    });
+    html += `</tr><tr class="sub-hdr">`;
+
+    llavesColumnas.forEach(k => {
+      html += `<th style="min-width:130px; font-size:11px;">${columnasMapeadas[k].hijo}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    listaFechasBase.forEach(fechaBase => {
+      html += `<tr><td class="col-fecha-sticky">${formatToCustomDate(fechaBase)}</td>`;
+      llavesColumnas.forEach(colKey => {
+        const val = (matrizValores[fechaBase] && matrizValores[fechaBase][colKey]) ? matrizValores[fechaBase][colKey] : 0;
+        html += val > 0 ? `<td><div class="mzn-badge-container">${val.toFixed(1)} Mzn</div></td>` : `<td>—</td>`;
+      });
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
   }
 
-  btn.textContent = "📊 Descargar Excel";
-  btn.disabled = false;
-}
+  function exportPivotToExcel() {
+    const table = document.querySelector("table.pivot-gantt");
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table, { raw: false });
+    XLSX.writeFile(wb, `INFOAGRO_MATRIZ_DIARIA_LABORES.xlsx`);
+  }
+
+  loadData();
 </script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 </body>
 </html>
