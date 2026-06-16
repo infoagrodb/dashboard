@@ -1,0 +1,70 @@
+name: Odoo Proxy Detalle Despachos Combustible
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-odoo-despachos-combustible:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        run: |
+          echo "Llamando a Odoo Detalle de Despachos de Combustible..."
+          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "infoagro",
+                12,
+                "Meganet37**",
+                "x_despacho_de_combusti_line_59f76",
+                "search_read",
+                [],
+                [
+                  "id","x_studio_reporte","x_studio_fecha","x_studio_ciclo",
+                  "x_studio_sector_1","x_studio_sku_en_reporte","x_studio_finca",
+                  "x_studio_equipo","x_studio_actividad","x_studio_um",
+                  "x_studio_hora_motor","x_studio_cantidad_ltrs",
+                  "x_studio_categoria_de_equipo","x_studio_compaia",
+                  "x_studio_hme","x_studio_proveedor_del_servicio",
+                  "x_studio_productor","x_studio_ticket",
+                  "x_studio_reporte_consolidado","x_studio_estado_del_consolidado",
+                  "x_studio_bodega","x_studio_categoria_actividad"
+                ]
+              ]
+            }
+          }' > Odoo_DetalleDespachosCombustible.json
+
+          echo "Verificando contenido..."
+          if [ ! -s Odoo_DetalleDespachosCombustible.json ]; then
+            echo "❌ Error: Odoo_DetalleDespachosCombustible.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 Odoo_DetalleDespachosCombustible.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add Odoo_DetalleDespachosCombustible.json
+          git commit -m "Actualización automática de datos Detalle Despachos Combustible desde Odoo" || echo "No hay cambios"
+          git push origin main
