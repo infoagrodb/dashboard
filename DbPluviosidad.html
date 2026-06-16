@@ -2,16 +2,16 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Pluviosidad · Análisis Histórico Gerencial</title>
+<title>Pluviosidad · Análisis Histórico</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   /* AccuWeather & Premium Modern Palette */
-  --brand-dark: #0f172a;       /* Slate 900 (Fondo principal / Textos fuertes) */
-  --brand-blue: #0284c7;       /* Sky 600 (Acentos meteorológicos) */
-  --brand-orange: #f97316;     /* Orange 500 (Acento AccuWeather para detalles/totales) */
-  --bg-main: #f8fafc;          /* Slate 50 (Fondo de pantalla limpio) */
+  --brand-dark: #0f172a;       /* Slate 900 */
+  --brand-blue: #0284c7;       /* Sky 600 */
+  --brand-orange: #f97316;     /* Orange 500 */
+  --bg-main: #f8fafc;          /* Slate 50 */
   --card-bg: #ffffff;
   
   --border-color: #e2e8f0;     /* Slate 200 */
@@ -31,15 +31,18 @@ body{
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   background: var(--bg-main);
   color: var(--text-main);
-  min-height: 100vh;
-  padding: 24px;
+  height: 100vh;
+  overflow: hidden;
   line-height: 1.5;
 }
 
-/* CONTAINER */
 .dashboard-container {
   max-width: 1400px;
   margin: 0 auto;
+  height: 100vh;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* HEADER STYLE */
@@ -47,26 +50,26 @@ body{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 24px;
   background: var(--brand-dark);
-  padding: 18px 24px;
-  border-radius: var(--radius-md);
+  padding: 14px 20px;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
   color: #ffffff;
   box-shadow: var(--shadow-md);
+  flex-shrink: 0;
 }
 .page-hdr-left{display:flex;align-items:center;gap:14px}
 .page-icon{
-  font-size: 24px;
+  font-size: 22px;
   background: rgba(255,255,255,0.1);
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
 }
-.page-title{font-size:18px;font-weight:700;letter-spacing:-0.02em}
-.page-sub{font-size:12px;color:#94a3b8;margin-top:2px}
+.page-title{font-size:16px;font-weight:700;letter-spacing:-0.02em}
+.page-sub{font-size:11px;color:#94a3b8;margin-top:2px}
 .badge-live{
   display:flex;align-items:center;gap:6px;font-size:11px;padding:6px 14px;
   border-radius: 20px;background: rgba(34, 197, 94, 0.15);color:#4ade80;font-weight:600;
@@ -75,35 +78,84 @@ body{
 .dot-live{width:6px;height:6px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
-/* FILTERS TOOLBAR */
+/* PESTAÑA ESTILO EXCEL */
+.ribbon-toggle-bar {
+  background: #1e293b;
+  display: flex;
+  justify-content: flex-start;
+  padding: 0 20px;
+  margin-bottom: 12px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+.btn-ribbon-toggle {
+  background: #334155;
+  color: #f8fafc;
+  border: none;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 16px;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.2s;
+}
+.btn-ribbon-toggle:hover {
+  background: var(--brand-blue);
+}
+
+/* CORRECCIÓN DE CAPAS: Forzamos un z-index alto para que el contenedor flote sobre los KPIs */
+.filters-wrapper {
+  max-height: 500px;
+  overflow: visible; /* Permitir que los dropdowns salgan visualmente del contenedor */
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1000; 
+}
+.filters-wrapper.collapsed {
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .filters-card{
   background:var(--card-bg);border-radius:var(--radius-md);
-  border:1px solid var(--border-color);box-shadow:var(--shadow-sm);
-  padding:16px 20px;margin-bottom:20px
+  border:1px solid var(--border-color);box-shadow:var(--shadow-md);
+  padding:12px 16px; margin-bottom: 12px;
+  position: relative;
+  z-index: 1001;
 }
-.filters-row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
-.fg{display:flex;flex-direction:column;gap:5px}
-.fg-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.filters-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg-label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
 .fg-inner{display:flex;gap:6px;align-items:center}
 
 select, .chk-btn{
-  font-size:13px;padding:0 12px;border:1px solid var(--border-color);
+  font-size:12px;padding:0 10px;border:1px solid var(--border-color);
   border-radius:var(--radius-sm);background:var(--card-bg);color:var(--text-main);
-  height:36px;width:160px;transition: all .2s ease;font-family:inherit;
+  height:32px;width:150px;transition: all .2s ease;font-family:inherit;
 }
 select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-shadow:0 0 0 3px rgba(2, 132, 199, 0.15)}
 
-/* CHECKLIST MULTISELECT */
-.chk-wrap{position:relative;width:160px}
+/* CHECKLIST MULTISELECT POPUP HIGHER PRIORITIES */
+.chk-wrap{position:relative;width:150px}
 .chk-btn{text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;justify-content:space-between}
 .chk-btn::after{content:"▾";font-size:10px;color:var(--text-muted)}
 .chk-list{
-  position:absolute;top:40px;left:0;min-width:200px;background:var(--card-bg);
+  position:absolute;top:36px;left:0;min-width:190px;background:var(--card-bg);
   border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:6px;
-  z-index:999;display:none;max-height:240px;overflow-y:auto;box-shadow:var(--shadow-lg);
+  z-index: 2000; /* Asegura estar en la capa más alta por sobre cualquier otro elemento */
+  display:none;max-height:200px;overflow-y:auto;box-shadow:var(--shadow-lg);
 }
 .chk-list.open{display:block}
-.chk-list li{list-style:none;font-size:13px;padding:5px 8px;border-radius:4px;color:var(--text-main)}
+.chk-list li{list-style:none;font-size:12px;padding:5px 8px;border-radius:4px;color:var(--text-main)}
 .chk-list li:hover{background:#f1f5f9}
 .chk-list li label{display:flex;align-items:center;gap:8px;cursor:pointer;width:100%}
 .chk-list input[type="checkbox"]{accent-color:var(--brand-blue);width:14px;height:14px}
@@ -111,42 +163,41 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 /* BUTTONS & ACTIONS */
 .reset-btn{
   background:none;border:1px solid var(--border-color);color:var(--text-muted);
-  border-radius:var(--radius-sm);padding:0 10px;height:36px;cursor:pointer;
-  font-size:14px;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  border-radius:var(--radius-sm);padding:0 8px;height:32px;cursor:pointer;
+  font-size:13px;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;
 }
 .reset-btn:hover{background:#f1f5f9;border-color:var(--text-muted);color:var(--text-main)}
 
 .btn-excel{
   background: #16a34a; color: white; border: none; font-weight: 600;
-  padding: 0 14px; height: 36px; border-radius: var(--radius-sm);
-  cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: background .15s;
+  padding: 0 12px; height: 32px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: background .15s;
 }
 .btn-excel:hover{background:#15803d}
 
-/* CONMUTADOR DE FORMATO VISTA */
 .btn-toggle-view {
   background: var(--brand-blue); color: white; border: none; font-weight: 600;
-  padding: 0 14px; height: 36px; border-radius: var(--radius-sm);
-  cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: background .15s;
+  padding: 0 12px; height: 32px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 12px; display: flex; align-items: center; gap: 6px; transition: background .15s;
 }
 .btn-toggle-view:hover { background: #026ca3; }
 
-.toggle-total{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-main);height:36px;cursor:pointer;user-select:none;font-weight:500}
-.toggle-total input{accent-color:var(--brand-dark);width:15px;height:15px;cursor:pointer}
-.filter-divider{width:1px;height:36px;background:var(--border-color);align-self:flex-end;margin:0 4px;flex-shrink:0}
+.toggle-total{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-main);height:32px;cursor:pointer;user-select:none;font-weight:500}
+.toggle-total input{accent-color:var(--brand-dark);width:14px;height:14px;cursor:pointer}
+.filter-divider{width:1px;height:32px;background:var(--border-color);align-self:flex-end;margin:0 2px;flex-shrink:0}
 
 /* EXECUTIVE KPI CARDS */
-.kpi-section { margin-bottom: 24px; }
+.kpi-section { margin-bottom: 12px; flex-shrink: 0; position: relative; z-index: 10; }
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
 }
 .kpi-card {
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  padding: 20px;
+  padding: 12px 16px;
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
@@ -159,47 +210,54 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 }
 .kpi-card.accent::before { background: var(--brand-orange); }
 
-.kpi-title-meta { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
-.kpi-years-row { display: flex; gap: 12px; margin-top: 12px; overflow-x: auto; padding-bottom: 4px; }
+.kpi-title-meta { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
+.kpi-years-row { display: flex; gap: 8px; margin-top: 8px; overflow-x: auto; padding-bottom: 4px; }
 .kpi-year-box {
-  flex: 1; min-width: 70px; text-align: center; 
+  flex: 1; min-width: 65px; text-align: center; 
   background: #f8fafc; border: 1px solid var(--border-color); 
-  padding: 8px 4px; border-radius: var(--radius-sm);
+  padding: 6px 4px; border-radius: var(--radius-sm);
   cursor: pointer;
   transition: transform 0.1s ease, background-color 0.1s ease;
   user-select: none;
 }
-.kpi-year-box:hover {
-  transform: scale(1.05);
-  background: #f1f5f9;
-}
-.kpi-year-label { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px;}
-.kpi-year-val { font-size: 15px; font-weight: 700; color: var(--brand-dark); }
+.kpi-year-box:hover { transform: scale(1.04); background: #f1f5f9; }
+.kpi-year-label { font-size: 10px; color: var(--text-muted); font-weight: 600; margin-bottom: 2px;}
+.kpi-year-val { font-size: 14px; font-weight: 700; color: var(--brand-dark); }
 .kpi-card.accent .kpi-year-val { color: var(--brand-orange); }
 
-.mini-bar-bg { width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; margin-top: 4px; overflow: hidden; }
+.mini-bar-bg { width: 100%; height: 3px; background: #e2e8f0; border-radius: 2px; margin-top: 4px; overflow: hidden; }
 .mini-bar-fill { height: 100%; background: var(--brand-blue); border-radius: 2px; }
 .kpi-card.accent .mini-bar-fill { background: var(--brand-orange); }
 
-/* PIVOT TABLE SECTION Y WRAPPER DE SCROLL AUTOMÁTICO */
-.pivot-section{margin-top:0}
-.pivot-label{
-  font-size:13px;color:var(--brand-dark);font-weight:700;margin-bottom:12px;
-  padding:0 2px;display:flex;align-items:center;gap:8px
+/* SECCIÓN TABLA */
+.pivot-section{
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; 
+  min-height: 0;
+  position: relative;
+  z-index: 5;
 }
-.pivot-label::before{content:"";display:inline-block;width:4px;height:14px;background:var(--brand-orange);border-radius:2px}
+.pivot-label{
+  font-size:12px;color:var(--brand-dark);font-weight:700;margin-bottom:8px;
+  padding:0 2px;display:flex;align-items:center;gap:6px;
+  flex-shrink: 0;
+}
+.pivot-label::before{content:"";display:inline-block;width:4px;height:12px;background:var(--brand-orange);border-radius:2px}
 
 .tbl-wrap{
+  flex-grow: 1;
   overflow: auto;
-  max-height: 650px;
   background: var(--card-bg);
   border-radius:var(--radius-md);
   border:1px solid var(--border-color);
   box-shadow:var(--shadow-md);
 }
+
 table.pivot{border-collapse:separate; border-spacing:0; width:100%; font-size:12px; color: var(--text-main)}
 
-/* CONFIGURACIÓN DEL ENCABEZADO MULTIFILA INMOVILIZADO */
+/* HEADER DE LA TABLA PIVOT */
 table.pivot thead th{
   background: #f1f5f9;color: var(--text-main);font-weight:700;
   padding:8px 12px;text-align:center;
@@ -218,7 +276,7 @@ table.pivot thead tr.hdr-titles th:first-child{
 }
 
 table.pivot thead tr.hdr-totals th{
-  background: #e2e8f0; color: var(--brand-dark); font-size: 12px; font-weight: 800;
+  background: #e2e8f0; color: var(--brand-dark); font-size: 11px; font-weight: 800;
   border-bottom: 2px solid var(--brand-dark); top: 35px;
 }
 table.pivot thead tr.hdr-totals th:first-child{
@@ -231,7 +289,7 @@ table.pivot thead tr.hdr-totals th.total-col{color: var(--brand-orange); backgro
 
 /* CUERPO DE LA TABLA */
 table.pivot tbody td{
-  padding:8px 12px;text-align:center;
+  padding:6px 12px;text-align:center;
   border-bottom:1px solid var(--border-color);border-right:1px solid var(--border-color);
   font-size:12px;
 }
@@ -243,42 +301,41 @@ table.pivot tbody td:first-child{
 table.pivot tbody tr:hover td{background: #f8fafc}
 table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 
-/* CALENDAR VIEW DE ACCUWEATHER */
+/* CALENDAR VIEW */
 .calendar-wrapper {
   background: var(--card-bg); border-radius: var(--radius-md);
-  border: 1px solid var(--border-color); box-shadow: var(--shadow-md); overflow: hidden;
+  border: 1px solid var(--border-color); box-shadow: var(--shadow-md); 
+  overflow-y: auto; flex-grow: 1;
 }
 .calendar-weekdays {
   display: grid; grid-template-columns: repeat(7, 1fr); background: #f1f5f9;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;
 }
 .weekday {
-  text-align: center; font-size: 11px; font-weight: 700; color: var(--text-muted);
-  padding: 12px 0; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid var(--border-color);
+  text-align: center; font-size: 10px; font-weight: 700; color: var(--text-muted);
+  padding: 10px 0; text-transform: uppercase; letter-spacing: 0.05em; border-right: 1px solid var(--border-color);
 }
 .weekday:last-child { border-right: none; }
 .calendar-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
 
 .calendar-day-cell {
-  min-height: 110px; padding: 10px; border-right: 1px solid var(--border-color);
+  min-height: 90px; padding: 8px; border-right: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column;
   justify-content: space-between; background: #ffffff; position: relative;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 .calendar-day-cell:nth-child(7n) { border-right: none; }
 .calendar-day-cell.empty { background: #f8fafc; cursor: default; }
 
-.day-number { font-size: 12px; font-weight: 700; color: var(--text-muted); align-self: flex-start; }
+.day-number { font-size: 11px; font-weight: 700; color: var(--text-muted); align-self: flex-start; }
 .calendar-day-cell.has-rain .day-number { color: var(--brand-dark); }
 
-.day-weather-info { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
-.weather-icon { font-size: 20px; }
-.weather-val { font-size: 14px; font-weight: 700; }
-
+.day-weather-info { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.weather-icon { font-size: 18px; }
+.weather-val { font-size: 13px; font-weight: 700; }
 .calendar-day-cell.has-rain { cursor: pointer; }
-.calendar-day-cell.has-rain:hover { z-index: 10; box-shadow: inset 0 0 0 2px var(--brand-blue); transform: scale(1.02); }
+.calendar-day-cell.has-rain:hover { z-index: 5; box-shadow: inset 0 0 0 2px var(--brand-blue); transform: scale(1.01); }
 
-/* Mapa de calor climatológico */
+/* MAPA DE CALOR */
 .rain-light { background: rgba(2, 132, 199, 0.04); }
 .rain-medium { background: rgba(2, 132, 199, 0.10); }
 .rain-heavy { background: rgba(2, 132, 199, 0.18); }
@@ -288,34 +345,28 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .rain-heavy .weather-val { color: #075985; }
 .rain-extreme .weather-val { color: #1e3a8a; }
 
-/* SMART DATA BADGES */
+/* INTERACTIVOS */
 .cell-interactive { cursor: pointer; display: inline-block; transition: transform 0.1s ease; user-select: none; }
-.cell-interactive:hover { transform: scale(1.08); }
+.cell-interactive:hover { transform: scale(1.05); }
+.cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 6px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
+.cv2{background:rgba(249, 115, 22, 0.12);color:#c2410c;font-weight:700;border-radius:4px;padding:2px 6px;display:inline-block; border: 1px solid rgba(249, 115, 22, 0.25)}
 
-.cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 8px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
-.cv2{background:rgba(249, 115, 22, 0.12);color:#c2410c;font-weight:700;border-radius:4px;padding:2px 8px;display:inline-block; border: 1px solid rgba(249, 115, 22, 0.25)}
-
-/* GLOBAL SECURE TOOLTIP */
+/* GLOBAL TOOLTIP */
 #global-tooltip {
   position: fixed; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 12px 14px; border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15); width: 250px; text-align: left; z-index: 999999; pointer-events: none;
+  -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 10px 12px; border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15); width: 240px; text-align: left; z-index: 999999; pointer-events: none;
 }
-.popup-hdr {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15);
-  padding-bottom: 6px; margin-bottom: 6px; font-weight: 700;
-}
-.popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; }
-.popup-item .p-name { color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
+.popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; }
+.popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+.popup-item .p-name { color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
 .popup-item .p-val { font-weight: 700; color: #38bdf8; }
 
 .total-hidden .total-col{display:none}
-
-/* LOADING / EMPTY */
-.loading{display:flex;align-items:center;justify-content:center;padding:40px;gap:12px;color:var(--text-muted);font-size:14px}
-.spinner{width:20px;height:20px;border:2px solid var(--border-color);border-top-color:var(--brand-blue);border-radius:50%;animation:spin .7s linear infinite}
+.loading{display:flex;align-items:center;justify-content:center;padding:30px;gap:12px;color:var(--text-muted);font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid var(--border-color);border-top-color:var(--brand-blue);border-radius:50%;animation:spin .7s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.empty-msg{text-align:center;padding:40px;color:var(--text-muted);font-size:14px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);}
+.empty-msg{text-align:center;padding:30px;color:var(--text-muted);font-size:13px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);}
 </style>
 </head>
 <body>
@@ -326,76 +377,84 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
     <div class="page-hdr-left">
       <div class="page-icon">🌧️</div>
       <div>
-        <div class="page-title">Pluviosidad · Análisis Histórico Corporativo</div>
+        <div class="page-title">Pluviosidad · Análisis Histórico</div>
         <div class="page-sub">Monitoreo analítico de precipitaciones por día y año · INFOAGRO</div>
       </div>
     </div>
     <div class="badge-live"><span class="dot-live"></span>INFOAGRO · Business Intelligence</div>
   </div>
 
-  <div class="filters-card">
-    <div class="filters-row">
+  <div class="ribbon-toggle-bar">
+    <button class="btn-ribbon-toggle" onclick="toggleRibbonFilters()">
+      <span id="ribbonIcon">🔼</span> <span id="ribbonText">Ocultar Filtros</span>
+    </button>
+  </div>
 
-      <div class="fg">
-        <div class="fg-label">Mes de Análisis</div>
-        <div class="fg-inner">
-          <select id="selMes"></select>
-          <button class="reset-btn" title="Limpiar" onclick="clearSingle('selMes')">↺</button>
-        </div>
-      </div>
+  <div class="filters-wrapper" id="filtersWrapper">
+    <div class="filters-card">
+      <div class="filters-row">
 
-      <div class="filter-divider"></div>
-
-      <div class="fg">
-        <div class="fg-label">Sector</div>
-        <div class="fg-inner">
-          <select id="selSector"><option value="">Todos</option></select>
-          <button class="reset-btn" title="Limpiar" onclick="clearSingle('selSector')">↺</button>
-        </div>
-      </div>
-
-      <div class="fg">
-        <div class="fg-label">Finca</div>
-        <div class="fg-inner">
-          <div class="chk-wrap">
-            <button class="chk-btn" id="chkFincaBtn" onclick="toggleChk('chkFincaList','chkFincaBtn')">Todas las fincas</button>
-            <ul class="chk-list" id="chkFincaList"></ul>
+        <div class="fg">
+          <div class="fg-label">Mes de Análisis</div>
+          <div class="fg-inner">
+            <select id="selMes"></select>
+            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selMes')">↺</button>
           </div>
-          <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkFincaList','chkFincaBtn','fincas')">↺</button>
         </div>
-      </div>
 
-      <div class="filter-divider"></div>
+        <div class="filter-divider"></div>
 
-      <div class="fg">
-        <div class="fg-label">Años Históricos</div>
-        <div class="fg-inner">
-          <div class="chk-wrap">
-            <button class="chk-btn" id="chkYearBtn" onclick="toggleChk('chkYearList','chkYearBtn')">Todos los años</button>
-            <ul class="chk-list" id="chkYearList"></ul>
+        <div class="fg">
+          <div class="fg-label">Sector</div>
+          <div class="fg-inner">
+            <select id="selSector"><option value="">Todos</option></select>
+            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selSector')">↺</button>
           </div>
-          <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkYearList','chkYearBtn','años')">↺</button>
         </div>
-      </div>
 
-      <div class="filter-divider"></div>
-
-      <div class="fg">
-        <div class="fg-label">Visualización y Reporte</div>
-        <div class="fg-inner">
-          <button class="btn-toggle-view" id="btnToggleView" onclick="toggleViewMode()">
-            <span>📅 Ver Calendario</span>
-          </button>
-          <label class="toggle-total" id="chkTotalColWrap">
-            <input type="checkbox" id="chkTotalCol" checked>
-            Mostrar media total
-          </label>
-          <button class="btn-excel" onclick="exportPivotToExcel()">
-            <span>⬇︎ Exportar reporte</span>
-          </button>
+        <div class="fg">
+          <div class="fg-label">Finca</div>
+          <div class="fg-inner">
+            <div class="chk-wrap">
+              <button class="chk-btn" id="chkFincaBtn" onclick="toggleChk('chkFincaList','chkFincaBtn')">Todas las fincas</button>
+              <ul class="chk-list" id="chkFincaList"></ul>
+            </div>
+            <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkFincaList','chkFincaBtn','fincas')">↺</button>
+          </div>
         </div>
-      </div>
 
+        <div class="filter-divider"></div>
+
+        <div class="fg">
+          <div class="fg-label">Años Históricos</div>
+          <div class="fg-inner">
+            <div class="chk-wrap">
+              <button class="chk-btn" id="chkYearBtn" onclick="toggleChk('chkYearList','chkYearBtn')">Todos los años</button>
+              <ul class="chk-list" id="chkYearList"></ul>
+            </div>
+            <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkYearList','chkYearBtn','años')">↺</button>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="fg">
+          <div class="fg-label">Visualización y Reporte</div>
+          <div class="fg-inner">
+            <button class="btn-toggle-view" id="btnToggleView" onclick="toggleViewMode()">
+              <span>📅 Ver Calendario</span>
+            </button>
+            <label class="toggle-total" id="chkTotalColWrap">
+              <input type="checkbox" id="chkTotalCol" checked>
+              Mostrar media total
+            </label>
+            <button class="btn-excel" onclick="exportPivotToExcel()">
+              <span>⬇︎ Exportar reporte</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -449,7 +508,22 @@ function getY(f){return parseInt(f.split("-")[0])}
 function getD(f){return parseInt(f.split("-")[2])}
 function unique(arr,k){return[...new Set(arr.map(r=>r[k]).filter(Boolean))].sort()}
 
-// FUNCIÓN INTERACTIVA CONMUTADORA DE VISTA
+function toggleRibbonFilters() {
+  const wrapper = document.getElementById("filtersWrapper");
+  const icon = document.getElementById("ribbonIcon");
+  const text = document.getElementById("ribbonText");
+  
+  wrapper.classList.toggle("collapsed");
+  
+  if (wrapper.classList.contains("collapsed")) {
+    icon.textContent = "🔽";
+    text.textContent = "Mostrar Filtros (Estilo Excel)";
+  } else {
+    icon.textContent = "🔼";
+    text.textContent = "Ocultar Filtros (Estilo Excel)";
+  }
+}
+
 function toggleViewMode() {
   const btn = document.getElementById("btnToggleView");
   const tblSec = document.getElementById("viewTableSection");
@@ -460,7 +534,7 @@ function toggleViewMode() {
     CURRENT_VIEW = "calendar";
     btn.innerHTML = "<span>📊 Ver Tabla Matrix</span>";
     tblSec.style.display = "none";
-    calSec.style.display = "block";
+    calSec.style.display = "flex";
     chkTotalWrap.style.visibility = "hidden"; 
   } else {
     CURRENT_VIEW = "table";
@@ -490,7 +564,7 @@ async function loadData(){
     const resp=await fetch(url+"?cache="+Date.now());
     const json=await resp.json();
     
-    const records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+    let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
     if(!records.length && json.records) records = json.records;
 
     RAW=records.map(r=>{
@@ -540,12 +614,10 @@ function initFilters(){
   });
 }
 
-// MEJORA SOLICITADA: FILTRADO EN CASCADA COMPLETO DESDE SECTOR -> FINCAS
 function populateCascadeFilters(){
   const secEl=document.getElementById("selSector");
   const curSec=secEl.value;
   
-  // 1. Reconstruir lista de Sectores si está vacía
   if(secEl.options.length <= 1){
     secEl.innerHTML = '<option value="">Todos</option>';
     unique(RAW,"se").forEach(s=>{
@@ -554,7 +626,6 @@ function populateCascadeFilters(){
     if(curSec) secEl.value = curSec;
   }
 
-  // 2. Filtrar en cascada las fincas pertenecientes únicamente al sector seleccionado
   const activeSector = secEl.value;
   const baseFi = RAW.filter(r => !activeSector || r.se === activeSector);
   
@@ -799,7 +870,6 @@ function buildPivot(data){
   const sorted=[...cellVals].sort((a,b)=>a-b);
   const p75=sorted[Math.floor(sorted.length*0.75)]||0;
 
-  // ENCABEZADO FILA 1: TÍTULOS DE LAS COLUMNAS CLÁSICAS
   let trTitles = document.createElement("tr");
   trTitles.className = "hdr-titles";
   
@@ -820,7 +890,6 @@ function buildPivot(data){
   }
   head.appendChild(trTitles);
 
-  // ENCABEZADO FILA 2: VALORES DE TOTAL PRECIPITACIÓN ACUMULADA
   let trTotals = document.createElement("tr");
   trTotals.className = "hdr-totals";
 
@@ -847,7 +916,6 @@ function buildPivot(data){
   }
   head.appendChild(trTotals);
 
-  // CONSTRUCCIÓN DEL CUERPO (DISTRIBUCIÓN DIARIA DE LLUVIA)
   for(let d=1;d<=daysInMonth;d++){
     const anyData=years.some(y=>data.some(r=>getY(r.f)===y&&getD(r.f)===d));
     if(!anyData) continue;
@@ -917,7 +985,6 @@ function buildPivot(data){
   else pivotTable.classList.add("total-hidden");
 }
 
-// RENDERIZADO DEL CALENDARIO DINÁMICO ACCUWEATHER
 function buildCalendar(data) {
   const grid = document.getElementById("calendarGrid");
   grid.innerHTML = "";
@@ -1006,7 +1073,6 @@ function buildCalendar(data) {
   }
 }
 
-// CONTROL CENTRALIZADO DEL TOOLTIP GLOBAL
 const gTooltip = document.getElementById("global-tooltip");
 
 function showGlobalTooltip(e) {
