@@ -24,20 +24,32 @@
       --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
     }
 
-    body {
+    html, body {
+      height: 100%;
+      overflow: hidden; 
       background-color: var(--bg-organic);
       color: var(--text-main);
       font-family: 'Inter', sans-serif;
       font-size: 12px;
+    }
+
+    body {
       padding: 10px 15px;
+      display: flex;
+      flex-direction: column;
     }
 
     .dashboard-container {
       max-width: 100%;
+      width: 100%;
       margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0; 
     }
 
-    /* HEADER PRINCIPAL */
+    /* HEADER */
     .page-hdr-container {
       background: var(--grad-header);
       border-radius: 12px 6px 12px 6px;
@@ -45,6 +57,7 @@
       color: #ffffff;
       box-shadow: 0 4px 15px -5px rgba(27, 67, 50, 0.2);
       margin-bottom: 8px;
+      flex-shrink: 0;
     }
     .hdr-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 6px; }
     .hdr-sub { font-size: 11px; color: #b7e4c7; font-weight: 400; margin-left: 10px; display: inline-block; }
@@ -55,7 +68,6 @@
       gap: 10px;
     }
 
-    /* FILTRO DE COMPAÑÍA ESTILIZADO */
     .hdr-compaia-box {
       display: flex;
       align-items: center;
@@ -129,6 +141,7 @@
       max-height: 120px;
       opacity: 1;
       overflow: visible;
+      flex-shrink: 0;
     }
     
     .filters-inline-container.collapsed {
@@ -237,6 +250,7 @@
       align-items: center;
       margin-bottom: 6px;
       padding: 0 4px;
+      flex-shrink: 0;
     }
 
     #pivotGroupingOrder {
@@ -246,20 +260,16 @@
       color: #1b4332 !important;
     }
 
-    /* CONTENEDOR DE TABLA MAXIMIZADO */
+    /* AREA DE TABLA RE-ESTRUCTURADA CON CONTROL DE SCROLL EXCLUSIVO */
     .table-responsive-organic {
-      overflow-x: auto;
-      max-height: calc(100vh - 135px);
-      transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: auto; 
+      flex: 1;
+      min-height: 0;
       border-radius: 12px;
       padding: 1px;
       background: #ffffff;
       border: 1px solid rgba(82, 183, 136, 0.12);
       box-shadow: var(--shadow-md);
-    }
-    
-    .filters-inline-container.collapsed ~ .table-responsive-organic {
-      max-height: calc(100vh - 90px);
     }
 
     table.pivot-gantt {
@@ -269,40 +279,52 @@
       font-size: 11px;
     }
     
+    /* CONTROL LOGICO DE ENCABEZADOS FIJOS SIN ALTURAS RIGIDAS EN TR */
     table.pivot-gantt thead th {
-      background: #f8faf9;
-      color: #1b4332;
-      font-weight: 700;
-      padding: 6px 8px;
       text-align: center;
-      border-bottom: 1px solid rgba(82, 183, 136, 0.2);
       border-right: 1px solid #e2e8f0;
       position: sticky;
-      top: 0;
       z-index: 10;
+      padding: 8px 10px;
+      vertical-align: middle;
+      /* Corrección de envoltura para que actividades largas no se corten */
+      white-space: normal !important; 
+      word-wrap: break-word;
     }
 
-    table.pivot-gantt thead tr.sub-hdr th {
-      top: 29px;
-      font-size: 10.5px;
-      background: #ffffff;
-      color: var(--text-muted);
+    /* Nivel 1: Fincas u Operaciones Maestras */
+    table.pivot-gantt thead tr.main-hdr-row th {
+      top: 0px;
+      background: #1b4332 !important; 
+      color: #ffffff !important;       
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
     }
 
-    table.pivot-gantt thead tr.total-hdr th {
-      top: 57px;
-      font-size: 11px;
-      background: #edf7f2;
-      color: #1b4332;
+    /* Nivel 2: Sub-ítems/Actividades (Se quita altura estricta y se da ancho mínimo seguro) */
+    table.pivot-gantt thead tr.sub-hdr-row th {
+      top: 33px; /* Re-ajustado dinámicamente según espacio de padding */
+      background: #f1f5f9 !important; 
+      color: #334155 !important;       
+      font-weight: 600;
+      border-bottom: 1px solid #cbd5e1;
+      min-width: 120px; /* Ancho mínimo para que quepa "Fungicida VIII" sin problemas */
+    }
+
+    /* Nivel 3: Totales de la columna */
+    table.pivot-gantt thead tr.total-hdr-row th {
+      top: 61px;
+      background: #edf7f2 !important; 
+      color: #1b4332 !important;
       font-weight: 800;
       border-bottom: 2px solid rgba(82, 183, 136, 0.3);
     }
     
+    /* COLUMNA STICKY DE FECHAS */
     table.pivot-gantt th.col-fecha-sticky, 
     table.pivot-gantt td.col-fecha-sticky {
       position: sticky;
       left: 0;
-      background: #f8faf9 !important;
       z-index: 15;
       font-weight: 700;
       text-align: center;
@@ -310,7 +332,15 @@
       width: 95px;
       min-width: 95px;
     }
-    table.pivot-gantt thead th.col-fecha-sticky { z-index: 25; }
+    
+    table.pivot-gantt td.col-fecha-sticky {
+      background: #f8faf9 !important;
+    }
+
+    /* Z-Index superior en las intersecciones izquierdas fijas */
+    table.pivot-gantt thead tr.main-hdr-row th.col-fecha-sticky { z-index: 35; top: 0px; background: #1b4332 !important; color: #ffffff !important; }
+    table.pivot-gantt thead tr.sub-hdr-row th.col-fecha-sticky { z-index: 35; top: 33px; background: #f1f5f9 !important; color: #334155 !important; }
+    table.pivot-gantt thead tr.total-hdr-row th.col-fecha-sticky { z-index: 35; top: 61px; background: #edf7f2 !important; color: #1b4332 !important; }
 
     table.pivot-gantt tbody td {
       padding: 5px 6px;
@@ -321,6 +351,7 @@
     table.pivot-gantt tbody tr:nth-child(even) { background-color: #f8faf9; }
 
     .cell-interactive { cursor: pointer; display: inline-block; width: 100%; }
+    
     .mzn-badge-container {
       background: rgba(82, 183, 136, 0.12);
       color: #1b4332;
@@ -549,7 +580,6 @@
     checkGlobalClearVisibility();
   }
 
-  /* OBTENCIÓN DINÁMICA DE OPCIONES PARA LA CASCADA ASOCIATIVA */
   function getOptionsFor(prop) {
     const fFechaTipo = document.getElementById("filterFechaTipo").value;
     const hoy = new Date();
@@ -591,7 +621,6 @@
     return [...new Set(dataFiltered.map(r => r[prop]))].filter(Boolean).sort();
   }
 
-  /* CONSTRUCTOR CENTRAL DE MENÚS EN CASCADA */
   function buildCascadingFilters() {
     updateDropdownUI("dropProveedor", "btnProveedor", "proveedor");
     updateDropdownUI("dropSector", "btnSector", "sector");
@@ -600,7 +629,6 @@
     updateDropdownUI("dropActividad", "btnActividad", "actividad");
   }
 
-  /* RENDERIZA EL CONTENIDO DE UN DROPDOWN SIN TOCAR EL RESTO */
   function updateDropdownUI(idDrop, idBtn, prop) {
     const dropdown = document.getElementById(idDrop);
     const btn = document.getElementById(idBtn);
@@ -615,7 +643,6 @@
       item.className = "multiselect-option";
       item.innerHTML = `<input type="checkbox" data-prop="${prop}" value="${val}" ${isChecked ? 'checked' : ''}> <span style="margin-left:4px;">${val}</span>`;
       
-      // Manejador del clic directo en la opción
       item.addEventListener("click", (e) => {
         if(e.target.tagName !== "INPUT") {
           const cb = item.querySelector("input");
@@ -624,18 +651,15 @@
         }
       });
       
-      // Manejador del cambio en la casilla
       item.querySelector("input").addEventListener("change", (e) => {
         handleCheckboxChange(e.target, idBtn, prop);
       });
       dropdown.appendChild(item);
     });
 
-    // Actualizar únicamente las etiquetas y estados del botón analizado
     updateButtonLabels(btn, resetBtn, prevChecked, prop);
   }
 
-  /* ACTUALIZA SOLO LAS ETIQUETAS DEL BOTÓN DE CONTROL */
   function updateButtonLabels(btn, resetBtn, checkedList, prop) {
     if (checkedList.length === 0) {
       btn.textContent = prop === "actividad" || prop === "finca" ? "Todas" : "Todos";
@@ -650,7 +674,6 @@
     }
   }
 
-  /* CONTROL DE PERSISTENCIA: El checkbox altera los datos pero no borra el HTML del menú abierto */
   function handleCheckboxChange(cb, idBtn, prop) {
     const val = cb.value;
     if(cb.checked) {
@@ -659,23 +682,19 @@
       SELECCIONES[prop] = SELECCIONES[prop].filter(v => v !== val);
     }
 
-    // 1. Renderizar la tabla y el contador en tiempo real tras el click
     renderMatrix();
     checkGlobalClearVisibility();
 
-    // 2. Actualizar las etiquetas del botón actual para reflejar el cambio de inmediato
     const btn = document.getElementById(idBtn);
     const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
     updateButtonLabels(btn, resetBtn, SELECCIONES[prop], prop);
   }
 
-  /* INTERRUPTOR DE MENÚS: Al abrir o cerrar se ejecuta la sincronización en cascada de los demás */
   function toggleDropdown(e, idDrop) {
     e.stopPropagation();
     const dropdown = document.getElementById(idDrop);
     const wasOpen = dropdown.classList.contains("show");
     
-    // Al abrir un dropdown, recalculamos y refrescamos el resto para garantizar cascada asociativa
     if(!wasOpen) {
       buildCascadingFilters();
     }
@@ -686,14 +705,6 @@
 
   function closeAllDropdowns() {
     document.querySelectorAll(".multiselect-dropdown").forEach(d => d.classList.remove("show"));
-  }
-
-  /* Al hacer click fuera de la barra, sincroniza los filtros en cascada */
-  function closeDropdownsEvent(e) {
-    if(!e.target.closest(".filter-item-wrap")) {
-      closeAllDropdowns();
-      buildCascadingFilters();
-    }
   }
 
   function toggleFechaInputs() {
@@ -831,19 +842,22 @@
       bloquesPadre[p] = (bloquesPadre[p] || 0) + 1;
     });
 
-    let html = `<table class="pivot-gantt"><thead><tr>`;
-    html += `<th rowspan="3" class="col-fecha-sticky" style="z-index: 30;">Fecha</th>`;
+    let html = `<table class="pivot-gantt"><thead><tr class="main-hdr-row">`;
+    html += `<th rowspan="3" class="col-fecha-sticky">Fecha</th>`;
 
+    // Renderizar Fila Nivel 1 (Padre)
     Object.keys(bloquesPadre).sort().forEach(padre => {
       html += `<th colspan="${bloquesPadre[padre]}">${padre}</th>`;
     });
-    html += `</tr><tr class="sub-hdr">`;
+    
+    html += `</tr><tr class="sub-hdr-row">`;
 
+    // Renderizar Fila Nivel 2 (Hijo - Aquí se evita el recorte del texto)
     llavesColumnas.forEach(k => {
-      html += `<th style="min-width:110px;">${columnasMapeadas[k].hijo}</th>`;
+      html += `<th>${columnasMapeadas[k].hijo}</th>`;
     });
     
-    html += `</tr><tr class="total-hdr">`;
+    html += `</tr><tr class="total-hdr-row">`;
     llavesColumnas.forEach(colKey => {
       const totalCol = totalesColumnas[colKey] || 0;
       html += `<th>${totalCol > 0 ? totalCol.toFixed(1) : '0.0'}</th>`;
@@ -854,11 +868,14 @@
       html += `<tr><td class="col-fecha-sticky">${formatToCustomDate(fechaBase)}</td>`;
       llavesColumnas.forEach(colKey => {
         const val = (matrizValores[fechaBase] && matrizValores[fechaBase][colKey]) ? matrizValores[fechaBase][colKey] : 0;
+        
         if(val > 0) {
           const pId = `pop_${fechaBase}_${colKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
           html += `<td>
                     <div class="cell-interactive" data-popup-id="${pId}" onmouseenter="showPopup(event)" onmousemove="movePopup(event)" onmouseleave="hidePopup()">
-                      <div class="mzn-badge-container">${val.toFixed(1)}</div>
+                      <div class="mzn-badge-container">
+                        ${val.toFixed(1)}
+                      </div>
                     </div>
                    </td>`;
         } else {
@@ -920,7 +937,6 @@
     XLSX.writeFile(wb, `INFOAGRO_MATRIZ_${COMPAIA_SELECCIONADA.replace(/ /g, '_')}.xlsx`);
   }
 
-  // Cerrar menús y recalcular cascada completa al hacer click fuera
   document.addEventListener("click", (e) => {
     if(!e.target.closest(".filter-item-wrap")) {
       closeAllDropdowns();
