@@ -11,6 +11,7 @@
   --brand-dark: #0f172a;       /* Slate 900 */
   --brand-blue: #0284c7;       /* Sky 600 */
   --brand-orange: #f97316;     /* Orange 500 */
+  --brand-green: #16a34a;      /* Verde 600 */
   --bg-main: #f8fafc;          /* Slate 50 */
   --card-bg: #ffffff;
   
@@ -197,7 +198,7 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 .kpi-card::before {
   content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--brand-blue);
 }
-.kpi-card.accent::before { background: var(--brand-orange); }
+.kpi-card.accent::before { background: var(--brand-orange); } 
 
 .kpi-title-meta { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
 .kpi-years-row { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; padding-bottom: 4px; }
@@ -232,7 +233,7 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
   padding:0 2px;display:flex;align-items:center;gap:4px;
   flex-shrink: 0;
 }
-.pivot-label::before{content:"";display:inline-block;width:3px;height:10px;background:var(--brand-orange);border-radius:2px}
+.pivot-label::before{content:"";display:inline-block;width:3px;height:10px;background:var(--brand-green);border-radius:2px}
 
 .tbl-wrap{
   flex-grow: 1;
@@ -275,7 +276,7 @@ table.pivot thead tr.hdr-totals th:first-child{
   width:75px; min-width:75px; max-width:75px;
 }
 table.pivot thead th.total-col{background:#cbd5e1; color: var(--brand-dark)}
-table.pivot thead tr.hdr-totals th.total-col{color: var(--brand-orange); background: #cbd5e1;}
+table.pivot thead tr.hdr-totals th.total-col{color: var(--brand-green); background: #cbd5e1;}
 
 /* CUERPO DE LA TABLA COMPACTADO */
 table.pivot tbody td{
@@ -326,20 +327,20 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .calendar-day-cell.has-rain { cursor: pointer; }
 .calendar-day-cell.has-rain:hover { z-index: 5; box-shadow: inset 0 0 0 2px var(--brand-blue); }
 
-/* MAPA DE CALOR */
+/* MAPA DE CALOR (CALENDAR VIEW) */
 .rain-light { background: rgba(2, 132, 199, 0.04); }
 .rain-medium { background: rgba(2, 132, 199, 0.10); }
-.rain-heavy { background: rgba(2, 132, 199, 0.18); }
-.rain-extreme { background: rgba(2, 132, 199, 0.30); }
+.rain-heavy { background: rgba(22, 163, 74, 0.12); } 
+.rain-extreme { background: rgba(22, 163, 74, 0.25); } 
 .rain-light .weather-val { color: #0284c7; }
 .rain-medium .weather-val { color: #0369a1; }
-.rain-heavy .weather-val { color: #075985; }
-.rain-extreme .weather-val { color: #1e3a8a; }
+.rain-heavy .weather-val { color: #16a34a; }
+.rain-extreme .weather-val { color: #14532d; }
 
-/* INTERACTIVOS */
+/* INTERACTIVOS DENTRO DE LA MATRIZ DE LA TABLA */
 .cell-interactive { cursor: pointer; display: inline-block; user-select: none; }
 .cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 4px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
-.cv2{background:rgba(249, 115, 22, 0.12);color:#c2410c;font-weight:700;border-radius:4px;padding:2px 4px;display:inline-block; border: 1px solid rgba(249, 115, 22, 0.25)}
+.cv2{background:rgba(22, 163, 74, 0.12);color:#15803d;font-weight:700;border-radius:4px;padding:2px 4px;display:inline-block; border: 1px solid rgba(22, 163, 74, 0.25)}
 
 /* GLOBAL TOOLTIP */
 #global-tooltip {
@@ -350,7 +351,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; }
 .popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
 .popup-item .p-name { color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
-.popup-item .p-val { font-weight: 700; color: #38bdf8; }
+.popup-item .p-val { font-weight: 700; color: #4ade80; } 
 
 .total-hidden .total-col{display:none}
 .loading{display:flex;align-items:center;justify-content:center;padding:30px;gap:12px;color:var(--text-muted);font-size:13px}
@@ -857,15 +858,15 @@ function buildPivot(data){
   const anyYear=years[0];
   const daysInMonth=new Date(anyYear,parseInt(mes),0).getDate();
 
-  const cellVals=[];
-  for(let d=1;d<=daysInMonth;d++){
-    years.forEach(y=>{
-      const rows=data.filter(r=>getY(r.f)===y&&getD(r.f)===d);
-      if(rows.length) cellVals.push(avgDay(rows));
+  const cellVals = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    years.forEach(y => {
+      const rows = data.filter(r => getY(r.f) === y && getD(r.f) === d);
+      if (rows.length) cellVals.push(avgDay(rows));
     });
   }
-  const sorted=[...cellVals].sort((a,b)=>a-b);
-  const p75=sorted[Math.floor(sorted.length*0.75)]||0;
+  const sorted = [...cellVals].sort((a, b) => a - b);
+  const p75 = sorted[Math.floor(sorted.length * 0.75)] || 0;
 
   let trTitles = document.createElement("tr");
   trTitles.className = "hdr-titles";
@@ -955,10 +956,8 @@ function buildPivot(data){
 
         tdCell.appendChild(wrapper);
       } else {
-        let spanBlank = document.createElement("span");
-        spanBlank.style.color = "#cbd5e1";
-        spanBlank.textContent = "—";
-        tdCell.appendChild(spanBlank);
+        /* EXCLUSIVAMENTE UN GUION LIMPIO */
+        tdCell.textContent = "-";
       }
       tr.appendChild(tdCell);
     });
@@ -968,7 +967,7 @@ function buildPivot(data){
       let tdTotal=document.createElement("td");
       tdTotal.className = "total-col";
       tdTotal.style.fontWeight = "700";
-      tdTotal.textContent = tdVal>0?tdVal.toFixed(1):"—";
+      tdTotal.textContent = tdVal>0?tdVal.toFixed(1):"-";
       tr.appendChild(tdTotal);
     }
     body.appendChild(tr);
