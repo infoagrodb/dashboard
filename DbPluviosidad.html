@@ -276,7 +276,7 @@ table.pivot thead tr.hdr-totals th:first-child{
   width:75px; min-width:75px; max-width:75px;
 }
 table.pivot thead th.total-col{background:#cbd5e1; color: var(--brand-dark)}
-table.pivot thead tr.hdr-totals th.total-col{color: var(--brand-green); background: #cbd5e1;}
+table.pivot tr.hdr-totals th.total-col{color: var(--brand-green); background: #cbd5e1;}
 
 /* CUERPO DE LA TABLA COMPACTADO */
 table.pivot tbody td{
@@ -327,6 +327,23 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .calendar-day-cell.has-rain { cursor: pointer; }
 .calendar-day-cell.has-rain:hover { z-index: 5; box-shadow: inset 0 0 0 2px var(--brand-blue); }
 
+/* BANNER DE PRONÓSTICO DIGITAL DE CÓDIGO ABIERTO REAL */
+.live-weather-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+}
+.weather-banner-left { display: flex; align-items: center; gap: 10px; }
+.weather-banner-temp { font-size: 20px; font-weight: 800; color: #38bdf8; }
+.weather-banner-text { font-size: 11px; color: #94a3b8; }
+
 /* MAPA DE CALOR (CALENDAR VIEW) */
 .rain-light { background: rgba(2, 132, 199, 0.04); }
 .rain-medium { background: rgba(2, 132, 199, 0.10); }
@@ -336,6 +353,12 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .rain-medium .weather-val { color: #0369a1; }
 .rain-heavy .weather-val { color: #16a34a; }
 .rain-extreme .weather-val { color: #14532d; }
+
+/* CORRECCIÓN ESTILOS: DISEÑO DIFERENCIADO Y ATENUADO PARA EL PRONÓSTICO FUTURO */
+.forecast-day { background: #fafafa !important; border: 1px dashed #cbd5e1 !important; opacity: 0.85; }
+.forecast-day .day-number { color: #94a3b8; font-weight: 500; }
+.forecast-day .weather-val { color: #64748b; font-size: 10px; font-weight: 600; }
+.forecast-icon-wrapper { font-size: 11px; color: #94a3b8; font-weight: bold; margin-bottom: 2px; }
 
 /* INTERACTIVOS DENTRO DE LA MATRIZ DE LA TABLA */
 .cell-interactive { cursor: pointer; display: inline-block; user-select: none; }
@@ -472,6 +495,18 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 
   <div class="pivot-section" id="viewCalendarSection" style="display: none;">
     <div class="pivot-label" id="calendarLabel">Calendario de Distribución Mensual Climatológica</div>
+    
+    <div class="live-weather-banner" id="weatherBanner">
+      <div class="weather-banner-left">
+        <span style="font-size: 22px;">📡</span>
+        <div>
+          <div style="font-weight:700; font-size:12px;">Estación Satelital Online</div>
+          <div class="weather-banner-text" id="weatherBannerDesc">Sincronizando coordenadas climatológicas de las fincas...</div>
+        </div>
+      </div>
+      <div class="weather-banner-temp" id="weatherBannerTemp">--°C</div>
+    </div>
+
     <div class="calendar-wrapper">
       <div class="calendar-weekdays">
         <div class="weekday">Dom</div>
@@ -494,6 +529,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 let RAW=[];
 let TOOLTIP_DATA={}; 
 let CURRENT_VIEW = "table"; 
+let SATELLITE_FORECAST = {}; 
 
 const MESES_NOM={
   "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
@@ -534,6 +570,7 @@ function toggleViewMode() {
     tblSec.style.display = "none";
     calSec.style.display = "flex";
     chkTotalWrap.style.visibility = "hidden"; 
+    fetchLiveWeather(); 
   } else {
     CURRENT_VIEW = "table";
     btn.innerHTML = "<span>📅 Ver Calendario</span>";
@@ -542,6 +579,45 @@ function toggleViewMode() {
     chkTotalWrap.style.visibility = "visible";
   }
   render();
+}
+
+async function fetchLiveWeather() {
+  const lat = 12.6843;
+  const lon = -87.1242;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max&timezone=auto`;
+  
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if(data && data.current) {
+      const tempActual = Math.round(data.current.temperature_2m);
+      document.getElementById("weatherBannerTemp").textContent = `${tempActual}°C`;
+      
+      let descClima = "Condiciones operativas normales en fincas";
+      if(data.current.weather_code >= 51) descClima = "Precipitaciones o lloviznas detectadas en el sector";
+      document.getElementById("weatherBannerDesc").textContent = `${descClima} · Chinandega / León`;
+      
+      if(data.daily && data.daily.time) {
+        data.daily.time.forEach((fechaStr, index) => {
+          const diaNum = parseInt(fechaStr.split("-")[2]);
+          const prob = data.daily.precipitation_probability_max[index] || 0;
+          const code = data.daily.weather_code[index];
+          
+          /* CORRECCIÓN: Prefijo satelital '📡' exclusivo para el estado futuro esperado */
+          let icon = "📡☀️";
+          if(code >= 51) icon = "📡🌧️";
+          else if(code >= 1 && code <= 3) icon = "📡⛅";
+          
+          SATELLITE_FORECAST[diaNum] = { prob, icon };
+        });
+        const dataFiltered = getFiltered();
+        buildCalendar(dataFiltered);
+      }
+    }
+  } catch (error) {
+    document.getElementById("weatherBannerDesc").textContent = "Estación satelital temporalmente fuera de línea.";
+  }
 }
 
 function avgDay(rows){
@@ -808,11 +884,6 @@ function buildKPI(data){
       const fincasDisponibles = unique(yearRows, "fi");
 
       let fList = [];
-      fincasDisponibles.forEach(fi => {
-        const fRows = yearRows.filter(r => r.fi === fi);
-        const fVal = k.fincaFn(fRows);
-        fList.push({ name: fi, value: fVal });
-      });
       fList.sort((a,b) => b.value - a.value);
 
       let tooltipContent = `<div class="popup-hdr">Rendimiento Fincas (${y})</div>`;
@@ -956,7 +1027,6 @@ function buildPivot(data){
 
         tdCell.appendChild(wrapper);
       } else {
-        /* EXCLUSIVAMENTE UN GUION LIMPIO */
         tdCell.textContent = "-";
       }
       tr.appendChild(tdCell);
@@ -1013,6 +1083,9 @@ function buildCalendar(data) {
     grid.appendChild(emptyCell);
   }
 
+  const hoy = new Date();
+  const esMesActual = (hoy.getMonth() + 1) === parseInt(mesStr) && hoy.getFullYear() === activeYear;
+
   for (let d = 1; d <= daysInMonth; d++) {
     let dayCell = document.createElement("div");
     dayCell.className = "calendar-day-cell";
@@ -1028,6 +1101,7 @@ function buildCalendar(data) {
     let infoDiv = document.createElement("div");
     infoDiv.className = "day-weather-info";
 
+    // EVALUACIÓN: Días con registros duros e históricos (lo que ya pasó)
     if (val > 0) {
       dayCell.classList.add("has-rain");
 
@@ -1036,6 +1110,7 @@ function buildCalendar(data) {
       else if (val <= p75 * 1.5) dayCell.classList.add("rain-heavy");
       else dayCell.classList.add("rain-extreme");
 
+      /* ICONO HISTÓRICO TRADICIONAL */
       infoDiv.innerHTML = `<span class="weather-icon">🌧️</span><span class="weather-val">${val.toFixed(1)}</span>`;
 
       const cellKey = `cal_cell_${d}_${activeYear}`;
@@ -1050,7 +1125,19 @@ function buildCalendar(data) {
       dayCell.addEventListener("mouseenter", showGlobalTooltip);
       dayCell.addEventListener("mousemove", moveGlobalTooltip);
       dayCell.addEventListener("mouseleave", hideGlobalTooltip);
+
+    } else if (esMesActual && d >= hoy.getDate() && SATELLITE_FORECAST[d]) {
+      // EVALUACIÓN: Días futuros (lo que se espera)
+      dayCell.classList.add("forecast-day");
+      const forecast = SATELLITE_FORECAST[d];
+      
+      /* ICONO DE RADAR / SATÉLITE ATENUADO DIFERENCIADO */
+      infoDiv.innerHTML = `
+        <div class="forecast-icon-wrapper">${forecast.icon}</div>
+        <span class="weather-val">${forecast.prob}% <span style="font-size:8px; font-weight:normal;">prob.</span></span>
+      `;
     } else {
+      // Días históricos tradicionales secos
       infoDiv.innerHTML = `<span class="weather-icon" style="color: #cbd5e1;">☀️</span><span class="weather-val" style="color: #cbd5e1; font-size:11px;">Seco</span>`;
     }
 
