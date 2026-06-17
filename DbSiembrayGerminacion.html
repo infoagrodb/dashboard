@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Matriz Pivot de Germinación Agrícola</title>
+<title>Matriz Pivot Germinación Agrícola</title>
 <style>
   :root {
     --bg-main: #f8fafc;
@@ -129,6 +129,12 @@
     accent-color: var(--accent-green);
   }
 
+  .actions-panel {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
   .btn {
     background-color: var(--accent-green);
     color: white;
@@ -140,10 +146,16 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
-    margin-left: auto;
   }
 
   .btn:hover { background-color: var(--accent-green-hover); }
+
+  .btn-secondary {
+    background-color: var(--primary);
+  }
+  .btn-secondary:hover {
+    background-color: #334155;
+  }
 
   /* Estilo Estructura Pivot */
   .table-container {
@@ -176,6 +188,24 @@
     border: 1px solid var(--border-color);
   }
 
+  .row-finca-header {
+    background-color: #e2e8f0;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .row-finca-header:hover {
+    background-color: #cbd5e1;
+  }
+
+  .toggle-icon {
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--primary);
+    font-size: 13px;
+  }
+
   .row-lote {
     background-color: #ffffff;
   }
@@ -187,13 +217,17 @@
   .row-total-finca {
     background-color: #f1f5f9;
     font-weight: bold;
-    border-top: 2px solid #cbd5e1;
+    border-top: 1px dashed #cbd5e1;
     border-bottom: 2px solid #cbd5e1;
+  }
+
+  .hidden-row {
+    display: none !important;
   }
 
   .badge-pct {
     display: inline-block;
-    padding: 2px 6px;
+    padding: 2px 4px;
     border-radius: 4px;
     font-weight: 600;
     font-size: 11px;
@@ -216,7 +250,7 @@
 <header>
   <div>
     <h1>Control de Siembra y Germinación</h1>
-    <p>Matriz Avanzada Pivot - Datos de GitHub con Corrección Estricta de Campos</p>
+    <p>Matriz Pivot Tridimensional - Auditoría con Doble Columna de % Germinación (10 y 15 DDS)</p>
   </div>
   <p>Sincronización: <span id="fechaActualizacion"></span></p>
 </header>
@@ -253,33 +287,23 @@
       <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
       <div class="multiselect-options" id="optsTipo"></div>
     </div>
+  </div>
 
-    <button class="btn" onclick="cargarDatosDesdeGitHub()">Actualizar Datos</button>
+  <div class="actions-panel">
+    <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Todos los Lotes</button>
+    <button class="btn" style="margin-left: auto;" onclick="cargarDatosDesdeGitHub()">Actualizar desde GitHub</button>
   </div>
 
   <div class="table-container">
-    <table id="tablaGerminacion">
-      <thead>
+    <table id="tablaGerminacionMaster">
+      <thead id="tablaHeader">
         <tr>
-          <th rowspan="2" style="text-align: left; min-width: 150px;">Finca</th>
-          <th rowspan="2" style="text-align: left; min-width: 150px;">Lote Agrícola</th>
-          <th colspan="3">Semillas por Mtr Lineal (Promedio)</th>
-          <th colspan="2">Plantas m.l. (Promedio Real)</th>
-          <th colspan="2">% Germinación</th>
-        </tr>
-        <tr>
-          <th>Enteras</th>
-          <th>Quebradas</th>
-          <th>Total Semillas</th>
-          <th>10 DDS</th>
-          <th>15 DDS</th>
-          <th>10 DDS</th>
-          <th>15 DDS</th>
+          <th class="loading">Estructurando dimensiones matriciales...</th>
         </tr>
       </thead>
       <tbody id="pivotBody">
         <tr>
-          <td colspan="9" class="loading">Consultando endpoints remotos en GitHub...</td>
+          <td class="loading">Sincronizando orígenes de datos remotos...</td>
         </tr>
       </tbody>
     </table>
@@ -288,7 +312,11 @@
 
 <script>
 let datosMaestrosUnificados = []; 
+let ciclosDetectados = [];
 let seleccionesFiltros = { compania: [], ciclo: [], finca: [], sector: [], tipo: [] };
+
+let estadoFincasColapso = {}; 
+let estadoGlobalColapsado = false; 
 
 window.onclick = function(event) {
   if (!event.target.matches('.multiselect-dropdown') && !event.target.closest('.multiselect-options')) {
@@ -304,6 +332,51 @@ function toggleDropdown(event, idOpts) {
   if (!estaAbierto) {
     optionsDiv.classList.add('show');
   }
+}
+
+function toggleFincaRows(fincaNombre) {
+  estadoFincasColapso[fincaNombre] = !estadoFincasColapso[fincaNombre];
+  actualizarVisibilidadFinca(fincaNombre);
+}
+
+function actualizarVisibilidadFinca(fincaNombre) {
+  const cleanId = normalizeTextId(fincaNombre);
+  const icono = document.getElementById(`icon-${cleanId}`);
+  const filasLotes = document.querySelectorAll(`.lote-row-${cleanId}`);
+  const filaTotal = document.getElementById(`total-row-${cleanId}`);
+  
+  if (estadoFincasColapso[fincaNombre]) {
+    filasLotes.forEach(f => f.classList.add('hidden-row'));
+    if (filaTotal) filaTotal.classList.add('hidden-row'); 
+    if (icono) icono.textContent = '📁';
+  } else {
+    filasLotes.forEach(f => f.classList.remove('hidden-row'));
+    if (filaTotal) filaTotal.classList.remove('hidden-row'); 
+    if (icono) icono.textContent = '📂';
+  }
+}
+
+function alternarColapsoGlobal() {
+  estadoGlobalColapsado = !estadoGlobalColapsado;
+  const btn = document.getElementById('btnToggleGlobal');
+  
+  if (estadoGlobalColapsado) {
+    btn.textContent = '📂 Expandir Todos los Lotes';
+    Object.keys(estadoFincasColapso).forEach(finca => {
+      estadoFincasColapso[finca] = true;
+      actualizarVisibilidadFinca(finca);
+    });
+  } else {
+    btn.textContent = '📁 Colapsar Todos los Lotes';
+    Object.keys(estadoFincasColapso).forEach(finca => {
+      estadoFincasColapso[finca] = false;
+      actualizarVisibilidadFinca(finca);
+    });
+  }
+}
+
+function normalizeTextId(text) {
+  return normalizeText(text).replace(/[^a-z0-9]/g, "");
 }
 
 function limpiarDescripcion(valor) {
@@ -324,7 +397,7 @@ function normalizeText(text) {
 
 async function cargarDatosDesdeGitHub() {
   const tbody = document.getElementById('pivotBody');
-  tbody.innerHTML = '<tr><td colspan="9" class="loading">Sincronizando modelos y procesando promedios...</td></tr>';
+  tbody.innerHTML = '<tr><td class="loading">Ejecutando unión y agrupamiento relacional...</td></tr>';
   
   const siembraURL = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentosSiembra.json';
   const germinacionURL = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentoGerminacio.json';
@@ -336,7 +409,8 @@ async function cargarDatosDesdeGitHub() {
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];
 
-    // PROCESAMIENTO CRUCIAL: Mapeamos usando las propiedades exactas descubiertas del JSON
+    ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)))].sort();
+
     datosMaestrosUnificados = siembraData.map(s => {
       const finca = limpiarDescripcion(s.x_studio_finca);
       const lote = limpiarDescripcion(s.x_studio_lote_de_finca);
@@ -349,15 +423,13 @@ async function cargarDatosDesdeGitHub() {
       const sNorm = normalizeText(s.x_studio_sector_1);
       const cNorm = normalizeText(s.x_studio_ciclo);
 
-      // CORRECCIÓN DE LLAVE: Se busca 'x_studio_lote_de_la_finca' (con la palabra '_la_') para Germinación
       const muestrasRelacionadas = germinacionData.filter(g => 
         normalizeText(g.x_studio_finca) === fNorm &&
-        normalizeText(g.x_studio_lote_de_la_finca || g.x_studio_lote_de_finca) === lNorm &&
+        normalizeText(g.x_studio_lote_de_la_finca) === lNorm &&
         normalizeText(g.x_studio_sector) === sNorm &&
         normalizeText(g.x_studio_ciclo) === cNorm
       );
 
-      // Filtrado por DDS
       const muestras10 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 10);
       const muestras15 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 15);
 
@@ -391,7 +463,7 @@ async function cargarDatosDesdeGitHub() {
 
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = '<tr><td colspan="9" class="loading" style="color:#dc2626;">Error cargando orígenes de datos desde GitHub.</td></tr>';
+    tbody.innerHTML = '<tr><td class="loading" style="color:#dc2626;">Error crítico al sincronizar archivos de GitHub.</td></tr>';
   }
 }
 
@@ -456,104 +528,172 @@ function filtrarYMostrar() {
     seleccionesFiltros.tipo.includes(d.tipo)
   );
 
+  generarEncabezadosDinamicos();
   renderPivot(filtrados);
 }
 
-// AGRUPACIÓN PIVOT REAL: Agrupa los subsectores por Finca y Lote calculando promedios exactos
+// GENERACIÓN DINÁMICA DE ENCABEZADOS CON DOBLE PORCENTAJE DE GERMINACIÓN
+function generarEncabezadosDinamicos() {
+  const header = document.getElementById('tablaHeader');
+  
+  let tr1 = `<tr><th rowspan="2" style="text-align: left; min-width:160px;">Finca</th><th rowspan="2" style="text-align: left; min-width:160px;">Lote de finca</th>`;
+  let tr2 = `<tr>`;
+
+  ciclosDetectados.forEach(ciclo => {
+    tr1 += `<th colspan="5" style="border-left: 2px solid var(--border-color); background-color: #f8fafc;">Ciclo: ${ciclo}</th>`;
+    tr2 += `
+      <th style="border-left: 2px solid var(--border-color);">Semillas m.l.</th>
+      <th style="color:#0284c7;">10 DDS</th>
+      <th style="color:#0f766e;">15 DDS</th>
+      <th>% Germ 10DDS</th>
+      <th>% Germ 15DDS</th>
+    `;
+  });
+
+  tr1 += `</tr>`;
+  tr2 += `</tr>`;
+  header.innerHTML = tr1 + tr2;
+}
+
 function renderPivot(data) {
   const tbody = document.getElementById('pivotBody');
-  tbody.innerHTML = '';
+  let htmlBuffer = [];
+  const totalColumnasReporte = 2 + (ciclosDetectados.length * 5);
 
   if (data.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="loading">No hay registros que coincidan con el filtro activo.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="${totalColumnasReporte}" class="loading">No hay registros que coincidan.</td></tr>`;
     return;
   }
 
+  // AGRUPACIÓN (Finca -> Lote -> Ciclo)
   const matrizPivot = {};
   data.forEach(reg => {
     if (!matrizPivot[reg.finca]) {
       matrizPivot[reg.finca] = { lotes: {} };
     }
-    
-    const claveLote = reg.lote;
-    if (!matrizPivot[reg.finca].lotes[claveLote]) {
-      matrizPivot[reg.finca].lotes[claveLote] = [];
+    if (!matrizPivot[reg.finca].lotes[reg.lote]) {
+      matrizPivot[reg.finca].lotes[reg.lote] = {};
     }
-    matrizPivot[reg.finca].lotes[claveLote].push(reg);
+    if (!matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo]) {
+      matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo] = [];
+    }
+    matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo].push(reg);
   });
 
-  // Renderizado final
+  // Renderizado al buffer de memoria
   Object.keys(matrizPivot).sort().forEach(fincaName => {
     const fincaObj = matrizPivot[fincaName];
+    const fincaIdClean = normalizeTextId(fincaName);
+    
+    if (estadoFincasColapso[fincaName] === undefined) {
+      estadoFincasColapso[fincaName] = estadoGlobalColapsado;
+    }
+    
+    const iconState = estadoFincasColapso[fincaName] ? '📁' : '📂';
+    const hiddenClass = estadoFincasColapso[fincaName] ? 'hidden-row' : '';
 
-    let finca_sum_entera = 0, finca_sum_quebrada = 0, finca_sum_total_s = 0;
-    let finca_sum_p10 = 0, finca_sum_p15 = 0;
-    let total_lotes_finca = 0;
+    htmlBuffer.push(`
+      <tr class="row-finca-header" onclick="toggleFincaRows('${fincaName}')">
+        <td colspan="${totalColumnasReporte}" style="text-align: left; color: var(--primary);">
+          <span class="toggle-icon" id="icon-${fincaIdClean}">${iconState}</span> Finca: ${fincaName} (Haga clic para contraer o expandir lotes)
+        </td>
+      </tr>
+    `);
 
-    Object.keys(fincaObj.lotes).sort().forEach((loteKey, index) => {
-      const registrosLote = fincaObj.lotes[loteKey];
-      const len = registrosLote.length;
-
-      // PROMEDIOS MATEMÁTICOS REALES POR LOTE AGRUPADO COMPLETO
-      const lote_entera = registrosLote.reduce((acc, curr) => acc + curr.semilla_entera, 0) / len;
-      const lote_quebrada = registrosLote.reduce((acc, curr) => acc + curr.semilla_quebrada, 0) / len;
-      const lote_total_s = registrosLote.reduce((acc, curr) => acc + curr.total_semillas, 0) / len;
-      
-      const lote_p10 = registrosLote.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / len;
-      const lote_p15 = registrosLote.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / len;
-
-      const g10 = lote_total_s > 0 ? (lote_p10 / lote_total_s) * 100 : 0;
-      const g15 = lote_total_s > 0 ? (lote_p15 / lote_total_s) * 100 : 0;
-
-      // Acumuladores Subtotales de Finca
-      finca_sum_entera += lote_entera;
-      finca_sum_quebrada += lote_quebrada;
-      finca_sum_total_s += lote_total_s;
-      finca_sum_p10 += lote_p10;
-      finca_sum_p15 += lote_p15;
-      total_lotes_finca++;
-
-      tbody.innerHTML += `
-        <tr class="row-lote">
-          <td style="font-weight: 600; color: var(--primary); background-color: #fafafa; text-align: left;">${index === 0 ? fincaName : ''}</td>
-          <td style="font-weight: 500; text-align: left;">${loteKey}</td>
-          <td class="text-right">${lote_entera.toFixed(1)}</td>
-          <td class="text-right">${lote_quebrada.toFixed(1)}</td>
-          <td class="text-right" style="font-weight:600;">${lote_total_s.toFixed(1)}</td>
-          <td class="text-right" style="color: #0284c7; font-weight: 600;">${lote_p10.toFixed(1)}</td>
-          <td class="text-right" style="color: #0f766e; font-weight: 600;">${lote_p15.toFixed(1)}</td>
-          <td class="text-center"><span class="badge-pct ${g10 < 75 ? 'low':''}">${g10.toFixed(1)}%</span></td>
-          <td class="text-center"><span class="badge-pct ${g15 < 75 ? 'low':''}">${g15.toFixed(1)}%</span></td>
-        </tr>
-      `;
+    const fincaCiclosTotales = {};
+    ciclosDetectados.forEach(c => {
+      fincaCiclosTotales[c] = { sumS: 0, sumP10: 0, sumP15: 0, totalLotes: 0 };
     });
 
-    // Fila Consolidadora Final de Totales de Finca
-    const finca_entera = total_lotes_finca > 0 ? (finca_sum_entera / total_lotes_finca) : 0;
-    const finca_quebrada = total_lotes_finca > 0 ? (finca_sum_quebrada / total_lotes_finca) : 0;
-    const finca_total_s = total_lotes_finca > 0 ? (finca_sum_total_s / total_lotes_finca) : 0;
-    const finca_p10 = total_lotes_finca > 0 ? (finca_sum_p10 / total_lotes_finca) : 0;
-    const finca_p15 = total_lotes_finca > 0 ? (finca_sum_p15 / total_lotes_finca) : 0;
+    // Renglones de los Lotes
+    Object.keys(fincaObj.lotes).sort().forEach(loteKey => {
+      const loteCiclosData = fincaObj.lotes[loteKey];
 
-    const tg10 = finca_total_s > 0 ? (finca_p10 / finca_total_s) * 100 : 0;
-    const tg15 = finca_total_s > 0 ? (finca_p15 / finca_total_s) * 100 : 0;
+      let filaHtml = `<tr class="row-lote lote-row-${fincaIdClean} ${hiddenClass}">`;
+      filaHtml += `<td style="font-weight: 600; color: var(--text-muted); background-color: #fafafa; text-align: left;">${fincaName}</td>`;
+      filaHtml += `<td style="font-weight: 500; text-align: left;">${loteKey}</td>`;
 
-    tbody.innerHTML += `
-      <tr class="row-total-finca">
-        <td colspan="2" style="text-align: left;">Total ${fincaName}</td>
-        <td class="text-right">${finca_entera.toFixed(1)}</td>
-        <td class="text-right">${finca_quebrada.toFixed(1)}</td>
-        <td class="text-right">${finca_total_s.toFixed(1)}</td>
-        <td class="text-right">${finca_p10.toFixed(1)}</td>
-        <td class="text-right">${finca_p15.toFixed(1)}</td>
-        <td class="text-center"><span class="badge-pct ${tg10 < 75 ? 'low':''}">${tg10.toFixed(1)}%</span></td>
-        <td class="text-center"><span class="badge-pct ${tg15 < 75 ? 'low':''}">${tg15.toFixed(1)}%</span></td>
-      </tr>
-    `;
+      ciclosDetectados.forEach(ciclo => {
+        const registrosSector = loteCiclosData[ciclo] || [];
+        const count = registrosSector.length;
+
+        if (count > 0) {
+          const avgS = registrosSector.reduce((acc, curr) => acc + curr.total_semillas, 0) / count;
+          const avgP10 = registrosSector.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / count;
+          const avgP15 = registrosSector.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / count;
+          
+          // DOBLE CALCULO DE TASA PORCENTUAL DE GERMINACIÓN
+          const g10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0;
+          const g15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+
+          fincaCiclosTotales[ciclo].sumS += avgS;
+          fincaCiclosTotales[ciclo].sumP10 += avgP10;
+          fincaCiclosTotales[ciclo].sumP15 += avgP15;
+          fincaCiclosTotales[ciclo].totalLotes++;
+
+          filaHtml += `
+            <td class="text-right" style="border-left: 2px solid var(--border-color); font-weight:500;">${avgS.toFixed(1)}</td>
+            <td class="text-right" style="color: #0284c7;">${avgP10.toFixed(1)}</td>
+            <td class="text-right" style="color: #0f766e; font-weight:600;">${avgP15.toFixed(1)}</td>
+            <td class="text-center"><span class="badge-pct ${g10 < 75 ? 'low' : ''}">${g10.toFixed(1)}%</span></td>
+            <td class="text-center"><span class="badge-pct ${g15 < 75 ? 'low' : ''}">${g15.toFixed(1)}%</span></td>
+          `;
+        } else {
+          filaHtml += `
+            <td class="text-right" style="border-left: 2px solid var(--border-color); color: #cbd5e1;">-</td>
+            <td class="text-right" style="color: #cbd5e1;">-</td>
+            <td class="text-right" style="color: #cbd5e1;">-</td>
+            <td class="text-center" style="color: #cbd5e1;">-</td>
+            <td class="text-center" style="color: #cbd5e1;">-</td>
+          `;
+        }
+      });
+
+      filaHtml += `</tr>`;
+      htmlBuffer.push(filaHtml);
+    });
+
+    // Fila Consolidadora Final de Subtotales por Finca
+    let subtotalHtml = `<tr class="row-total-finca ${hiddenClass}" id="total-row-${fincaIdClean}">`;
+    subtotalHtml += `<td colspan="2" style="text-align: left;">Total Promedios ${fincaName}</td>`;
+
+    ciclosDetectados.forEach(ciclo => {
+      const cTot = fincaCiclosTotales[ciclo];
+      if (cTot.totalLotes > 0) {
+        const avgS = cTot.sumS / cTot.totalLotes;
+        const avgP10 = cTot.sumP10 / cTot.totalLotes;
+        const avgP15 = cTot.sumP15 / cTot.totalLotes;
+        
+        const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0;
+        const tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+
+        subtotalHtml += `
+          <td class="text-right" style="border-left: 2px solid #cbd5e1;">${avgS.toFixed(1)}</td>
+          <td class="text-right" style="color: #0284c7;">${avgP10.toFixed(1)}</td>
+          <td class="text-right" style="color: #0f766e;">${avgP15.toFixed(1)}</td>
+          <td class="text-center"><span class="badge-pct">${tg10.toFixed(1)}%</span></td>
+          <td class="text-center"><span class="badge-pct">${tg15.toFixed(1)}%</span></td>
+        `;
+      } else {
+        subtotalHtml += `
+          <td class="text-right" style="border-left: 2px solid #cbd5e1; color: #cbd5e1;">-</td>
+          <td class="text-right" style="color: #cbd5e1;">-</td>
+          <td class="text-right" style="color: #cbd5e1;">-</td>
+          <td class="text-center" style="color: #cbd5e1;">-</td>
+          <td class="text-center" style="color: #cbd5e1;">-</td>
+        `;
+      }
+    });
+
+    subtotalHtml += `</tr>`;
+    htmlBuffer.push(subtotalHtml);
   });
+
+  // Inyección única y limpia en el DOM
+  tbody.innerHTML = htmlBuffer.join('');
 }
 
-// Carga Inicial
+// Carga Inicial Automatizada al compilar la ventana
 cargarDatosDesdeGitHub();
 </script>
 
