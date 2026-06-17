@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz Pivot de Germinación Agrícola</title>
+<style>
+  :root {
+    --bg-main: #f8fafc;
+    --text-main: #334155;
+    --text-muted: #64748b;
+    --primary: #1e293b; /* Gris azulado profundo del Gantt */
+    --primary-light: #f1f5f9;
+    --accent-green: #10b981; /* Verde esmeralda corporativo */
+    --accent-green-hover: #059669;
+    --border-color: #e2e8f0;
+    --card-bg: #ffffff;
+  }
+
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    margin: 0; padding: 0;
+  }
+
+  header {
+    background-color: var(--primary);
+    color: white;
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  header h1 { margin: 0; font-size: 20px; font-weight: 600; }
+  header p { margin: 0; font-size: 12px; color: #94a3b8; }
+
+  .container {
+    max-width: 100%;
+    padding: 20px;
+  }
+
+  /* Barra de Filtros Custom Multi-selección con Checkboxes */
+  .toolbar {
+    background-color: var(--card-bg);
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+  }
+
+  .filter-group label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .multiselect-dropdown {
+    min-width: 180px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 13px;
+    background-color: white;
+    cursor: pointer;
+    position: relative;
+    user-select: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .multiselect-dropdown::after {
+    content: "▼";
+    font-size: 9px;
+    color: var(--text-muted);
+  }
+
+  .multiselect-options {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: white;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    max-height: 220px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+    margin-top: 4px;
+    padding: 6px 0;
+  }
+
+  .multiselect-options.show {
+    display: block;
+  }
+
+  .multiselect-item {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .multiselect-item:hover {
+    background-color: var(--primary-light);
+  }
+
+  .multiselect-item input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: var(--accent-green);
+  }
+
+  .btn {
+    background-color: var(--accent-green);
+    color: white;
+    border: none;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    margin-left: auto;
+  }
+
+  .btn:hover { background-color: var(--accent-green-hover); }
+
+  /* Estilo Estructura Pivot */
+  .table-container {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  th {
+    background-color: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+    padding: 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    border: 1px solid var(--border-color);
+    text-align: center;
+  }
+
+  td {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+  }
+
+  .row-lote {
+    background-color: #ffffff;
+  }
+
+  .row-lote:hover {
+    background-color: #f8fafc;
+  }
+
+  .row-total-finca {
+    background-color: #f1f5f9;
+    font-weight: bold;
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+  }
+
+  .badge-pct {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    background-color: #e6f4ea;
+    color: #137333;
+  }
+  .badge-pct.low {
+    background-color: #fce8e6;
+    color: #c5221f;
+  }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .loading { padding: 30px; text-align: center; color: var(--text-muted); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Control de Siembra y Germinación</h1>
+    <p>Matriz Avanzada Pivot - Datos de GitHub con Corrección Estricta de Campos</p>
+  </div>
+  <p>Sincronización: <span id="fechaActualizacion"></span></p>
+</header>
+
+<div class="container">
+  
+  <div class="toolbar">
+    <div class="filter-group">
+      <label>Compañía</label>
+      <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
+      <div class="multiselect-options" id="optsCompania"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Ciclo</label>
+      <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
+      <div class="multiselect-options" id="optsCiclo"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Finca</label>
+      <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
+      <div class="multiselect-options" id="optsFinca"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Sector</label>
+      <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
+      <div class="multiselect-options" id="optsSector"></div>
+    </div>
+
+    <div class="filter-group">
+      <label>Tipo Actividad</label>
+      <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
+      <div class="multiselect-options" id="optsTipo"></div>
+    </div>
+
+    <button class="btn" onclick="cargarDatosDesdeGitHub()">Actualizar Datos</button>
+  </div>
+
+  <div class="table-container">
+    <table id="tablaGerminacion">
+      <thead>
+        <tr>
+          <th rowspan="2" style="text-align: left; min-width: 150px;">Finca</th>
+          <th rowspan="2" style="text-align: left; min-width: 150px;">Lote Agrícola</th>
+          <th colspan="3">Semillas por Mtr Lineal (Promedio)</th>
+          <th colspan="2">Plantas m.l. (Promedio Real)</th>
+          <th colspan="2">% Germinación</th>
+        </tr>
+        <tr>
+          <th>Enteras</th>
+          <th>Quebradas</th>
+          <th>Total Semillas</th>
+          <th>10 DDS</th>
+          <th>15 DDS</th>
+          <th>10 DDS</th>
+          <th>15 DDS</th>
+        </tr>
+      </thead>
+      <tbody id="pivotBody">
+        <tr>
+          <td colspan="9" class="loading">Consultando endpoints remotos en GitHub...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let datosMaestrosUnificados = []; 
+let seleccionesFiltros = { compania: [], ciclo: [], finca: [], sector: [], tipo: [] };
+
+window.onclick = function(event) {
+  if (!event.target.matches('.multiselect-dropdown') && !event.target.closest('.multiselect-options')) {
+    document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
+  }
+}
+
+function toggleDropdown(event, idOpts) {
+  event.stopPropagation();
+  const optionsDiv = document.getElementById(idOpts);
+  const estaAbierto = optionsDiv.classList.contains('show');
+  document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
+  if (!estaAbierto) {
+    optionsDiv.classList.add('show');
+  }
+}
+
+function limpiarDescripcion(valor) {
+  if (!valor) return 'N/A';
+  if (Array.isArray(valor)) {
+    return valor.length > 1 ? String(valor[1]).trim() : String(valor[0]).trim();
+  }
+  let texto = String(valor).trim();
+  texto = texto.replace(/^\[?\d+\]?\s*[-_]?\s*/, '');
+  return texto || 'N/A';
+}
+
+function normalizeText(text) {
+  return limpiarDescripcion(text).toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]/g, "");
+}
+
+async function cargarDatosDesdeGitHub() {
+  const tbody = document.getElementById('pivotBody');
+  tbody.innerHTML = '<tr><td colspan="9" class="loading">Sincronizando modelos y procesando promedios...</td></tr>';
+  
+  const siembraURL = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentosSiembra.json';
+  const germinacionURL = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentoGerminacio.json';
+
+  try {
+    const siembraRes = await fetch(siembraURL).then(r => r.json());
+    const germinacionRes = await fetch(germinacionURL).then(r => r.json());
+
+    const siembraData = siembraRes.result || [];
+    const germinacionData = germinacionRes.result || [];
+
+    // PROCESAMIENTO CRUCIAL: Mapeamos usando las propiedades exactas descubiertas del JSON
+    datosMaestrosUnificados = siembraData.map(s => {
+      const finca = limpiarDescripcion(s.x_studio_finca);
+      const lote = limpiarDescripcion(s.x_studio_lote_de_finca);
+      const ciclo = limpiarDescripcion(s.x_studio_ciclo);
+      const sectorSiembra = limpiarDescripcion(s.x_studio_sector_1);
+      const compania = limpiarDescripcion(s.x_studio_compaia || s.x_studio_company_id);
+
+      const fNorm = normalizeText(s.x_studio_finca);
+      const lNorm = normalizeText(s.x_studio_lote_de_finca);
+      const sNorm = normalizeText(s.x_studio_sector_1);
+      const cNorm = normalizeText(s.x_studio_ciclo);
+
+      // CORRECCIÓN DE LLAVE: Se busca 'x_studio_lote_de_la_finca' (con la palabra '_la_') para Germinación
+      const muestrasRelacionadas = germinacionData.filter(g => 
+        normalizeText(g.x_studio_finca) === fNorm &&
+        normalizeText(g.x_studio_lote_de_la_finca || g.x_studio_lote_de_finca) === lNorm &&
+        normalizeText(g.x_studio_sector) === sNorm &&
+        normalizeText(g.x_studio_ciclo) === cNorm
+      );
+
+      // Filtrado por DDS
+      const muestras10 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 10);
+      const muestras15 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 15);
+
+      const p10_sum = muestras10.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0);
+      const plantas10 = muestras10.length > 0 ? (p10_sum / muestras10.length) : 0;
+
+      const p15_sum = muestras15.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0);
+      let plantas15 = muestras15.length > 0 ? (p15_sum / muestras15.length) : 0;
+
+      if (plantas15 === 0 && plantas10 > 0 && muestras15.length === 0) {
+        plantas15 = plantas10;
+      }
+
+      const semilla_entera = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal) || 0;
+      const semilla_quebrada = parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal) || 0;
+      const total_semillas = parseFloat(s.x_studio_semilla_total) || (semilla_entera + semilla_quebrada);
+
+      let tipoNorm = 'Siembra';
+      if ((s.x_studio_tipo || '').toLowerCase().includes('re')) tipoNorm = 'Re-siembra';
+
+      return {
+        finca, lote, sector: sectorSiembra, ciclo, compania, tipo: tipoNorm,
+        semilla_entera, semilla_quebrada, total_semillas,
+        plantas_10dds: plantas10, plantas_15dds: plantas15
+      };
+    });
+
+    configurarFiltrosMultiples(datosMaestrosUnificados);
+    filtrarYMostrar();
+    document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
+
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = '<tr><td colspan="9" class="loading" style="color:#dc2626;">Error cargando orígenes de datos desde GitHub.</td></tr>';
+  }
+}
+
+function configurarFiltrosMultiples(data) {
+  const companias = [...new Set(data.map(d => d.compania))].sort();
+  const ciclos = [...new Set(data.map(d => d.ciclo))].sort();
+  const fincas = [...new Set(data.map(d => d.finca))].sort();
+  const sectores = [...new Set(data.map(d => d.sector))].sort();
+  const tipos = ['Siembra', 'Re-siembra'];
+
+  poblarDropdown('optsCompania', 'dropCompania', companias, 'compania');
+  poblarDropdown('optsCiclo', 'dropCiclo', ciclos, 'ciclo');
+  poblarDropdown('optsFinca', 'dropFinca', fincas, 'finca');
+  poblarDropdown('optsSector', 'dropSector', sectores, 'sector');
+  poblarDropdown('optsTipo', 'dropTipo', tipos, 'tipo');
+}
+
+function poblarDropdown(idOpts, idDrop, items, llaveFiltro) {
+  const container = document.getElementById(idOpts);
+  seleccionesFiltros[llaveFiltro] = [...items];
+  
+  let html = '';
+  items.forEach(item => {
+    html += `
+      <div class="multiselect-item" onclick="event.stopPropagation();">
+        <input type="checkbox" value="${item}" checked onchange="manejarCambioFiltro('${idDrop}', '${llaveFiltro}', this)">
+        <span>${item}</span>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+  actualizarTextoDropdown(idDrop, items.length, items.length);
+}
+
+function manejarCambioFiltro(idDrop, llaveFiltro, checkbox) {
+  const contenedor = checkbox.closest('.multiselect-options');
+  const marcados = Array.from(contenedor.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+  const totalItems = contenedor.querySelectorAll('input[type="checkbox"]').length;
+  
+  seleccionesFiltros[llaveFiltro] = marcados;
+  actualizarTextoDropdown(idDrop, marcados.length, totalItems);
+  filtrarYMostrar();
+}
+
+function actualizarTextoDropdown(idDrop, marcadosCount, totalCount) {
+  const drop = document.getElementById(idDrop);
+  if (marcadosCount === totalCount) {
+    drop.textContent = "Todos";
+  } else if (marcadosCount === 0) {
+    drop.textContent = "Ninguno";
+  } else {
+    drop.textContent = `${marcadosCount} seleccionados`;
+  }
+}
+
+function filtrarYMostrar() {
+  let filtrados = datosMaestrosUnificados.filter(d => 
+    seleccionesFiltros.compania.includes(d.compania) &&
+    seleccionesFiltros.ciclo.includes(d.ciclo) &&
+    seleccionesFiltros.finca.includes(d.finca) &&
+    seleccionesFiltros.sector.includes(d.sector) &&
+    seleccionesFiltros.tipo.includes(d.tipo)
+  );
+
+  renderPivot(filtrados);
+}
+
+// AGRUPACIÓN PIVOT REAL: Agrupa los subsectores por Finca y Lote calculando promedios exactos
+function renderPivot(data) {
+  const tbody = document.getElementById('pivotBody');
+  tbody.innerHTML = '';
+
+  if (data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" class="loading">No hay registros que coincidan con el filtro activo.</td></tr>';
+    return;
+  }
+
+  const matrizPivot = {};
+  data.forEach(reg => {
+    if (!matrizPivot[reg.finca]) {
+      matrizPivot[reg.finca] = { lotes: {} };
+    }
+    
+    const claveLote = reg.lote;
+    if (!matrizPivot[reg.finca].lotes[claveLote]) {
+      matrizPivot[reg.finca].lotes[claveLote] = [];
+    }
+    matrizPivot[reg.finca].lotes[claveLote].push(reg);
+  });
+
+  // Renderizado final
+  Object.keys(matrizPivot).sort().forEach(fincaName => {
+    const fincaObj = matrizPivot[fincaName];
+
+    let finca_sum_entera = 0, finca_sum_quebrada = 0, finca_sum_total_s = 0;
+    let finca_sum_p10 = 0, finca_sum_p15 = 0;
+    let total_lotes_finca = 0;
+
+    Object.keys(fincaObj.lotes).sort().forEach((loteKey, index) => {
+      const registrosLote = fincaObj.lotes[loteKey];
+      const len = registrosLote.length;
+
+      // PROMEDIOS MATEMÁTICOS REALES POR LOTE AGRUPADO COMPLETO
+      const lote_entera = registrosLote.reduce((acc, curr) => acc + curr.semilla_entera, 0) / len;
+      const lote_quebrada = registrosLote.reduce((acc, curr) => acc + curr.semilla_quebrada, 0) / len;
+      const lote_total_s = registrosLote.reduce((acc, curr) => acc + curr.total_semillas, 0) / len;
+      
+      const lote_p10 = registrosLote.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / len;
+      const lote_p15 = registrosLote.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / len;
+
+      const g10 = lote_total_s > 0 ? (lote_p10 / lote_total_s) * 100 : 0;
+      const g15 = lote_total_s > 0 ? (lote_p15 / lote_total_s) * 100 : 0;
+
+      // Acumuladores Subtotales de Finca
+      finca_sum_entera += lote_entera;
+      finca_sum_quebrada += lote_quebrada;
+      finca_sum_total_s += lote_total_s;
+      finca_sum_p10 += lote_p10;
+      finca_sum_p15 += lote_p15;
+      total_lotes_finca++;
+
+      tbody.innerHTML += `
+        <tr class="row-lote">
+          <td style="font-weight: 600; color: var(--primary); background-color: #fafafa; text-align: left;">${index === 0 ? fincaName : ''}</td>
+          <td style="font-weight: 500; text-align: left;">${loteKey}</td>
+          <td class="text-right">${lote_entera.toFixed(1)}</td>
+          <td class="text-right">${lote_quebrada.toFixed(1)}</td>
+          <td class="text-right" style="font-weight:600;">${lote_total_s.toFixed(1)}</td>
+          <td class="text-right" style="color: #0284c7; font-weight: 600;">${lote_p10.toFixed(1)}</td>
+          <td class="text-right" style="color: #0f766e; font-weight: 600;">${lote_p15.toFixed(1)}</td>
+          <td class="text-center"><span class="badge-pct ${g10 < 75 ? 'low':''}">${g10.toFixed(1)}%</span></td>
+          <td class="text-center"><span class="badge-pct ${g15 < 75 ? 'low':''}">${g15.toFixed(1)}%</span></td>
+        </tr>
+      `;
+    });
+
+    // Fila Consolidadora Final de Totales de Finca
+    const finca_entera = total_lotes_finca > 0 ? (finca_sum_entera / total_lotes_finca) : 0;
+    const finca_quebrada = total_lotes_finca > 0 ? (finca_sum_quebrada / total_lotes_finca) : 0;
+    const finca_total_s = total_lotes_finca > 0 ? (finca_sum_total_s / total_lotes_finca) : 0;
+    const finca_p10 = total_lotes_finca > 0 ? (finca_sum_p10 / total_lotes_finca) : 0;
+    const finca_p15 = total_lotes_finca > 0 ? (finca_sum_p15 / total_lotes_finca) : 0;
+
+    const tg10 = finca_total_s > 0 ? (finca_p10 / finca_total_s) * 100 : 0;
+    const tg15 = finca_total_s > 0 ? (finca_p15 / finca_total_s) * 100 : 0;
+
+    tbody.innerHTML += `
+      <tr class="row-total-finca">
+        <td colspan="2" style="text-align: left;">Total ${fincaName}</td>
+        <td class="text-right">${finca_entera.toFixed(1)}</td>
+        <td class="text-right">${finca_quebrada.toFixed(1)}</td>
+        <td class="text-right">${finca_total_s.toFixed(1)}</td>
+        <td class="text-right">${finca_p10.toFixed(1)}</td>
+        <td class="text-right">${finca_p15.toFixed(1)}</td>
+        <td class="text-center"><span class="badge-pct ${tg10 < 75 ? 'low':''}">${tg10.toFixed(1)}%</span></td>
+        <td class="text-center"><span class="badge-pct ${tg15 < 75 ? 'low':''}">${tg15.toFixed(1)}%</span></td>
+      </tr>
+    `;
+  });
+}
+
+// Carga Inicial
+cargarDatosDesdeGitHub();
+</script>
+
+</body>
+</html>
