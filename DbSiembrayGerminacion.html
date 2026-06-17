@@ -189,14 +189,14 @@
   }
 
   .row-finca-header {
-    background-color: #e2e8f0;
+    background-color: #cbd5e1;
     font-weight: bold;
     cursor: pointer;
     user-select: none;
   }
 
   .row-finca-header:hover {
-    background-color: #cbd5e1;
+    background-color: #94a3b8;
   }
 
   .toggle-icon {
@@ -215,7 +215,7 @@
   }
 
   .row-total-finca {
-    background-color: #f1f5f9;
+    background-color: #e2e8f0;
     font-weight: bold;
     border-top: 1px dashed #cbd5e1;
     border-bottom: 2px solid #cbd5e1;
@@ -250,7 +250,7 @@
 <header>
   <div>
     <h1>Control de Siembra y Germinación</h1>
-    <p>Matriz Pivot Tridimensional - Auditoría con Doble Columna de % Germinación (10 y 15 DDS)</p>
+    <p>Matriz Pivot Tridimensional - Promedios de Finca Interactivos al Colapsar</p>
   </div>
   <p>Sincronización: <span id="fechaActualizacion"></span></p>
 </header>
@@ -290,7 +290,7 @@
   </div>
 
   <div class="actions-panel">
-    <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Todos los Lotes</button>
+    <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Todas las Fincas</button>
     <button class="btn" style="margin-left: auto;" onclick="cargarDatosDesdeGitHub()">Actualizar desde GitHub</button>
   </div>
 
@@ -334,45 +334,22 @@ function toggleDropdown(event, idOpts) {
   }
 }
 
+// Disparador del colapso: Fuerza al motor a re-renderizar la tabla para inyectar promedios en la cabecera
 function toggleFincaRows(fincaNombre) {
   estadoFincasColapso[fincaNombre] = !estadoFincasColapso[fincaNombre];
-  actualizarVisibilidadFinca(fincaNombre);
-}
-
-function actualizarVisibilidadFinca(fincaNombre) {
-  const cleanId = normalizeTextId(fincaNombre);
-  const icono = document.getElementById(`icon-${cleanId}`);
-  const filasLotes = document.querySelectorAll(`.lote-row-${cleanId}`);
-  const filaTotal = document.getElementById(`total-row-${cleanId}`);
-  
-  if (estadoFincasColapso[fincaNombre]) {
-    filasLotes.forEach(f => f.classList.add('hidden-row'));
-    if (filaTotal) filaTotal.classList.add('hidden-row'); 
-    if (icono) icono.textContent = '📁';
-  } else {
-    filasLotes.forEach(f => f.classList.remove('hidden-row'));
-    if (filaTotal) filaTotal.classList.remove('hidden-row'); 
-    if (icono) icono.textContent = '📂';
-  }
+  filtrarYMostrar(); 
 }
 
 function alternarColapsoGlobal() {
   estadoGlobalColapsado = !estadoGlobalColapsado;
   const btn = document.getElementById('btnToggleGlobal');
   
-  if (estadoGlobalColapsado) {
-    btn.textContent = '📂 Expandir Todos los Lotes';
-    Object.keys(estadoFincasColapso).forEach(finca => {
-      estadoFincasColapso[finca] = true;
-      actualizarVisibilidadFinca(finca);
-    });
-  } else {
-    btn.textContent = '📁 Colapsar Todos los Lotes';
-    Object.keys(estadoFincasColapso).forEach(finca => {
-      estadoFincasColapso[finca] = false;
-      actualizarVisibilidadFinca(finca);
-    });
-  }
+  btn.textContent = estadoGlobalColapsado ? '📂 Expandir Todas las Fincas' : '📁 Colapsar Todas las Fincas';
+  
+  Object.keys(estadoFincasColapso).forEach(finca => {
+    estadoFincasColapso[finca] = estadoGlobalColapsado;
+  });
+  filtrarYMostrar();
 }
 
 function normalizeTextId(text) {
@@ -449,6 +426,9 @@ async function cargarDatosDesdeGitHub() {
 
       let tipoNorm = 'Siembra';
       if ((s.x_studio_tipo || '').toLowerCase().includes('re')) tipoNorm = 'Re-siembra';
+
+      // Inicializar estado de colapso por defecto
+      if (estadoFincasColapso[finca] === undefined) estadoFincasColapso[finca] = false;
 
       return {
         finca, lote, sector: sectorSiembra, ciclo, compania, tipo: tipoNorm,
@@ -532,7 +512,6 @@ function filtrarYMostrar() {
   renderPivot(filtrados);
 }
 
-// GENERACIÓN DINÁMICA DE ENCABEZADOS CON DOBLE PORCENTAJE DE GERMINACIÓN
 function generarEncabezadosDinamicos() {
   const header = document.getElementById('tablaHeader');
   
@@ -565,7 +544,7 @@ function renderPivot(data) {
     return;
   }
 
-  // AGRUPACIÓN (Finca -> Lote -> Ciclo)
+  // AGRUPACIÓN MULTIDIMENSIONAL (Finca -> Lote -> Ciclo)
   const matrizPivot = {};
   data.forEach(reg => {
     if (!matrizPivot[reg.finca]) {
@@ -585,27 +564,62 @@ function renderPivot(data) {
     const fincaObj = matrizPivot[fincaName];
     const fincaIdClean = normalizeTextId(fincaName);
     
-    if (estadoFincasColapso[fincaName] === undefined) {
-      estadoFincasColapso[fincaName] = estadoGlobalColapsado;
-    }
-    
-    const iconState = estadoFincasColapso[fincaName] ? '📁' : '📂';
-    const hiddenClass = estadoFincasColapso[fincaName] ? 'hidden-row' : '';
+    const esColapsado = estadoFincasColapso[fincaName];
+    const iconState = esColapsado ? '📁' : '📂';
+    const hiddenClass = esColapsado ? 'hidden-row' : '';
 
-    htmlBuffer.push(`
-      <tr class="row-finca-header" onclick="toggleFincaRows('${fincaName}')">
-        <td colspan="${totalColumnasReporte}" style="text-align: left; color: var(--primary);">
-          <span class="toggle-icon" id="icon-${fincaIdClean}">${iconState}</span> Finca: ${fincaName} (Haga clic para contraer o expandir lotes)
-        </td>
-      </tr>
-    `);
-
+    // ESTRUCTURA DE CONTROL: Calculamos de forma anticipada los promedios globales de esta finca
     const fincaCiclosTotales = {};
     ciclosDetectados.forEach(c => {
       fincaCiclosTotales[c] = { sumS: 0, sumP10: 0, sumP15: 0, totalLotes: 0 };
     });
 
-    // Renglones de los Lotes
+    // Procesamos primero la matemática interna para tener los datos listos
+    Object.keys(fincaObj.lotes).forEach(loteKey => {
+      const loteCiclosData = fincaObj.lotes[loteKey];
+      ciclosDetectados.forEach(ciclo => {
+        const registrosSector = loteCiclosData[ciclo] || [];
+        const count = registrosSector.length;
+        if (count > 0) {
+          fincaCiclosTotales[ciclo].sumS += registrosSector.reduce((acc, curr) => acc + curr.total_semillas, 0) / count;
+          fincaCiclosTotales[ciclo].sumP10 += registrosSector.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / count;
+          fincaCiclosTotales[ciclo].sumP15 += registrosSector.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / count;
+          fincaCiclosTotales[ciclo].totalLotes++;
+        }
+      });
+    });
+
+    // NUEVA INGENIERÍA: Si la finca está colapsada, pintamos los promedios directamente en las celdas de la cabecera
+    let fincaHeaderHtml = `<tr class="row-finca-header" onclick="toggleFincaRows('${fincaName}')">`;
+    fincaHeaderHtml += `<td style="text-align: left; color: var(--primary);"><span class="toggle-icon" id="icon-${fincaIdClean}">${iconState}</span> Finca: ${fincaName}</td>`;
+    fincaHeaderHtml += `<td style="font-style: italic; color: var(--text-muted); text-align: left;">${esColapsado ? 'Promedio General Finca' : 'Desglose de Lotes'}</td>`;
+
+    ciclosDetectados.forEach(ciclo => {
+      const cTot = fincaCiclosTotales[ciclo];
+      if (esColapsado && cTot.totalLotes > 0) {
+        // Inyección reactiva de promedios generales estilo formato tabla en la cabecera
+        const avgS = cTot.sumS / cTot.totalLotes;
+        const avgP10 = cTot.sumP10 / cTot.totalLotes;
+        const avgP15 = cTot.sumP15 / cTot.totalLotes;
+        const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0;
+        const tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+
+        fincaHeaderHtml += `
+          <td class="text-right" style="border-left: 2px solid #94a3b8;">${avgS.toFixed(1)}</td>
+          <td class="text-right" style="color: #0284c7;">${avgP10.toFixed(1)}</td>
+          <td class="text-right" style="color: #0f766e;">${avgP15.toFixed(1)}</td>
+          <td class="text-center"><span class="badge-pct">${tg10.toFixed(1)}%</span></td>
+          <td class="text-center"><span class="badge-pct">${tg15.toFixed(1)}%</span></td>
+        `;
+      } else {
+        // Si está expandida o no hay datos, las celdas de la cabecera permanecen limpias de relleno
+        fincaHeaderHtml += `<td style="border-left: 2px solid #cbd5e1;">-</td><td>-</td><td>-</td><td>-</td><td>-</td>`;
+      }
+    });
+    fincaHeaderHtml += `</tr>`;
+    htmlBuffer.push(fincaHeaderHtml);
+
+    // Renglones individuales de los Lotes (Se rigen bajo la clase hidden-row)
     Object.keys(fincaObj.lotes).sort().forEach(loteKey => {
       const loteCiclosData = fincaObj.lotes[loteKey];
 
@@ -622,14 +636,8 @@ function renderPivot(data) {
           const avgP10 = registrosSector.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / count;
           const avgP15 = registrosSector.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / count;
           
-          // DOBLE CALCULO DE TASA PORCENTUAL DE GERMINACIÓN
           const g10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0;
           const g15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
-
-          fincaCiclosTotales[ciclo].sumS += avgS;
-          fincaCiclosTotales[ciclo].sumP10 += avgP10;
-          fincaCiclosTotales[ciclo].sumP15 += avgP15;
-          fincaCiclosTotales[ciclo].totalLotes++;
 
           filaHtml += `
             <td class="text-right" style="border-left: 2px solid var(--border-color); font-weight:500;">${avgS.toFixed(1)}</td>
@@ -653,7 +661,7 @@ function renderPivot(data) {
       htmlBuffer.push(filaHtml);
     });
 
-    // Fila Consolidadora Final de Subtotales por Finca
+    // Fila de Cierre de Subtotales (Solo se inyecta en la pantalla si el bloque está expandido)
     let subtotalHtml = `<tr class="row-total-finca ${hiddenClass}" id="total-row-${fincaIdClean}">`;
     subtotalHtml += `<td colspan="2" style="text-align: left;">Total Promedios ${fincaName}</td>`;
 
@@ -663,7 +671,6 @@ function renderPivot(data) {
         const avgS = cTot.sumS / cTot.totalLotes;
         const avgP10 = cTot.sumP10 / cTot.totalLotes;
         const avgP15 = cTot.sumP15 / cTot.totalLotes;
-        
         const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0;
         const tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
 
@@ -689,11 +696,11 @@ function renderPivot(data) {
     htmlBuffer.push(subtotalHtml);
   });
 
-  // Inyección única y limpia en el DOM
+  // Volcado final y masivo al cuerpo de la tabla
   tbody.innerHTML = htmlBuffer.join('');
 }
 
-// Carga Inicial Automatizada al compilar la ventana
+// Inicialización automática
 cargarDatosDesdeGitHub();
 </script>
 
