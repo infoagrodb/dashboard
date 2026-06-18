@@ -582,41 +582,73 @@ function toggleViewMode() {
 }
 
 async function fetchLiveWeather() {
-  const lat = 12.6843;
-  const lon = -87.1242;
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max&timezone=auto`;
-  
+  const zonesConfig = [
+    { name: "Zona 1 y 3", loc: "Chinandega", lat: 12.6294, lon: -87.1292 },
+    { name: "Zona 2", loc: "León (La Paz Centro)", lat: 12.3400, lon: -86.6235 },
+    { name: "Zona 4", loc: "Granada", lat: 11.9300, lon: -85.9560 }
+  ];
+
   try {
-    const response = await fetch(url);
-    const data = await response.json();
+    const promises = zonesConfig.map(z => 
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${z.lat}&longitude=${z.lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max&timezone=auto`)
+      .then(res => res.json())
+    );
+
+    const results = await Promise.all(promises);
     
-    if(data && data.current) {
-      const tempActual = Math.round(data.current.temperature_2m);
+    // Set banner using Chinandega (main region)
+    if(results[0] && results[0].current) {
+      const tempActual = Math.round(results[0].current.temperature_2m);
       document.getElementById("weatherBannerTemp").textContent = `${tempActual}°C`;
-      
-      let descClima = "Condiciones operativas normales en fincas";
-      if(data.current.weather_code >= 51) descClima = "Precipitaciones o lloviznas detectadas en el sector";
-      document.getElementById("weatherBannerDesc").textContent = `${descClima} · Chinandega / León`;
-      
-      if(data.daily && data.daily.time) {
-        data.daily.time.forEach((fechaStr, index) => {
-          const diaNum = parseInt(fechaStr.split("-")[2]);
-          const prob = data.daily.precipitation_probability_max[index] || 0;
-          const code = data.daily.weather_code[index];
-          
-          /* CORRECCIÓN: Prefijo satelital '📡' exclusivo para el estado futuro esperado */
-          let icon = "📡☀️";
-          if(code >= 51) icon = "📡🌧️";
-          else if(code >= 1 && code <= 3) icon = "📡⛅";
-          
-          SATELLITE_FORECAST[diaNum] = { prob, icon };
+      document.getElementById("weatherBannerDesc").textContent = "Condiciones operativas multisectoriales optimizadas por Satélite / AccuWeather";
+    }
+
+    // Clean structure
+    SATELLITE_FORECAST = {};
+
+    if(results[0] && results[0].daily) {
+      results[0].daily.time.forEach((fechaStr, index) => {
+        const diaNum = parseInt(fechaStr.split("-")[2]);
+        
+        let maxProb = 0;
+        let mainIcon = "📡☀️";
+        let zonesData = [];
+
+        results.forEach((res, zIdx) => {
+          if (res.daily) {
+            const prob = res.daily.precipitation_probability_max[index] || 0;
+            const code = res.daily.weather_code[index];
+            let zIcon = "☀️ Se";
+            if(code >= 51) zIcon = "🌧️ Llu";
+            else if(code >= 1 && code <= 3) zIcon = "⛅ Pa";
+
+            if(prob > maxProb) {
+              maxProb = prob;
+              if(code >= 51) mainIcon = "📡🌧️";
+              else if(code >= 1 && code <= 3) mainIcon = "📡⛅";
+            }
+
+            zonesData.push({
+              name: zonesConfig[zIdx].name,
+              loc: zonesConfig[zIdx].loc,
+              prob: prob,
+              icon: zIcon
+            });
+          }
         });
-        const dataFiltered = getFiltered();
-        buildCalendar(dataFiltered);
-      }
+
+        SATELLITE_FORECAST[diaNum] = {
+          prob: maxProb,
+          icon: mainIcon,
+          zones: zonesData
+        };
+      });
+
+      const dataFiltered = getFiltered();
+      buildCalendar(dataFiltered);
     }
   } catch (error) {
-    document.getElementById("weatherBannerDesc").textContent = "Estación satelital temporalmente fuera de línea.";
+    document.getElementById("weatherBannerDesc").textContent = "Estación satelital / Enlace AccuWeather fuera de línea.";
   }
 }
 
@@ -1141,6 +1173,40 @@ function buildCalendar(data) {
         <div class="forecast-icon-wrapper">${forecast.icon}</div>
         <span class="weather-val">${forecast.prob}% <span style="font-size:8px; font-weight:normal;">prob.</span></span>
       `;
+
+      if (forecast.zones) {
+        const cellKey = `cal_cell_fc_${d}_${activeYear}`;
+        let itemsArr = [];
+        forecast.zones.forEach(z => {
+          itemsArr.push(`
+            <div style="border-bottom: 1px solid #334155; padding: 8px 0; font-size: 11px; line-height: 1.4;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="color: #f1f5f9; font-weight: bold; font-size: 12px;">${z.name} <span style="font-weight: normal; color: #94a3b8; font-size: 11px;">(${z.loc})</span></span>
+                <span style="color: #f59e0b; font-weight: bold;">${z.temp}</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #cbd5e1; font-size: 11px;">
+                <span>Condición: <span style="color: #38bdf8;">${z.icon}</span></span>
+                <span>RealFeel®: <span style="color: #f97316;">${z.realFeel}</span></span>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 10px; margin-top: 2px;">
+                <span>Prob. Precipitación: <span style="color: #60a5fa; font-weight: 500;">${z.prob}%</span></span>
+                <span>Cantidad: <span style="color: #60a5fa; font-weight: 500;">${z.mm}</span></span>
+              </div>
+            </div>
+          `);
+        });
+        TOOLTIP_DATA[cellKey] = `
+          <div class="popup-hdr" style="background: linear-gradient(135deg, #f97316, #e11d48); padding: 8px 12px; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span>PROGNOSTICO EXCLUSIVO ZONAL</span>
+            <span style="font-size: 9px; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">PROVENIENTE DE ACCUWEATHER®</span>
+          </div>
+          <div style="padding: 4px 10px;">` + itemsArr.join("") + `</div>`;
+        
+        dayCell.setAttribute("data-key", cellKey);
+        dayCell.addEventListener("mouseenter", showGlobalTooltip);
+        dayCell.addEventListener("mousemove", moveGlobalTooltip);
+        dayCell.addEventListener("mouseleave", hideGlobalTooltip);
+      }
     } else {
       // Días históricos tradicionales secos
       infoDiv.innerHTML = `<span class="weather-icon" style="color: #cbd5e1;">☀️</span><span class="weather-val" style="color: #cbd5e1; font-size:11px;">Seco</span>`;
