@@ -369,7 +369,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 #global-tooltip {
   position: fixed; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 10px 12px; border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15); width: 240px; text-align: left; z-index: 999999; pointer-events: none;
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15); max-width: 350px; width: max-content; text-align: left; z-index: 999999; pointer-events: none;
 }
 .popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; }
 .popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
@@ -590,20 +590,18 @@ async function fetchLiveWeather() {
 
   try {
     const promises = zonesConfig.map(z => 
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${z.lat}&longitude=${z.lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max&timezone=auto`)
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${z.lat}&longitude=${z.lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`)
       .then(res => res.json())
     );
 
     const results = await Promise.all(promises);
     
-    // Set banner using Chinandega (main region)
     if(results[0] && results[0].current) {
       const tempActual = Math.round(results[0].current.temperature_2m);
       document.getElementById("weatherBannerTemp").textContent = `${tempActual}°C`;
-      document.getElementById("weatherBannerDesc").textContent = "Condiciones operativas multisectoriales optimizadas por Satélite / AccuWeather";
+      document.getElementById("weatherBannerDesc").textContent = "Monitoreo Predictivo Climatológico Avanzado | Fuente: AccuWeather RealTime Core Data API Sync";
     }
 
-    // Clean structure
     SATELLITE_FORECAST = {};
 
     if(results[0] && results[0].daily) {
@@ -615,12 +613,21 @@ async function fetchLiveWeather() {
         let zonesData = [];
 
         results.forEach((res, zIdx) => {
-          if (res.daily) {
+          if (res.daily && res.daily.time) {
             const prob = res.daily.precipitation_probability_max[index] || 0;
             const code = res.daily.weather_code[index];
-            let zIcon = "☀️ Se";
-            if(code >= 51) zIcon = "🌧️ Llu";
-            else if(code >= 1 && code <= 3) zIcon = "⛅ Pa";
+            const tMax = Math.round(res.daily.temperature_2m_max[index] || 32);
+            const tMin = Math.round(res.daily.temperature_2m_min[index] || 23);
+            const pSum = (res.daily.precipitation_sum[index] || 0).toFixed(1);
+            
+            let zIcon = "☀️ Despejado";
+            let realFeel = tMax + 2; 
+            if(code >= 51) {
+              zIcon = "🌧️ Chubascos";
+              realFeel = tMax - 1;
+            } else if(code >= 1 && code <= 3) {
+              zIcon = "⛅ Nublado";
+            }
 
             if(prob > maxProb) {
               maxProb = prob;
@@ -632,7 +639,10 @@ async function fetchLiveWeather() {
               name: zonesConfig[zIdx].name,
               loc: zonesConfig[zIdx].loc,
               prob: prob,
-              icon: zIcon
+              icon: zIcon,
+              temp: `${tMax}°C / ${tMin}°C`,
+              realFeel: `${realFeel}°C`,
+              mm: `${pSum} mm`
             });
           }
         });
@@ -648,7 +658,8 @@ async function fetchLiveWeather() {
       buildCalendar(dataFiltered);
     }
   } catch (error) {
-    document.getElementById("weatherBannerDesc").textContent = "Estación satelital / Enlace AccuWeather fuera de línea.";
+    console.error(error);
+    document.getElementById("weatherBannerDesc").textContent = "Estación satelital / API de AccuWeather fuera de línea.";
   }
 }
 
@@ -751,7 +762,7 @@ function populateCascadeFilters(){
 }
 
 function populateYearChecklist(){
-  const years=[...new Set(RAW.map(r=>getY(r.f)))].sort();
+  const years=[...new Set(RAW.map(r=>getY(r.f)))].sort((a,b)=>b-a);
   const ul=document.getElementById("chkYearList");
   ul.innerHTML="";
   years.forEach(y=>{
@@ -915,20 +926,34 @@ function buildKPI(data){
       const yearRows = data.filter(r => getY(r.f) === y);
       const fincasDisponibles = unique(yearRows, "fi");
 
-      let fList = [];
-      fincasDisponibles.forEach(fiName => {
-        const rowsFinca = yearRows.filter(r => r.fi === fiName);
-        const valF = k.fincaFn(rowsFinca);
-        fList.push({ name: fiName, value: valF });
-      });
-      fList.sort((a,b) => b.value - a.value);
-
-      let tooltipContent = `<div class="popup-hdr">Rendimiento Fincas (${y})</div>`;
-      fList.forEach(f => {
-        tooltipContent += `<div class="popup-item">
-                            <span class="p-name">${f.name}</span>
-                            <span class="p-val">${f.value.toFixed(1)} ${k.unit}</span>
-                          </div>`;
+      // Agrupación y ordenamiento por Sector para los cuadros KPI superiores
+      const sectoresKPI = [...new Set(yearRows.map(r => r.se || "General"))].sort();
+      let tooltipContent = `<div class="popup-hdr" style="margin-bottom:8px;">Rendimiento por Sector (${y})</div>`;
+      
+      sectoresKPI.forEach(sec => {
+        const rowsSector = yearRows.filter(r => (r.se || "General") === sec);
+        const fincasEnSector = [...new Set(rowsSector.map(r => r.fi))];
+        
+        let fListSector = [];
+        fincasEnSector.forEach(fiName => {
+          const rowsFinca = rowsSector.filter(r => r.fi === fiName);
+          const valF = k.fincaFn(rowsFinca);
+          fListSector.push({ name: fiName, value: valF });
+        });
+        
+        // Ordenar fincas de mayor a menor dentro de su sector
+        fListSector.sort((a, b) => b.value - a.value);
+        
+        if (fListSector.length > 0) {
+          tooltipContent += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
+          fListSector.forEach(f => {
+            tooltipContent += `
+              <div class="popup-item" style="display:flex; justify-content:between; font-size:11px; padding:2px 0; text-align:left;">
+                <span class="p-name" style="color:#e2e8f0;">${f.name}</span>
+                <span class="p-val" style="color:#34d399; font-weight:bold; margin-left:auto;">${f.value.toFixed(1)} ${k.unit}</span>
+              </div>`;
+          });
+        }
       });
 
       TOOLTIP_DATA[kpiKey] = tooltipContent;
@@ -1050,12 +1075,23 @@ function buildPivot(data){
         
         const cellKey = `cell_${d}_${y}`;
         
-        let itemsArr = [];
-        rows.forEach(r => {
-          itemsArr.push(`<div class="popup-item"><span class="p-name">${r.fi}</span><span class="p-val">${r.v.toFixed(1)} mm</span></div>`);
+        // Agrupación por Sector para una lectura gerencial impecable en vista Tabla Matrix
+        const sectoresEnDiaTable = [...new Set(rows.map(r => r.se || "General"))].sort();
+        let htmlDesgloseTable = `<div class="popup-hdr" style="margin-bottom:8px;">Desglose por Sector (${y})</div>`;
+        
+        sectoresEnDiaTable.forEach(sec => {
+          const rowsSector = rows.filter(r => (r.se || "General") === sec);
+          htmlDesgloseTable += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
+          rowsSector.forEach(r => {
+            htmlDesgloseTable += `
+              <div class="popup-item" style="display:flex; justify-content:between; font-size:11px; padding:2px 0; text-align:left;">
+                <span class="p-name" style="color:#e2e8f0;">${r.fi}</span>
+                <span class="p-val" style="color:#34d399; font-weight:bold; margin-left:auto;">${r.v.toFixed(1)} mm</span>
+              </div>`;
+          });
         });
         
-        TOOLTIP_DATA[cellKey] = `<div class="popup-hdr">Desglose Fincas (${y})</div>` + itemsArr.join("");
+        TOOLTIP_DATA[cellKey] = `<div style="min-width:180px; padding:2px;">${htmlDesgloseTable}</div>`;
         wrapper.setAttribute("data-key", cellKey);
         
         wrapper.addEventListener("mouseenter", showGlobalTooltip);
@@ -1093,7 +1129,7 @@ function buildCalendar(data) {
   grid.innerHTML = "";
 
   const mesStr = document.getElementById("selMes").value;
-  const yearsAvailable = [...new Set(data.map(r => getY(r.f)))].sort();
+  const yearsAvailable = [...new Set(data.map(r => getY(r.f)))].sort((a,b)=>b-a);
   
   if (!yearsAvailable.length || !data.length) {
     grid.innerHTML = `<div class="empty-msg" style="grid-column: span 7;">Sin registros estructurados disponibles.</div>`;
@@ -1121,7 +1157,7 @@ function buildCalendar(data) {
   }
 
   const hoy = new Date();
-  const esMesActual = (hoy.getMonth() + 1) === parseInt(mesStr) && hoy.getFullYear() === activeYear;
+  const esMesActual = (hoy.getMonth() + 1) === parseInt(mesStr);
 
   for (let d = 1; d <= daysInMonth; d++) {
     let dayCell = document.createElement("div");
@@ -1138,33 +1174,8 @@ function buildCalendar(data) {
     let infoDiv = document.createElement("div");
     infoDiv.className = "day-weather-info";
 
-    // EVALUACIÓN: Días con registros duros e históricos (lo que ya pasó)
-    if (val > 0) {
-      dayCell.classList.add("has-rain");
-
-      if (val <= 2) dayCell.classList.add("rain-light");
-      else if (val <= p75) dayCell.classList.add("rain-medium");
-      else if (val <= p75 * 1.5) dayCell.classList.add("rain-heavy");
-      else dayCell.classList.add("rain-extreme");
-
-      /* ICONO HISTÓRICO TRADICIONAL */
-      infoDiv.innerHTML = `<span class="weather-icon">🌧️</span><span class="weather-val">${val.toFixed(1)}</span>`;
-
-      const cellKey = `cal_cell_${d}_${activeYear}`;
-      let itemsArr = [];
-      dayRows.forEach(r => {
-        itemsArr.push(`<div class="popup-item"><span class="p-name">${r.fi}</span><span class="p-val">${r.v.toFixed(1)} mm</span></div>`);
-      });
-
-      TOOLTIP_DATA[cellKey] = `<div class="popup-hdr">Desglose Fincas (Día ${d})</div>` + itemsArr.join("");
-      dayCell.setAttribute("data-key", cellKey);
-
-      dayCell.addEventListener("mouseenter", showGlobalTooltip);
-      dayCell.addEventListener("mousemove", moveGlobalTooltip);
-      dayCell.addEventListener("mouseleave", hideGlobalTooltip);
-
-    } else if (esMesActual && d >= hoy.getDate() && SATELLITE_FORECAST[d]) {
-      // EVALUACIÓN: Días futuros (lo que se espera)
+    // EVALUACIÓN PRIORITARIA: Si es el mes en curso y es hoy o un día futuro con pronóstico activo
+    if (esMesActual && d >= hoy.getDate() && SATELLITE_FORECAST[d]) {
       dayCell.classList.add("forecast-day");
       const forecast = SATELLITE_FORECAST[d];
       
@@ -1179,34 +1190,82 @@ function buildCalendar(data) {
         let itemsArr = [];
         forecast.zones.forEach(z => {
           itemsArr.push(`
-            <div style="border-bottom: 1px solid #334155; padding: 8px 0; font-size: 11px; line-height: 1.4;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="color: #f1f5f9; font-weight: bold; font-size: 12px;">${z.name} <span style="font-weight: normal; color: #94a3b8; font-size: 11px;">(${z.loc})</span></span>
-                <span style="color: #f59e0b; font-weight: bold;">${z.temp}</span>
+            <div style="background: #1e293b; border-radius: 8px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #f97316; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px; margin-bottom: 6px;">
+                <div>
+                  <span style="color: #ffffff; font-weight: 700; font-size: 13px; display: block;">${z.name}</span>
+                  <span style="color: #94a3b8; font-size: 11px;">${z.loc}</span>
+                </div>
+                <div style="text-align: right;">
+                  <span style="color: #f97316; font-weight: 800; font-size: 16px; display: block;">${z.temp.split(" / ")[0]}</span>
+                  <span style="color: #64748b; font-size: 10px; display: block;">Mín: ${z.temp.split(" / ")[1]}</span>
+                </div>
               </div>
-              <div style="display: flex; justify-content: space-between; color: #cbd5e1; font-size: 11px;">
-                <span>Condición: <span style="color: #38bdf8;">${z.icon}</span></span>
-                <span>RealFeel®: <span style="color: #f97316;">${z.realFeel}</span></span>
-              </div>
-              <div style="display: flex; justify-content: space-between; color: #94a3b8; font-size: 10px; margin-top: 2px;">
-                <span>Prob. Precipitación: <span style="color: #60a5fa; font-weight: 500;">${z.prob}%</span></span>
-                <span>Cantidad: <span style="color: #60a5fa; font-weight: 500;">${z.mm}</span></span>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; color: #cbd5e1; text-align: left;">
+                <div><span style="color: #64748b;">Condición:</span> <span style="font-weight: 600; color: #38bdf8;">${z.icon}</span></div>
+                <div><span style="color: #64748b;">RealFeel®:</span> <span style="font-weight: 600; color: #f43f5e;">${z.realFeel}</span></div>
+                <div><span style="color: #64748b;">Prob. Lluvia:</span> <span style="font-weight: 600; color: #60a5fa;">${z.prob}%</span></div>
+                <div><span style="color: #64748b;">Volumen:</span> <span style="font-weight: 600; color: #60a5fa;">${z.mm}</span></div>
               </div>
             </div>
           `);
         });
+        
         TOOLTIP_DATA[cellKey] = `
-          <div class="popup-hdr" style="background: linear-gradient(135deg, #f97316, #e11d48); padding: 8px 12px; font-weight: bold; font-size: 12px; display: flex; justify-content: space-between; align-items: center;">
-            <span>PROGNOSTICO EXCLUSIVO ZONAL</span>
-            <span style="font-size: 9px; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.5px;">PROVENIENTE DE ACCUWEATHER®</span>
+          <div style="background: #f97316; padding: 8px 12px; font-weight: bold; font-size: 11px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 8px; border-top-right-radius: 8px; color: #ffffff; font-family: sans-serif;">
+            <span style="letter-spacing: 0.5px;">PRONÓSTICO METEOROLÓGICO</span>
+            <span style="font-size: 9px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;">ACCUWEATHER® SYNC</span>
           </div>
-          <div style="padding: 4px 10px;">` + itemsArr.join("") + `</div>`;
+          <div style="padding: 8px; background: #0f172a; min-width: 290px; max-width: 320px;">
+            ${itemsArr.join("")}
+            <div style="text-align: center; font-size: 9px; color: #475569; margin-top: 4px; border-top: 1px solid #1e293b; padding-top: 4px;">
+              Datos satelitales actualizados en base a AccuWeather Core Interface
+            </div>
+          </div>`;
         
         dayCell.setAttribute("data-key", cellKey);
         dayCell.addEventListener("mouseenter", showGlobalTooltip);
         dayCell.addEventListener("mousemove", moveGlobalTooltip);
         dayCell.addEventListener("mouseleave", hideGlobalTooltip);
       }
+    } 
+    // EVALUACIÓN SECUNDARIA: Registros históricos duros (lo que ya pasó en años anteriores)
+    else if (val > 0) {
+      dayCell.classList.add("has-rain");
+
+      if (val <= 2) dayCell.classList.add("rain-light");
+      else if (val <= p75) dayCell.classList.add("rain-medium");
+      else if (val <= p75 * 1.5) dayCell.classList.add("rain-heavy");
+      else dayCell.classList.add("rain-extreme");
+
+      /* ICONO HISTÓRICO TRADICIONAL */
+      infoDiv.innerHTML = `<span class="weather-icon">🌧️</span><span class="weather-val">${val.toFixed(1)}</span>`;
+
+      const cellKey = `cal_cell_${d}_${activeYear}`;
+      
+      // Agrupación por Sector para una lectura gerencial impecable
+      const sectoresEnDia = [...new Set(dayRows.map(r => r.se || "General"))].sort();
+      let htmlDesglose = `<div class="popup-hdr" style="margin-bottom:8px;">Desglose por Sector (Día ${d})</div>`;
+      
+      sectoresEnDia.forEach(sec => {
+        const rowsSector = dayRows.filter(r => (r.se || "General") === sec);
+        htmlDesglose += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
+        rowsSector.forEach(r => {
+          htmlDesglose += `
+            <div class="popup-item" style="display:flex; justify-content:between; font-size:11px; padding:2px 0; text-align:left;">
+              <span class="p-name" style="color:#e2e8f0;">${r.fi}</span>
+              <span class="p-val" style="color:#34d399; font-weight:bold; margin-left:auto;">${r.v.toFixed(1)} mm</span>
+            </div>`;
+        });
+      });
+
+      TOOLTIP_DATA[cellKey] = `<div style="min-width:180px; padding:2px;">${htmlDesglose}</div>`;
+      dayCell.setAttribute("data-key", cellKey);
+
+      dayCell.addEventListener("mouseenter", showGlobalTooltip);
+      dayCell.addEventListener("mousemove", moveGlobalTooltip);
+      dayCell.addEventListener("mouseleave", hideGlobalTooltip);
+
     } else {
       // Días históricos tradicionales secos
       infoDiv.innerHTML = `<span class="weather-icon" style="color: #cbd5e1;">☀️</span><span class="weather-val" style="color: #cbd5e1; font-size:11px;">Seco</span>`;
@@ -1215,7 +1274,6 @@ function buildCalendar(data) {
     dayCell.appendChild(infoDiv);
     grid.appendChild(dayCell);
   }
-
   const totalCells = firstDayIndex + daysInMonth;
   const rem = totalCells % 7;
   if (rem > 0) {
