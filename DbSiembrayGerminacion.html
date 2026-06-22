@@ -8,27 +8,27 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
-    --bg-main: #fbfaf5;          /* Arena ultra claro */
-    --text-main: #0f172a;        /* Slate 900 */
-    --text-muted: #475569;       /* Slate 600 */
-    --primary: #0f2a11;          /* Verde Industrial Profundo */
-    --primary-hover: #071508;
-    --primary-light: #e4ede6;    /* Verde cabecera suave */
-    --accent-peanut: #b35c04;    /* Tostado Premium */
-    --accent-peanut-hover: #8f4a03;
-    --border-color: #dcd4c4;      /* Arcilla suave */
+    --bg-main: #f3f4f6;
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #dbeafe;
+    --accent-peanut: #b45309;
+    --accent-peanut-hover: #92400e;
+    --border-color: #e5e7eb;
     --card-bg: #ffffff;
-    --shadow-sm: 0 4px 6px -1px rgba(15, 23, 42, 0.04), 0 2px 4px -1px rgba(15, 23, 42, 0.02);
-    --shadow-md: 0 12px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -2px rgba(15, 23, 42, 0.04);
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 10px rgba(0,0,0,0.12);
   }
 
   * { box-sizing: border-box; transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s; }
 
   /* Barra de Scroll Estilizada */
   ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: #ebdcb9; border-radius: 10px; }
-  ::-webkit-scrollbar-thumb { background: var(--accent-peanut); border-radius: 10px; border: 2px solid #ebdcb9; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--accent-peanut-hover); }
+  ::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; border: 2px solid #e5e7eb; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary-hover); }
 
   html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
 
@@ -41,33 +41,37 @@
     flex-direction: column;
   }
 
-  .header-wrapper { background-color: var(--primary); box-shadow: 0 4px 20px rgba(15,42,17,0.25); width: 100%; z-index: 100; }
+  .header-wrapper {
+    position: sticky; top: 0; z-index: 100;
+    background: linear-gradient(90deg, #f97316 0%, #facc15 40%, #22c55e 100%);
+    padding: 10px 0 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 100%;
+  }
 
   header {
-    max-width: 1400px; margin: 0 auto; color: #ffffff; padding: 14px 24px;
+    max-width: 1400px; margin: 0 auto; color: #111827; padding: 10px 24px;
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
   }
 
-  .header-title-area h1 { margin: 0 0 2px 0; font-size: 20px; font-weight: 700; letter-spacing: -0.4px; }
-  .header-title-area p { margin: 0; font-size: 11px; color: #cbdccb; }
-  .header-action-area { display: flex; align-items: flex-end; gap: 14px; }
+  .header-title-area h1 { margin: 0 0 2px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+  .header-title-area p { margin: 0; font-size: 13px; color: #1f2937; }
+  .header-action-area { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
 
-  .header-filter-group { display: flex; flex-direction: column; gap: 4px; width: 240px; position: relative; }
+  .header-filter-group { display: flex; flex-direction: column; gap: 4px; width: 220px; position: relative; }
   .header-filter-group .label-container { display: flex; justify-content: space-between; align-items: center; height: 16px; }
-  .header-filter-group label { font-size: 10px; font-weight: 700; color: #cbdccb; text-transform: uppercase; letter-spacing: 0.5px; }
+  .header-filter-group label { font-size: 10px; font-weight: 700; color: #1f2937; text-transform: uppercase; letter-spacing: 0.5px; }
 
   .header-filter-group .multiselect-dropdown {
-    background-color: rgba(255, 255, 255, 0.15); color: white; border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.55); color: #111827; border: 1px solid rgba(17, 24, 39, 0.15);
     padding: 6px 12px; border-radius: 6px; height: 34px;
   }
-  .header-filter-group .multiselect-dropdown:hover { border-color: #ffffff; background-color: rgba(255, 255, 255, 0.25); transform: translateY(-1px); }
+  .header-filter-group .multiselect-dropdown:hover { border-color: #111827; background-color: rgba(255, 255, 255, 0.8); transform: translateY(-1px); }
 
   .btn-toggle-filters {
-    background-color: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white; height: 34px; font-size: 13px; padding: 0 14px; border-radius: 6px; cursor: pointer;
-    display: inline-flex; align-items: center; transition: background 0.2s;
+    background-color: #f97316; border: none; color: #ffffff; font-weight: 600;
+    height: 34px; font-size: 13px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; transition: all 0.15s ease;
   }
-  .btn-toggle-filters:hover { background-color: rgba(255, 255, 255, 0.2); transform: translateY(-1px); }
+  .btn-toggle-filters:hover { background-color: #fb923c; transform: translateY(-1px); }
 
   .container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 24px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
@@ -85,13 +89,13 @@
 
   .filter-group { flex: 1 1 160px; display: flex; flex-direction: column; gap: 4px; position: relative; }
   .label-container { display: flex; justify-content: space-between; align-items: center; width: 100%; height: 16px; }
-  .filter-group label { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+  .filter-group label { font-size: 12px; font-weight: 600; color: #374151; }
 
   .btn-clear-individual {
-    background: none; border: none; padding: 0; cursor: pointer; display: none; align-items: center; justify-content: center; width: 16px; height: 16px; color: #ef4444;
+    background: none; border: none; padding: 0; cursor: pointer; display: none; align-items: center; justify-content: center; width: 16px; height: 16px; color: #6b7280;
   }
-  .btn-clear-individual:hover { transform: scale(1.2); color: #dc2626; }
-  .header-filter-group .btn-clear-individual { color: #f87171; }
+  .btn-clear-individual:hover { transform: scale(1.2); color: #ef4444; }
+  .header-filter-group .btn-clear-individual { color: #4b5563; }
   .btn-clear-individual svg { width: 15px; height: 15px; fill: currentColor; }
 
   .multiselect-dropdown {
@@ -100,95 +104,121 @@
     display: flex; justify-content: space-between; align-items: center; height: 34px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .multiselect-dropdown:hover { border-color: var(--accent-peanut); box-shadow: 0 2px 8px rgba(179,92,4,0.1); }
+  .multiselect-dropdown:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(37,99,235,0.12); }
   .multiselect-dropdown::after { content: "▼"; font-size: 8px; color: var(--text-muted); margin-left: 6px; }
 
   .multiselect-options {
-    display: none; position: absolute; top: 100%; left: 0; right: 0; background-color: white;
-    border: 1px solid var(--border-color); border-radius: 8px; max-height: 220px; overflow-y: auto;
-    z-index: 110; box-shadow: var(--shadow-md); margin-top: 6px; padding: 6px 0;
+    display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background-color: white;
+    border: 1px solid var(--border-color); border-radius: 8px; max-height: 300px; overflow: hidden;
+    z-index: 110; box-shadow: var(--shadow-md); margin-top: 6px;
     animation: dropdownFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .multiselect-options.show { display: block; }
+  .multiselect-options.show { display: flex; }
 
-  .multiselect-item { padding: 8px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; color: #1e293b; }
+  @keyframes dropdownFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .ms-search-wrap { padding: 8px 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+  .ms-search-input {
+    width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px;
+    font-size: 12px; outline: none; font-family: inherit;
+  }
+  .ms-search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+
+  .ms-items-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 4px 0; }
+
+  .ms-selectall { border-bottom: 1px solid var(--border-color); font-weight: 700; flex-shrink: 0; }
+
+  .ms-empty { display: none; padding: 16px 14px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+  .multiselect-footer { display: flex; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border-color); flex-shrink: 0; }
+  .ms-btn-ok, .ms-btn-cancel {
+    flex: 1; padding: 6px 0; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer;
+    border: none; text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .ms-btn-ok { background-color: var(--primary); color: white; }
+  .ms-btn-ok:hover { background-color: var(--primary-hover); }
+  .ms-btn-cancel { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .ms-btn-cancel:hover { background-color: #e2e8f0; }
+
+  .multiselect-item { padding: 7px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; color: #1e293b; }
   .multiselect-item:hover { background-color: var(--primary-light); }
   .multiselect-item input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
+  .multiselect-item input[type="checkbox"]:indeterminate { accent-color: var(--accent-peanut); }
 
   .table-toolbar {
-    background-color: #ebdcb9; border: 1px solid var(--border-color); border-bottom: none;
+    background-color: #ffffff; border: 1px solid var(--border-color); border-bottom: none;
     border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 8px 16px;
     display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   }
   .table-toolbar-left { display: flex; align-items: center; gap: 10px; width: 100%; flex-wrap: wrap; }
 
   .inline-column-selector { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
-  .inline-column-selector span { font-size: 11px; font-weight: 700; color: #1e293b; text-transform: uppercase; margin-right: 2px; }
+  .inline-column-selector span { font-size: 12px; font-weight: 600; color: #4b5563; margin-right: 2px; }
 
   .col-label-btn {
     display: inline-flex; align-items: center; gap: 6px; background-color: #ffffff; border: 1px solid var(--border-color);
     padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; user-select: none;
   }
   .col-label-btn:hover { background-color: var(--bg-main); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
-  .col-label-btn input[type="checkbox"] { accent-color: var(--accent-peanut); margin: 0; }
+  .col-label-btn input[type="checkbox"] { accent-color: var(--primary); margin: 0; }
 
   .pivot-mode-selector {
-    display: inline-flex; background-color: #fff; border: 1px solid var(--border-color); padding: 2px; border-radius: 8px;
+    display: inline-flex; background-color: #fff; border: 1px solid var(--border-color); padding: 2px; border-radius: 999px; overflow: hidden;
   }
   .pivot-mode-btn {
-    background: none; border: none; font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 4px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase;
+    background: none; border: none; font-size: 12px; font-weight: 600; color: #4b5563; padding: 4px 10px; border-radius: 999px; cursor: pointer;
   }
-  .pivot-mode-btn.active { background-color: var(--accent-peanut); color: white; }
+  .pivot-mode-btn.active { background-color: var(--primary); color: white; font-weight: 600; }
 
   .btn-excel {
-    background-color: #107c41; color: white; border: none; font-size: 12px; font-weight: 600; padding: 0 12px; height: 28px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    background-color: #22c55e; color: white; border: none; font-size: 13px; font-weight: 600; padding: 6px 14px; height: 34px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;
   }
-  .btn-excel:hover { background-color: #0a5c30; transform: translateY(-1px); }
+  .btn-excel:hover { background-color: #16a34a; }
 
   .table-container { background-color: var(--card-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid var(--border-color); overflow: auto; flex: 1; box-shadow: var(--shadow-sm); }
 
   table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
 
   #tablaHeader th {
-    position: sticky; top: 0; z-index: 30; background-color: var(--primary-light); color: var(--primary);
-    font-weight: 700; padding: 12px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
-    border-right: 1px solid var(--border-color); border-bottom: 2px solid var(--border-color);
+    position: sticky; top: 0; z-index: 30; background-color: #f9fafb; color: #111827;
+    font-weight: 700; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
+    border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
   }
   #tablaHeader tr:nth-child(2) th { top: 41px; z-index: 25; }
 
-  #tablaHeader tr:first-child th:first-child { position: sticky; left: 0; top: 0; z-index: 55; background-color: #cbdccb !important; min-width: 160px; max-width: 160px; }
-  #tablaHeader tr:first-child th:nth-child(2) { position: sticky; left: 160px; top: 0; z-index: 55; background-color: #cbdccb !important; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color); }
+  #tablaHeader tr:first-child th:first-child { position: sticky; left: 0; top: 0; z-index: 55; background-color: #f9fafb !important; min-width: 160px; max-width: 160px; }
+  #tablaHeader tr:first-child th:nth-child(2) { position: sticky; left: 160px; top: 0; z-index: 55; background-color: #f9fafb !important; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1); border-right: 2px solid var(--border-color); }
 
   .freeze-col-1 { position: sticky; left: 0; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; }
-  .freeze-col-2 { position: sticky; left: 160px; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color) !important; }
+  .freeze-col-2 { position: sticky; left: 160px; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1); border-right: 2px solid var(--border-color) !important; }
 
-  .row-finca-header td:first-child { position: sticky; left: 0; z-index: 22; background-color: #ded4bf !important; }
-  .row-finca-header td:nth-child(2) { position: sticky; left: 160px; z-index: 22; background-color: #ded4bf !important; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color) !important; }
+  .row-finca-header td:first-child { position: sticky; left: 0; z-index: 22; background-color: #fef3c7 !important; }
+  .row-finca-header td:nth-child(2) { position: sticky; left: 160px; z-index: 22; background-color: #fef3c7 !important; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1); border-right: 2px solid var(--border-color) !important; }
 
-  td { padding: 10px 14px; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+  td { padding: 8px 14px; border-right: 1px solid var(--border-color); border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
   table th:first-child, table td:first-child { border-left: 1px solid var(--border-color); }
 
   .interactive-cell { cursor: pointer; position: relative; transition: all 0.2s ease; }
-  .interactive-cell:hover { background-color: rgba(179, 92, 4, 0.08) !important; color: var(--accent-peanut); font-weight: 600; transform: scale(1.01); box-shadow: inset 0 0 0 1px var(--accent-peanut); }
+  .interactive-cell:hover { background-color: var(--primary-light) !important; color: var(--primary); font-weight: 600; }
 
-  .row-finca-header { background-color: #ded4bf; font-weight: 700; cursor: pointer; user-select: none; }
-  .row-finca-header:hover { background-color: #cfc4ad; }
+  .row-finca-header { background-color: #fef3c7; font-weight: 700; cursor: pointer; user-select: none; }
+  .row-finca-header:hover { background-color: #fde68a; }
   .toggle-icon { display: inline-block; margin-right: 8px; color: var(--primary); transition: transform 0.2s ease; }
 
   .row-lote { background-color: #ffffff; animation: fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both; }
   .row-lote:hover { background-color: var(--bg-main); }
-  .row-total-finca { background-color: #f2e9d3; font-weight: 700; border-top: 2px solid var(--border-color); border-bottom: 2px solid var(--border-color); }
+  .row-total-finca { background-color: #f3f4f6; font-weight: 700; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
 
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   .hidden-row { display: none !important; }
 
-  .badge-pct { display: inline-block; padding: 3px 8px; border-radius: 20px; font-weight: 700; font-size: 11px; background-color: #d1fae5; color: #065f46; min-width: 55px; text-align: center; }
-  .badge-pct.low { background-color: #fee2e2; color: #991b1b; }
+  .badge-pct { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 11px; background-color: #e5e7eb; color: #111827; min-width: 55px; text-align: center; }
+  .badge-pct.low { background-color: #fee2e2; color: #b91c1c; }
 
-  .btn { background-color: var(--accent-peanut); color: white; border: none; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 34px; transition: all 0.2s ease; }
-  .btn:hover { background-color: var(--accent-peanut-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(179,92,4,0.2); }
-  .btn-secondary { background-color: var(--primary); }
-  .btn-secondary:hover { background-color: var(--primary-hover); }
+  .btn { background-color: #111827; color: #f9fafb; border: none; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 34px; transition: all 0.15s ease; }
+  .btn:hover { background-color: #000000; }
+  .btn-secondary { background-color: #e5e7eb; color: #111827; }
+  .btn-secondary:hover { background-color: #d1d5db; }
   .btn-clear-filters { background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; }
   .btn-clear-filters:hover { background-color: #f1f5f9; color: #0f172a; }
 
@@ -200,30 +230,30 @@
   /* Pop-ups Originales En Bruto */
   .modal-overlay {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background-color: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center;
-    transition: opacity 0.3s ease;
+    background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 500; align-items: center; justify-content: center;
+    transition: opacity 0.2s ease;
   }
   .modal-overlay.show { display: flex; }
   
   .modal-card {
     background-color: white; border-radius: 16px; width: 560px; max-width: 92%;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; overflow: hidden;
-    transform: scale(0.92); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: var(--shadow-md); display: flex; flex-direction: column; overflow: hidden;
+    transform: scale(0.96); opacity: 0; transition: all 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
   }
   .modal-overlay.show .modal-card { transform: scale(1); opacity: 1; }
-  .modal-header { background-color: var(--primary); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
-  .modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  .modal-header { background-color: var(--primary); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
   .modal-close { background: none; border: none; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; }
-  .modal-close:hover { color: #f87171; }
-  .modal-body { padding: 20px; max-height: 450px; overflow-y: auto; background-color: #fcfcf9; }
+  .modal-close:hover { color: #fca5a5; }
+  .modal-body { padding: 20px; max-height: 450px; overflow-y: auto; background-color: #ffffff; }
   
-  .popup-data-grid { display: flex; flex-direction: column; gap: 12px; }
-  .popup-item { display: flex; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--border-color); font-size: 13px; }
-  .popup-item:nth-child(even) { background-color: #fbfaf5; }
+  .popup-data-grid { display: flex; flex-direction: column; gap: 14px; }
+  .popup-item { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+  .popup-item:last-child { border-bottom: none; }
   .popup-label { font-weight: 600; color: #475569; }
   .popup-value { font-weight: 600; color: var(--text-main); text-align: right; }
-  .popup-multi-block { border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; overflow: hidden; box-shadow: var(--shadow-sm); }
-  .popup-block-title { background-color: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 700; padding: 6px 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .popup-multi-block { border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; overflow: hidden; }
+  .popup-block-title { background-color: #f1f5f9; color: #334155; font-size: 12px; font-weight: 700; padding: 6px 12px; border-bottom: 1px solid var(--border-color); }
 
   @media (max-width: 1100px) { .inline-column-selector { display: none; } }
   @media (max-width: 768px) {
@@ -316,7 +346,7 @@
         <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos > Ciclos</button>
       </div>
 
-      <button class="btn" style="background-color: #0284c7; height:28px; padding:0 12px; font-size:12px;" onclick="abrirModalGrafico()">📊 Ver Gráfico Correlación</button>
+      <button class="btn" style="background-color: #0284c7; height:28px; padding:0 12px; font-size:12px;" onclick="abrirModalGrafico()">📊 Ver Gráfico Correlación con Lluvia</button>
       <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Descargar Excel</button>
       
       <div class="inline-column-selector" id="desktopColumnSelector">
@@ -422,12 +452,34 @@ function cambiarModoPivot(modo) {
   filtrarYMostrar();
 }
 
+const MAPA_OPTS_LLAVE = { optsCompania: 'compania', optsSector: 'sector', optsCiclo: 'ciclo', optsFinca: 'finca', optsTipo: 'tipo' };
+
 function toggleDropdown(event, idOpts) {
   event.stopPropagation();
   const optionsDiv = document.getElementById(idOpts);
   const estaAbierto = optionsDiv.classList.contains('show');
   document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
-  if (!estaAbierto) optionsDiv.classList.add('show');
+  if (!estaAbierto) {
+    sincronizarCheckboxesConSeleccion(idOpts);
+    optionsDiv.classList.add('show');
+    const searchInput = optionsDiv.querySelector('.ms-search-input');
+    if (searchInput) {
+      searchInput.value = '';
+      filtrarBusquedaMultiselect(searchInput, idOpts);
+      setTimeout(() => searchInput.focus(), 0);
+    }
+  }
+}
+
+function sincronizarCheckboxesConSeleccion(idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const llaveFiltro = MAPA_OPTS_LLAVE[idOpts];
+  const seleccionActual = seleccionesFiltros[llaveFiltro] || [];
+  contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => {
+    cb.checked = seleccionActual.includes(cb.value);
+  });
+  actualizarEstadoSeleccionarTodo(idOpts);
 }
 
 function toggleFincaRows(fincaNombre) {
@@ -488,35 +540,104 @@ function formatFechaEjeX(fechaStr) {
 
 function inicializarEstructuraFiltrosDOM() {
   poblarOpcionesFijasHTML('optsCompania', 'compania', 'dropCompania', 'btn_clear_compania');
-  poblarOpcionesFijasHTML('optsSector', 'sector', 'dropSector', 'optsSector', 'btn_clear_sector');
-  poblarOpcionesFijasHTML('optsCiclo', 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo');
-  poblarOpcionesFijasHTML('optsFinca', 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca');
-  poblarOpcionesFijasHTML('optsTipo', 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo');
+  poblarOpcionesFijasHTML('optsSector', 'sector', 'dropSector', 'btn_clear_sector');
+  poblarOpcionesFijasHTML('optsCiclo', 'ciclo', 'dropCiclo', 'btn_clear_ciclo');
+  poblarOpcionesFijasHTML('optsFinca', 'finca', 'dropFinca', 'btn_clear_finca');
+  poblarOpcionesFijasHTML('optsTipo', 'tipo', 'dropTipo', 'btn_clear_tipo');
 }
 
 function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
   const contenedor = document.getElementById(idOpts);
   if (!contenedor) return;
   let universo = universosUnicos[llaveFiltro] || [];
-  let html = '';
+  let itemsHtml = '';
   universo.forEach(item => {
-    html += `<div class="multiselect-item" id="item_${llaveFiltro}_${normalizeTextId(item)}" onclick="event.stopPropagation();">
-              <input type="checkbox" value="${item}" checked onchange="manejarCambioCheckbox('${llaveFiltro}', '${idDrop}', '${idOpts}', '${idBtnClear}')">
+    itemsHtml += `<div class="multiselect-item" id="item_${llaveFiltro}_${normalizeTextId(item)}" data-texto="${normalizeText(item)}" onclick="event.stopPropagation();">
+              <input type="checkbox" value="${item}" checked onchange="manejarCambioCheckbox('${llaveFiltro}', '${idOpts}')">
               <span class="text-span">${item}</span>
             </div>`;
   });
-  contenedor.innerHTML = html;
+  contenedor.innerHTML = `
+    <div class="ms-search-wrap">
+      <input type="text" class="ms-search-input" placeholder="Buscar..." oninput="filtrarBusquedaMultiselect(this, '${idOpts}')" onclick="event.stopPropagation();">
+    </div>
+    <div class="multiselect-item ms-selectall" onclick="event.stopPropagation();">
+      <input type="checkbox" class="ms-selectall-checkbox" checked onchange="toggleSeleccionarTodoVisible('${idOpts}', this.checked)">
+      <span>(Seleccionar todo)</span>
+    </div>
+    <div class="ms-items-scroll">${itemsHtml}</div>
+    <div class="ms-empty">Sin resultados</div>
+    <div class="multiselect-footer">
+      <button type="button" class="ms-btn-ok" onclick="event.stopPropagation(); aplicarFiltroDropdown('${llaveFiltro}', '${idDrop}', '${idOpts}', '${idBtnClear}')">Aceptar</button>
+      <button type="button" class="ms-btn-cancel" onclick="event.stopPropagation(); cancelarFiltroDropdown('${idOpts}')">Cancelar</button>
+    </div>`;
 }
 
-function manejarCambioCheckbox(llaveFiltro, idDrop, idOpts, idBtnClear) {
+function manejarCambioCheckbox(llaveFiltro, idOpts) {
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function actualizarEstadoSeleccionarTodo(idOpts) {
   const contenedor = document.getElementById(idOpts);
   if (!contenedor) return;
-  const marcados = Array.from(contenedor.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+  const selectAllCb = contenedor.querySelector('.ms-selectall-checkbox');
+  if (!selectAllCb) return;
+  const visibles = Array.from(contenedor.querySelectorAll('.ms-items-scroll .multiselect-item')).filter(el => el.style.display !== 'none');
+  const checkboxesVisibles = visibles.map(el => el.querySelector('input[type="checkbox"]'));
+  const totalVisibles = checkboxesVisibles.length;
+  const marcadosVisibles = checkboxesVisibles.filter(cb => cb.checked).length;
+  if (totalVisibles === 0) { selectAllCb.checked = false; selectAllCb.indeterminate = false; return; }
+  selectAllCb.checked = marcadosVisibles === totalVisibles;
+  selectAllCb.indeterminate = marcadosVisibles > 0 && marcadosVisibles < totalVisibles;
+}
+
+function toggleSeleccionarTodoVisible(idOpts, marcarTodo) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  contenedor.querySelectorAll('.ms-items-scroll .multiselect-item').forEach(el => {
+    if (el.style.display === 'none') return;
+    const cb = el.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = marcarTodo;
+  });
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function filtrarBusquedaMultiselect(inputEl, idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const valorCrudo = (inputEl && inputEl.value) ? String(inputEl.value).trim() : '';
+  const texto = valorCrudo ? normalizeText(valorCrudo) : '';
+  const items = contenedor.querySelectorAll('.ms-items-scroll .multiselect-item');
+  let visiblesCount = 0;
+  items.forEach(el => {
+    const cruceDisponible = el.getAttribute('data-cruce') !== 'oculto';
+    const coincideTexto = !texto || (el.getAttribute('data-texto') || '').includes(texto);
+    const mostrar = cruceDisponible && coincideTexto;
+    el.style.display = mostrar ? 'flex' : 'none';
+    if (mostrar) visiblesCount++;
+  });
+  const empty = contenedor.querySelector('.ms-empty');
+  if (empty) empty.style.display = visiblesCount === 0 ? 'block' : 'none';
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function aplicarFiltroDropdown(llaveFiltro, idDrop, idOpts, idBtnClear) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const marcados = Array.from(contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]:checked')).map(cb => cb.value);
   seleccionesFiltros[llaveFiltro] = marcados;
   actualizarTextoDropdown(idDrop, marcados.length, (universosUnicos[llaveFiltro] || []).length, marcados);
   const btn = document.getElementById(idBtnClear);
-  if (btn) btn.style.display = (marcados.length < universosUnicos[llaveFiltro].length) ? "inline-flex" : "none";
+  if (btn) btn.style.display = (marcados.length < (universosUnicos[llaveFiltro] || []).length) ? "inline-flex" : "none";
+  contenedor.classList.remove('show');
   filtrarYMostrar();
+}
+
+function cancelarFiltroDropdown(idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  contenedor.classList.remove('show');
+  sincronizarCheckboxesConSeleccion(idOpts);
 }
 
 function actualizarTextoDropdown(idDrop, marcadosCount, totalCount, listaMarcados) {
@@ -531,11 +652,12 @@ function actualizarTextoDropdown(idDrop, marcadosCount, totalCount, listaMarcado
 function limpiarFiltroIndividual(event, llaveFiltro, idDrop, idOpts, idBtnClear) {
   if(event) event.stopPropagation();
   const contenedor = document.getElementById(idOpts);
-  if(contenedor) contenedor.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+  if(contenedor) contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = true);
   seleccionesFiltros[llaveFiltro] = [...(universosUnicos[llaveFiltro] || [])];
   actualizarTextoDropdown(idDrop, universosUnicos[llaveFiltro].length, universosUnicos[llaveFiltro].length, universosUnicos[llaveFiltro]);
   const btn = document.getElementById(idBtnClear);
   if (btn) btn.style.display = "none";
+  if (contenedor) actualizarEstadoSeleccionarTodo(idOpts);
   filtrarYMostrar();
 }
 
@@ -544,7 +666,10 @@ function limpiarTodosLosFiltros() {
     seleccionesFiltros[llave] = [...(universosUnicos[llave] || [])];
     let cap = llave.charAt(0).toUpperCase() + llave.slice(1);
     const cont = document.getElementById('opts' + cap);
-    if(cont) cont.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    if(cont) {
+      cont.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = true);
+      actualizarEstadoSeleccionarTodo('opts' + cap);
+    }
     actualizarTextoDropdown('drop' + cap, universosUnicos[llave].length, universosUnicos[llave].length, universosUnicos[llave]);
     const btn = document.getElementById('btn_clear_' + llave);
     if (btn) btn.style.display = "none";
@@ -562,10 +687,16 @@ function refrescarVisibilidadCrucesFiltros() {
              (llaveObjetivo === 'tipo'     || (seleccionesFiltros.tipo || []).includes(d.tipo));
     });
     let existentesEnCruce = [...new Set(dataCruzada.map(d => d[llaveObjetivo]))];
+    let idOptsObjetivo = 'opts' + llaveObjetivo.charAt(0).toUpperCase() + llaveObjetivo.slice(1);
     (universosUnicos[llaveObjetivo] || []).forEach(item => {
       const itemElement = document.getElementById(`item_${llaveObjetivo}_${normalizeTextId(item)}`);
-      if(itemElement) itemElement.style.display = existentesEnCruce.includes(item) ? "flex" : "none";
+      if(itemElement) itemElement.setAttribute('data-cruce', existentesEnCruce.includes(item) ? 'visible' : 'oculto');
     });
+    const contenedorObjetivo = document.getElementById(idOptsObjetivo);
+    if (contenedorObjetivo) {
+      const searchInput = contenedorObjetivo.querySelector('.ms-search-input');
+      filtrarBusquedaMultiselect(searchInput, idOptsObjetivo);
+    }
   });
 }
 
@@ -736,14 +867,24 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
     title.textContent = `Detalle de Siembra - Lote: ${lote}`;
     itemsCelda.forEach((item, idx) => {
       const s = item.rawSiembra || {};
+      const enteras = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal || 0);
+      const quebradas = parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal || 0);
+      const totalSem = item.total_semillas || (enteras + quebradas);
+      const pctEnteras = totalSem > 0 ? (enteras / totalSem) * 100 : 0;
+      const idReporte = s.name || s.x_name || ('#' + (idx + 1));
       html += `
         <div class="popup-multi-block">
-          <div class="popup-block-title">Reporte de Siembra #${idx + 1}</div>
+          <div class="popup-block-title">Reporte de Siembra: ${idReporte}</div>
+          <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${idReporte}</span></div>
           <div class="popup-item"><span class="popup-label">Fecha Reporte:</span><span class="popup-value">${extraerFecha(s) || 'N/A'}</span></div>
           <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
-          <div class="popup-item"><span class="popup-label">Lote Finca:</span><span class="popup-value">${item.lote}</span></div>
+          <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
+          <div class="popup-item"><span class="popup-label">Lote:</span><span class="popup-value">${item.lote}</span></div>
           <div class="popup-item"><span class="popup-label">Variedad:</span><span class="popup-value">${limpiarDescripcion(s.x_studio_variedad)}</span></div>
-          <div class="popup-item" style="background-color:#fff3cd;"><span class="popup-label">Total Semillas m.l.:</span><span class="popup-value" style="color:var(--accent-peanut);">${item.total_semillas.toFixed(2)}</span></div>
+          <div class="popup-item"><span class="popup-label">Semillas Enteras:</span><span class="popup-value">${enteras.toFixed(2)}</span></div>
+          <div class="popup-item"><span class="popup-label">Semillas Quebradas:</span><span class="popup-value">${quebradas.toFixed(2)}</span></div>
+          <div class="popup-item"><span class="popup-label">% de Enteras:</span><span class="popup-value">${pctEnteras.toFixed(2)}%</span></div>
+          <div class="popup-item" style="background-color:#fff3cd;"><span class="popup-label">Total de Semillas m.l.:</span><span class="popup-value" style="color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</span></div>
         </div>`;
     });
   } else {
@@ -754,15 +895,24 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
     itemsCelda.forEach((item) => {
       const muestrasFiltradas = (item.rawMuestrasOriginales || []).filter(m => Math.round(parseFloat(m.x_studio_dds)) === ddsObjetivo);
       muestrasFiltradas.forEach((m) => {
-        const idReporte = m.x_name || 'N/A';
+        const idReporte = m.x_name || m.name || 'N/A';
         if (reportesProcesados.has(idReporte)) return;
         reportesProcesados.add(idReporte);
+        const obs = m.x_studio_observaciones || m.x_studio_observacion || m.comment || m.note || m.description || 'N/A';
         html += `
           <div class="popup-multi-block">
             <div class="popup-block-title">Reporte Germinación: ${idReporte}</div>
+            <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${idReporte}</span></div>
+            <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
+            <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
+            <div class="popup-item"><span class="popup-label">Lote:</span><span class="popup-value">${item.lote}</span></div>
             <div class="popup-item"><span class="popup-label">Fecha Muestreo:</span><span class="popup-value">${extraerFecha(m) || 'N/A'}</span></div>
             <div class="popup-item"><span class="popup-label">DDS Registrado:</span><span class="popup-value">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</span></div>
-            <div class="popup-item"><span class="popup-label">Plantas / m.l.:</span><span class="popup-value" style="color:#0284c7;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</span></div>
+            <div class="popup-item"><span class="popup-label">Plantas / m.l.:</span><span class="popup-value" style="color:#0284c7; font-weight:700;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</span></div>
+            <div class="popup-item" style="flex-direction: column; align-items: flex-start; gap: 4px; background-color: #f8fafc;">
+              <span class="popup-label">Observación:</span>
+              <span class="popup-value" style="text-align: left; font-weight: normal; font-style: italic; color: #475569; width: 100%; white-space: normal;">${obs}</span>
+            </div>
           </div>`;
       });
     });
