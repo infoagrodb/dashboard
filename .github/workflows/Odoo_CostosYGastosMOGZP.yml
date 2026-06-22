@@ -1,60 +1,70 @@
-name: Odoo_CostosYGastosMOGZP
+name: Odoo Proxy CostosYGastosMOGZP
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # Cada 2 horas
-  workflow_dispatch:
+    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
 
 jobs:
-  extract-odoo-data:
+  fetch-odoo-costosygastos:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get install jq -y
-
-      - name: Query Odoo hr.payslip.line
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
         run: |
-          RESPONSE=$(curl -s -X POST "https://grupozp-main-13656030.odoo.com/jsonrpc" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "jsonrpc": "2.0",
-              "method": "call",
-              "id": 1,
-              "params": {
-                "service": "object",
-                "method": "execute",
-                "args": [
-                  "grupozp-main-13656030",
-                  "7",
-                  "Meganet37**",
-                  "hr.payslip.line",
-                  "search_read",
-                  [],
-                  [
-                    "x_studio_nombre_del_lote",
-                    "x_studio_fecha_final_lote",
-                    "x_studio_cuenta_analitica_en_recibo_de_pago",
-                    "x_studio_empleado",
-                    "x_studio_puesto_historico",
-                    "x_studio_tipo_contrato",
-                    "x_studio_actividad_agricola_1",
-                    "x_studio_cuenta_contable_debito",
-                    "total"
-                  ]
+          echo "Llamando a Odoo Costos y Gastos..."
+          curl -s -X POST https://grupozp-main-13656030.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "grupozp-main-13656030",
+                7,
+                "Meganet37**",
+                "hr.payslip.line",
+                "search_read",
+                [],
+                [
+                  "x_studio_nombre_del_lote",
+                  "x_studio_fecha_final_lote",
+                  "x_studio_cuenta_analitica_en_recibo_de_pago",
+                  "x_studio_empleado",
+                  "x_studio_puesto_historico",
+                  "x_studio_tipo_contrato",
+                  "x_studio_actividad_agricola_1",
+                  "x_studio_cuenta_contable_debito",
+                  "total"
                 ]
-              }
-            }')
+              ]
+            }
+          }' > CostosyGastosMOGZP.json
 
-          echo "$RESPONSE" | jq '.result // .error' > CostosyGastosMOGZP.json
+          echo "Verificando contenido..."
+          if [ ! -s CostosyGastosMOGZP.json ]; then
+            echo "❌ Error: CostosyGastosMOGZP.json está vacío o no se generó correctamente."
+            exit 1
+          fi
 
-      - name: Commit JSON
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 CostosyGastosMOGZP.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           git add CostosyGastosMOGZP.json
-          git commit -m "Updated CostosyGastosMOGZP.json" || echo "No changes to commit"
-          git push
+          git commit -m "Actualización automática de datos Costos y Gastos desde Odoo" || echo "No hay cambios"
+          git push origin main
