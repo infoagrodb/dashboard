@@ -212,6 +212,9 @@
   @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   .hidden-row { display: none !important; }
 
+  table.oculta-col-lote thead tr:first-child th:nth-child(2),
+  table.oculta-col-lote tbody tr td:nth-child(2) { display: none !important; }
+
   .badge-pct { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 11px; background-color: #e5e7eb; color: #111827; min-width: 55px; text-align: center; }
   .badge-pct.low { background-color: #fee2e2; color: #b91c1c; }
 
@@ -259,9 +262,17 @@
   @media (max-width: 768px) {
     header { flex-direction: column; text-align: center; align-items: stretch; padding: 14px 16px; }
     .header-action-area { flex-direction: column; align-items: stretch; }
+    .header-filter-group { width: 100%; }
     .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar-wrapper { max-height: none; }
+    .toolbar-wrapper:not(.collapsed) { max-height: 1400px; }
     .btn-clear-filters { width: 100%; justify-content: center; }
     .table-toolbar { flex-direction: row; }
+    .table-toolbar-left { justify-content: flex-start; }
+    .pivot-mode-selector { flex-wrap: wrap; }
+    .modal-card { width: 94%; }
+    .modal-body { max-height: 65vh; }
+    .container { padding: 12px; }
   }
 </style>
 </head>
@@ -447,8 +458,6 @@ function cambiarModoPivot(modo) {
   CURRENT_PIVOT_MODE = modo;
   document.getElementById('mode_ciclo_recuento').classList.toggle('active', modo === 'ciclo_recuento');
   document.getElementById('mode_recuento_ciclo').classList.toggle('active', modo === 'recuento_ciclo');
-  document.getElementById('desktopColumnSelector').style.opacity = (modo === 'recuento_ciclo') ? '0.4' : '1';
-  document.getElementById('desktopColumnSelector').style.pointerEvents = (modo === 'recuento_ciclo') ? 'none' : 'auto';
   filtrarYMostrar();
 }
 
@@ -491,6 +500,7 @@ function alternarColapsoGlobal() {
   estadoGlobalColapsado = !estadoGlobalColapsado;
   document.getElementById('btnToggleGlobal').textContent = estadoGlobalColapsado ? '📂 Expandir Fincas' : '📁 Colapsar Fincas';
   Object.keys(estadoFincasColapso).forEach(finca => { estadoFincasColapso[finca] = estadoGlobalColapsado; });
+  document.getElementById('tablaGerminacionMaster').classList.toggle('oculta-col-lote', estadoGlobalColapsado);
   filtrarYMostrar();
 }
 
@@ -503,9 +513,12 @@ function actualizarVisibilidadColumnas() {
   filtrarYMostrar();
 }
 
-function obtenerColumnasActivasPorCicloCount() { 
-  if (CURRENT_PIVOT_MODE === 'recuento_ciclo') return (seleccionesFiltros.ciclo || []).length;
-  return METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length; 
+function obtenerMetricasActivas() {
+  return METRICAS_LLAVES.filter(v => visibilidadColumnas[v]);
+}
+
+function obtenerColumnasActivasPorCicloCount() {
+  return obtenerMetricasActivas().length;
 }
 
 function normalizeTextId(text) { return normalizeText(text).replace(/[^a-z0-9]/g, ""); }
@@ -1028,7 +1041,7 @@ function generarEncabezadosDinamicos() {
       }
     });
   } else {
-    METRICAS_LLAVES.forEach(metricaKey => {
+    obtenerMetricasActivas().forEach(metricaKey => {
       tr1 += `<th colspan="${ciclosVisibles.length}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light); color: var(--accent-peanut);">${METRICAS_NOMBRES[metricaKey]}</th>`;
       ciclosVisibles.forEach(ciclo => {
         let colorSub = metricaKey.includes('10') ? 'color:#0284c7;' : metricaKey.includes('15') ? 'color:var(--primary);' : '';
@@ -1068,7 +1081,7 @@ function renderPivot(data) {
 
   const fincasExistentes = Object.keys(matrizPivot).sort();
   if (fincasExistentes.length === 0) {
-    let totalCols = CURRENT_PIVOT_MODE === 'ciclo_recuento' ? (2 + (ciclosVisibles.length * obtenerColumnasActivasPorCicloCount())) : (2 + (5 * ciclosVisibles.length));
+    let totalCols = 2 + (ciclosVisibles.length * obtenerColumnasActivasPorCicloCount());
     tbody.innerHTML = `<tr><td colspan="${totalCols}" class="loading">No hay registros que coincidan con los filtros.</td></tr>`;
     return;
   }
@@ -1114,7 +1127,7 @@ function renderPivot(data) {
         }
       });
     } else {
-      METRICAS_LLAVES.forEach(mKey => {
+      obtenerMetricasActivas().forEach(mKey => {
         ciclosVisibles.forEach(ciclo => {
           const cTot = fincaCiclosTotales[ciclo];
           if (cTot.totalLotes > 0) {
@@ -1155,7 +1168,7 @@ function renderPivot(data) {
           }
         });
       } else {
-        METRICAS_LLAVES.forEach(mKey => {
+        obtenerMetricasActivas().forEach(mKey => {
           ciclosVisibles.forEach(ciclo => {
             const regs = fincaObj.lotes[loteKey][ciclo] || [];
             if (regs.length > 0) {
@@ -1191,7 +1204,7 @@ function renderPivot(data) {
         }
       });
     } else {
-      METRICAS_LLAVES.forEach(mKey => {
+      obtenerMetricasActivas().forEach(mKey => {
         ciclosVisibles.forEach(ciclo => {
           const cTot = fincaCiclosTotales[ciclo];
           if (cTot.totalLotes > 0) {
