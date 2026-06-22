@@ -1,62 +1,72 @@
-name: Odoo_DiasHombreMOGZP
+name: Odoo Proxy DiasHombreMOGZP
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # Ejecuta cada 2 horas
-  workflow_dispatch:
+    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
 
 jobs:
-  extract-odoo-data:
+  fetch-odoo-diashombre:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install jq
-        run: sudo apt-get install jq -y
-
-      - name: Query Odoo hr.payslip.worked_days
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
         run: |
-          RESPONSE=$(curl -s -X POST "https://grupozp-main-13656030.odoo.com/jsonrpc" \
-            -H "Content-Type: application/json" \
-            -d '{
-              "jsonrpc": "2.0",
-              "method": "call",
-              "id": 1,
-              "params": {
-                "service": "object",
-                "method": "execute",
-                "args": [
-                  "grupozp-main-13656030",
-                  "7",
-                  "Meganet37**",
-                  "hr.payslip.worked_days",
-                  "search_read",
-                  [],
-                  [
-                    "x_studio_nombre_del_lote",
-                    "x_studio_fecha_final_lote",
-                    "x_studio_cuenta_analitica_en_recibo_de_pago",
-                    "x_studio_puesto_historico",
-                    "x_studio_empleado",
-                    "x_studio_actividad_agricola_1",
-                    "x_studio_dias_efectivos",
-                    "x_studio_septimo_dia",
-                    "x_studio_horas_extras",
-                    "x_studio_alimentacion",
-                    "x_studio_feriado"
-                  ]
+          echo "Llamando a Odoo Días Hombre..."
+          curl -s -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "grupozp-main-13656030",
+                7,
+                "Meganet37**",
+                "hr.payslip.worked_days",
+                "search_read",
+                [],
+                [
+                  "x_studio_nombre_del_lote",
+                  "x_studio_fecha_final_lote",
+                  "x_studio_cuenta_analitica_en_recibo_de_pago",
+                  "x_studio_puesto_historico",
+                  "x_studio_empleado",
+                  "x_studio_actividad_agricola_1",
+                  "x_studio_dias_efectivos",
+                  "x_studio_septimo_dia",
+                  "x_studio_horas_extras",
+                  "x_studio_alimentacion",
+                  "x_studio_feriado"
                 ]
-              }
-            }')
+              ]
+            }
+          }' > Odoo_DiasHombreMOGZP.json
 
-          echo "$RESPONSE" | jq '.result // .error' > Odoo_DiasHombreMOGZP.json
+          echo "Verificando contenido..."
+          if [ ! -s Odoo_DiasHombreMOGZP.json ]; then
+            echo "❌ Error: Odoo_DiasHombreMOGZP.json está vacío o no se generó correctamente."
+            exit 1
+          fi
 
-      - name: Commit JSON output
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 Odoo_DiasHombreMOGZP.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config --local user.email "actions@github.com"
-          git config --local user.name "GitHub Actions"
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
           git add Odoo_DiasHombreMOGZP.json
-          git commit -m "Updated Odoo_DiasHombreMOGZP.json" || echo "No changes to commit"
-          git push
+          git commit -m "Actualización automática de datos Días Hombre desde Odoo" || echo "No hay cambios"
+          git push origin main
