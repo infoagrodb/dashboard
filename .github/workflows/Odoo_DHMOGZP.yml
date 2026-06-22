@@ -2,7 +2,7 @@ name: Odoo_DiasHombreMOGZP
 
 on:
   schedule:
-    - cron: "0 */2 * * *"   # Cada 2 horas
+    - cron: "0 */2 * * *"   # Ejecuta cada 2 horas
   workflow_dispatch:
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Install jq
@@ -51,9 +51,9 @@ jobs:
               }
             }')
 
-          echo "$RESPONSE" | jq '.result' > Odoo_DiasHombreMOGZP.json
+          echo "$RESPONSE" | jq '.result // .error' > Odoo_DiasHombreMOGZP.json
 
-      - name: Commit JSON
+      - name: Commit JSON output
         run: |
           git config --local user.email "actions@github.com"
           git config --local user.name "GitHub Actions"
