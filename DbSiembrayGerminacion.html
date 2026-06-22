@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Matriz Pivot Germinación Agrícola - Maní Premium</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
     --bg-main: #fbfaf5;          /* Arena ultra claro */
@@ -70,7 +71,7 @@
 
   .container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 24px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
-  /* Animación Desplegable de Filtros */
+  /* Panel de Filtros Desplegable */
   .toolbar-wrapper { 
     max-height: 250px; overflow: visible; opacity: 1; margin-bottom: 16px; flex-shrink: 0;
     transition: max-height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1), margin-bottom 0.4s ease, opacity 0.3s ease;
@@ -109,7 +110,6 @@
     animation: dropdownFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
   .multiselect-options.show { display: block; }
-  @keyframes dropdownFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
   .multiselect-item { padding: 8px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; color: #1e293b; }
   .multiselect-item:hover { background-color: var(--primary-light); }
@@ -120,7 +120,7 @@
     border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 8px 16px;
     display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
   }
-  .table-toolbar-left { display: flex; align-items: center; gap: 12px; width: 100%; }
+  .table-toolbar-left { display: flex; align-items: center; gap: 10px; width: 100%; flex-wrap: wrap; }
 
   .inline-column-selector { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
   .inline-column-selector span { font-size: 11px; font-weight: 700; color: #1e293b; text-transform: uppercase; margin-right: 2px; }
@@ -132,37 +132,23 @@
   .col-label-btn:hover { background-color: var(--bg-main); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
   .col-label-btn input[type="checkbox"] { accent-color: var(--accent-peanut); margin: 0; }
 
-  /* Selector de Pivot */
   .pivot-mode-selector {
-    display: inline-flex; background-color: #fff; border: 1px solid var(--border-color);
-    padding: 2px; border-radius: 8px; margin-left: 8px;
+    display: inline-flex; background-color: #fff; border: 1px solid var(--border-color); padding: 2px; border-radius: 8px;
   }
   .pivot-mode-btn {
-    background: none; border: none; font-size: 11px; font-weight: 700; color: var(--text-muted);
-    padding: 4px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase;
+    background: none; border: none; font-size: 11px; font-weight: 700; color: var(--text-muted); padding: 4px 10px; border-radius: 6px; cursor: pointer; text-transform: uppercase;
   }
   .pivot-mode-btn.active { background-color: var(--accent-peanut); color: white; }
 
   .btn-excel {
-    background-color: #107c41; color: white; border: none; font-size: 12px; font-weight: 600;
-    padding: 0 12px; height: 28px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    background-color: #107c41; color: white; border: none; font-size: 12px; font-weight: 600; padding: 0 12px; height: 28px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
   }
   .btn-excel:hover { background-color: #0a5c30; transform: translateY(-1px); }
-
-  .ellipsis-menu-container { display: none; position: relative; }
-  .btn-ellipsis { background: none; border: 1px solid var(--border-color); background-color: #fff; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 6px; cursor: pointer; }
-  .ellipsis-dropdown { display: none; position: absolute; top: 100%; right: 0; background-color: white; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-md); z-index: 120; padding: 8px; flex-direction: column; gap: 6px; }
-  .ellipsis-dropdown.show { display: flex; }
 
   .table-container { background-color: var(--card-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid var(--border-color); overflow: auto; flex: 1; box-shadow: var(--shadow-sm); }
 
   table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
 
-  /* ──────────────────────────────────────────────────────── */
-  /* ❄️ ARQUITECTURA DE COLUMNAS CONGELADAS (ESTILO EXCEL STICKY) */
-  /* ──────────────────────────────────────────────────────── */
-  
-  /* Cabeceras de Nivel 1 y Nivel 2 Superiores */
   #tablaHeader th {
     position: sticky; top: 0; z-index: 30; background-color: var(--primary-light); color: var(--primary);
     font-weight: 700; padding: 12px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
@@ -170,39 +156,18 @@
   }
   #tablaHeader tr:nth-child(2) th { top: 41px; z-index: 25; }
 
-  /* Congelar cabecera fija superior de Finca */
-  #tablaHeader tr:first-child th:first-child {
-    position: sticky; left: 0; top: 0; z-index: 55; background-color: #cbdccb !important; min-width: 160px; max-width: 160px;
-  }
-  /* Congelar cabecera fija superior de Lote con Sombra */
-  #tablaHeader tr:first-child th:nth-child(2) {
-    position: sticky; left: 160px; top: 0; z-index: 55; background-color: #cbdccb !important; min-width: 160px; max-width: 160px;
-    box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color);
-  }
+  #tablaHeader tr:first-child th:first-child { position: sticky; left: 0; top: 0; z-index: 55; background-color: #cbdccb !important; min-width: 160px; max-width: 160px; }
+  #tablaHeader tr:first-child th:nth-child(2) { position: sticky; left: 160px; top: 0; z-index: 55; background-color: #cbdccb !important; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color); }
 
-  /* Celdas del cuerpo congeladas para filas normales de lotes y subtotales */
-  .freeze-col-1 {
-    position: sticky; left: 0; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px;
-  }
-  .freeze-col-2 {
-    position: sticky; left: 160px; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px;
-    box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color) !important;
-  }
+  .freeze-col-1 { position: sticky; left: 0; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; }
+  .freeze-col-2 { position: sticky; left: 160px; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color) !important; }
 
-  /* CORRECCIÓN CRÍTICA DE SOBREPOSICIÓN: Forzar fondo sólido beige y z-index superior a las celdas de Finca */
-  .row-finca-header td:first-child {
-    position: sticky; left: 0; z-index: 22; background-color: #ded4bf !important;
-  }
-  .row-finca-header td:nth-child(2) {
-    position: sticky; left: 160px; z-index: 22; background-color: #ded4bf !important;
-    box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color) !important;
-  }
-  /* ──────────────────────────────────────────────────────── */
+  .row-finca-header td:first-child { position: sticky; left: 0; z-index: 22; background-color: #ded4bf !important; }
+  .row-finca-header td:nth-child(2) { position: sticky; left: 160px; z-index: 22; background-color: #ded4bf !important; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.15); border-right: 2px solid var(--border-color) !important; }
 
   td { padding: 10px 14px; border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); vertical-align: middle; }
   table th:first-child, table td:first-child { border-left: 1px solid var(--border-color); }
 
-  /* Microinteracción de Celda Interactiva */
   .interactive-cell { cursor: pointer; position: relative; transition: all 0.2s ease; }
   .interactive-cell:hover { background-color: rgba(179, 92, 4, 0.08) !important; color: var(--accent-peanut); font-weight: 600; transform: scale(1.01); box-shadow: inset 0 0 0 1px var(--accent-peanut); }
 
@@ -210,16 +175,11 @@
   .row-finca-header:hover { background-color: #cfc4ad; }
   .toggle-icon { display: inline-block; margin-right: 8px; color: var(--primary); transition: transform 0.2s ease; }
 
-  /* Efecto de Entrada Fluida Escalonada */
   .row-lote { background-color: #ffffff; animation: fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both; }
   .row-lote:hover { background-color: var(--bg-main); }
   .row-total-finca { background-color: #f2e9d3; font-weight: 700; border-top: 2px solid var(--border-color); border-bottom: 2px solid var(--border-color); }
 
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   .hidden-row { display: none !important; }
 
   .badge-pct { display: inline-block; padding: 3px 8px; border-radius: 20px; font-weight: 700; font-size: 11px; background-color: #d1fae5; color: #065f46; min-width: 55px; text-align: center; }
@@ -237,7 +197,7 @@
   .text-left { text-align: left; }
   .loading { padding: 40px; text-align: center; color: var(--text-main); font-weight: 600; }
 
-  /* Pop-up Moderno Blur Backdrop */
+  /* Pop-ups Originales En Bruto */
   .modal-overlay {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(15, 23, 42, 0.4); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center;
@@ -251,12 +211,10 @@
     transform: scale(0.92); opacity: 0; transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   .modal-overlay.show .modal-card { transform: scale(1); opacity: 1; }
-  
   .modal-header { background-color: var(--primary); color: white; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; }
   .modal-header h3 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
   .modal-close { background: none; border: none; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; }
   .modal-close:hover { color: #f87171; }
-  
   .modal-body { padding: 20px; max-height: 450px; overflow-y: auto; background-color: #fcfcf9; }
   
   .popup-data-grid { display: flex; flex-direction: column; gap: 12px; }
@@ -264,11 +222,10 @@
   .popup-item:nth-child(even) { background-color: #fbfaf5; }
   .popup-label { font-weight: 600; color: #475569; }
   .popup-value { font-weight: 600; color: var(--text-main); text-align: right; }
-  
   .popup-multi-block { border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; overflow: hidden; box-shadow: var(--shadow-sm); }
   .popup-block-title { background-color: var(--primary-light); color: var(--primary); font-size: 11px; font-weight: 700; padding: 6px 12px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-  @media (max-width: 1100px) { .inline-column-selector { display: none; } .ellipsis-menu-container { display: block; margin-left: auto; } }
+  @media (max-width: 1100px) { .inline-column-selector { display: none; } }
   @media (max-width: 768px) {
     header { flex-direction: column; text-align: center; align-items: stretch; padding: 14px 16px; }
     .header-action-area { flex-direction: column; align-items: stretch; }
@@ -286,7 +243,6 @@
       <h1>Control de Siembra y Germinación</h1>
       <p>Matriz Pivot Tridimensional • Umbral Mínimo: 55% • Sincronización: <span id="fechaActualizacion">-</span></p>
     </div>
-    
     <div class="header-action-area">
       <button class="btn-toggle-filters" onclick="toggleFiltrosPanel()">🔍 Filtros</button>
       <div class="header-filter-group">
@@ -360,6 +316,7 @@
         <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos > Ciclos</button>
       </div>
 
+      <button class="btn" style="background-color: #0284c7; height:28px; padding:0 12px; font-size:12px;" onclick="abrirModalGrafico()">📊 Ver Gráfico Correlación</button>
       <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Descargar Excel</button>
       
       <div class="inline-column-selector" id="desktopColumnSelector">
@@ -369,17 +326,6 @@
         <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
         <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10DDS</label>
         <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15DDS</label>
-      </div>
-
-      <div class="ellipsis-menu-container">
-        <button class="btn-ellipsis" onclick="toggleEllipsisMenu(event)">⋮ Columnas</button>
-        <div class="ellipsis-dropdown" id="ellipsisMenuOpts" onclick="event.stopPropagation();">
-          <label class="col-label-btn"><input type="checkbox" id="col_semillas_m" checked onchange="sincronizarCheckboxes('col_semillas_m', 'col_semillas')"> Semillas m.l.</label>
-          <label class="col-label-btn"><input type="checkbox" id="col_10dds_m" checked onchange="sincronizarCheckboxes('col_10dds_m', 'col_10dds')"> Plantas 10 DDS</label>
-          <label class="col-label-btn"><input type="checkbox" id="col_15dds_m" checked onchange="sincronizarCheckboxes('col_15dds_m', 'col_15dds')"> Plantas 15 DDS</label>
-          <label class="col-label-btn"><input type="checkbox" id="col_g10_m" checked onchange="sincronizarCheckboxes('col_g10_m', 'col_g10')"> % Germ 10DDS</label>
-          <label class="col-label-btn"><input type="checkbox" id="col_g15_m" checked onchange="sincronizarCheckboxes('col_g15_m', 'col_g15')"> % Germ 15DDS</label>
-        </div>
       </div>
     </div>
   </div>
@@ -410,11 +356,26 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="popupGraficoOverlay" onclick="cerrarModalGrafico()">
+  <div class="modal-card" style="width: 1060px; max-width: 95%;" onclick="event.stopPropagation()">
+    <div class="modal-header" style="background-color: var(--accent-peanut);">
+      <h3>📊 Análisis de Correlación Híbrida: Lluvia vs Campañas Operativas</h3>
+      <button class="modal-close" onclick="cerrarModalGrafico()">&times;</button>
+    </div>
+    <div class="modal-body" style="background-color: #ffffff; padding: 24px; position: relative; min-height: 480px; overflow: hidden;">
+      <div id="graficoLoading" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-weight: 600; color: var(--text-muted);">Cruzando líneas históricas de pluviosidad...</div>
+      <div style="width:100%; height:430px;">
+        <canvas id="chartCorrelacionMaster"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 let datosMaestrosUnificados = []; 
+let datosLluviaRaw = [];
 let universosUnicos = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
 let seleccionesFiltros = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
-let ciclosDetectados = [];
 
 const METRICAS_LLAVES = ['semillas', '10dds', '15dds', 'g10', 'g15'];
 const METRICAS_NOMBRES = {
@@ -426,20 +387,20 @@ const METRICAS_NOMBRES = {
 };
 
 let CURRENT_PIVOT_MODE = 'ciclo_recuento'; 
-
+let chartInstanciaUnica = null;
 let estadoFincasColapso = {}; 
 let estadoGlobalColapsado = false; 
 let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: true, g15: true };
 
+function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
+
 document.getElementById('pivotBody').addEventListener('click', function(e) {
   const cell = e.target.closest('.interactive-cell');
   if (!cell) return;
-  
   const tipoColumna = cell.getAttribute('data-tipo');
   const finca = cell.getAttribute('data-finca');
   const lote = cell.getAttribute('data-lote');
   const ciclo = cell.getAttribute('data-ciclo');
-  
   if (tipoColumna && finca && lote && ciclo) {
     abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo);
   }
@@ -449,25 +410,15 @@ window.onclick = function(event) {
   if (!event.target.matches('.multiselect-dropdown') && !event.target.closest('.multiselect-options')) {
     document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
   }
-  if (!event.target.matches('.btn-ellipsis') && !event.target.closest('.ellipsis-dropdown')) {
-    document.getElementById('ellipsisMenuOpts').classList.remove('show');
-  }
 }
-
-function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
-function toggleEllipsisMenu(event) { event.stopPropagation(); document.getElementById('ellipsisMenuOpts').classList.toggle('show'); }
-function sincronizarCheckboxes(idOrigen, idDestino) { const val = document.getElementById(idOrigen).checked; document.getElementById(idDestino).checked = val; actualizarVisibilidadColumnas(); }
 
 function cambiarModoPivot(modo) {
   if (CURRENT_PIVOT_MODE === modo) return;
   CURRENT_PIVOT_MODE = modo;
-  
   document.getElementById('mode_ciclo_recuento').classList.toggle('active', modo === 'ciclo_recuento');
   document.getElementById('mode_recuento_ciclo').classList.toggle('active', modo === 'recuento_ciclo');
-  
   document.getElementById('desktopColumnSelector').style.opacity = (modo === 'recuento_ciclo') ? '0.4' : '1';
   document.getElementById('desktopColumnSelector').style.pointerEvents = (modo === 'recuento_ciclo') ? 'none' : 'auto';
-  
   filtrarYMostrar();
 }
 
@@ -476,9 +427,7 @@ function toggleDropdown(event, idOpts) {
   const optionsDiv = document.getElementById(idOpts);
   const estaAbierto = optionsDiv.classList.contains('show');
   document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
-  if (!estaAbierto) {
-    optionsDiv.classList.add('show');
-  }
+  if (!estaAbierto) optionsDiv.classList.add('show');
 }
 
 function toggleFincaRows(fincaNombre) {
@@ -499,18 +448,11 @@ function actualizarVisibilidadColumnas() {
   visibilidadColumnas['15dds'] = document.getElementById('col_15dds').checked;
   visibilidadColumnas.g10 = document.getElementById('col_g10').checked;
   visibilidadColumnas.g15 = document.getElementById('col_g15').checked;
-  
-  document.getElementById('col_semillas_m').checked = visibilidadColumnas.semillas;
-  document.getElementById('col_10dds_m').checked = visibilidadColumnas['10dds'];
-  document.getElementById('col_15dds_m').checked = visibilidadColumnas['15dds'];
-  document.getElementById('col_g10_m').checked = visibilidadColumnas.g10;
-  document.getElementById('col_g15_m').checked = visibilidadColumnas.g15;
-
   filtrarYMostrar();
 }
 
 function obtenerColumnasActivasPorCicloCount() { 
-  if (CURRENT_PIVOT_MODE === 'recuento_ciclo') return ciclosDetectados.length;
+  if (CURRENT_PIVOT_MODE === 'recuento_ciclo') return (seleccionesFiltros.ciclo || []).length;
   return METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length; 
 }
 
@@ -518,13 +460,9 @@ function normalizeTextId(text) { return normalizeText(text).replace(/[^a-z0-9]/g
 
 function limpiarDescripcion(valor) {
   if (!valor) return 'N/A';
-  if (Array.isArray(valor)) {
-    return valor.length > 1 ? String(valor[1]).trim() : String(valor[0]).trim();
-  }
+  if (Array.isArray(valor)) return valor.length > 1 ? String(valor[1]).trim() : String(valor[0]).trim();
   let str = String(valor).trim();
-  if (str.startsWith('[')) {
-    str = str.replace(/^\[?\d+\]?\s*[-_]?\s*/, '');
-  }
+  if (str.startsWith('[')) str = str.replace(/^\[?\d+\]?\s*[-_]?\s*/, '');
   return str || 'N/A';
 }
 
@@ -532,17 +470,34 @@ function normalizeText(text) {
   return limpiarDescripcion(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
 }
 
+function extraerFecha(r) {
+  if (!r) return null;
+  let f = r.x_studio_fecha || r.x_studio_fecha_siembra || r.x_studio_fecha_de_siembra || r.date || r.create_date;
+  if (!f) return null;
+  if (Array.isArray(f)) f = f[1];
+  f = String(f).trim();
+  if (f.includes(' ')) f = f.split(' ')[0];
+  return f.match(/^\d{4}-\d{2}-\d{2}/) ? f : null;
+}
+
+function formatFechaEjeX(fechaStr) {
+  if (!fechaStr) return '';
+  const p = fechaStr.split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].substring(2)}` : fechaStr;
+}
+
 function inicializarEstructuraFiltrosDOM() {
   poblarOpcionesFijasHTML('optsCompania', 'compania', 'dropCompania', 'btn_clear_compania');
-  poblarOpcionesFijasHTML('optsSector', 'sector', 'dropSector', 'btn_clear_sector');
-  poblarOpcionesFijasHTML('optsCiclo', 'ciclo', 'dropCiclo', 'btn_clear_ciclo');
-  poblarOpcionesFijasHTML('optsFinca', 'finca', 'dropFinca', 'btn_clear_finca');
-  poblarOpcionesFijasHTML('optsTipo', 'tipo', 'dropTipo', 'btn_clear_tipo');
+  poblarOpcionesFijasHTML('optsSector', 'sector', 'dropSector', 'optsSector', 'btn_clear_sector');
+  poblarOpcionesFijasHTML('optsCiclo', 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo');
+  poblarOpcionesFijasHTML('optsFinca', 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca');
+  poblarOpcionesFijasHTML('optsTipo', 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo');
 }
 
 function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
   const contenedor = document.getElementById(idOpts);
-  let universo = universosUnicos[llaveFiltro];
+  if (!contenedor) return;
+  let universo = universosUnicos[llaveFiltro] || [];
   let html = '';
   universo.forEach(item => {
     html += `<div class="multiselect-item" id="item_${llaveFiltro}_${normalizeTextId(item)}" onclick="event.stopPropagation();">
@@ -555,44 +510,42 @@ function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
 
 function manejarCambioCheckbox(llaveFiltro, idDrop, idOpts, idBtnClear) {
   const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
   const marcados = Array.from(contenedor.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
   seleccionesFiltros[llaveFiltro] = marcados;
-  
-  actualizarTextoDropdown(idDrop, marcados.length, universosUnicos[llaveFiltro].length, marcados);
-  
+  actualizarTextoDropdown(idDrop, marcados.length, (universosUnicos[llaveFiltro] || []).length, marcados);
   const btn = document.getElementById(idBtnClear);
-  if (btn) {
-    btn.style.display = (marcados.length < universosUnicos[llaveFiltro].length) ? "inline-flex" : "none";
-  }
-  
+  if (btn) btn.style.display = (marcados.length < universosUnicos[llaveFiltro].length) ? "inline-flex" : "none";
   filtrarYMostrar();
+}
+
+function actualizarTextoDropdown(idDrop, marcadosCount, totalCount, listaMarcados) {
+  const drop = document.getElementById(idDrop);
+  if (!drop) return;
+  if (marcadosCount === totalCount && totalCount > 0) drop.textContent = "Todos";
+  else if (marcadosCount === 0) drop.textContent = "Ninguno";
+  else if (marcadosCount === 1) drop.textContent = listaMarcados[0];
+  else drop.textContent = `${marcadosCount} sel.`;
 }
 
 function limpiarFiltroIndividual(event, llaveFiltro, idDrop, idOpts, idBtnClear) {
   if(event) event.stopPropagation();
   const contenedor = document.getElementById(idOpts);
-  if(contenedor) {
-    contenedor.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
-  }
-  seleccionesFiltros[llaveFiltro] = [...universosUnicos[llaveFiltro]];
+  if(contenedor) contenedor.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+  seleccionesFiltros[llaveFiltro] = [...(universosUnicos[llaveFiltro] || [])];
   actualizarTextoDropdown(idDrop, universosUnicos[llaveFiltro].length, universosUnicos[llaveFiltro].length, universosUnicos[llaveFiltro]);
-  
   const btn = document.getElementById(idBtnClear);
   if (btn) btn.style.display = "none";
-  
   filtrarYMostrar();
 }
 
 function limpiarTodosLosFiltros() {
   Object.keys(seleccionesFiltros).forEach(llave => {
-    seleccionesFiltros[llave] = [...universosUnicos[llave]];
-    let capitalizada = llave.charAt(0).toUpperCase() + llave.slice(1);
-    const contenedor = document.getElementById('opts' + capitalizada);
-    if(contenedor) {
-      contenedor.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
-    }
-    actualizarTextoDropdown('drop' + capitalizada, universosUnicos[llave].length, universosUnicos[llave].length, universosUnicos[llave]);
-    
+    seleccionesFiltros[llave] = [...(universosUnicos[llave] || [])];
+    let cap = llave.charAt(0).toUpperCase() + llave.slice(1);
+    const cont = document.getElementById('opts' + cap);
+    if(cont) cont.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = true);
+    actualizarTextoDropdown('drop' + cap, universosUnicos[llave].length, universosUnicos[llave].length, universosUnicos[llave]);
     const btn = document.getElementById('btn_clear_' + llave);
     if (btn) btn.style.display = "none";
   });
@@ -602,113 +555,220 @@ function limpiarTodosLosFiltros() {
 function refrescarVisibilidadCrucesFiltros() {
   Object.keys(universosUnicos).forEach(llaveObjetivo => {
     let dataCruzada = datosMaestrosUnificados.filter(d => {
-      return (llaveObjetivo === 'compania' || seleccionesFiltros.compania.includes(d.compania)) &&
-             (llaveObjetivo === 'sector'   || seleccionesFiltros.sector.includes(d.sector)) &&
-             (llaveObjetivo === 'ciclo'    || seleccionesFiltros.ciclo.includes(d.ciclo)) &&
-             (llaveObjetivo === 'finca'    || seleccionesFiltros.finca.includes(d.finca)) &&
-             (llaveObjetivo === 'tipo'     || seleccionesFiltros.tipo.includes(d.tipo));
+      return (llaveObjetivo === 'compania' || (seleccionesFiltros.compania || []).includes(d.compania)) &&
+             (llaveObjetivo === 'sector'   || (seleccionesFiltros.sector || []).includes(d.sector)) &&
+             (llaveObjetivo === 'ciclo'    || (seleccionesFiltros.ciclo || []).includes(d.ciclo)) &&
+             (llaveObjetivo === 'finca'    || (seleccionesFiltros.finca || []).includes(d.finca)) &&
+             (llaveObjetivo === 'tipo'     || (seleccionesFiltros.tipo || []).includes(d.tipo));
     });
-
     let existentesEnCruce = [...new Set(dataCruzada.map(d => d[llaveObjetivo]))];
-    
-    universosUnicos[llaveObjetivo].forEach(item => {
+    (universosUnicos[llaveObjetivo] || []).forEach(item => {
       const itemElement = document.getElementById(`item_${llaveObjetivo}_${normalizeTextId(item)}`);
-      if(itemElement) {
-        if(existentesEnCruce.includes(item)) {
-          itemElement.style.display = "flex";
-        } else {
-          itemElement.style.display = "none";
-        }
-      }
+      if(itemElement) itemElement.style.display = existentesEnCruce.includes(item) ? "flex" : "none";
     });
   });
 }
 
-function actualizarTextoDropdown(idDrop, marcadosCount, totalCount, listaMarcados) {
-  const drop = document.getElementById(idDrop);
-  if (marcadosCount === totalCount && totalCount > 0) { drop.textContent = "Todos"; }
-  else if (marcadosCount === 0) { drop.textContent = "Ninguno"; }
-  else if (marcadosCount === 1) { drop.textContent = listaMarcados[0]; }
-  else { drop.textContent = `${marcadosCount} sel.`; }
+function procesarEstructuraGrafico() {
+  let siembrasFiltradas = datosMaestrosUnificados.filter(d => 
+    (seleccionesFiltros.compania || []).includes(d.compania) && 
+    (seleccionesFiltros.sector || []).includes(d.sector) && 
+    (seleccionesFiltros.ciclo || []).includes(d.ciclo) && 
+    (seleccionesFiltros.finca || []).includes(d.finca) && 
+    (seleccionesFiltros.tipo || []).includes(d.tipo)
+  );
+
+  let anosSeleccionados = (seleccionesFiltros.ciclo || []).map(c => {
+    let m = c.match(/\d+/);
+    return m ? m[0] : null;
+  }).filter(Boolean);
+
+  let lluviaFiltrada = datosLluviaRaw.map(r => {
+    return {
+      fecha: r.x_studio_fecha,
+      finca: limpiarDescripcion(r.x_studio_finca),
+      sector: limpiarDescripcion(r.x_studio_sector_1),
+      valor: parseFloat(r.x_studio_cantidad_promedio || r.x_studio_cantidad || 0)
+    };
+  }).filter(l => {
+    if (!l.fecha) return false;
+    let matchFinca = (seleccionesFiltros.finca || []).includes(l.finca);
+    let matchSector = (seleccionesFiltros.sector || []).includes(l.sector);
+    if (!matchFinca || !matchSector) return false;
+
+    let fClean = l.fecha.includes(' ') ? l.fecha.split(' ')[0] : l.fecha;
+    let anoLluvia = fClean.split('-')[0];
+    return anosSeleccionados.includes(anoLluvia);
+  });
+
+  let mapaEjeTemporal = {};
+
+  lluviaFiltrada.forEach(l => {
+    let f = l.fecha.includes(' ') ? l.fecha.split(' ')[0] : l.fecha;
+    if (!mapaEjeTemporal[f]) mapaEjeTemporal[f] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+    mapaEjeTemporal[f].lluvia += l.valor;
+    mapaEjeTemporal[f].countLluvia++;
+  });
+
+  siembrasFiltradas.forEach(s => {
+    let f = extraerFecha(s.rawSiembra);
+    if (!f) return;
+    if (!mapaEjeTemporal[f]) mapaEjeTemporal[f] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+    mapaEjeTemporal[f].siembra += s.total_semillas;
+    mapaEjeTemporal[f].siembraCount++;
+  });
+
+  siembrasFiltradas.forEach(s => {
+    (s.rawMuestrasOriginales || []).forEach(g => {
+      let f = extraerFecha(g);
+      if (!f) return;
+      if (!mapaEjeTemporal[f]) mapaEjeTemporal[f] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+      mapaEjeTemporal[f].germinacion += parseFloat(g.x_studio_cant_plantas_x_mtr_lineal || 0);
+      mapaEjeTemporal[f].germinacionCount++;
+    });
+  });
+
+  let fechasOrdenadas = Object.keys(mapaEjeTemporal).sort();
+  let labels = [], dataLluvia = [], dataSiembra = [], dataGerminacion = [];
+
+  fechasOrdenadas.forEach(f => {
+    let o = mapaEjeTemporal[f];
+    let rainAvg = o.countLluvia > 0 ? o.lluvia / o.countLluvia : 0;
+    let siembraAvg = o.siembraCount > 0 ? o.siembra / o.siembraCount : 0;
+    let germAvg = o.germinacionCount > 0 ? o.germinacion / o.germinacionCount : 0;
+
+    if (rainAvg > 0 || siembraAvg > 0 || germAvg > 0) {
+      labels.push(formatFechaEjeX(f));
+      dataLluvia.push(rainAvg);
+      dataSiembra.push(siembraAvg);
+      dataGerminacion.push(germAvg);
+    }
+  });
+
+  return { labels, dataLluvia, dataSiembra, dataGerminacion };
 }
+
+function abrirModalGrafico() {
+  const overlay = document.getElementById('popupGraficoOverlay');
+  overlay.classList.add('show');
+  document.getElementById('graficoLoading').style.display = 'block';
+
+  setTimeout(() => {
+    const ctx = document.getElementById('chartCorrelacionMaster').getContext('2d');
+    const datasetFinal = procesarEstructuraGrafico();
+
+    if (chartInstanciaUnica) chartInstanciaUnica.destroy();
+    document.getElementById('graficoLoading').style.display = 'none';
+
+    chartInstanciaUnica = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: datasetFinal.labels,
+        datasets: [
+          {
+            label: 'Lluvia Día (mm)',
+            data: datasetFinal.dataLluvia,
+            backgroundColor: 'rgba(2, 132, 199, 0.55)',
+            borderColor: '#0284c7',
+            borderWidth: 1,
+            yAxisID: 'yLluvia'
+          },
+          {
+            label: 'Semillas m.l. (Siembra)',
+            data: datasetFinal.dataSiembra,
+            borderColor: '#b35c04',
+            backgroundColor: 'transparent',
+            borderWidth: 3,
+            type: 'line',
+            tension: 0.25,
+            pointRadius: 2,
+            yAxisID: 'yMétricas'
+          },
+          {
+            label: 'Plantas m.l. (Germinación)',
+            data: datasetFinal.dataGerminacion,
+            borderColor: '#0f2a11',
+            backgroundColor: 'transparent',
+            borderWidth: 3,
+            type: 'line',
+            tension: 0.25,
+            pointRadius: 2,
+            yAxisID: 'yMétricas'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#475569' } },
+          yLluvia: {
+            type: 'linear', position: 'left',
+            title: { display: true, text: 'Pluviosidad Acumulada (mm)', color: '#0284c7', font: { weight: 'bold' } },
+            ticks: { color: '#0284c7' }, grid: { color: '#f1f5f9' }
+          },
+          yMétricas: {
+            type: 'linear', position: 'right',
+            title: { display: true, text: 'Densidad Operativa (Muestras / m.l.)', color: '#b35c04', font: { weight: 'bold' } },
+            ticks: { color: '#b35c04' }, grid: { display: false }
+          }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 12, weight: '600' }, boxWidth: 12 } }
+        }
+      }
+    });
+  }, 350);
+}
+
+function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
 
 function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
   const overlay = document.getElementById('popupDetalleOverlay');
   const title = document.getElementById('popupTitle');
   const body = document.getElementById('popupBodyContent');
-  
   const itemsCelda = datosMaestrosUnificados.filter(d => d.finca === finca && d.lote === lote && d.ciclo === ciclo);
   if (itemsCelda.length === 0) return;
   
   let html = `<div class="popup-data-grid">`;
-  
   if (tipoColumna === 'semillas') {
     title.textContent = `Detalle de Siembra - Lote: ${lote}`;
     itemsCelda.forEach((item, idx) => {
       const s = item.rawSiembra || {};
-      const e_m = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal || 0).toFixed(2);
-      const q_m = parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal || 0).toFixed(2);
-      const pct_e = (parseFloat(s.x_studio_porcenjate_enteras || 0) * 100).toFixed(2);
-
       html += `
         <div class="popup-multi-block">
           <div class="popup-block-title">Reporte de Siembra #${idx + 1}</div>
+          <div class="popup-item"><span class="popup-label">Fecha Reporte:</span><span class="popup-value">${extraerFecha(s) || 'N/A'}</span></div>
           <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
-          <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
-          <div class="popup-item"><span class="popup-label">Lote de la finca:</span><span class="popup-value">${item.lote}</span></div>
-          <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${s.x_name || 'N/A'}</span></div>
-          <div class="popup-item"><span class="popup-label">Sector:</span><span class="popup-value">${item.sector}</span></div>
-          <div class="popup-item"><span class="popup-label">Tipo Recuento:</span><span class="popup-value">${item.tipo}</span></div>
+          <div class="popup-item"><span class="popup-label">Lote Finca:</span><span class="popup-value">${item.lote}</span></div>
           <div class="popup-item"><span class="popup-label">Variedad:</span><span class="popup-value">${limpiarDescripcion(s.x_studio_variedad)}</span></div>
-          <div class="popup-item"><span class="popup-label">Calibre:</span><span class="popup-value">${limpiarDescripcion(s.x_studio_calibre)}</span></div>
-          <div class="popup-item"><span class="popup-label">Lote Comasa:</span><span class="popup-value">${s.x_studio_lote_comasa || 'N/A'}</span></div>
-          <div class="popup-item"><span class="popup-label">Semillas enteras:</span><span class="popup-value">${e_m}</span></div>
-          <div class="popup-item"><span class="popup-label">Semillas quebradas:</span><span class="popup-value">${q_m}</span></div>
-          <div class="popup-item"><span class="popup-label">% Enteras:</span><span class="popup-value">${pct_e}%</span></div>
           <div class="popup-item" style="background-color:#fff3cd;"><span class="popup-label">Total Semillas m.l.:</span><span class="popup-value" style="color:var(--accent-peanut);">${item.total_semillas.toFixed(2)}</span></div>
         </div>`;
     });
   } else {
     const ddsObjetivo = tipoColumna.includes('10') ? 10 : 15;
     title.textContent = `Muestras Germinación (${ddsObjetivo} DDS)`;
-    
     let reportesProcesados = new Set();
-    let contadorBloques = 1;
 
     itemsCelda.forEach((item) => {
       const muestrasFiltradas = (item.rawMuestrasOriginales || []).filter(m => Math.round(parseFloat(m.x_studio_dds)) === ddsObjetivo);
-      
       muestrasFiltradas.forEach((m) => {
         const idReporte = m.x_name || 'N/A';
         if (reportesProcesados.has(idReporte)) return;
         reportesProcesados.add(idReporte);
-
-        const r_area = m.x_studio_area_en_mzn ? parseFloat(m.x_studio_area_en_mzn).toFixed(2) : 'N/A';
-        const r_cant = m.x_studio_cant_plantas_x_mtr_lineal ? parseFloat(m.x_studio_cant_plantas_x_mtr_lineal).toFixed(2) : '0.00';
-
         html += `
           <div class="popup-multi-block">
-            <div class="popup-block-title">Reporte Germinación #${contadorBloques}</div>
-            <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
-            <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
-            <div class="popup-item"><span class="popup-label">Lote de la finca:</span><span class="popup-value">${item.lote}</span></div>
-            <div class="popup-item"><span class="popup-label">Reporte Germinacion:</span><span class="popup-value">${idReporte}</span></div>
-            <div class="popup-item"><span class="popup-label">DDS:</span><span class="popup-value">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</span></div>
-            <div class="popup-item"><span class="popup-label">Area (mzn) evaluada:</span><span class="popup-value">${r_area}</span></div>
-            <div class="popup-item"><span class="popup-label">Cantidad de plantas Germinadas:</span><span class="popup-value" style="color:#0284c7;">${r_cant}</span></div>
-            <div class="popup-item"><span class="popup-label">Observacion:</span><span class="popup-value">${m.x_studio_observacion || 'Sin observaciones'}</span></div>
+            <div class="popup-block-title">Reporte Germinación: ${idReporte}</div>
+            <div class="popup-item"><span class="popup-label">Fecha Muestreo:</span><span class="popup-value">${extraerFecha(m) || 'N/A'}</span></div>
+            <div class="popup-item"><span class="popup-label">DDS Registrado:</span><span class="popup-value">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</span></div>
+            <div class="popup-item"><span class="popup-label">Plantas / m.l.:</span><span class="popup-value" style="color:#0284c7;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</span></div>
           </div>`;
-          contadorBloques++;
       });
     });
-
-    if (reportesProcesados.size === 0) {
-      html += `<div class="popup-item"><span style="color:var(--text-muted); font-style:italic;">No existen registros físicos directos en x_germinaciones para ${ddsObjetivo} DDS en este lote.</span></div>`;
-    }
+    if (reportesProcesados.size === 0) html += `<div class="popup-item"><span style="color:var(--text-muted); font-style:italic;">No existen registros en Odoo para ${ddsObjetivo} DDS.</span></div>`;
   }
-  
-  html += `</div>`;
-  body.innerHTML = html;
+  body.innerHTML = html + `</div>`;
   overlay.classList.add('show');
 }
 
@@ -720,15 +780,13 @@ async function cargarDatosDesdeGitHub() {
   try {
     const siembraRes = await fetch('https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentosSiembra.json').then(r => r.json());
     const germinacionRes = await fetch('https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentoGerminacio.json').then(r => r.json());
+    const lluviaRes = await fetch('https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json').then(r => r.json());
 
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];
+    datosLluviaRaw = lluviaRes.result || lluviaRes || [];
 
-    ciclosDetectados = [...new Set(
-      siembraData
-        .map(s => limpiarDescripcion(s.x_studio_ciclo))
-        .filter(c => c && c !== 'N/A' && c !== 'false')
-    )].sort();
+    ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort();
 
     datosMaestrosUnificados = siembraData.map(s => {
       const finca = limpiarDescripcion(s.x_studio_finca);
@@ -743,41 +801,23 @@ async function cargarDatosDesdeGitHub() {
       const sNorm = normalizeText(s.x_studio_sector_1);
 
       const muestrasRelacionadas = germinacionData.filter(g => {
-        const matchFinca = normalizeText(g.x_studio_finca) === fNorm;
-        const matchLote = normalizeText(g.x_studio_lote_de_la_finca) === lNorm;
-        const matchSector = normalizeText(g.x_studio_sector) === sNorm;
-        
-        if (!matchFinca || !matchLote || !matchSector) return false;
-
-        const matchCicloEstricto = normalizeText(g.x_studio_ciclo) === cNorm;
-        if (matchCicloEstricto) return true;
-
-        const numAñoSiembra = cNorm.match(/\d+/);
-        if (numAñoSiembra && g.x_studio_ciclo) {
-          const añoGerminacionStr = String(g.x_studio_ciclo).toLowerCase();
-          return añoGerminacionStr.includes(numAñoSiembra[0]);
-        }
-        return !g.x_studio_ciclo || String(g.x_studio_ciclo).toLowerCase() === 'false';
+        if (normalizeText(g.x_studio_finca) !== fNorm || normalizeText(g.x_studio_lote_de_la_finca) !== lNorm || normalizeText(g.x_studio_sector) !== sNorm) return false;
+        if (normalizeText(g.x_studio_ciclo) === cNorm) return true;
+        const numAño = cNorm.match(/\d+/);
+        return numAño && g.x_studio_ciclo && String(g.x_studio_ciclo).toLowerCase().includes(numAño[0]);
       });
 
       const muestras10 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 10);
       const muestras15 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 15);
-
       const plantas10 = muestras10.length > 0 ? (muestras10.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras10.length) : 0;
       let plantas15 = muestras15.length > 0 ? (muestras15.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras15.length) : 0;
-
       if (plantas15 === 0 && plantas10 > 0 && muestras15.length === 0) plantas15 = plantas10;
 
       const total_semillas = parseFloat(s.x_studio_semilla_total) || ((parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal) || 0) + (parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal) || 0));
       let tipoNorm = (s.x_studio_tipo || '').toLowerCase().includes('re') ? 'Re-siembra' : 'Siembra';
-
       if (estadoFincasColapso[finca] === undefined) estadoFincasColapso[finca] = false;
 
-      return { 
-        finca, lote, sector: sectorSiembra, ciclo, compania, tipo: tipoNorm, total_semillas, 
-        plantas_10dds: plantas10, plantas_15dds: plantas15,
-        rawSiembra: s, rawMuestrasOriginales: muestrasRelacionadas
-      };
+      return { finca, lote, sector: sectorSiembra, ciclo, compania, tipo: tipoNorm, total_semillas, plantas_10dds: plantas10, plantas_15dds: plantas15, rawSiembra: s, rawMuestrasOriginales: muestrasRelacionadas };
     }).filter(d => d.ciclo && d.ciclo !== 'N/A' && d.ciclo !== 'false');
 
     universosUnicos.compania = [...new Set(datosMaestrosUnificados.map(d => d.compania))].sort();
@@ -786,8 +826,8 @@ async function cargarDatosDesdeGitHub() {
     universosUnicos.finca    = [...new Set(datosMaestrosUnificados.map(d => d.finca))].sort();
     universosUnicos.tipo     = [...new Set(datosMaestrosUnificados.map(d => d.tipo))].sort();
 
-    Object.keys(seleccionesFiltros).forEach(key => { seleccionesFiltros[key] = [...universosUnicos[key]]; });
-
+    Object.keys(seleccionesFiltros).forEach(key => { seleccionesFiltros[key] = [...(universosUnicos[key] || [])]; });
+    
     inicializarEstructuraFiltrosDOM();
 
     actualizarTextoDropdown('dropCompania', universosUnicos.compania.length, universosUnicos.compania.length, universosUnicos.compania);
@@ -797,23 +837,21 @@ async function cargarDatosDesdeGitHub() {
     actualizarTextoDropdown('dropTipo', universosUnicos.tipo.length, universosUnicos.tipo.length, universosUnicos.tipo);
 
     filtrarYMostrar();
-
     document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar archivos de Odoo desde GitHub.</td></tr>';
+    tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar archivos desde GitHub.</td></tr>';
   }
 }
 
 function filtrarYMostrar() {
   let filtrados = datosMaestrosUnificados.filter(d => 
-    seleccionesFiltros.compania.includes(d.compania) && 
-    seleccionesFiltros.sector.includes(d.sector) && 
-    seleccionesFiltros.ciclo.includes(d.ciclo) && 
-    seleccionesFiltros.finca.includes(d.finca) && 
-    seleccionesFiltros.tipo.includes(d.tipo)
+    (seleccionesFiltros.compania || []).includes(d.compania) && 
+    (seleccionesFiltros.sector || []).includes(d.sector) && 
+    (seleccionesFiltros.ciclo || []).includes(d.ciclo) && 
+    (seleccionesFiltros.finca || []).includes(d.finca) && 
+    (seleccionesFiltros.tipo || []).includes(d.tipo)
   );
-  
   refrescarVisibilidadCrucesFiltros();
   generarEncabezadosDinamicos();
   renderPivot(filtrados);
@@ -825,10 +863,13 @@ function generarEncabezadosDinamicos() {
   let tr1 = `<tr><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Finca</th><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Lote de finca</th>`;
   let tr2 = `<tr>`;
 
+  const ciclosVisibles = seleccionesFiltros.ciclo || [];
+
   if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
-    ciclosDetectados.forEach(ciclo => {
-      if (subCabecerasCount > 0) {
-        tr1 += `<th colspan="${subCabecerasCount}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light);">Ciclo: ${ciclo}</th>`;
+    ciclosVisibles.forEach(ciclo => {
+      let activeCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+      if (activeCount > 0) {
+        tr1 += `<th colspan="${activeCount}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light);">Ciclo: ${ciclo}</th>`;
         if(visibilidadColumnas.semillas) tr2 += `<th style="border-right: 1px solid var(--border-color);">Semillas m.l.</th>`;
         if(visibilidadColumnas['10dds']) tr2 += `<th style="color: #0284c7; border-right: 1px solid var(--border-color);">Plantas 10 DDS</th>`;
         if(visibilidadColumnas['15dds']) tr2 += `<th style="color: var(--primary); border-right: 1px solid var(--border-color);">Plantas 15 DDS</th>`;
@@ -838,8 +879,8 @@ function generarEncabezadosDinamicos() {
     });
   } else {
     METRICAS_LLAVES.forEach(metricaKey => {
-      tr1 += `<th colspan="${subCabecerasCount}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light); color: var(--accent-peanut);">${METRICAS_NOMBRES[metricaKey]}</th>`;
-      ciclosDetectados.forEach(ciclo => {
+      tr1 += `<th colspan="${ciclosVisibles.length}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light); color: var(--accent-peanut);">${METRICAS_NOMBRES[metricaKey]}</th>`;
+      ciclosVisibles.forEach(ciclo => {
         let colorSub = metricaKey.includes('10') ? 'color:#0284c7;' : metricaKey.includes('15') ? 'color:var(--primary);' : '';
         tr2 += `<th style="border-right: 1px solid var(--border-color); font-size:11px; ${colorSub}">${ciclo.replace('Mani ','')}</th>`;
       });
@@ -860,11 +901,10 @@ function construirCeldaHTML(valor, metricaKey, finca, lote, ciclo) {
 function renderPivot(data) {
   const tbody = document.getElementById('pivotBody');
   let htmlBuffer = [];
-  const subCabecerasCount = obtenerColumnasActivasPorCicloCount();
-  
-  if (data.length === 0) {
-    let totalCols = CURRENT_PIVOT_MODE === 'ciclo_recuento' ? (2 + (ciclosDetectados.length * subCabecerasCount)) : (2 + (5 * ciclosDetectados.length));
-    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="loading">No hay registros que coincidan.</td></tr>`;
+  const ciclosVisibles = seleccionesFiltros.ciclo || [];
+
+  if (ciclosVisibles.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" class="loading">No hay ciclos seleccionados en los filtros.</td></tr>`;
     return;
   }
 
@@ -876,16 +916,23 @@ function renderPivot(data) {
     matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo].push(reg);
   });
 
-  Object.keys(matrizPivot).sort().forEach((fincaName, fincaIdx) => {
+  const fincasExistentes = Object.keys(matrizPivot).sort();
+  if (fincasExistentes.length === 0) {
+    let totalCols = CURRENT_PIVOT_MODE === 'ciclo_recuento' ? (2 + (ciclosVisibles.length * obtenerColumnasActivasPorCicloCount())) : (2 + (5 * ciclosVisibles.length));
+    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="loading">No hay registros que coincidan con los filtros.</td></tr>`;
+    return;
+  }
+
+  fincasExistentes.forEach((fincaName, fincaIdx) => {
     const fincaObj = matrizPivot[fincaName];
     const esColapsado = estadoFincasColapso[fincaName];
     const hiddenClass = esColapsado ? 'hidden-row' : '';
 
     const fincaCiclosTotales = {};
-    ciclosDetectados.forEach(c => { fincaCiclosTotales[c] = { sumS: 0, sumP10: 0, sumP15: 0, totalLotes: 0 }; });
+    ciclosVisibles.forEach(c => { fincaCiclosTotales[c] = { sumS: 0, sumP10: 0, sumP15: 0, totalLotes: 0 }; });
 
     Object.keys(fincaObj.lotes).forEach(loteKey => {
-      ciclosDetectados.forEach(ciclo => {
+      ciclosVisibles.forEach(ciclo => {
         const regs = fincaObj.lotes[loteKey][ciclo] || [];
         if (regs.length > 0) {
           fincaCiclosTotales[ciclo].sumS += regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
@@ -901,27 +948,26 @@ function renderPivot(data) {
     fincaHeaderHtml += `<td style="font-style: italic; color: #4a3b32; text-align: left;">${esColapsado ? 'Promedio Finca' : 'Lotes'}</td>`;
 
     if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
-      ciclosDetectados.forEach(ciclo => {
+      ciclosVisibles.forEach(ciclo => {
         const cTot = fincaCiclosTotales[ciclo];
-        if (subCabecerasCount > 0) {
-          if (esColapsado && cTot.totalLotes > 0) {
-            const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
-            const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0, tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
-            if(visibilidadColumnas.semillas) fincaHeaderHtml += `<td class="text-right">${avgS.toFixed(2)}</td>`;
-            if(visibilidadColumnas['10dds']) fincaHeaderHtml += `<td class="text-right" style="color: #0284c7; font-weight:700;">${avgP10.toFixed(2)}</td>`;
-            if(visibilidadColumnas['15dds']) fincaHeaderHtml += `<td class="text-right" style="color: var(--primary); font-weight:700;">${avgP15.toFixed(2)}</td>`;
-            if(visibilidadColumnas.g10)      fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${tg10 < 55 ? 'low' : ''}">${tg10.toFixed(2)}%</span></td>`;
-            if(visibilidadColumnas.g15)      fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${tg15 < 55 ? 'low' : ''}">${tg15.toFixed(2)}%</span></td>`;
-          } else {
-            for (let i = 0; i < subCabecerasCount; i++) fincaHeaderHtml += `<td>-</td>`;
-          }
+        if (esColapsado && cTot && cTot.totalLotes > 0) {
+          const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
+          const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0, tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+          if(visibilidadColumnas.semillas) fincaHeaderHtml += `<td class="text-right">${avgS.toFixed(2)}</td>`;
+          if(visibilidadColumnas['10dds']) fincaHeaderHtml += `<td class="text-right" style="color: #0284c7; font-weight:700;">${avgP10.toFixed(2)}</td>`;
+          if(visibilidadColumnas['15dds']) fincaHeaderHtml += `<td class="text-right" style="color: var(--primary); font-weight:700;">${avgP15.toFixed(2)}</td>`;
+          if(visibilidadColumnas.g10)      fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${tg10 < 55 ? 'low' : ''}">${tg10.toFixed(2)}%</span></td>`;
+          if(visibilidadColumnas.g15)      fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${tg15 < 55 ? 'low' : ''}">${tg15.toFixed(2)}%</span></td>`;
+        } else {
+          let currentMetricasCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+          for (let i = 0; i < currentMetricasCount; i++) fincaHeaderHtml += `<td>-</td>`;
         }
       });
     } else {
       METRICAS_LLAVES.forEach(mKey => {
-        ciclosDetectados.forEach(ciclo => {
+        ciclosVisibles.forEach(ciclo => {
           const cTot = fincaCiclosTotales[ciclo];
-          if (esColapsado && cTot.totalLotes > 0) {
+          if (cTot.totalLotes > 0) {
             const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
             let valCalculado = mKey==='semillas'? avgS : mKey==='10dds'? avgP10 : mKey==='15dds'? avgP15 : mKey==='g10'? (avgS>0?(avgP10/avgS)*100:0) : (avgS>0?(avgP15/avgS)*100:0);
             if(mKey==='g10' || mKey==='g15') {
@@ -937,32 +983,30 @@ function renderPivot(data) {
     }
     htmlBuffer.push(fincaHeaderHtml + "</tr>");
 
-    Object.keys(fincaObj.lotes).sort().forEach((loteKey, loteIdx) => {
-      const staggerDelay = ((fincaIdx * 3) + loteIdx) * 18;
+    Object.keys(fincaObj.lotes).sort().forEach((loteKey, lIdx) => {
+      const staggerDelay = ((fincaIdx * 3) + lIdx) * 14;
       let filaHtml = `<tr class="row-lote ${hiddenClass}" style="animation-delay: ${staggerDelay}ms;"><td class="freeze-col-1" style="color: var(--text-muted); text-align: left;">${fincaName}</td><td class="freeze-col-2" style="font-weight: 600; text-align: left;">${loteKey}</td>`;
       
       if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
-        ciclosDetectados.forEach(ciclo => {
+        ciclosVisibles.forEach(ciclo => {
           const regs = fincaObj.lotes[loteKey][ciclo] || [];
-          if (subCabecerasCount > 0) {
-            if (regs.length > 0) {
-              const avgS = regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
-              const avgP10 = regs.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / regs.length;
-              const avgP15 = regs.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / regs.length;
-              
-              if(visibilidadColumnas.semillas) filaHtml += construirCeldaHTML(avgS, 'semillas', fincaName, loteKey, ciclo);
-              if(visibilidadColumnas['10dds']) filaHtml += construirCeldaHTML(avgP10, '10dds', fincaName, loteKey, ciclo);
-              if(visibilidadColumnas['15dds']) filaHtml += construirCeldaHTML(avgP15, '15dds', fincaName, loteKey, ciclo);
-              if(visibilidadColumnas.g10)      filaHtml += construirCeldaHTML(avgS > 0 ? (avgP10 / avgS) * 100 : 0, 'g10', fincaName, loteKey, ciclo);
-              if(visibilidadColumnas.g15)      filaHtml += construirCeldaHTML(avgS > 0 ? (avgP15 / avgS) * 100 : 0, 'g15', fincaName, loteKey, ciclo);
-            } else {
-              for (let i = 0; i < subCabecerasCount; i++) filaHtml += `<td style="color: #cbd5e1;">-</td>`;
-            }
+          if (regs.length > 0) {
+            const avgS = regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
+            const avgP10 = regs.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / regs.length;
+            const avgP15 = regs.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / regs.length;
+            if(visibilidadColumnas.semillas) filaHtml += construirCeldaHTML(avgS, 'semillas', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas['10dds']) filaHtml += construirCeldaHTML(avgP10, '10dds', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas['15dds']) filaHtml += construirCeldaHTML(avgP15, '15dds', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas.g10)      filaHtml += construirCeldaHTML(avgS > 0 ? (avgP10 / avgS) * 100 : 0, 'g10', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas.g15)      filaHtml += construirCeldaHTML(avgS > 0 ? (avgP15 / avgS) * 100 : 0, 'g15', fincaName, loteKey, ciclo);
+          } else {
+            let activeCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+            for (let i = 0; i < activeCount; i++) filaHtml += `<td style="color: #cbd5e1;">-</td>`;
           }
         });
       } else {
         METRICAS_LLAVES.forEach(mKey => {
-          ciclosDetectados.forEach(ciclo => {
+          ciclosVisibles.forEach(ciclo => {
             const regs = fincaObj.lotes[loteKey][ciclo] || [];
             if (regs.length > 0) {
               const avgS = regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
@@ -981,25 +1025,24 @@ function renderPivot(data) {
 
     let subtotalHtml = `<tr class="row-total-finca ${hiddenClass}"><td class="freeze-col-1" style="text-align: left;">Total Promedios ${fincaName}</td><td class="freeze-col-2" style="font-weight: 600; text-align: left;">-</td>`;
     if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
-      ciclosDetectados.forEach(ciclo => {
+      ciclosVisibles.forEach(ciclo => {
         const cTot = fincaCiclosTotales[ciclo];
-        if (subCabecerasCount > 0) {
-          if (cTot.totalLotes > 0) {
-            const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
-            const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0, tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
-            if(visibilidadColumnas.semillas) subtotalHtml += `<td class="text-right">${avgS.toFixed(2)}</td>`;
-            if(visibilidadColumnas['10dds']) subtotalHtml += `<td class="text-right" style="color: #0284c7;">${avgP10.toFixed(2)}</td>`;
-            if(visibilidadColumnas['15dds']) subtotalHtml += `<td class="text-right" style="color: var(--primary);">${avgP15.toFixed(2)}</td>`;
-            if(visibilidadColumnas.g10)      subtotalHtml += `<td class="text-center"><span class="badge-pct ${tg10 < 55 ? 'low' : ''}">${tg10.toFixed(2)}%</span></td>`;
-            if(visibilidadColumnas.g15)      subtotalHtml += `<td class="text-center"><span class="badge-pct ${tg15 < 55 ? 'low' : ''}">${tg15.toFixed(2)}%</span></td>`;
-          } else {
-            for (let i = 0; i < subCabecerasCount; i++) subtotalHtml += `<td style="color: #cbd5e1;">-</td>`;
-          }
+        if (cTot && cTot.totalLotes > 0) {
+          const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
+          const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0, tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+          if(visibilidadColumnas.semillas) subtotalHtml += `<td class="text-right">${avgS.toFixed(2)}</td>`;
+          if(visibilidadColumnas['10dds']) subtotalHtml += `<td class="text-right" style="color: #0284c7;">${avgP10.toFixed(2)}</td>`;
+          if(visibilidadColumnas['15dds']) subtotalHtml += `<td class="text-right" style="color: var(--primary);">${avgP15.toFixed(2)}</td>`;
+          if(visibilidadColumnas.g10)      subtotalHtml += `<td class="text-center"><span class="badge-pct ${tg10 < 55 ? 'low' : ''}">${tg10.toFixed(2)}%</span></td>`;
+          if(visibilidadColumnas.g15)      subtotalHtml += `<td class="text-center"><span class="badge-pct ${tg15 < 55 ? 'low' : ''}">${tg15.toFixed(2)}%</span></td>`;
+        } else {
+          let activeCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+          for (let i = 0; i < activeCount; i++) subtotalHtml += `<td style="color: #cbd5e1;">-</td>`;
         }
       });
     } else {
       METRICAS_LLAVES.forEach(mKey => {
-        ciclosDetectados.forEach(ciclo => {
+        ciclosVisibles.forEach(ciclo => {
           const cTot = fincaCiclosTotales[ciclo];
           if (cTot.totalLotes > 0) {
             const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
