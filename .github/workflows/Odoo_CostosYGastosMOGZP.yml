@@ -1,0 +1,60 @@
+name: Odoo_CostosYGastosMOGZP
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # Cada 2 horas
+  workflow_dispatch:
+
+jobs:
+  extract-odoo-data:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get install jq -y
+
+      - name: Query Odoo hr.payslip.line
+        run: |
+          RESPONSE=$(curl -s -X POST "https://grupozp-main-13656030.odoo.com/jsonrpc" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "jsonrpc": "2.0",
+              "method": "call",
+              "id": 1,
+              "params": {
+                "service": "object",
+                "method": "execute",
+                "args": [
+                  "grupozp-main-13656030",
+                  "7",
+                  "Meganet37**",
+                  "hr.payslip.line",
+                  "search_read",
+                  [],
+                  [
+                    "x_studio_nombre_del_lote",
+                    "x_studio_fecha_final_lote",
+                    "x_studio_cuenta_analitica_en_recibo_de_pago",
+                    "x_studio_empleado",
+                    "x_studio_puesto_historico",
+                    "x_studio_tipo_contrato",
+                    "x_studio_actividad_agricola_1",
+                    "x_studio_cuenta_contable_debito",
+                    "total"
+                  ]
+                ]
+              }
+            }')
+
+          echo "$RESPONSE" | jq '.result' > CostosyGastosMOGZP.json
+
+      - name: Commit JSON
+        run: |
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+          git add CostosyGastosMOGZP.json
+          git commit -m "Updated CostosyGastosMOGZP.json" || echo "No changes to commit"
+          git push
