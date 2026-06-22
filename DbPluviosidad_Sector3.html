@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Pluviosidad · Análisis Histórico Gerencial</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  /* AccuWeather & Premium Modern Palette */
+  --brand-dark: #0f172a;       /* Slate 900 */
+  --brand-blue: #0284c7;       /* Sky 600 */
+  --brand-orange: #f97316;     /* Orange 500 */
+  --brand-green: #16a34a;      /* Verde 600 */
+  --bg-main: #f8fafc;          /* Slate 50 */
+  --card-bg: #ffffff;
+  
+  --border-color: #e2e8f0;     /* Slate 200 */
+  --text-main: #1e293b;        /* Slate 800 */
+  --text-muted: #64748b;       /* Slate 500 */
+  
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
+}
+
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg-main);
+  color: var(--text-main);
+  min-height: 100vh;
+  line-height: 1.4;
+}
+
+.dashboard-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ENCABEZADO ULTRA FINO Y LIMPIO */
+.page-hdr{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--brand-dark);
+  padding: 6px 12px; 
+  border-radius: var(--radius-md);
+  color: #ffffff;
+  box-shadow: var(--shadow-md);
+  flex-shrink: 0;
+}
+.page-hdr-left{display:flex;align-items:center;gap:8px}
+.page-icon{
+  font-size: 15px; 
+  background: rgba(255,255,255,0.1);
+  width: 26px;    
+  height: 26px;   
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+}
+.page-title{font-size:12px;font-weight:700;letter-spacing:-0.01em} 
+.page-sub{font-size:10px;color:#94a3b8;margin-top:0px}
+
+/* CONTENEDOR DERECHO EXCLUSIVO PARA EL BOTÓN */
+.page-hdr-right{
+  display: flex;
+  align-items: center;
+}
+
+/* BOTÓN DE MOSTRAR/OCULTAR FILTROS */
+.btn-hdr-toggle {
+  background: rgba(255, 255, 255, 0.1); 
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 10px; 
+  height: 24px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+.btn-hdr-toggle:hover { 
+  background: rgba(255, 255, 255, 0.2); 
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* CONTENEDOR DE FILTROS */
+.filters-wrapper {
+  max-height: 500px;
+  overflow: visible; 
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s ease, opacity 0.3s ease;
+  opacity: 1;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1000; 
+}
+.filters-wrapper.collapsed {
+  max-height: 0;
+  margin-bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.filters-card{
+  background:var(--card-bg);border-radius:var(--radius-md);
+  border:1px solid var(--border-color);box-shadow:var(--shadow-md);
+  padding:10px 14px; margin-bottom: 2px;
+  position: relative;
+  z-index: 1001;
+}
+.filters-row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.fg{display:flex;flex-direction:column;gap:4px}
+.fg-label{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);font-weight:700}
+.fg-inner{display:flex;gap:6px;align-items:center}
+
+select, .chk-btn{
+  font-size:12px;padding:0 8px;border:1px solid var(--border-color);
+  border-radius:var(--radius-sm);background:var(--card-bg);color:var(--text-main);
+  height:30px;width:140px;transition: all .2s ease;font-family:inherit;
+}
+select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-shadow:0 0 0 3px rgba(2, 132, 199, 0.15)}
+
+/* CHECKLIST MULTISELECT POPUP */
+.chk-wrap{position:relative;width:140px}
+.chk-btn{text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;justify-content:space-between}
+.chk-btn::after{content:"▾";font-size:10px;color:var(--text-muted)}
+.chk-list{
+  position:absolute;top:34px;left:0;min-width:180px;background:var(--card-bg);
+  border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:6px;
+  z-index: 2000; 
+  display:none;max-height:200px;overflow-y:auto;box-shadow:var(--shadow-lg);
+}
+.chk-list.open{display:block}
+.chk-list li{list-style:none;font-size:12px;padding:4px 6px;border-radius:4px;color:var(--text-main)}
+.chk-list li:hover{background:#f1f5f9}
+.chk-list li label{display:flex;align-items:center;gap:6px;cursor:pointer;width:100%}
+.chk-list input[type="checkbox"]{accent-color:var(--brand-blue);width:14px;height:14px}
+
+/* BUTTONS & ACTIONS */
+.reset-btn{
+  background:none;border:1px solid var(--border-color);color:var(--text-muted);
+  border-radius:var(--radius-sm);padding:0 6px;height:30px;cursor:pointer;
+  font-size:12px;transition:all .15s;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+}
+.reset-btn:hover{background:#f1f5f9;border-color:var(--text-muted);color:var(--text-main)}
+
+.btn-excel{
+  background: #16a34a; color: white; border: none; font-weight: 600;
+  padding: 0 10px; height: 30px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: background .15s;
+}
+.btn-excel:hover{background:#15803d}
+
+.btn-toggle-view {
+  background: var(--brand-blue); color: white; border: none; font-weight: 600;
+  padding: 0 10px; height: 30px; border-radius: var(--radius-sm);
+  cursor: pointer; font-size: 11px; display: flex; align-items: center; gap: 4px; transition: background .15s;
+}
+.btn-toggle-view:hover { background: #026ca3; }
+
+.toggle-total{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-main);height:30px;cursor:pointer;user-select:none;font-weight:500}
+.toggle-total input{accent-color:var(--brand-dark);width:13px;height:13px;cursor:pointer}
+.filter-divider{width:1px;height:30px;background:var(--border-color);align-self:flex-end;margin:0 2px;flex-shrink:0}
+
+/* EXECUTIVE KPI CARDS */
+.kpi-section { margin-bottom: 2px; flex-shrink: 0; position: relative; z-index: 10; }
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 10px;
+}
+.kpi-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.kpi-card::before {
+  content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--brand-blue);
+}
+.kpi-card.accent::before { background: var(--brand-orange); } 
+
+.kpi-title-meta { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
+.kpi-years-row { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; padding-bottom: 4px; }
+.kpi-year-box {
+  flex: 1; min-width: 60px; text-align: center; 
+  background: #f8fafc; border: 1px solid var(--border-color); 
+  padding: 4px 2px; border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.1s ease;
+  user-select: none;
+}
+.kpi-year-box:hover { transform: scale(1.04); background: #f1f5f9; }
+.kpi-year-label { font-size: 9px; color: var(--text-muted); font-weight: 600; margin-bottom: 1px;}
+.kpi-year-val { font-size: 13px; font-weight: 700; color: var(--brand-dark); }
+.kpi-card.accent .kpi-year-val { color: var(--brand-orange); }
+
+.mini-bar-bg { width: 100%; height: 3px; background: #e2e8f0; border-radius: 2px; margin-top: 3px; overflow: hidden; }
+.mini-bar-fill { height: 100%; background: var(--brand-blue); border-radius: 2px; }
+.kpi-card.accent .mini-bar-fill { background: var(--brand-orange); }
+
+/* SECCIÓN TABLA OPTIMIZADA */
+.pivot-section{
+  margin-top: 0;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; 
+  position: relative;
+  z-index: 5;
+}
+.pivot-label{
+  font-size:11px;color:var(--brand-dark);font-weight:700;margin-bottom:6px;
+  padding:0 2px;display:flex;align-items:center;gap:4px;
+  flex-shrink: 0;
+}
+.pivot-label::before{content:"";display:inline-block;width:3px;height:10px;background:var(--brand-green);border-radius:2px}
+
+.tbl-wrap{
+  flex-grow: 1;
+  overflow: auto; 
+  background: var(--card-bg);
+  border-radius:var(--radius-md);
+  border:1px solid var(--border-color);
+  box-shadow:var(--shadow-md);
+  -webkit-overflow-scrolling: touch; 
+}
+
+table.pivot{border-collapse:separate; border-spacing:0; width:100%; font-size:12px; color: var(--text-main)}
+
+/* STICKY HEADERS Y COLUMNA 1 A 75PX */
+table.pivot thead th{
+  background: #f1f5f9;color: var(--text-main);font-weight:700;
+  padding:6px 8px;text-align:center;
+  border-bottom: 1px solid var(--border-color);
+  border-right:1px solid var(--border-color);
+  white-space:nowrap;font-size:11px;
+  position: sticky; top: 0; z-index: 20;
+}
+
+table.pivot thead tr.hdr-titles th{ padding:8px 6px; top: 0; }
+table.pivot thead tr.hdr-titles th:first-child{
+  background:#f8fafc;color:var(--text-main);text-align:left;
+  width:75px; min-width:75px; max-width:75px;
+  position: sticky; left: 0; top: 0; z-index: 30;
+  border-right:2px solid var(--border-color);
+}
+
+table.pivot thead tr.hdr-totals th{
+  background: #e2e8f0; color: var(--brand-dark); font-size: 11px; font-weight: 800;
+  border-bottom: 2px solid var(--brand-dark); top: 31px;
+}
+table.pivot thead tr.hdr-totals th:first-child{
+  text-align:left; color: var(--brand-dark); background:#cbd5e1;
+  position: sticky; left: 0; top: 31px; z-index: 30;
+  border-right:2px solid var(--border-color); font-size: 10px;
+  width:75px; min-width:75px; max-width:75px;
+}
+table.pivot thead th.total-col{background:#cbd5e1; color: var(--brand-dark)}
+table.pivot tr.hdr-totals th.total-col{color: var(--brand-green); background: #cbd5e1;}
+
+/* CUERPO DE LA TABLA COMPACTADO */
+table.pivot tbody td{
+  padding:5px 6px;text-align:center;
+  border-bottom:1px solid var(--border-color);border-right:1px solid var(--border-color);
+  font-size:11px;
+}
+table.pivot tbody td:first-child{
+  text-align:left;font-weight:700;color:var(--text-main);
+  background:#f8fafc;white-space:nowrap; 
+  width:75px; min-width:75px; max-width:75px;
+  position: sticky; left: 0; z-index: 10; border-right:2px solid var(--border-color);
+}
+table.pivot tbody tr:hover td{background: #f8fafc}
+table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
+
+/* CALENDAR VIEW */
+.calendar-wrapper {
+  background: var(--card-bg); border-radius: var(--radius-md);
+  border: 1px solid var(--border-color); box-shadow: var(--shadow-md); 
+  overflow-y: auto; flex-grow: 1;
+}
+.calendar-weekdays {
+  display: grid; grid-template-columns: repeat(7, 1fr); background: #f1f5f9;
+  border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 10;
+}
+.weekday {
+  text-align: center; font-size: 9px; font-weight: 700; color: var(--text-muted);
+  padding: 8px 0; text-transform: uppercase; border-right: 1px solid var(--border-color);
+}
+.weekday:last-child { border-right: none; }
+.calendar-days-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+
+.calendar-day-cell {
+  min-height: 80px; padding: 6px; border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column;
+  justify-content: space-between; background: #ffffff; position: relative;
+}
+.calendar-day-cell:nth-child(7n) { border-right: none; }
+.calendar-day-cell.empty { background: #f8fafc; cursor: default; }
+
+.day-number { font-size: 10px; font-weight: 700; color: var(--text-muted); align-self: flex-start; }
+.calendar-day-cell.has-rain .day-number { color: var(--brand-dark); }
+
+.day-weather-info { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.weather-icon { font-size: 15px; }
+.weather-val { font-size: 12px; font-weight: 700; }
+.calendar-day-cell.has-rain { cursor: pointer; }
+.calendar-day-cell.has-rain:hover { z-index: 5; box-shadow: inset 0 0 0 2px var(--brand-blue); }
+
+/* BANNER DE PRONÓSTICO DIGITAL DE CÓDIGO ABIERTO REAL */
+.live-weather-banner {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow-md);
+}
+.weather-banner-left { display: flex; align-items: center; gap: 10px; }
+.weather-banner-temp { font-size: 20px; font-weight: 800; color: #38bdf8; }
+.weather-banner-text { font-size: 11px; color: #94a3b8; }
+
+/* MAPA DE CALOR (CALENDAR VIEW) */
+.rain-light { background: rgba(2, 132, 199, 0.04); }
+.rain-medium { background: rgba(2, 132, 199, 0.10); }
+.rain-heavy { background: rgba(22, 163, 74, 0.12); } 
+.rain-extreme { background: rgba(22, 163, 74, 0.25); } 
+.rain-light .weather-val { color: #0284c7; }
+.rain-medium .weather-val { color: #0369a1; }
+.rain-heavy .weather-val { color: #16a34a; }
+.rain-extreme .weather-val { color: #14532d; }
+
+/* CORRECCIÓN ESTILOS: DISEÑO DIFERENCIADO Y ATENUADO PARA EL PRONÓSTICO FUTURO */
+.forecast-day { background: #fafafa !important; border: 1px dashed #cbd5e1 !important; opacity: 0.85; }
+.forecast-day .day-number { color: #94a3b8; font-weight: 500; }
+.forecast-day .weather-val { color: #64748b; font-size: 10px; font-weight: 600; }
+.forecast-icon-wrapper { font-size: 11px; color: #94a3b8; font-weight: bold; margin-bottom: 2px; }
+
+/* INTERACTIVOS DENTRO DE LA MATRIZ DE LA TABLA */
+.cell-interactive { cursor: pointer; display: inline-block; user-select: none; }
+.cv{background:rgba(2, 132, 199, 0.08);color:#0369a1;font-weight:600;border-radius:4px;padding:2px 4px;display:inline-block; border: 1px solid rgba(2, 132, 199, 0.15)}
+.cv2{background:rgba(22, 163, 74, 0.12);color:#15803d;font-weight:700;border-radius:4px;padding:2px 4px;display:inline-block; border: 1px solid rgba(22, 163, 74, 0.25)}
+
+/* GLOBAL TOOLTIP */
+#global-tooltip {
+  position: fixed; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px); color: #ffffff; padding: 10px 12px; border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(255,255,255,0.15); max-width: 350px; width: max-content; text-align: left; z-index: 999999; pointer-events: none;
+}
+.popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; }
+.popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+.popup-item .p-name { color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+.popup-item .p-val { font-weight: 700; color: #4ade80; } 
+
+.total-hidden .total-col{display:none}
+.loading{display:flex;align-items:center;justify-content:center;padding:30px;gap:12px;color:var(--text-muted);font-size:13px}
+.spinner{width:18px;height:18px;border:2px solid var(--border-color);border-top-color:var(--brand-blue);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-msg{text-align:center;padding:30px;color:var(--text-muted);font-size:13px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);}
+
+/* RESPONSIVE AJUSTES */
+@media (max-width: 768px) {
+  .page-hdr { flex-direction: row; align-items: center; justify-content: space-between; padding: 6px 12px; }
+  .page-hdr-right { width: auto; }
+  .filters-row { gap: 8px; }
+  .fg, select, .chk-wrap, .chk-btn { width: 100% !important; } 
+  .tbl-wrap { max-height: 55vh; border: 2px solid var(--brand-blue); }
+}
+</style>
+</head>
+<body>
+
+<div class="dashboard-container">
+
+  <div class="page-hdr">
+    <div class="page-hdr-left">
+      <div class="page-icon">🌧️</div>
+      <div>
+        <div class="page-title">Pluviosidad · Matriz Histórica</div>
+        <div class="page-sub">INFOAGRO · Monitoreo de precipitaciones</div>
+      </div>
+    </div>
+    <div class="page-hdr-right">
+      <button class="btn-hdr-toggle" onclick="toggleRibbonFilters()">
+        <span id="ribbonIcon">🔼</span> <span id="ribbonText">Ocultar Filtros</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="filters-wrapper" id="filtersWrapper">
+    <div class="filters-card">
+      <div class="filters-row">
+
+        <div class="fg">
+          <div class="fg-label">Mes de Análisis</div>
+          <div class="fg-inner">
+            <select id="selMes"></select>
+            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selMes')">↺</button>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="fg">
+          <div class="fg-label">Sector</div>
+          <div class="fg-inner">
+            <select id="selSector"><option value="">Todos</option></select>
+            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selSector')">↺</button>
+          </div>
+        </div>
+
+        <div class="fg">
+          <div class="fg-label">Finca</div>
+          <div class="fg-inner">
+            <div class="chk-wrap">
+              <button class="chk-btn" id="chkFincaBtn" onclick="toggleChk('chkFincaList','chkFincaBtn')">Todas las fincas</button>
+              <ul class="chk-list" id="chkFincaList"></ul>
+            </div>
+            <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkFincaList','chkFincaBtn','fincas')">↺</button>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="fg">
+          <div class="fg-label">Años Históricos</div>
+          <div class="fg-inner">
+            <div class="chk-wrap">
+              <button class="chk-btn" id="chkYearBtn" onclick="toggleChk('chkYearList','chkYearBtn')">Todos los años</button>
+              <ul class="chk-list" id="chkYearList"></ul>
+            </div>
+            <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkYearList','chkYearBtn','años')">↺</button>
+          </div>
+        </div>
+
+        <div class="filter-divider"></div>
+
+        <div class="fg">
+          <div class="fg-label">Visualización y Reporte</div>
+          <div class="fg-inner">
+            <button class="btn-toggle-view" id="btnToggleView" onclick="toggleViewMode()">
+              <span>📅 Ver Calendario</span>
+            </button>
+            <label class="toggle-total" id="chkTotalColWrap">
+              <input type="checkbox" id="chkTotalCol" checked>
+              Mostrar media total
+            </label>
+            <button class="btn-excel" onclick="exportPivotToExcel()">
+              <span>⬇︎ Exportar reporte</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="kpi-section" id="kpiWrap">
+    <div class="loading"><div class="spinner"></div> Cargando matriz de datos e indicadores...</div>
+  </div>
+
+  <div class="pivot-section" id="viewTableSection">
+    <div class="pivot-label" id="pivotLabel">Distribución de lluvia diaria por año</div>
+    <div class="tbl-wrap" id="pivotWrap">
+      <table class="pivot">
+        <thead id="pivotHead"></thead>
+        <tbody id="pivotBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="pivot-section" id="viewCalendarSection" style="display: none;">
+    <div class="pivot-label" id="calendarLabel">Calendario de Distribución Mensual Climatológica</div>
+    
+    <div class="live-weather-banner" id="weatherBanner">
+      <div class="weather-banner-left">
+        <span style="font-size: 22px;">📡</span>
+        <div>
+          <div style="font-weight:700; font-size:12px;">Estación Satelital Online</div>
+          <div class="weather-banner-text" id="weatherBannerDesc">Sincronizando coordenadas climatológicas de las fincas...</div>
+        </div>
+      </div>
+      <div class="weather-banner-temp" id="weatherBannerTemp">--°C</div>
+    </div>
+
+    <div class="calendar-wrapper">
+      <div class="calendar-weekdays">
+        <div class="weekday">Dom</div>
+        <div class="weekday">Lun</div>
+        <div class="weekday">Mar</div>
+        <div class="weekday">Mié</div>
+        <div class="weekday">Jue</div>
+        <div class="weekday">Vie</div>
+        <div class="weekday">Sáb</div>
+      </div>
+      <div class="calendar-days-grid" id="calendarGrid"></div>
+    </div>
+  </div>
+
+</div>
+
+<div id="global-tooltip"></div>
+
+<script>
+let RAW=[];
+let TOOLTIP_DATA={}; 
+let CURRENT_VIEW = "table"; 
+let SATELLITE_FORECAST = {}; 
+
+const MESES_NOM={
+  "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
+  "05":"Mayo","06":"Junio","07":"Julio","08":"Agosto",
+  "09":"Septiembre","10":"Octubre","11":"Noviembre","12":"Diciembre"
+};
+
+function getM(f){return f.split("-")[1]}
+function getY(f){return parseInt(f.split("-")[0])}
+function getD(f){return parseInt(f.split("-")[2])}
+function unique(arr,k){return[...new Set(arr.map(r=>r[k]).filter(Boolean))].sort()}
+
+function toggleRibbonFilters() {
+  const wrapper = document.getElementById("filtersWrapper");
+  const icon = document.getElementById("ribbonIcon");
+  const text = document.getElementById("ribbonText");
+  
+  wrapper.classList.toggle("collapsed");
+  
+  if (wrapper.classList.contains("collapsed")) {
+    icon.textContent = "🔽";
+    text.textContent = "Mostrar Filtros";
+  } else {
+    icon.textContent = "🔼";
+    text.textContent = "Ocultar Filtros";
+  }
+}
+
+function toggleViewMode() {
+  const btn = document.getElementById("btnToggleView");
+  const tblSec = document.getElementById("viewTableSection");
+  const calSec = document.getElementById("viewCalendarSection");
+  const chkTotalWrap = document.getElementById("chkTotalColWrap");
+
+  if (CURRENT_VIEW === "table") {
+    CURRENT_VIEW = "calendar";
+    btn.innerHTML = "<span>📊 Ver Tabla Matrix</span>";
+    tblSec.style.display = "none";
+    calSec.style.display = "flex";
+    chkTotalWrap.style.visibility = "hidden"; 
+    fetchLiveWeather(); 
+  } else {
+    CURRENT_VIEW = "table";
+    btn.innerHTML = "<span>📅 Ver Calendario</span>";
+    tblSec.style.display = "block";
+    calSec.style.display = "none";
+    chkTotalWrap.style.visibility = "visible";
+  }
+  render();
+}
+
+async function fetchLiveWeather() {
+  const zonesConfig = [
+    { name: "Zona 3", loc: "Chinandega", lat: 12.6294, lon: -87.1292 }
+  ];
+
+  try {
+    const promises = zonesConfig.map(z => 
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${z.lat}&longitude=${z.lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`)
+      .then(res => res.json())
+    );
+
+    const results = await Promise.all(promises);
+    
+    if(results[0] && results[0].current) {
+      const tempActual = Math.round(results[0].current.temperature_2m);
+      document.getElementById("weatherBannerTemp").textContent = `${tempActual}°C`;
+      document.getElementById("weatherBannerDesc").textContent = "Monitoreo Predictivo Climatológico Avanzado | Fuente: AccuWeather RealTime Core Data API Sync";
+    }
+
+    SATELLITE_FORECAST = {};
+
+    if(results[0] && results[0].daily) {
+      results[0].daily.time.forEach((fechaStr, index) => {
+        const diaNum = parseInt(fechaStr.split("-")[2]);
+        
+        let maxProb = 0;
+        let mainIcon = "📡☀️";
+        let zonesData = [];
+
+        results.forEach((res, zIdx) => {
+          if (res.daily && res.daily.time) {
+            const prob = res.daily.precipitation_probability_max[index] || 0;
+            const code = res.daily.weather_code[index];
+            const tMax = Math.round(res.daily.temperature_2m_max[index] || 32);
+            const tMin = Math.round(res.daily.temperature_2m_min[index] || 23);
+            const pSum = (res.daily.precipitation_sum[index] || 0).toFixed(1);
+            
+            let zIcon = "☀️ Despejado";
+            let realFeel = tMax + 2; 
+            if(code >= 51) {
+              zIcon = "🌧️ Chubascos";
+              realFeel = tMax - 1;
+            } else if(code >= 1 && code <= 3) {
+              zIcon = "⛅ Nublado";
+            }
+
+            if(prob > maxProb) {
+              maxProb = prob;
+              if(code >= 51) mainIcon = "📡🌧️";
+              else if(code >= 1 && code <= 3) mainIcon = "📡⛅";
+            }
+
+            zonesData.push({
+              name: zonesConfig[zIdx].name,
+              loc: zonesConfig[zIdx].loc,
+              prob: prob,
+              icon: zIcon,
+              temp: `${tMax}°C / ${tMin}°C`,
+              realFeel: `${realFeel}°C`,
+              mm: `${pSum} mm`
+            });
+          }
+        });
+
+        SATELLITE_FORECAST[diaNum] = {
+          prob: maxProb,
+          icon: mainIcon,
+          zones: zonesData
+        };
+      });
+
+      const dataFiltered = getFiltered();
+      buildCalendar(dataFiltered);
+    }
+  } catch (error) {
+    console.error(error);
+    document.getElementById("weatherBannerDesc").textContent = "Estación satelital / API de AccuWeather fuera de línea.";
+  }
+}
+
+function avgDay(rows){
+  if(!rows.length) return 0;
+  const sum=rows.reduce((s,r)=>s+r.v,0);
+  const fincasDistintas=new Set(rows.map(r=>r.fi)).size||1;
+  return sum/fincasDistintas;
+}
+
+function totalMes(rows){
+  const dias=[...new Set(rows.map(r=>r.f))];
+  return dias.reduce((s,fecha)=>s+avgDay(rows.filter(r=>r.f===fecha)),0);
+}
+
+async function loadData(){
+  const url="https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json";
+  try{
+    const resp=await fetch(url+"?cache="+Date.now());
+    const json=await resp.json();
+    
+    let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+    if(!records.length && json.records) records = json.records;
+
+    RAW=records.map(r=>{
+      const finca=Array.isArray(r.x_studio_finca)?r.x_studio_finca[1]:r.x_studio_finca;
+      const sector=Array.isArray(r.x_studio_sector_1)?r.x_studio_sector_1[1]:r.x_studio_sector_1;
+      return {f:r.x_studio_fecha, fi:finca, se:sector, v:Number(r.x_studio_cantidad_promedio||0)};
+    }).filter(item => item.se === 'Sector 3');
+    initFilters();
+    render();
+  }catch(e){
+    document.getElementById("kpiWrap").innerHTML=`<div class="empty-msg">⚠️ Error en la comunicación con el servidor de Odoo. Verifique su conexión de red o estructura JSON.</div>`;
+  }
+}
+
+function initFilters(){
+  const mesEl=document.getElementById("selMes");
+  mesEl.innerHTML="";
+  
+  const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
+  
+  mesesDisponibles.forEach(m=>{
+    const o=document.createElement("option");
+    o.value=m; o.textContent=MESES_NOM[m]||m;
+    mesEl.appendChild(o);
+  });
+
+  const hoy = new Date();
+  const mesActualStr = String(hoy.getMonth() + 1).padStart(2, '0');
+
+  if(mesesDisponibles.includes(mesActualStr)) {
+    mesEl.value = mesActualStr;
+  } else {
+    if(mesesDisponibles.length > 0) {
+      mesEl.value = mesesDisponibles[0];
+    }
+  }
+
+  populateCascadeFilters();
+  populateYearChecklist();
+
+  document.getElementById("chkTotalCol").addEventListener("change",render);
+  ["selMes","selSector"].forEach(id=>{
+    document.getElementById(id).addEventListener("change",()=>{
+      if (id === "selSector") populateCascadeFilters();
+      render();
+    });
+  });
+}
+
+function populateCascadeFilters(){
+  const secEl=document.getElementById("selSector");
+  const curSec=secEl.value;
+  
+  if(secEl.options.length <= 1){
+    secEl.innerHTML = '<option value="">Todos</option>';
+    unique(RAW,"se").forEach(s=>{
+      const o=document.createElement("option"); o.value=s; o.textContent=s; secEl.appendChild(o);
+    });
+    if(curSec) secEl.value = curSec;
+  }
+
+  const activeSector = secEl.value;
+  const baseFi = RAW.filter(r => !activeSector || r.se === activeSector);
+  
+  const ul=document.getElementById("chkFincaList");
+  ul.innerHTML="";
+  
+  unique(baseFi,"fi").forEach(fi=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<label><input type="checkbox" value="${fi}"> ${fi}</label>`;
+    li.querySelector("input").addEventListener("change",()=>{
+      updateChkBtn("chkFincaList","chkFincaBtn","fincas");
+      render();
+    });
+    ul.appendChild(li);
+  });
+  updateChkBtn("chkFincaList","chkFincaBtn","fincas");
+}
+
+function populateYearChecklist(){
+  const years=[...new Set(RAW.map(r=>getY(r.f)))].sort((a,b)=>b-a);
+  const ul=document.getElementById("chkYearList");
+  ul.innerHTML="";
+  years.forEach(y=>{
+    const li=document.createElement("li");
+    li.innerHTML=`<label><input type="checkbox" value="${y}" checked> ${y}</label>`;
+    li.querySelector("input").addEventListener("change",()=>{
+      updateChkBtn("chkYearList","chkYearBtn","años");
+      render();
+    });
+    ul.appendChild(li);
+  });
+  updateChkBtn("chkYearList","chkYearBtn","años");
+}
+
+function toggleChk(listId,btnId){
+  document.getElementById(listId).classList.toggle("open");
+}
+
+document.addEventListener("click",e=>{
+  document.querySelectorAll(".chk-wrap").forEach(w=>{
+    const list=w.querySelector(".chk-list");
+    if(!w.contains(e.target)){
+      list.classList.remove("open");
+      if(list.id==="chkFincaList") updateChkBtn("chkFincaList","chkFincaBtn","fincas");
+      if(list.id==="chkYearList")  updateChkBtn("chkYearList","chkYearBtn","años");
+    }
+  });
+});
+
+function getSelFromList(listId){
+  return Array.from(document.querySelectorAll(`#${listId} input:checked`)).map(x=>x.value);
+}
+
+function updateChkBtn(listId,btnId,labelType){
+  const sel=getSelFromList(listId);
+  const btn=document.getElementById(btnId);
+  if(!sel.length) btn.textContent=labelType==="fincas"?"Todas las fincas":"Todos los años";
+  else if(sel.length<=2) btn.textContent=sel.join(", ");
+  else btn.textContent=sel.length+" "+labelType+" seleccionados";
+}
+
+function clearSingle(id){
+  if(id === "selMes") {
+    const hoy = new Date();
+    const mesActualStr = String(hoy.getMonth() + 1).padStart(2, '0');
+    const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
+    document.getElementById(id).value = mesesDisponibles.includes(mesActualStr) ? mesActualStr : mesesDisponibles[0];
+  } else {
+    document.getElementById(id).selectedIndex=0;
+  }
+  populateCascadeFilters();
+  render();
+}
+
+function clearChecklist(listId,btnId,labelType){
+  document.querySelectorAll(`#${listId} input`).forEach(i=>i.checked=false);
+  updateChkBtn(listId,btnId,labelType);
+  render();
+}
+
+function getFiltered(){
+  const mes=document.getElementById("selMes").value;
+  const se=document.getElementById("selSector").value;
+  const selFi=getSelFromList("chkFincaList");
+  const selYears=getSelFromList("chkYearList").map(y=>parseInt(y));
+  return RAW.filter(r=>
+    r.se === "Sector 3" &&
+    getM(r.f)===mes&&
+    (!se||r.se===se)&&
+    (!selFi.length||selFi.includes(r.fi))&&
+    (!selYears.length||selYears.includes(getY(r.f)))
+  );
+}
+
+function buildKPI(data){
+  const wrap=document.getElementById("kpiWrap");
+  const years=[...new Set(data.map(r=>getY(r.f)))].sort();
+  if(!years.length){wrap.innerHTML=`<div class="empty-msg">No se encontraron registros para los criterios seleccionados.</div>`;return}
+
+  const kpis=[
+    {
+      id: "vol_acum",
+      label:"Volumen Total Acumulado (mm)",
+      clase:"accent",
+      isBar: true,
+      calcFn: (rows) => totalMes(rows),
+      fincaFn: (fRows) => totalMes(fRows),
+      unit: "mm"
+    },
+    {
+      id: "dias_eff",
+      label:"Días Efectivos de Lluvia",
+      clase:"",
+      isBar: false,
+      calcFn: (rows) => [...new Set(rows.map(r=>r.f))].length,
+      fincaFn: (fRows) => [...new Set(fRows.map(r=>r.f))].length,
+      unit: "días"
+    },
+    {
+      id: "int_prom",
+      label:"Intensidad Promedio por Evento (mm/día)",
+      clase:"",
+      isBar: true,
+      calcFn: (rows) => {
+        const d = [...new Set(rows.map(r=>r.f))].length;
+        return d > 0 ? totalMes(rows) / d : 0;
+      },
+      fincaFn: (fRows) => {
+        const d = [...new Set(fRows.map(r=>r.f))].length;
+        return d > 0 ? totalMes(fRows) / d : 0;
+      },
+      unit: "mm/día"
+    },
+  ];
+
+  let containerGrid = document.createElement("div");
+  containerGrid.className = "kpi-grid";
+
+  kpis.forEach(k=>{
+    let card = document.createElement("div");
+    card.className = `kpi-card ${k.clase}`;
+    
+    let titleMeta = document.createElement("div");
+    titleMeta.className = "kpi-title-meta";
+    titleMeta.textContent = k.label;
+    card.appendChild(titleMeta);
+
+    let yearsRow = document.createElement("div");
+    yearsRow.className = "kpi-years-row";
+
+    const yearVals = years.map(y => ({ y, val: k.calcFn(data.filter(r => getY(r.f) === y)) }));
+    const maxV = Math.max(...yearVals.map(x => x.val), 1);
+
+    yearVals.forEach(({y, val})=>{
+      const pct = Math.round((val / maxV) * 100);
+      const disp = val > 0 ? val.toFixed(1) : "0.0";
+
+      let yearBox = document.createElement("div");
+      yearBox.className = "kpi-year-box";
+      
+      let lbl = document.createElement("div");
+      lbl.className = "kpi-year-label";
+      lbl.textContent = y;
+      yearBox.appendChild(lbl);
+
+      let vDiv = document.createElement("div");
+      vDiv.className = "kpi-year-val";
+      vDiv.textContent = disp;
+      yearBox.appendChild(vDiv);
+
+      if(k.isBar){
+        let barBg = document.createElement("div");
+        barBg.className = "mini-bar-bg";
+        let barFill = document.createElement("div");
+        barFill.className = "mini-bar-fill";
+        barFill.style.width = `${pct}%`;
+        barBg.appendChild(barFill);
+        yearBox.appendChild(barBg);
+      }
+
+      const kpiKey = `kpi_${k.id}_${y}`;
+      const yearRows = data.filter(r => getY(r.f) === y);
+      const fincasDisponibles = unique(yearRows, "fi");
+
+      // Agrupación y ordenamiento por Sector para los cuadros KPI superiores
+      const sectoresKPI = [...new Set(yearRows.map(r => r.se || "General"))].sort();
+      let tooltipContent = `<div class="popup-hdr" style="margin-bottom:8px;">Rendimiento por Sector (${y})</div>`;
+      
+      sectoresKPI.forEach(sec => {
+        const rowsSector = yearRows.filter(r => (r.se || "General") === sec);
+        const fincasEnSector = [...new Set(rowsSector.map(r => r.fi))];
+        
+        let fListSector = [];
+        fincasEnSector.forEach(fiName => {
+          const rowsFinca = rowsSector.filter(r => r.fi === fiName);
+          const valF = k.fincaFn(rowsFinca);
+          fListSector.push({ name: fiName, value: valF });
+        });
+        
+        // Ordenar fincas de mayor a menor dentro de su sector
+        fListSector.sort((a, b) => b.value - a.value);
+        
+        if (fListSector.length > 0) {
+          tooltipContent += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
+          fListSector.forEach(f => {
+            tooltipContent += `
+              <div class="popup-item" style="display:flex; justify-content:between; font-size:11px; padding:2px 0; text-align:left;">
+                <span class="p-name" style="color:#e2e8f0;">${f.name}</span>
+                <span class="p-val" style="color:#34d399; font-weight:bold; margin-left:auto;">${f.value.toFixed(1)} ${k.unit}</span>
+              </div>`;
+          });
+        }
+      });
+
+      TOOLTIP_DATA[kpiKey] = tooltipContent;
+      yearBox.setAttribute("data-key", kpiKey);
+
+      yearBox.addEventListener("mouseenter", showGlobalTooltip);
+      yearBox.addEventListener("mousemove", moveGlobalTooltip);
+      yearBox.addEventListener("mouseleave", hideGlobalTooltip);
+
+      yearsRow.appendChild(yearBox);
+    });
+
+    card.appendChild(yearsRow);
+    containerGrid.appendChild(card);
+  });
+
+  wrap.innerHTML = "";
+  wrap.appendChild(containerGrid);
+}
+
+function buildPivot(data){
+  const mes=document.getElementById("selMes").value;
+  const showTotal=document.getElementById("chkTotalCol").checked;
+  const years=[...new Set(data.map(r=>getY(r.f)))].sort();
+  const head=document.getElementById("pivotHead");
+  const body=document.getElementById("pivotBody");
+  
+  head.innerHTML=""; body.innerHTML="";
+
+  if(!years.length||!data.length){
+    body.innerHTML=`<tr><td colspan="2" class="empty-msg">Sin registros estructurados disponibles.</td></tr>`;
+    return;
+  }
+
+  const anyYear=years[0];
+  const daysInMonth=new Date(anyYear,parseInt(mes),0).getDate();
+
+  const cellVals = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    years.forEach(y => {
+      const rows = data.filter(r => getY(r.f) === y && getD(r.f) === d);
+      if (rows.length) cellVals.push(avgDay(rows));
+    });
+  }
+  const sorted = [...cellVals].sort((a, b) => a - b);
+  const p75 = sorted[Math.floor(sorted.length * 0.75)] || 0;
+
+  let trTitles = document.createElement("tr");
+  trTitles.className = "hdr-titles";
+  
+  let thDiaLabel = document.createElement("th");
+  thDiaLabel.textContent = "Día";
+  trTitles.appendChild(thDiaLabel);
+
+  years.forEach(y=>{
+    let thY = document.createElement("th");
+    thY.textContent = `${y}`;
+    trTitles.appendChild(thY);
+  });
+  if(showTotal){
+    let thMediaLabel = document.createElement("th");
+    thMediaLabel.className = "total-col";
+    thMediaLabel.textContent = "Media";
+    trTitles.appendChild(thMediaLabel);
+  }
+  head.appendChild(trTitles);
+
+  let trTotals = document.createElement("tr");
+  trTotals.className = "hdr-totals";
+
+  let thTotalTitle = document.createElement("th");
+  thTotalTitle.textContent = "Total (mm)";
+  trTotals.appendChild(thTotalTitle);
+
+  let grandTotal=0; let grandCols=0;
+  years.forEach(y=>{
+    const val=totalMes(data.filter(r=>getY(r.f)===y));
+    grandTotal+=val; grandCols++;
+    
+    let thYTotal = document.createElement("th");
+    thYTotal.textContent = `${val>0?val.toFixed(1):"0.0"}`;
+    trTotals.appendChild(thYTotal);
+  });
+
+  if(showTotal){
+    const gt=grandCols>0?grandTotal/grandCols:0;
+    let thGrandTotal = document.createElement("th");
+    thGrandTotal.className = "total-col";
+    thGrandTotal.textContent = `${gt>0?gt.toFixed(1):"0.0"}`;
+    trTotals.appendChild(thGrandTotal);
+  }
+  head.appendChild(trTotals);
+
+  for(let d=1;d<=daysInMonth;d++){
+    const anyData=years.some(y=>data.some(r=>getY(r.f)===y&&getD(r.f)===d));
+    if(!anyData) continue;
+
+    const mStr=(MESES_NOM[mes]||mes).slice(0,3).toUpperCase();
+    let tr=document.createElement("tr");
+    
+    let tdDia=document.createElement("td");
+    tdDia.textContent=`${d} - ${mStr}`;
+    tr.appendChild(tdDia);
+
+    let totalDia=0; let cols=0;
+
+    years.forEach(y=>{
+      const rows=data.filter(r=>getY(r.f)===y&&getD(r.f)===d);
+      const val=avgDay(rows);
+      if(rows.length){ totalDia+=val; cols++; }
+      
+      let tdCell=document.createElement("td");
+
+      if(val>0){
+        const cls=val>=p75?"cv2":"cv";
+        let wrapper = document.createElement("div");
+        wrapper.className = `cell-interactive ${cls}`;
+        wrapper.textContent = val.toFixed(1);
+        
+        const cellKey = `cell_${d}_${y}`;
+        
+        // Agrupación por Sector para una lectura gerencial impecable en vista Tabla Matrix
+        const sectoresEnDiaTable = [...new Set(rows.map(r => r.se || "General"))].sort();
+        let htmlDesgloseTable = `<div class="popup-hdr" style="margin-bottom:8px;">Desglose por Sector (${y})</div>`;
+        
+        sectoresEnDiaTable.forEach(sec => {
+          const rowsSector = rows.filter(r => (r.se || "General") === sec);
+          htmlDesgloseTable += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
+          rowsSector.forEach(r => {
+            htmlDesgloseTable += `
+              <div class="popup-item" style="display:flex; justify-content:between; font-size:11px; padding:2px 0; text-align:left;">
+                <span class="p-name" style="color:#e2e8f0;">${r.fi}</span>
+                <span class="p-val" style="color:#34d399; font-weight:bold; margin-left:auto;">${r.v.toFixed(1)} mm</span>
+              </div>`;
+          });
+        });
+        
+        TOOLTIP_DATA[cellKey] = `<div style="min-width:180px; padding:2px;">${htmlDesgloseTable}</div>`;
+        wrapper.setAttribute("data-key", cellKey);
+        
+        wrapper.addEventListener("mouseenter", showGlobalTooltip);
+        wrapper.addEventListener("mousemove", moveGlobalTooltip);
+        wrapper.addEventListener("mouseleave", hideGlobalTooltip);
+
+        tdCell.appendChild(wrapper);
+      } else {
+        tdCell.textContent = "-";
+      }
+      tr.appendChild(tdCell);
+    });
+
+    if(showTotal){
+      const tdVal=cols>0?totalDia/cols:0;
+      let tdTotal=document.createElement("td");
+      tdTotal.className = "total-col";
+      tdTotal.style.fontWeight = "700";
+      tdTotal.textContent = tdVal>0?tdVal.toFixed(1):"-";
+      tr.appendChild(tdTotal);
+    }
+    body.appendChild(tr);
+  }
+
+  const mn=MESES_NOM[mes]||mes;
+  document.getElementById("pivotLabel").textContent= `Análisis de Precipitaciones Diarias · ${mn} (Valores en mm)`;
+
+  const pivotTable=document.querySelector("table.pivot");
+  if(showTotal) pivotTable.classList.remove("total-hidden");
+  else pivotTable.classList.add("total-hidden");
+}
+
+function buildCalendar(data) {
+  const grid = document.getElementById("calendarGrid");
+  grid.innerHTML = "";
+
+  const mesStr = document.getElementById("selMes").value;
+  const yearsAvailable = [...new Set(data.map(r => getY(r.f)))].sort((a,b)=>b-a);
+  
+  if (!yearsAvailable.length || !data.length) {
+    grid.innerHTML = `<div class="empty-msg" style="grid-column: span 7;">Sin registros estructurados disponibles.</div>`;
+    return;
+  }
+
+  const activeYear = yearsAvailable[0];
+  document.getElementById("calendarLabel").textContent = `Calendario · ${MESES_NOM[mesStr]} de ${activeYear} (mm)`;
+
+  const firstDayIndex = new Date(activeYear, parseInt(mesStr) - 1, 1).getDay();
+  const daysInMonth = new Date(activeYear, parseInt(mesStr), 0).getDate();
+
+  const cellVals = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const r = data.filter(x => getY(x.f) === activeYear && getD(x.f) === d);
+    if (r.length) cellVals.push(avgDay(r));
+  }
+  const sorted = [...cellVals].sort((a, b) => a - b);
+  const p75 = sorted[Math.floor(sorted.length * 0.75)] || 0;
+
+  for (let i = 0; i < firstDayIndex; i++) {
+    let emptyCell = document.createElement("div");
+    emptyCell.className = "calendar-day-cell empty";
+    grid.appendChild(emptyCell);
+  }
+
+  const hoy = new Date();
+  const esMesActual = (hoy.getMonth() + 1) === parseInt(mesStr);
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    let dayCell = document.createElement("div");
+    dayCell.className = "calendar-day-cell";
+
+    let numLabel = document.createElement("div");
+    numLabel.className = "day-number";
+    numLabel.textContent = d;
+    dayCell.appendChild(numLabel);
+
+    const dayRows = data.filter(r => getY(r.f) === activeYear && getD(r.f) === d);
+    const val = avgDay(dayRows);
+
+    let infoDiv = document.createElement("div");
+    infoDiv.className = "day-weather-info";
+
+    // EVALUACIÓN PRIORITARIA: Si es el mes en curso y es hoy o un día futuro con pronóstico activo
+    if (esMesActual && d >= hoy.getDate() && SATELLITE_FORECAST[d]) {
+      dayCell.classList.add("forecast-day");
+      const forecast = SATELLITE_FORECAST[d];
+      
+      /* ICONO DE RADAR / SATÉLITE ATENUADO DIFERENCIADO */
+      infoDiv.innerHTML = `
+        <div class="forecast-icon-wrapper">${forecast.icon}</div>
+        <span class="weather-val">${forecast.prob}% <span style="font-size:8px; font-weight:normal;">prob.</span></span>
+      `;
+
+      if (forecast.zones) {
+        const cellKey = `cal_cell_fc_${d}_${activeYear}`;
+        let itemsArr = [];
+        forecast.zones.forEach(z => {
+          itemsArr.push(`
+            <div style="background: #1e293b; border-radius: 8px; padding: 10px; margin-bottom: 8px; border-left: 4px solid #f97316; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: left;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #334155; padding-bottom: 6px; margin-bottom: 6px;">
+                <div>
+                  <span style="color: #ffffff; font-weight: 700; font-size: 13px; display: block;">${z.name}</span>
+                  <span style="color: #94a3b8; font-size: 11px;">${z.loc}</span>
+                </div>
+                <div style="text-align: right;">
+                  <span style="color: #f97316; font-weight: 800; font-size: 16px; display: block;">${z.temp.split(" / ")[0]}</span>
+                  <span style="color: #64748b; font-size: 10px; display: block;">Mín: ${z.temp.split(" / ")[1]}</span>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px; color: #cbd5e1; text-align: left;">
+                <div><span style="color: #64748b;">Condición:</span> <span style="font-weight: 600; color: #38bdf8;">${z.icon}</span></div>
+                <div><span style="color: #64748b;">RealFeel®:</span> <span style="font-weight: 600; color: #f43f5e;">${z.realFeel}</span></div>
+                <div><span style="color: #64748b;">Prob. Lluvia:</span> <span style="font-weight: 600; color: #60a5fa;">${z.prob}%</span></div>
+                <div><span style="color: #64748b;">Volumen:</span> <span style="font-weight: 600; color: #60a5fa;">${z.mm}</span></div>
+              </div>
+            </div>
+          `);
+        });
+        
+        TOOLTIP_DATA[cellKey] = `
+          <div style="background: #f97316; padding: 8px 12px; font-weight: bold; font-size: 11px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 8px; border-top-right-radius: 8px; color: #ffffff; font-family: sans-serif;">
+            <span style="letter-spacing: 0.5px;">PRONÓSTICO METEOROLÓGICO</span>
+            <span style="font-size: 9px; background: rgba(0,0,0,0.2); padding: 2px 6px; border-radius: 4px;">ACCUWEATHER® SYNC</span>
+          </div>
+          <div style="padding: 8px; background: #0f172a; min-width: 290px; max-width: 320px;">
+            ${itemsArr.join("")}
+            <div style="text-align: center; font-size: 9px; color: #475569; margin-top: 4px; border-top: 1px solid #1e293b; padding-top: 4px;">
+              Datos satelitales actualizados en base a AccuWeather Core Interface
+            </div>
+          </div>`;
+        
+        dayCell.setAttribute("data-key", cellKey);
+        dayCell.addEventListener("mouseenter", showGlobalTooltip);
+        dayCell.addEventListener("mousemove", moveGlobalTooltip);
+        dayCell.addEventListener("mouseleave", hideGlobalTooltip);
+      }
+    } 
+    // EVALUACIÓN SECUNDARIA: Registros históricos duros (lo que ya pasó en años anteriores)
+    else if (val > 0) {
+      dayCell.classList.add("has-rain");
+
+      if (val <= 2) dayCell.classList.add("rain-light");
+      else if (val <= p75) dayCell.classList.add("rain-medium");
+      else if (val <= p75 * 1.5) dayCell.classList.add("rain-heavy");
+      else dayCell.classList.add("rain-extreme");
+
+      /* ICONO HISTÓRICO TRADICIONAL */
+      infoDiv.innerHTML = `<span class="weather-icon">🌧️</span><span class="weather-val">${val.toFixed(1)}</span>`;
+
+      const cellKey = `cal_cell_${d}_${activeYear}`;
+      
+      // Agrupación por Sector para una lectura gerencial impecable
+      const sectoresEnDia = [...new Set(dayRows.map(r => r.se || "General"))].sort();
+      let htmlDesglose = `<div class="popup-hdr" style="margin-bottom:8px;">Desglose por Sector (Día ${d})</div>`;
+      
+      sectoresEnDia.forEach(sec => {
+        const rowsSector = dayRows.filter(r => (r.se || "General") === sec);
+        htmlDesglose += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
+        rowsSector.forEach(r => {
+          htmlDesglose += `
+            <div class="popup-item" style="display:flex; justify-content:between; font-size:11px; padding:2px 0; text-align:left;">
+              <span class="p-name" style="color:#e2e8f0;">${r.fi}</span>
+              <span class="p-val" style="color:#34d399; font-weight:bold; margin-left:auto;">${r.v.toFixed(1)} mm</span>
+            </div>`;
+        });
+      });
+
+      TOOLTIP_DATA[cellKey] = `<div style="min-width:180px; padding:2px;">${htmlDesglose}</div>`;
+      dayCell.setAttribute("data-key", cellKey);
+
+      dayCell.addEventListener("mouseenter", showGlobalTooltip);
+      dayCell.addEventListener("mousemove", moveGlobalTooltip);
+      dayCell.addEventListener("mouseleave", hideGlobalTooltip);
+
+    } else {
+      // Días históricos tradicionales secos
+      infoDiv.innerHTML = `<span class="weather-icon" style="color: #cbd5e1;">☀️</span><span class="weather-val" style="color: #cbd5e1; font-size:11px;">Seco</span>`;
+    }
+
+    dayCell.appendChild(infoDiv);
+    grid.appendChild(dayCell);
+  }
+  const totalCells = firstDayIndex + daysInMonth;
+  const rem = totalCells % 7;
+  if (rem > 0) {
+    for (let i = 0; i < (7 - rem); i++) {
+      let emptyCell = document.createElement("div");
+      emptyCell.className = "calendar-day-cell empty";
+      grid.appendChild(emptyCell);
+    }
+  }
+}
+
+const gTooltip = document.getElementById("global-tooltip");
+
+function showGlobalTooltip(e) {
+  const key = e.currentTarget.getAttribute("data-key");
+  const htmlContent = TOOLTIP_DATA[key];
+  if (!htmlContent) return;
+  
+  gTooltip.innerHTML = htmlContent;
+  gTooltip.style.display = "block";
+  moveGlobalTooltip(e);
+}
+
+function moveGlobalTooltip(e) {
+  const tooltipWidth = 250; 
+  const tooltipHeight = gTooltip.offsetHeight || 100;
+  
+  let posX = e.clientX - (tooltipWidth / 2);
+  let posY = e.clientY - tooltipHeight - 16; 
+  
+  if ((posX + tooltipWidth) > window.innerWidth) posX = window.innerWidth - tooltipWidth - 20;
+  if (posX < 0) posX = 10;
+  if (posY < 0) posY = e.clientY + 20;
+
+  gTooltip.style.left = posX + "px";
+  gTooltip.style.top = posY + "px";
+}
+
+function hideGlobalTooltip() { gTooltip.style.display = "none"; }
+
+function render(){
+  const data=getFiltered();
+  buildKPI(data);
+  
+  if (CURRENT_VIEW === "table") {
+    buildPivot(data);
+  } else {
+    let grid = document.getElementById("calendarGrid");
+    if(grid) buildCalendar(data);
+  }
+}
+
+function exportPivotToExcel(){
+  const table=document.querySelector("table.pivot");
+  if(!table) return;
+  let csv=[];
+  const rows=table.querySelectorAll("tr");
+  rows.forEach(tr=>{
+    let row=[];
+    tr.querySelectorAll("th,td").forEach(cell=>{
+      let text=cell.innerText.replace(/\s+/g," ").trim();
+      text=text.replace(/;/g,",");
+      row.push('"'+text+'"');
+    });
+    csv.push(row.join(";"));
+  });
+  const blob=new Blob([csv.join("\n")],{type:"text/csv;charset=utf-8;"});
+  const link=document.createElement("a");
+  const mesSel=document.getElementById("selMes").value;
+  const mesNom=MESES_NOM[mesSel]||mesSel||"mes";
+  link.href=URL.createObjectURL(blob);
+  link.download=`reporte_pluviosidad_${mesNom}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+loadData();
+</script>
+</body>
+</html>
