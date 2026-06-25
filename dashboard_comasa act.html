@@ -141,6 +141,7 @@ input.factor-input{width:70px;padding:2px 5px;font-size:11px;border:1px solid va
 @media(max-width:1024px){.grid-2,.grid-3{grid-template-columns:1fr;}}
 </style>
 </head>
+
 <body>
 
 <!-- SIDEBAR -->
@@ -292,7 +293,6 @@ const SECTORES_VALIDOS=['Sector 1','Sector 2','Sector 3','Sector 4'];
 const CAT_COLORS={'Tractor Pequeño':'#2E6FBA','Tractor Mediano':'#3B9F6F','Tractor Grande':'#1b4332','Combinas':'#E0A52E','Vehículo Liviano':'#7B5FC4','Sin categoría':'#888780'};
 const CICLO_COLORS_MAP={'Mani 2022':'#3B9F6F','Mani 2023':'#2E6FBA','Mani 2024':'#D9445E','Mani 2025':'#E0A52E','Mani 2026':'#7B5FC4'};
 const CHART_COLORS=['#2E6FBA','#3B9F6F','#D9445E','#E0A52E','#7B5FC4','#e76f51','#40916c','#BA7517','#72243E','#534AB7'];
-function cicloColor(c){return CICLO_COLORS_MAP[c]||CHART_COLORS[4];}
 
 /* ===== CONSTANTES FALTANTES DEL CO ===== */
 const ACT_ORDER_LIST=['Arado/Romplona','Subsuelo','Grada','Mureo','Siembra','Quema','Sello','Post emergente',
@@ -1598,41 +1598,17 @@ function renderComparativo(){
   const cat=stateEq.catSel[0];
 
   // Filas de cada ciclo filtradas por categoría y proveedores seleccionados
-  function rowsForCiclo(ciclo){
-    return raw2.filter(r=>{
-      if(!isCompaña(r)) return false;
-      if(get(r,'ciclo')!==ciclo) return false;
-      if((get(r,'categoria equipo')||'Sin categoría')!==cat) return false;
-      if(stateEq.provSel.length&&!stateEq.provSel.includes(get(r,'proveedor del servicio'))) return false;
-      if(stateEq.secSel.length&&!stateEq.secSel.includes(get(r,'sector'))) return false;
-      if(stateEq.eqSel&&(get(r,'equipo')||'Sin equipo identificado')!==stateEq.eqSel) return false;
-      if(stateEq.actSel&&(get(r,'actividad')||'Sin actividad')!==stateEq.actSel) return false;
-      if(stateEq.actFiltSel.length&&!stateEq.actFiltSel.includes(get(r,'actividad')||'Sin actividad')) return false;
-      return true;
-    });
-  }
+  
 
-  const rowsAct=rowsForCiclo(cicloAct);
-  const rowsComp=rowsForCiclo(cicloComp);
+  const rowsAct=rowsForCiclo(cicloAct,cat);
+  const rowsComp=rowsForCiclo(cicloComp,cat);
 
-  function calcMetrics(rows){
-    const hm=rows.reduce((s,r)=>s+toNum(get(r,'hme','hm')),0);
-    const lts=rows.reduce((s,r)=>s+toNum(get(r,'cantidad diesel ltrs')),0);
-    const ratio=hm>0?lts/hm:null;
-    const eqs=new Set(rows.map(r=>get(r,'equipo')||'Sin equipo')).size;
-    return{hm,lts,ratio,eqs};
-  }
+  
 
   const mAct=calcMetrics(rowsAct);
   const mComp=calcMetrics(rowsComp);
 
-  function diffBadge(vAct,vComp,lowerIsBetter){
-    if(vAct==null||vComp==null||vComp===0) return '';
-    const pct=((vAct-vComp)/vComp*100);
-    const bad=(lowerIsBetter&&pct>0)||(!lowerIsBetter&&pct<0);
-    const cls=bad?'badge-bad':'badge-ok';
-    return `<span class="kpi-badge ${cls}">${pct>=0?'+':''}${pct.toFixed(1)}%</span>`;
-  }
+  
 
   // KPIs comparativos
   const kpiItems=[
@@ -1692,16 +1668,7 @@ function renderComparativo(){
 
   // ===== GRÁFICO COMPARATIVO POR EQUIPO =====
   // Calcular métricas por equipo para ambos ciclos
-  function eqMetrics(rows){
-    const m={};
-    rows.forEach(r=>{
-      const eq=get(r,'equipo')||'Sin equipo identificado';
-      if(!m[eq])m[eq]={hm:0,lts:0};
-      m[eq].hm+=toNum(get(r,'hme','hm'));
-      m[eq].lts+=toNum(get(r,'cantidad diesel ltrs'));
-    });
-    return m;
-  }
+  
   const eqAct=eqMetrics(rowsAct);
   const eqComp=eqMetrics(rowsComp);
 
@@ -1762,7 +1729,7 @@ function renderComparativo(){
   });
 }
 
-function rowsForCiclo(ciclo){
+function rowsForCiclo(ciclo,cat){
     return raw2.filter(r=>{
       if(!isCompaña(r)) return false;
       if(get(r,'ciclo')!==ciclo) return false;
@@ -2004,16 +1971,18 @@ async function init(){
     ciclosEq.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;selEq.appendChild(o);});
     const defEq=ciclosEq.find(c=>norm(c)==='mani 2026')||ciclosEq[ciclosEq.length-1]||ciclosEq[0];
     if(defEq) selEq.value=defEq;
-    onCicloChange();
-    onCicloEqChange();
+    try{ onCicloChange(); } catch(e){ console.error('onCicloChange error:',e); document.getElementById('page-resumen').innerHTML='<div class="error-msg">Error en onCicloChange: '+e.message+'<br><small>'+e.stack+'</small></div>'; }
+    try{ onCicloEqChange(); } catch(e){ console.error('onCicloEqChange error:',e); }
     dot.className='dot';
     document.getElementById('update-time').textContent='Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
   }catch(e){
     dot.className='dot error';
-    document.getElementById('update-time').textContent='Error';
-    const errLine = e.stack ? e.stack.split('\n')[1] : '';
-    document.getElementById('page-resumen').innerHTML=`<div class="error-msg"><strong>Error al conectar con Google Sheets</strong><br>${e.message}<br><small style="font-size:10px;opacity:.7">${errLine}</small></div>`;
-    console.error(e);
+    document.getElementById('update-time').textContent='Error: '+e.message;
+    const errLine = e.stack ? e.stack.split('\n').slice(0,3).join(' | ') : '';
+    const errHtml=`<div class="error-msg"><strong>Error al conectar con Google Sheets</strong><br>${e.message}<br><small style="font-size:10px;opacity:.7">${errLine}</small></div>`;
+    document.getElementById('page-resumen').innerHTML=errHtml;
+    document.getElementById('equipos-content').innerHTML=errHtml;
+    console.error('INIT ERROR:',e);
   }
 }
 
