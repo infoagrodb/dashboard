@@ -1,0 +1,98 @@
+
+name: OdooGzp_MovimientosInventario
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # Ejecuta cada 2 horas
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
+
+jobs:
+  fetch-odoo-movimientos-inventario:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        run: |
+          echo "Llamando a Odoo stock.move.line..."
+          curl -s -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "grupozp-main-13656030",
+                7,
+                "Meganet37**",
+                "stock.move.line",
+                "search_read",
+                [],
+                [
+                  "company_id",
+                  "consume_line_ids",
+                  "create_date",
+                  "create_uid",
+                  "date",
+                  "description_picking",
+                  "display_name",
+                  "id",
+                  "is_inventory",
+                  "is_locked",
+                  "location_dest_id",
+                  "location_dest_usage",
+                  "location_id",
+                  "location_usage",
+                  "lot_name",
+                  "lot_visible",
+                  "move_id",
+                  "move_line_origin_id",
+                  "owner_id",
+                  "package_id",
+                  "package_level_id",
+                  "picking_code",
+                  "picking_id",
+                  "picking_location_dest_id",
+                  "picking_location_id",
+                  "picking_partner_id",
+                  "picking_type_entire_packs",
+                  "picking_type_id",
+                  "picking_type_use_existing_lots",
+                  "product_id",
+                  "product_category_name",
+                  "product_packaging_qty",
+                  "product_packaging_id",
+                  "product_uom_id",
+                  "quantity",
+                  "qty_done"
+                ]
+              ]
+            }
+          }' > OdooGzp_MovimientosInventario.json
+
+          echo "Verificando contenido..."
+          if [ ! -s OdooGzp_MovimientosInventario.json ]; then
+            echo "❌ Error: OdooGzp_MovimientosInventario.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 OdooGzp_MovimientosInventario.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add OdooGzp_MovimientosInventario.json
+          git commit -m "Actualización automática de Movimientos de Inventario desde Odoo" || echo "No hay cambios"
+          git push origin main
