@@ -8,57 +8,103 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <style>
-:root{--verde:#1a7a4a;--verde-dark:#12553a;--verde-bg:#eaf7f0;--fondo:#f0f4f2;--blanco:#fff;--gris:#6b7280;--gris-borde:#d1d5db;--texto:#1f2937;--rojo:#e74c3c;--rojo-bg:#fef2f2;--amarillo:#f39c12;--azul:#2563eb;--sidebar-w:220px;}
+:root{
+  --verde:#1a7a4a;--verde-dark:#12553a;--verde-bg:#eaf7f0;
+  --fondo:#f0f4f2;--blanco:#fff;--gris:#6b7280;--gris-borde:#d1d5db;
+  --texto:#1f2937;--rojo:#e74c3c;--rojo-bg:#fef2f2;--amarillo:#f39c12;--azul:#2563eb;
+  --sidebar-w:220px;--topbar-h:50px;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:var(--texto);font-size:13px;display:flex;min-height:100vh;}
-#sidebar{width:var(--sidebar-w);background:#0f3d25;color:#c8e6d5;display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;box-shadow:3px 0 12px rgba(0,0,0,.18);}
-.sidebar-logo{padding:20px 18px 14px;border-bottom:1px solid rgba(255,255,255,.1);}
-.sidebar-logo .marca{font-size:16px;font-weight:800;color:#fff;}
-.sidebar-logo .sub{font-size:10px;color:#7db897;margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:var(--texto);font-size:13px;min-height:100vh;}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar-w);background:#0f3d25;color:#c8e6d5;
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:200;
+  box-shadow:3px 0 12px rgba(0,0,0,.18);
+  transition:transform .25s ease;
+}
+.sidebar-logo{padding:18px 16px 12px;border-bottom:1px solid rgba(255,255,255,.1);}
+.sidebar-logo .marca{font-size:15px;font-weight:800;color:#fff;}
+.sidebar-logo .sub{font-size:9px;color:#7db897;margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
 .badge-v{display:inline-block;background:var(--verde);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:5px;font-weight:700;}
-nav.sb-nav{padding:10px 0;flex:1;}
-.nav-section{font-size:9px;color:#5d8a6c;text-transform:uppercase;letter-spacing:.8px;padding:10px 16px 3px;font-weight:700;}
-.nav-item{display:flex;align-items:center;gap:9px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:500;color:#9ec8b0;transition:all .15s;border-left:3px solid transparent;}
-.nav-item:hover{background:rgba(255,255,255,.06);color:#fff;}
+nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
+.nav-section{font-size:9px;color:#5d8a6c;text-transform:uppercase;letter-spacing:.8px;padding:10px 14px 3px;font-weight:700;}
+.nav-item{display:flex;align-items:center;gap:9px;padding:10px 14px;cursor:pointer;font-size:12px;font-weight:500;color:#9ec8b0;transition:all .15s;border-left:3px solid transparent;}
+.nav-item:hover{background:rgba(255,255,255,.07);color:#fff;}
 .nav-item.active{background:rgba(46,204,113,.12);color:#2ecc71;border-left-color:#2ecc71;font-weight:700;}
-.nav-icon{font-size:13px;width:16px;text-align:center;flex-shrink:0;}
-.sidebar-bottom{padding:12px 16px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:#5d8a6c;}
-#main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-width:0;}
-.topbar{background:var(--blanco);border-bottom:1px solid var(--gris-borde);padding:0 22px;height:50px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 1px 4px rgba(0,0,0,.04);}
-.topbar-title{font-size:14px;font-weight:700;color:var(--verde-dark);}
-.sync-badge{font-size:10px;background:var(--verde-bg);color:var(--verde);border:1px solid #a7d7b8;padding:3px 8px;border-radius:20px;font-weight:600;}
-.contenedor{padding:18px 22px;max-width:1800px;}
+.nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+.sidebar-bottom{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:#5d8a6c;}
+
+/* sidebar overlay (mobile) */
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;}
+#sb-overlay.show{display:block;}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-height:100vh;min-width:0;}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--blanco);border-bottom:1px solid var(--gris-borde);
+  padding:0 18px;height:var(--topbar-h);
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:100;box-shadow:0 1px 4px rgba(0,0,0,.05);
+  gap:10px;
+}
+.topbar-left{display:flex;align-items:center;gap:10px;min-width:0;}
+.menu-btn{
+  display:none;background:none;border:none;cursor:pointer;
+  padding:6px;border-radius:6px;color:var(--verde-dark);font-size:20px;line-height:1;flex-shrink:0;
+}
+.topbar-title{font-size:13px;font-weight:700;color:var(--verde-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.topbar-sub{font-size:10px;color:var(--gris);white-space:nowrap;}
+.sync-badge{font-size:10px;background:var(--verde-bg);color:var(--verde);border:1px solid #a7d7b8;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0;}
+
+/* ── CONTENEDOR ── */
+.contenedor{padding:16px 18px;width:100%;}
 .panel{display:none;}.panel.active{display:block;}
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:11px;margin-bottom:18px;}
-.kpi-card{background:var(--blanco);border-radius:8px;padding:13px 15px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--gris-borde);display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;}
+
+/* ── KPI GRID ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;}
+.kpi-card{background:var(--blanco);border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--gris-borde);display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--verde);}
 .kpi-card.azul::before{background:var(--azul);}.kpi-card.rojo::before{background:var(--rojo);}.kpi-card.nar::before{background:var(--amarillo);}
-.kpi-label{font-size:10px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.4px;}
-.kpi-valor{font-size:21px;font-weight:800;color:var(--texto);line-height:1.1;}
+.kpi-label{font-size:9px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.4px;}
+.kpi-valor{font-size:19px;font-weight:800;color:var(--texto);line-height:1.15;}
 .kpi-sub{font-size:10px;color:var(--gris);}
-.filtros-bar{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;padding:11px 15px;margin-bottom:14px;display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;}
+
+/* ── FILTROS BAR ── */
+.filtros-bar{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
 .filtro-group{display:flex;flex-direction:column;gap:3px;}
-.filtro-label{font-size:10px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px;}
+.filtro-label{font-size:9px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px;}
 .ms-count{display:inline-block;background:var(--verde);color:white;border-radius:10px;padding:0px 5px;font-size:9px;font-weight:700;}
-.btn-toggle-group{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--gris-borde);}
-.btn-toggle{padding:6px 12px;border:none;background:#fafafa;font-size:12px;font-weight:600;color:var(--gris);cursor:pointer;transition:all .15s;}
+
+/* ── TOGGLE BUTTONS ── */
+.btn-toggle-group{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--gris-borde);flex-wrap:wrap;}
+.btn-toggle{padding:6px 11px;border:none;background:#fafafa;font-size:11px;font-weight:600;color:var(--gris);cursor:pointer;transition:all .15s;white-space:nowrap;}
 .btn-toggle:not(:last-child){border-right:1px solid var(--gris-borde);}
 .btn-toggle.active{background:var(--verde);color:white;}
+.btn-toggle:active{transform:scale(.97);}
+
+/* ── MULTISELECT DROPDOWN ── */
 .ms-wrap{position:relative;display:inline-block;}
-.ms-btn{padding:6px 10px;border:1px solid var(--gris-borde);border-radius:6px;background:#fafafa;font-size:12px;color:var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:155px;justify-content:space-between;}
+.ms-btn{padding:6px 10px;border:1px solid var(--gris-borde);border-radius:6px;background:#fafafa;font-size:12px;color:var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:145px;justify-content:space-between;}
 .ms-btn:hover{border-color:var(--verde);}
-.ms-drop{display:none;position:absolute;top:calc(100% + 3px);left:0;background:white;border:1px solid var(--gris-borde);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:300;min-width:200px;max-height:270px;overflow-y:auto;}
+.ms-drop{display:none;position:absolute;top:calc(100% + 3px);left:0;background:white;border:1px solid var(--gris-borde);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.13);z-index:300;min-width:200px;max-height:260px;overflow-y:auto;}
 .ms-drop.open{display:block;}
 .ms-drop-hdr{padding:7px 11px;border-bottom:1px solid var(--gris-borde);display:flex;gap:10px;position:sticky;top:0;background:white;}
 .ms-drop-hdr a{font-size:10px;color:var(--azul);cursor:pointer;text-decoration:underline;}
-.ms-item{display:flex;align-items:center;gap:8px;padding:6px 11px;cursor:pointer;font-size:12px;}
+.ms-item{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;font-size:12px;}
 .ms-item:hover{background:#f3f4f6;}
 .ms-item input{accent-color:var(--verde);width:13px;height:13px;cursor:pointer;flex-shrink:0;}
 .ms-item label{cursor:pointer;flex:1;}
-.tabla-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:14px;}
-.tabla-header{padding:9px 13px;background:#f8fafb;border-bottom:1px solid var(--gris-borde);display:flex;align-items:center;justify-content:space-between;}
+
+/* ── TABLA ── */
+.tabla-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;}
+.tabla-header{padding:9px 13px;background:#f8fafb;border-bottom:1px solid var(--gris-borde);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 .tabla-title{font-weight:700;font-size:12px;color:var(--verde-dark);}
-.tabla-wrap{overflow-x:auto;max-height:560px;overflow-y:auto;}
+.tabla-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:520px;overflow-y:auto;}
 table{width:100%;border-collapse:collapse;font-size:11px;}
 th{background:#f3f4f6;color:#374151;font-weight:700;padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0;z-index:10;white-space:nowrap;}
 td{padding:7px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;}
@@ -68,26 +114,105 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 .badge{background:var(--verde-bg);color:#166534;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10px;}
 .badge-err{background:var(--rojo-bg);color:#991b1b;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10px;}
 .font-bold{font-weight:700;}.text-gris{color:var(--gris);}
-.chart-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:14px;}
+
+/* ── CHARTS ── */
+.chart-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;}
 .chart-title{font-weight:700;font-size:13px;color:var(--verde-dark);margin-bottom:2px;}
 .chart-subtitle{font-size:11px;color:var(--gris);margin-bottom:10px;}
-.chart-wrap.tall{position:relative;height:320px;}
-.chart-wrap.mid{position:relative;height:260px;}
-.puestos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(500px,1fr));gap:12px;}
-.piv-section-btn{display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border:none;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.chart-wrap.tall{position:relative;height:300px;}
+.chart-wrap.mid{position:relative;height:240px;}
+
+/* ── PIVOTE ── */
+.piv-section-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .piv-section-btn.n1{background:var(--verde);color:white;}
 .piv-section-btn.n6{background:#1e3a5f;color:white;}
 .piv-section-btn.inactive{background:#e5e7eb;color:var(--gris);}
 .piv-panel{display:none;}.piv-panel.active{display:block;}
 .piv-sect-header{padding:9px 13px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:white;}
-#loading{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,61,37,.93);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;}
+
+/* ── EXPORT BTN ── */
+.export-btn{padding:6px 12px;background:#1e3a5f;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
+.export-btn:hover{background:var(--azul);}
+
+/* ── LOADING ── */
+#loading{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,61,37,.93);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;padding:20px;text-align:center;}
 .loader-logo{font-size:21px;font-weight:800;color:#fff;margin-bottom:18px;}
 .loader-logo span{color:#2ecc71;}
 .spinner-ring{width:42px;height:42px;border:4px solid rgba(255,255,255,.15);border-top-color:#2ecc71;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:12px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 #loader-status{color:#7db897;font-size:11px;margin-top:5px;}
-.export-btn{padding:6px 13px;background:#1e3a5f;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;}
-.export-btn:hover{background:#2563eb;}
+
+/* ════════════════════════════════════
+   RESPONSIVE BREAKPOINTS
+════════════════════════════════════ */
+
+/* ── TABLET (≤1024px) ── */
+@media(max-width:1024px){
+  :root{--sidebar-w:200px;}
+  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}
+  .contenedor{padding:12px 14px;}
+  .btn-toggle{padding:5px 9px;font-size:11px;}
+  .piv-section-btn{padding:6px 10px;font-size:11px;}
+}
+
+/* ── MOBILE (≤768px) ── */
+@media(max-width:768px){
+  :root{--sidebar-w:240px;}
+  /* Sidebar oculto por defecto en móvil */
+  #sidebar{transform:translateX(-100%);}
+  #sidebar.open{transform:translateX(0);}
+  /* Main ocupa todo el ancho */
+  #main{margin-left:0;}
+  /* Mostrar botón hamburguesa */
+  .menu-btn{display:flex;align-items:center;justify-content:center;}
+  /* Topbar más compacta */
+  .topbar{padding:0 12px;}
+  .topbar-sub{display:none;}
+  .topbar-title{font-size:12px;}
+  /* Contenedor */
+  .contenedor{padding:10px 12px;}
+  /* KPI: 2 columnas en móvil */
+  .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .kpi-valor{font-size:16px;}
+  /* Filtros: full width items */
+  .filtros-bar{padding:10px 12px;gap:8px;}
+  .filtro-group{width:100%;}
+  .filtro-group .btn-toggle-group{width:100%;}
+  .filtro-group .btn-toggle{flex:1;padding:8px 6px;font-size:11px;}
+  .ms-btn{min-width:0;width:100%;}
+  .ms-drop{left:0;right:0;min-width:0;width:100%;}
+  /* Pivote section btns */
+  .piv-section-btn{font-size:11px;padding:7px 10px;}
+  /* Charts altura reducida */
+  .chart-wrap.tall{height:240px;}
+  .chart-wrap.mid{height:200px;}
+  /* Tabla: scroll horizontal */
+  .tabla-wrap{max-height:400px;}
+  /* Sección por puesto: columna única */
+  [style*="display:flex;gap:0"]{flex-direction:column!important;}
+  [style*="min-width:160px;flex-shrink:0"]{
+    min-width:0!important;width:100%!important;flex-direction:row!important;
+    flex-wrap:wrap;border-right:none!important;border-bottom:1px solid var(--gris-borde)!important;
+  }
+}
+
+/* ── SMALL MOBILE (≤480px) ── */
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr;}
+  .kpi-valor{font-size:18px;}
+  .topbar-title{font-size:11px;}
+  .btn-toggle-group{flex-wrap:wrap;}
+  .btn-toggle{flex:1;min-width:60px;}
+  table{font-size:10px;}
+  th,td{padding:6px 7px;}
+  .piv-section-btn{font-size:10px;padding:6px 8px;}
+}
+
+/* ── LARGE DESKTOP (≥1400px) ── */
+@media(min-width:1400px){
+  .kpi-grid{grid-template-columns:repeat(6,1fr);}
+  .contenedor{padding:20px 26px;}
+}
 </style>
 </head>
 <body>
@@ -100,7 +225,7 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 
 <nav id="sidebar">
   <div class="sidebar-logo">
-    <div class="marca">InfoAgro BI <span class="badge-v">v9</span></div>
+    <div class="marca">InfoAgro BI <span class="badge-v">v10</span></div>
     <div class="sub">Grupo ZP · Control Mano de Obra</div>
   </div>
   <nav class="sb-nav">
@@ -114,12 +239,16 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
   </nav>
   <div class="sidebar-bottom">Grupo ZP · Nicaragua 🌱</div>
 </nav>
+<div id="sb-overlay" onclick="cerrarSidebar()"></div>
 
 <div id="main">
   <div class="topbar">
-    <div>
-      <span class="topbar-title">Control Relacional Mano de Obra</span>
-      <span style="color:var(--gris);font-size:11px;margin-left:8px;">Cuentas 11410–11425 / 6100*</span>
+    <div class="topbar-left">
+      <button class="menu-btn" onclick="toggleSidebar()" aria-label="Menú">☰</button>
+      <div>
+        <span class="topbar-title">Control Relacional Mano de Obra</span>
+        <span class="topbar-sub" style="margin-left:8px;">Cuentas 11410–11425 / 6100*</span>
+      </div>
     </div>
     <span class="sync-badge" id="sync-badge">⏳ Cargando...</span>
   </div>
@@ -244,21 +373,28 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 
     <!-- PIVOTE -->
     <div id="panel-pivote" class="panel">
-      <div class="filtros-bar">
+      <!-- Fila 1: Sección + Vista + Cultivo + Ciclo + Finca + Export -->
+      <div class="filtros-bar" style="flex-wrap:wrap;gap:10px;">
         <div class="filtro-group">
-          <div class="filtro-label">Sección de Cuentas</div>
-          <div style="display:flex;gap:8px;">
-            <button class="piv-section-btn n1" id="btn-piv-n1" onclick="cambiarSeccionPivote('n1')">📋 Nivel 1 — Salarios (11410–11425)</button>
-            <button class="piv-section-btn inactive" id="btn-piv-n6" onclick="cambiarSeccionPivote('n6')">📋 Nivel 6 — Gastos (6100*)</button>
+          <div class="filtro-label">Sección</div>
+          <div style="display:flex;gap:6px;">
+            <button class="piv-section-btn n1" id="btn-piv-n1" onclick="cambiarSeccionPivote('n1')">📋 N1 Salarios</button>
+            <button class="piv-section-btn inactive" id="btn-piv-n6" onclick="cambiarSeccionPivote('n6')">📋 N6 Gastos</button>
           </div>
         </div>
-      </div>
-      <div class="filtros-bar">
         <div class="filtro-group">
           <div class="filtro-label">Vista</div>
           <div class="btn-toggle-group">
-            <button class="btn-toggle active" id="btn-piv-men" onclick="cambiarVistaPivote('mensual')">📅 Mensual</button>
-            <button class="btn-toggle" id="btn-piv-acu" onclick="cambiarVistaPivote('acumulado')">📈 Acumulado</button>
+            <button class="btn-toggle active" id="btn-piv-men" onclick="cambiarVistaPivote('mensual')">Mensual</button>
+            <button class="btn-toggle" id="btn-piv-acu" onclick="cambiarVistaPivote('acumulado')">Acumulado</button>
+          </div>
+        </div>
+        <div class="filtro-group">
+          <div class="filtro-label">Columnas</div>
+          <div class="btn-toggle-group">
+            <button class="btn-toggle" id="btn-col-anio" onclick="cambiarModoColumnas('anio')">Año</button>
+            <button class="btn-toggle active" id="btn-col-anomes" onclick="cambiarModoColumnas('anomes')">Año › Mes</button>
+            <button class="btn-toggle" id="btn-col-mes" onclick="cambiarModoColumnas('mes')">Mes › Año</button>
           </div>
         </div>
         <div class="filtro-group">
@@ -291,23 +427,23 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
           </div>
         </div>
         <div class="filtro-group" style="align-self:flex-end;">
-          <button class="export-btn" onclick="exportarPivoteExcel()">⬇ Exportar Excel</button>
+          <button class="export-btn" onclick="exportarPivoteExcel()">⬇ Excel</button>
         </div>
       </div>
-      <!-- Fila 3: Jerarquía + Métricas -->
-      <div class="filtros-bar">
+      <!-- Fila 2: Jerarquía + Métrica + controles expand -->
+      <div class="filtros-bar" style="gap:10px;">
         <div class="filtro-group">
-          <div class="filtro-label">Jerarquía de filas</div>
+          <div class="filtro-label">Jerarquía filas</div>
           <div class="btn-toggle-group">
-            <button class="btn-toggle" id="btn-piv-j1" onclick="cambiarJerarquia(1)">Cultivo&gt;Puesto&gt;Finca</button>
-            <button class="btn-toggle active" id="btn-piv-j2" onclick="cambiarJerarquia(2)">Cultivo&gt;Finca&gt;Puesto</button>
-            <button class="btn-toggle" id="btn-piv-j3" onclick="cambiarJerarquia(3)">Cultivo&gt;Finca&gt;Cuentas</button>
-            <button class="btn-toggle" id="btn-piv-j4" onclick="cambiarJerarquia(4)">Cultivo&gt;Cuentas</button>
-            <button class="btn-toggle" id="btn-piv-j5" onclick="cambiarJerarquia(5)">Cultivo&gt;Finca</button>
+            <button class="btn-toggle" id="btn-piv-j1" onclick="cambiarJerarquia(1)">C›P›F</button>
+            <button class="btn-toggle active" id="btn-piv-j2" onclick="cambiarJerarquia(2)">C›F›P</button>
+            <button class="btn-toggle" id="btn-piv-j3" onclick="cambiarJerarquia(3)">C›F›CC</button>
+            <button class="btn-toggle" id="btn-piv-j4" onclick="cambiarJerarquia(4)">C›CC</button>
+            <button class="btn-toggle" id="btn-piv-j5" onclick="cambiarJerarquia(5)">C›F</button>
           </div>
         </div>
         <div class="filtro-group">
-          <div class="filtro-label">Métrica de valores</div>
+          <div class="filtro-label">Métrica</div>
           <div class="btn-toggle-group">
             <button class="btn-toggle active" id="btn-piv-mc" onclick="cambiarMetricaPiv('costo')">C$ Costo</button>
             <button class="btn-toggle" id="btn-piv-mdh" onclick="cambiarMetricaPiv('dh')">DH</button>
@@ -315,14 +451,22 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
             <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')">C$/DH</button>
           </div>
         </div>
+        <div class="filtro-group" style="align-self:flex-end;">
+          <div class="btn-toggle-group">
+            <button class="btn-toggle" onclick="pivExpandAll(true)" title="Expandir todo">⊞ Expandir</button>
+            <button class="btn-toggle" onclick="pivExpandAll(false)" title="Colapsar todo">⊟ Colapsar</button>
+          </div>
+        </div>
       </div>
+
+      <!-- Tabla pivot -->
       <div id="piv-panel-n1" class="piv-panel active tabla-card">
         <div class="piv-sect-header" style="background:var(--verde)">📋 Cuentas Nivel 1 — Salarios y Prestaciones de Campo (11410–11425)</div>
-        <div class="tabla-wrap"><table><thead><tr id="th-piv-n1"></tr></thead><tbody id="tbody-piv-n1"></tbody><tfoot><tr class="fila-total" id="tft-piv-n1"></tr></tfoot></table></div>
+        <div class="tabla-wrap" id="wrap-piv-n1"><table id="tbl-piv-n1" style="width:100%;border-collapse:collapse;font-size:11px;"></table></div>
       </div>
       <div id="piv-panel-n6" class="piv-panel tabla-card">
         <div class="piv-sect-header" style="background:#1e3a5f;">📋 Cuentas Nivel 6 — Gastos MO Indirectos (6100*)</div>
-        <div class="tabla-wrap"><table><thead><tr id="th-piv-n6"></tr></thead><tbody id="tbody-piv-n6"></tbody><tfoot><tr class="fila-total" id="tft-piv-n6"></tr></tfoot></table></div>
+        <div class="tabla-wrap" id="wrap-piv-n6"><table id="tbl-piv-n6" style="width:100%;border-collapse:collapse;font-size:11px;"></table></div>
       </div>
     </div>
 
@@ -425,7 +569,18 @@ let cultivoPivActual='Mani',seccionPiv='n1',vistaPiv='mensual';
 let jerarquiaPiv=2,metricaPiv='costo',_pivDatos={};
 
 // ─── NAV ───
+function toggleSidebar(){
+  const sb=document.getElementById('sidebar');
+  const ov=document.getElementById('sb-overlay');
+  const open=sb.classList.toggle('open');
+  ov.classList.toggle('show',open);
+}
+function cerrarSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sb-overlay').classList.remove('show');
+}
 function irA(id,el){
+  cerrarSidebar();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
@@ -1087,274 +1242,425 @@ function cambiarMetricaPiv(m){
   renderizarPivote();
 }
 
+// modoColumnas: 'anio' | 'anomes' | 'mes'
+let modoColumnas='anomes';
+// Estado expand/colapso filas y columnas
+let pivRowExpand={};  // key → true/false
+let pivColExpand={};  // anio → true/false (para expandir meses)
+
+function cambiarModoColumnas(m){
+  modoColumnas=m;
+  ['btn-col-anio','btn-col-anomes','btn-col-mes'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById('btn-col-'+m).classList.add('active');
+  pivColExpand={};
+  renderizarPivote();
+}
+
+function pivExpandAll(val){
+  // Expand/colapso filas
+  document.querySelectorAll('[data-piv-row]').forEach(el=>{
+    const key=el.dataset.pivRow;
+    pivRowExpand[key]=val;
+  });
+  // Expand/colapso columnas (años)
+  Object.keys(pivColExpand).forEach(k=>pivColExpand[k]=val);
+  renderizarPivote();
+}
+
+function togglePivRow(key){
+  pivRowExpand[key]=!pivRowExpand[key];
+  renderizarPivote();
+}
+function togglePivCol(anio){
+  pivColExpand[anio]=!pivColExpand[anio];
+  renderizarPivote();
+}
+
+// Calcula el valor display de un slot {costo,dh,mzn}
+function calcPivVal(slot){
+  if(!slot)return 0;
+  if(metricaPiv==='costo')return slot.costo||0;
+  if(metricaPiv==='dh')return slot.dh||0;
+  if(metricaPiv==='dhmzn')return slot.mzn>0?(slot.dh/slot.mzn):0;
+  return slot.dh>0?(slot.costo/slot.dh):0;
+}
+function fmtPiv(v){
+  if(v===0)return'<span style="color:#d1d5db">—</span>';
+  if(metricaPiv==='costo')return'C$ '+fmt(Math.round(v));
+  if(metricaPiv==='dh')return fmt(Math.round(v));
+  if(metricaPiv==='dhmzn')return v.toFixed(2);
+  return'C$ '+fmt(Math.round(v));
+}
+
+function mergeSlot(a,b){
+  if(!b)return;
+  a.costo+=(b.costo||0);a.dh+=(b.dh||0);
+  if(b.mznF)b.mznF.forEach(k=>{if(!a.mznF.has(k)){a.mznF.add(k);const[fi,ci]=k.split('|');a.mzn+=buscarMzn(fi,ci);}});
+}
+function newSlot(){return{costo:0,dh:0,mzn:0,mznF:new Set()};}
+
+// Estructura principal: cultivo → L1 → L2 → cc → mes(YYYY-MM) → slot
+// Para jer 5 (C>F sin CC): cultivo → finca → '__' → '__' → mes → slot
+
 function renderizarPivote(){
   const ciclosActivos=getSelMs('piv-ciclo');
   const fincasActivas=getSelMs('piv-finca');
-
-  // Estructura: clave1 → clave2 → (clave3?) → mesYYYY-MM → {costo, dh, mzn}
-  // Dependiendo de jerarquía las claves cambian
-  // estN1/estN6: cultivo → nivel1 → nivel2 → cc → mes → {costo,dh,mzn}
   const estN1={},estN6={};
 
-  // Unir costos + DH por registro
-  const registros=[];
+  function addToEst(est,cu,L1,L2,cc,mes,monto,dh,finca,ciclo){
+    if(!est[cu])est[cu]={};
+    if(!est[cu][L1])est[cu][L1]={};
+    if(!est[cu][L1][L2])est[cu][L1][L2]={};
+    if(!est[cu][L1][L2][cc])est[cu][L1][L2][cc]={};
+    if(!est[cu][L1][L2][cc][mes])est[cu][L1][L2][cc][mes]=newSlot();
+    const sl=est[cu][L1][L2][cc][mes];
+    sl.costo+=monto;sl.dh+=dh;
+    const mk=`${finca}|${ciclo}`;
+    if(!sl.mznF.has(mk)){sl.mznF.add(mk);sl.mzn+=buscarMzn(finca,ciclo);}
+  }
+
+  // Costos
   DS_C.forEach(r=>{
     if(!r.mes||r.ca==='')return;
     if(cultivoPivActual!=='TODOS'&&r.cultivo!==cultivoPivActual)return;
     if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
-    registros.push({...r,dh:0,tipo:'costo'});
+    const est=esN1(r.cc)?estN1:esN6(r.cc)?estN6:null;if(!est)return;
+    const cu=r.cultivo||'Sin Cultivo',fi=r.finca||'Sin Finca',pu=r.puesto||'Sin Puesto';
+    let L1,L2,cc=r.cc;
+    if(jerarquiaPiv===1){L1=pu;L2=fi;}
+    else if(jerarquiaPiv===2){L1=fi;L2=pu;}
+    else if(jerarquiaPiv===3){L1=fi;L2='__';}
+    else if(jerarquiaPiv===4){L1='__';L2='__';}
+    else{L1=fi;L2='__';cc='__';}
+    addToEst(est,cu,L1,L2,cc,r.mes,r.monto,0,r.finca||'',r.ciclo||'');
   });
+  // DH
   DS_DH.forEach(r=>{
     if(!r.mes||r.ca==='')return;
     if(cultivoPivActual!=='TODOS'&&r.cultivo!==cultivoPivActual)return;
     if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
-    registros.push({...r,monto:0,cc:'11410',tipo:'dh'});
-  });
-
-  // Poblar estructuras
-  registros.forEach(r=>{
-    const est=esN1(r.cc)?estN1:(esN6(r.cc)?estN6:null);if(!est)return;
-    const cu=r.cultivo||'Sin Cultivo';
-    const fi=r.finca||'Sin Finca';
-    const pu=r.puesto||'Sin Puesto';
-    const cc=r.cc;
-    const mes=r.mes;// YYYY-MM cronológico
-    const mzn=buscarMzn(r.finca||'',r.ciclo||'');
-
-    // Determinar claves según jerarquía
-    let k1,k2,k3;
-    if(jerarquiaPiv===1){k1=pu;k2=fi;}         // C>P>F>CC
-    else if(jerarquiaPiv===2){k1=fi;k2=pu;}     // C>F>P>CC
-    else if(jerarquiaPiv===3){k1=fi;k2=null;}   // C>F>CC
-    else if(jerarquiaPiv===4){k1=null;k2=null;} // C>CC
-    else{k1=fi;k2=null;k3=null;}                // C>F (sin CC)
-
-    if(!est[cu])est[cu]={};
-    const L1=k1!==null?k1:'__root__';
-    if(!est[cu][L1])est[cu][L1]={};
-
-    // Para jerarquía 5 (solo Cultivo>Finca), no agrupar por CC
-    if(jerarquiaPiv===5){
-      if(!est[cu][L1]['__total__'])est[cu][L1]['__total__']={};
-      if(!est[cu][L1]['__total__'][mes])est[cu][L1]['__total__'][mes]={costo:0,dh:0,mzn:0,mznF:new Set()};
-      const sl=est[cu][L1]['__total__'][mes];
-      sl.costo+=r.monto||0;sl.dh+=r.dh||0;
-      const mk=`${r.finca}|${r.ciclo}`;if(!sl.mznF.has(mk)){sl.mznF.add(mk);sl.mzn+=mzn;}
-      return;
-    }
-
-    const L2=k2!==null?k2:'__root__';
-    if(!est[cu][L1][L2])est[cu][L1][L2]={};
-    if(!est[cu][L1][L2][cc])est[cu][L1][L2][cc]={};
-    if(!est[cu][L1][L2][cc][mes])est[cu][L1][L2][cc][mes]={costo:0,dh:0,mzn:0,mznF:new Set()};
-    const sl=est[cu][L1][L2][cc][mes];
-    sl.costo+=r.monto||0;sl.dh+=r.dh||0;
-    const mk=`${r.finca}|${r.ciclo}`;if(!sl.mznF.has(mk)){sl.mznF.add(mk);sl.mzn+=mzn;}
+    const est=estN1;// DH siempre en N1
+    const cu=r.cultivo||'Sin Cultivo',fi=r.finca||'Sin Finca',pu=r.puesto||'Sin Puesto';
+    let L1,L2,cc='11410';
+    if(jerarquiaPiv===1){L1=pu;L2=fi;}
+    else if(jerarquiaPiv===2){L1=fi;L2=pu;}
+    else if(jerarquiaPiv===3){L1=fi;L2='__';}
+    else if(jerarquiaPiv===4){L1='__';L2='__';}
+    else{L1=fi;L2='__';cc='__';}
+    addToEst(est,cu,L1,L2,cc,r.mes,0,r.dh,r.finca||'',r.ciclo||'');
   });
 
   _pivDatos={estN1,estN6};
-  renderSeccionPivote('n1',estN1);
-  renderSeccionPivote('n6',estN6);
+  renderTablaPivote('n1',estN1);
+  renderTablaPivote('n6',estN6);
 }
 
 const C_CULT={'Mani':'#f39c12','Caña':'#1a7a4a','Cacao':'#7c3aed'};
 
-function fmtPivVal(v,acumObj){
-  // v = {costo,dh,mzn} para ese mes; acumObj para acumulado
-  const obj=vistaPiv==='acumulado'?acumObj:v;
-  if(!obj)return'<span style="color:#d1d5db">0</span>';
-  let val;
-  if(metricaPiv==='costo')val=obj.costo;
-  else if(metricaPiv==='dh')val=obj.dh;
-  else if(metricaPiv==='dhmzn')val=obj.mzn>0?obj.dh/obj.mzn:0;
-  else val=obj.dh>0?obj.costo/obj.dh:0;// cdh
-  if(val===0)return'<span style="color:#d1d5db">0</span>';
-  if(metricaPiv==='dh')return fmt(Math.round(val));
-  if(metricaPiv==='dhmzn')return val.toFixed(2);
-  return'C$ '+fmt(Math.round(val));
-}
-
-function totPivSlot(slot){
-  // Suma todos los meses de un slot {mes:{costo,dh,mzn}}
-  const r={costo:0,dh:0,mzn:0,mznF:new Set()};
-  Object.values(slot).forEach(v=>{r.costo+=v.costo;r.dh+=v.dh;if(v.mznF)v.mznF.forEach(k=>{if(!r.mznF.has(k)){r.mznF.add(k);r.mzn+=v.mzn/v.mznF.size;}});});
-  return r;
-}
-
-function renderSeccionPivote(sufijo,estructura){
-  if(Object.keys(estructura).length===0){
-    document.getElementById(`th-piv-${sufijo}`).innerHTML='<th>Sin datos</th>';
-    document.getElementById(`tbody-piv-${sufijo}`).innerHTML=`<tr><td colspan="2" style="text-align:center;color:var(--gris);padding:20px;font-style:italic">Sin datos para los filtros seleccionados</td></tr>`;
-    document.getElementById(`tft-piv-${sufijo}`).innerHTML='';return;
-  }
-
-  // Recopilar todos los meses cronológicos presentes
-  const mesSet=new Set();
-  function recopilarMeses(obj){
-    if(typeof obj!=='object'||obj===null)return;
-    Object.keys(obj).forEach(k=>{
-      // si parece YYYY-MM
-      if(/^\d{4}-\d{2}$/.test(k))mesSet.add(k);
-      else recopilarMeses(obj[k]);
-    });
-  }
-  recopilarMeses(estructura);
-  const mO=Array.from(mesSet).sort();// cronológico real
-
-  if(mO.length===0){
-    document.getElementById(`tbody-piv-${sufijo}`).innerHTML=`<tr><td colspan="2" style="text-align:center;color:var(--gris);padding:20px;">Sin datos</td></tr>`;
+function renderTablaPivote(sufijo,est){
+  const tbl=document.getElementById(`tbl-piv-${sufijo}`);
+  if(!tbl)return;
+  if(Object.keys(est).length===0){
+    tbl.innerHTML=`<tbody><tr><td colspan="3" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr></tbody>`;
     return;
   }
 
-  const lblM=m=>etqMesAnio(m);// "Ene-25"
-  const etqJer=()=>{
-    if(jerarquiaPiv===1)return['Puesto','Finca'];
-    if(jerarquiaPiv===2)return['Finca','Puesto'];
-    if(jerarquiaPiv===3)return['Finca','—'];
-    if(jerarquiaPiv===4)return['—','—'];
-    return['Finca','—'];
-  };
-  const etqMetPiv=()=>{
-    if(metricaPiv==='costo')return'Costo (C$)';
-    if(metricaPiv==='dh')return'Días Hombre';
-    if(metricaPiv==='dhmzn')return'DH/Mzn';
-    return'C$/DH';
-  };
+  // 1. Recopilar todos los meses presentes YYYY-MM
+  const mesSet=new Set();
+  function recMes(o){if(!o)return;for(const k of Object.keys(o)){if(/^\d{4}-\d{2}$/.test(k))mesSet.add(k);else recMes(o[k]);}}
+  recMes(est);
+  const todosM=Array.from(mesSet).sort();
+  if(todosM.length===0){tbl.innerHTML='<tbody><tr><td style="padding:20px;color:var(--gris);">Sin datos</td></tr></tbody>';return;}
 
-  document.getElementById(`th-piv-${sufijo}`).innerHTML=
-    `<th style="min-width:220px">Cultivo / Jerarquía</th>`+
-    mO.map(m=>`<th class="t-right" style="min-width:75px">${lblM(m)}</th>`).join('')+
-    `<th class="t-right" style="background:#e8f5e9;min-width:90px">Total</th>`;
+  // 2. Agrupar meses por año
+  const porAnio={};
+  todosM.forEach(m=>{const y=m.slice(0,4);if(!porAnio[y])porAnio[y]=[];porAnio[y].push(m);});
+  const anios=Object.keys(porAnio).sort();
 
-  let filas=[],totG={};mO.forEach(m=>totG[m]={costo:0,dh:0,mzn:0,mznF:new Set()});
-  let totGTotal={costo:0,dh:0,mzn:0};
+  // 3. Inicializar pivColExpand para años nuevos
+  anios.forEach(y=>{if(pivColExpand[y]===undefined)pivColExpand[y]=(modoColumnas==='anomes');});
 
-  Object.keys(estructura).sort().forEach(cultivo=>{
-    const color=C_CULT[cultivo]||'#2563eb';
-    let totCult={};mO.forEach(m=>totCult[m]={costo:0,dh:0,mzn:0,mznF:new Set()});
-    let acumCult={costo:0,dh:0,mzn:0};
-    let filasSub=[];
+  // 4. Construir columnas visibles según modoColumnas
+  // colDefs: [{id, label, isAnio, anio, mes}]
+  const colDefs=[];
+  if(modoColumnas==='anio'){
+    // Solo totales por año
+    anios.forEach(y=>colDefs.push({id:'Y'+y,label:y,isAnio:true,anio:y,mes:null}));
+  } else if(modoColumnas==='anomes'){
+    // Año expandible → meses
+    anios.forEach(y=>{
+      const exp=pivColExpand[y];
+      colDefs.push({id:'Y'+y,label:y,isAnio:true,anio:y,mes:null,exp});
+      if(exp) porAnio[y].forEach(m=>colDefs.push({id:m,label:ML[parseInt(m.slice(5),10)-1],isAnio:false,anio:y,mes:m}));
+    });
+  } else {
+    // Mes expandible → años (Ene, Feb... con sub-años)
+    const mesesNum=[...new Set(todosM.map(m=>m.slice(5)))].sort();
+    mesesNum.forEach(mn=>{
+      const label=ML[parseInt(mn,10)-1];
+      const key='M'+mn;
+      const exp=pivColExpand[key]!==false;// default expandido
+      if(pivColExpand[key]===undefined)pivColExpand[key]=false;
+      colDefs.push({id:key,label,isAnio:true,anio:null,mes:mn,exp});
+      if(pivColExpand[key]) anios.filter(y=>porAnio[y].includes(y+'-'+mn)).forEach(y=>colDefs.push({id:y+'-'+mn,label:y,isAnio:false,anio:y,mes:mn}));
+    });
+  }
+  // Siempre columna Total
+  colDefs.push({id:'TOTAL',label:'Total',isAnio:false,anio:null,mes:null,isTotal:true});
 
-    const L1keys=Object.keys(estructura[cultivo]).sort();
+  // Helper: valor de una columna para un mapa de slots hoja {mes→slot}
+  function addMzn(a,v){
+    if(v&&v.mznF)v.mznF.forEach(k=>{if(!a.mznF.has(k)){a.mznF.add(k);const[fi,ci]=k.split('|');a.mzn+=buscarMzn(fi,ci);}});
+  }
+  function colVal(slotMap,col){
+    if(col.isTotal){
+      const s=newSlot();
+      Object.values(slotMap).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
+      return s;
+    }
+    if(col.mes&&col.anio) return slotMap[col.anio+'-'+col.mes]||null;
+    if(col.anio&&!col.mes){// año total
+      const s=newSlot();
+      (porAnio[col.anio]||[]).forEach(m=>{const v=slotMap[m];if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}});
+      return s;
+    }
+    if(col.mes&&!col.anio){// mes sin año (modo mes›año)
+      const s=newSlot();
+      anios.forEach(y=>{const v=slotMap[y+'-'+col.mes];if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}});
+      return s;
+    }
+    return null;
+  }
 
-    L1keys.forEach(L1=>{
-      const L1label=L1==='__root__'?cultivo:L1;
-      let totL1={};mO.forEach(m=>totL1[m]={costo:0,dh:0,mzn:0,mznF:new Set()});
-      let acumL1={costo:0,dh:0,mzn:0};
-      let filasL2=[];
+  // Acumulado: sumar todos los slots hasta ese mes en orden
+  function colValAcum(slotMap,col,allCols){
+    if(col.isTotal||col.isAnio) return colVal(slotMap,col);
+    // Acumular desde inicio hasta este mes
+    const idx=allCols.indexOf(col);
+    const s=newSlot();
+    for(let i=0;i<=idx;i++){
+      const c=allCols[i];
+      if(!c.isAnio&&!c.isTotal&&c.mes){
+        const v=colVal(slotMap,c);
+        if(v){s.costo+=v.costo;s.dh+=v.dh;v.mznF&&v.mznF.forEach(k=>{if(!s.mznF.has(k)){s.mznF.add(k);s.mzn+=v.mzn;}});}
+      }
+    }
+    return s;
+  }
 
-      if(jerarquiaPiv===5){
-        // Solo Cultivo>Finca, sin sub-niveles ni CC
-        const slot=estructura[cultivo][L1]['__total__']||{};
-        mO.forEach(m=>{
-          const v=slot[m]||{costo:0,dh:0,mzn:0,mznF:new Set()};
-          totL1[m].costo+=v.costo;totL1[m].dh+=v.dh;
-          v.mznF&&v.mznF.forEach(k=>{if(!totL1[m].mznF.has(k)){totL1[m].mznF.add(k);totL1[m].mzn+=v.mzn;}});
-          totCult[m].costo+=v.costo;totCult[m].dh+=v.dh;
-          totG[m].costo+=v.costo;totG[m].dh+=v.dh;
-        });
-      } else {
-        // Iterar L2 (puesto/root)
-        const L2keys=Object.keys(estructura[cultivo][L1]).sort();
-        L2keys.forEach(L2=>{
-          const L2label=L2==='__root__'?'':L2;
-          let totL2={};mO.forEach(m=>totL2[m]={costo:0,dh:0,mzn:0,mznF:new Set()});
-          let acumL2={costo:0,dh:0,mzn:0};
-          let filasCuenta=[];
-
-          const ccKeys=Object.keys(estructura[cultivo][L1][L2]).sort();
-          ccKeys.forEach(cc=>{
-            let acumCC={costo:0,dh:0,mzn:0};
-            let totCC={costo:0,dh:0,mzn:0};
-            const celdas=mO.map(m=>{
-              const v=estructura[cultivo][L1][L2][cc][m]||null;
-              if(v){
-                totL2[m].costo+=v.costo;totL2[m].dh+=v.dh;
-                totL1[m].costo+=v.costo;totL1[m].dh+=v.dh;
-                totCult[m].costo+=v.costo;totCult[m].dh+=v.dh;
-                totG[m].costo+=v.costo;totG[m].dh+=v.dh;
-                if(v.mznF)v.mznF.forEach(k=>{
-                  if(!totL2[m].mznF.has(k)){totL2[m].mznF.add(k);totL2[m].mzn+=v.mzn;}
-                });
-                acumCC.costo+=v.costo;acumCC.dh+=v.dh;acumCC.mzn=Math.max(acumCC.mzn,v.mzn||0);
-                totCC.costo+=v.costo;totCC.dh+=v.dh;totCC.mzn=Math.max(totCC.mzn,v.mzn||0);
-              } else {
-                // acumCC mantiene valores anteriores para acumulado
-              }
-              const disp=vistaPiv==='acumulado'?
-                (acumCC.costo||acumCC.dh?fmtPivVal(null,acumCC):'<span style="color:#d1d5db">0</span>'):
-                (v?fmtPivVal(v,null):'<span style="color:#d1d5db">0</span>');
-              return`<td class="t-right"${vistaPiv==='acumulado'?' style="color:#9a3412"':''}>${disp}</td>`;
-            }).join('');
-            const totDisp=metricaPiv==='costo'?'C$ '+fmt(Math.round(totCC.costo)):metricaPiv==='dh'?fmt(Math.round(totCC.dh)):metricaPiv==='dhmzn'?(totCC.mzn>0?(totCC.dh/totCC.mzn).toFixed(2):'—'):(totCC.dh>0?'C$ '+fmt(Math.round(totCC.costo/totCC.dh)):'—');
-            if(jerarquiaPiv!==4)// no mostrar fila CC en modo Cultivo>Cuentas en la sub — se muestra como L1
-              filasCuenta.push(`<tr><td style="padding-left:${jerarquiaPiv===4?14:jerarquiaPiv===3?28:36}px;color:#374151;font-size:11px"><span style="color:var(--azul);font-weight:700;margin-right:4px">${cc}</span>${NOM_CC[cc]||cc}</td>${celdas}<td class="t-right" style="background:#f0fdf4;font-weight:600">${totDisp}</td></tr>`);
-            else
-              filasCuenta.push(`<tr><td style="padding-left:14px;color:#374151;font-size:11px"><span style="color:var(--azul);font-weight:700;margin-right:4px">${cc}</span>${NOM_CC[cc]||cc}</td>${celdas}<td class="t-right" style="background:#f0fdf4;font-weight:600">${totDisp}</td></tr>`);
-          });
-
-          if(L2!=='__root__'&&jerarquiaPiv!==3&&jerarquiaPiv!==4){
-            // Fila L2 (Puesto o Finca nivel 2)
-            let acumL2r={costo:0,dh:0,mzn:0};
-            const totL2total={costo:mO.reduce((s,m)=>s+totL2[m].costo,0),dh:mO.reduce((s,m)=>s+totL2[m].dh,0),mzn:Math.max(...mO.map(m=>totL2[m].mzn||0))};
-            const celdasL2=mO.map(m=>{
-              if(vistaPiv==='acumulado'){acumL2r.costo+=totL2[m].costo;acumL2r.dh+=totL2[m].dh;acumL2r.mzn=Math.max(acumL2r.mzn,totL2[m].mzn||0);}
-              const disp=vistaPiv==='acumulado'?fmtPivVal(null,acumL2r):fmtPivVal(totL2[m],null);
-              return`<td class="t-right font-bold"${vistaPiv==='acumulado'?' style="color:#9a3412"':''}>${disp}</td>`;
-            }).join('');
-            const totL2disp=metricaPiv==='costo'?'C$ '+fmt(Math.round(totL2total.costo)):metricaPiv==='dh'?fmt(Math.round(totL2total.dh)):metricaPiv==='dhmzn'?(totL2total.mzn>0?(totL2total.dh/totL2total.mzn).toFixed(2):'—'):(totL2total.dh>0?'C$ '+fmt(Math.round(totL2total.costo/totL2total.dh)):'—');
-            filasL2.push(`<tr style="background:#f8fafc"><td style="padding-left:20px;font-weight:700">◦ ${L2label}</td>${celdasL2}<td class="t-right" style="background:#e8f5e9;font-weight:700">${totL2disp}</td></tr>`);
+  // Para filas de subtotal (cultivo/L1/L2), el slotMap es {colId→slot} ya pre-calculado
+  // Solo necesitamos obtener el slot para esa columna directamente
+  function getSubVal(preCalcSlots,col){
+    const slot=preCalcSlots[col.id]||newSlot();
+    if(vistaPiv==='acumulado'){
+      // Acumular desde el primer mes hasta esta columna
+      if(!col.isAnio&&!col.isTotal&&col.mes){
+        const s=newSlot();
+        for(const cd of colDefs){
+          if(cd.id===col.id){
+            // sumar este y parar
+            const v=preCalcSlots[cd.id];
+            if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
+            break;
           }
-          filasL2=filasL2.concat(filasCuenta);
-        });
+          if(!cd.isAnio&&!cd.isTotal&&cd.mes){
+            const v=preCalcSlots[cd.id];
+            if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
+          }
+        }
+        return calcPivVal(s);
       }
+    }
+    return calcPivVal(slot);
+  }
 
-      // Fila L1
-      const totL1total={costo:mO.reduce((s,m)=>s+totL1[m].costo,0),dh:mO.reduce((s,m)=>s+totL1[m].dh,0),mzn:Math.max(...mO.map(m=>totL1[m].mzn||0))};
-      let acumL1r={costo:0,dh:0,mzn:0};
-      const celdasL1=mO.map(m=>{
-        if(vistaPiv==='acumulado'){acumL1r.costo+=totL1[m].costo;acumL1r.dh+=totL1[m].dh;acumL1r.mzn=Math.max(acumL1r.mzn,totL1[m].mzn||0);}
-        const disp=vistaPiv==='acumulado'?fmtPivVal(null,acumL1r):fmtPivVal(totL1[m],null);
-        return`<td class="t-right" style="font-weight:700${vistaPiv==='acumulado'?';color:#9a3412':''}">${disp}</td>`;
-      }).join('');
-      const totL1disp=metricaPiv==='costo'?'C$ '+fmt(Math.round(totL1total.costo)):metricaPiv==='dh'?fmt(Math.round(totL1total.dh)):metricaPiv==='dhmzn'?(totL1total.mzn>0?(totL1total.dh/totL1total.mzn).toFixed(2):'—'):(totL1total.dh>0?'C$ '+fmt(Math.round(totL1total.costo/totL1total.dh)):'—');
+  function getVal(slotMap,col){
+    const v=vistaPiv==='acumulado'?colValAcum(slotMap,col,colDefs):colVal(slotMap,col);
+    return calcPivVal(v);
+  }
 
-      if(L1!=='__root__'){
-        filasSub.push(`<tr style="background:#f1f5f9"><td style="padding-left:14px;font-weight:700;color:#1f2937">📍 ${L1label}</td>${celdasL1}<td class="t-right" style="background:#e8f5e9;font-weight:700">${totL1disp}</td></tr>`);
+  // 5. Construir HTML thead
+  const thStyle='padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;';
+  const thNum=`${thStyle}text-align:right;`;
+  let thead='<thead>';
+
+  // Fila 1 header: etiquetas de columnas con botón expand
+  thead+=`<tr style="background:#f3f4f6;"><th style="${thStyle}min-width:200px;position:sticky;left:0;z-index:12;background:#f3f4f6;">Cultivo / Jerarquía</th>`;
+  colDefs.forEach(col=>{
+    if(col.isTotal){
+      thead+=`<th style="${thNum}background:#e8f5e9;min-width:90px;position:sticky;right:0;z-index:11;">Total</th>`;
+    } else if(col.isAnio){
+      const icon=col.exp===undefined?'':(col.exp?'▾ ':'▸ ');
+      const onclick=modoColumnas==='anomes'?`onclick="togglePivCol('${col.anio||col.id}')"`:(modoColumnas==='mes'?`onclick="togglePivCol('${col.id}')"`:``);
+      const bg=col.anio?'#eef2ff':'#f0fdf4';
+      thead+=`<th style="${thNum}background:${bg};cursor:pointer;min-width:90px;" ${onclick}>${icon}${col.label}</th>`;
+    } else {
+      thead+=`<th style="${thNum}min-width:80px;">${col.label}</th>`;
+    }
+  });
+  thead+='</tr></thead>';
+
+  // 6. Construir rows
+  const rows=[];
+  // Acumulados globales por columna
+  const totGlobal={};colDefs.forEach(c=>totGlobal[c.id]=newSlot());
+
+  Object.keys(est).sort().forEach(cultivo=>{
+    const color=C_CULT[cultivo]||'#2563eb';
+    const keyC=`C:${cultivo}`;
+    const expC=pivRowExpand[keyC]!==false;// default expandido
+
+    // Calcular subtotales por columna para cultivo
+    // Estrategia: para cada columna visible, sumar los slots hoja (cc→mes)
+    const cultivoSlots={};
+    colDefs.forEach(col=>{
+      if(col.isTotal){
+        // Total = suma de TODOS los meses de todos los cc
+        const s=newSlot();
+        Object.keys(est[cultivo]).forEach(L1=>Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
+          Object.values(est[cultivo][L1][L2][cc]).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
+        })));
+        cultivoSlots[col.id]=s;
+      } else {
+        const s=newSlot();
+        Object.keys(est[cultivo]).forEach(L1=>Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
+          const v=colVal(est[cultivo][L1][L2][cc],col);
+          if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
+        })));
+        cultivoSlots[col.id]=s;
       }
-      filasSub=filasSub.concat(filasL2);
+    });
+    // totGlobal
+    colDefs.forEach(col=>{
+      const s=cultivoSlots[col.id];
+      if(s){totGlobal[col.id].costo+=s.costo;totGlobal[col.id].dh+=s.dh;addMzn(totGlobal[col.id],s);}
     });
 
-    // Fila Cultivo
-    const totCultTotal={costo:mO.reduce((s,m)=>s+totCult[m].costo,0),dh:mO.reduce((s,m)=>s+totCult[m].dh,0),mzn:Math.max(...mO.map(m=>totCult[m].mzn||0))};
-    totGTotal.costo+=totCultTotal.costo;totGTotal.dh+=totCultTotal.dh;
-    let acumCultR={costo:0,dh:0,mzn:0};
-    const celdasCult=mO.map(m=>{
-      totG[m].costo+=0;// ya sumado arriba
-      if(vistaPiv==='acumulado'){acumCultR.costo+=totCult[m].costo;acumCultR.dh+=totCult[m].dh;acumCultR.mzn=Math.max(acumCultR.mzn,totCult[m].mzn||0);}
-      const disp=vistaPiv==='acumulado'?fmtPivVal(null,acumCultR):fmtPivVal(totCult[m],null);
-      return`<td class="t-right" style="font-weight:800${vistaPiv==='acumulado'?';color:#9a3412':''}">${disp}</td>`;
-    }).join('');
-    const totCultDisp=metricaPiv==='costo'?'C$ '+fmt(Math.round(totCultTotal.costo)):metricaPiv==='dh'?fmt(Math.round(totCultTotal.dh)):metricaPiv==='dhmzn'?(totCultTotal.mzn>0?(totCultTotal.dh/totCultTotal.mzn).toFixed(2):'—'):(totCultTotal.dh>0?'C$ '+fmt(Math.round(totCultTotal.costo/totCultTotal.dh)):'—');
-    filas.push(`<tr style="background:${color}18;border-top:2px solid ${color}"><td style="font-weight:800;color:${color};font-size:12px;padding:8px 10px">🌱 ${cultivo.toUpperCase()}</td>${celdasCult}<td class="t-right" style="background:${color}28;font-weight:800;color:${color}">${totCultDisp}</td></tr>`);
-    filas=filas.concat(filasSub);
+    // Fila cultivo
+    let rowCult=`<tr data-piv-row="${keyC}" style="background:${color}18;border-top:2px solid ${color};cursor:pointer;" onclick="togglePivRow('${keyC}')">`;
+    rowCult+=`<td style="font-weight:800;color:${color};font-size:12px;padding:9px 12px;position:sticky;left:0;background:${color}18;z-index:5;">${expC?'▾':'▸'} 🌱 ${cultivo.toUpperCase()}</td>`;
+    colDefs.forEach(col=>{
+      const v=getSubVal(cultivoSlots,col);
+      const bg=col.isTotal?`background:${color}28;`:'';
+      rowCult+=`<td style="text-align:right;font-weight:800;${vistaPiv==='acumulado'?'color:#9a3412;':''} ${bg}padding:8px 10px;">${fmtPiv(v)}</td>`;
+    });
+    rowCult+='</tr>';
+    rows.push(rowCult);
+
+    if(!expC)return;
+
+    // Filas L1
+    Object.keys(est[cultivo]).sort().forEach(L1=>{
+      const L1label=L1==='__'?'':L1;
+      const keyL1=`L1:${cultivo}:${L1}`;
+      const expL1=pivRowExpand[keyL1]!==false;
+      const showL1=jerarquiaPiv!==4;// en C>CC no hay L1
+
+      // Subtotales L1
+      const L1slots={};
+      colDefs.forEach(col=>{
+        if(col.isTotal){
+          const s=newSlot();
+          Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
+            Object.values(est[cultivo][L1][L2][cc]).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
+          }));
+          L1slots[col.id]=s;
+        } else {
+          const s=newSlot();
+          Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
+            const v=colVal(est[cultivo][L1][L2][cc],col);
+            if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
+          }));
+          L1slots[col.id]=s;
+        }
+      });
+
+      if(showL1){
+        let rowL1=`<tr data-piv-row="${keyL1}" style="background:#f1f5f9;cursor:pointer;" onclick="togglePivRow('${keyL1}')">`;
+        rowL1+=`<td style="padding-left:18px;font-weight:700;color:#1f2937;position:sticky;left:0;background:#f1f5f9;z-index:5;">${expL1?'▾':'▸'} 📍 ${L1label}</td>`;
+        colDefs.forEach(col=>{
+          const v=getSubVal(L1slots,col);
+          const bg=col.isTotal?'background:#e8f5e9;':'';
+          rowL1+=`<td style="text-align:right;font-weight:700;${vistaPiv==='acumulado'?'color:#9a3412;':''}${bg}padding:7px 10px;">${fmtPiv(v)}</td>`;
+        });
+        rowL1+='</tr>';
+        rows.push(rowL1);
+        if(!expL1)return;
+      }
+
+      // Filas L2
+      Object.keys(est[cultivo][L1]).sort().forEach(L2=>{
+        const L2label=L2==='__'?'':L2;
+        const keyL2=`L2:${cultivo}:${L1}:${L2}`;
+        const expL2=pivRowExpand[keyL2]!==false;
+        const showL2=L2!=='__'&&jerarquiaPiv!==5;
+
+        const L2slots={};
+        colDefs.forEach(col=>{
+          if(col.isTotal){
+            const s=newSlot();
+            Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
+              Object.values(est[cultivo][L1][L2][cc]).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
+            });
+            L2slots[col.id]=s;
+          } else {
+            const s=newSlot();
+            Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
+              const v=colVal(est[cultivo][L1][L2][cc],col);
+              if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
+            });
+            L2slots[col.id]=s;
+          }
+        });
+
+        if(showL2){
+          let rowL2=`<tr data-piv-row="${keyL2}" style="background:#f8fafc;cursor:pointer;" onclick="togglePivRow('${keyL2}')">`;
+          const indent=showL1?32:18;
+          rowL2+=`<td style="padding-left:${indent}px;font-weight:600;color:#374151;position:sticky;left:0;background:#f8fafc;z-index:5;">${expL2?'▾':'▸'} ◦ ${L2label}</td>`;
+          colDefs.forEach(col=>{
+            const v=getSubVal(L2slots,col);
+            const bg=col.isTotal?'background:#f0fdf4;':'';
+            rowL2+=`<td style="text-align:right;${vistaPiv==='acumulado'?'color:#9a3412;':''}${bg}padding:7px 10px;">${fmtPiv(v)}</td>`;
+          });
+          rowL2+='</tr>';
+          rows.push(rowL2);
+          if(!expL2)return;
+        }
+
+        // Filas CC
+        if(jerarquiaPiv!==5){
+          Object.keys(est[cultivo][L1][L2]).sort().forEach(cc=>{
+            if(cc==='__')return;
+            const ccSlots=est[cultivo][L1][L2][cc];
+            let rowCC='<tr style="background:white;">';
+            const indent2=(showL1?18:0)+(showL2?16:0)+20;
+            rowCC+=`<td style="padding-left:${indent2}px;color:#374151;font-size:11px;position:sticky;left:0;background:white;z-index:5;"><span style="color:var(--azul);font-weight:700;margin-right:4px;">${cc}</span>${NOM_CC[cc]||cc}</td>`;
+            colDefs.forEach(col=>{
+              const v=getVal(ccSlots,col);
+              const bg=col.isTotal?'background:#f0fdf4;font-weight:600;':'';
+              rowCC+=`<td style="text-align:right;${vistaPiv==='acumulado'?'color:#9a3412;':''}${bg}padding:6px 10px;border-bottom:1px solid #f1f5f9;">${fmtPiv(v)}</td>`;
+            });
+            rowCC+='</tr>';
+            rows.push(rowCC);
+          });
+        }
+      });
+    });
   });
 
-  document.getElementById(`tbody-piv-${sufijo}`).innerHTML=filas.join('');
+  // Fila total global
+  let rowTot=`<tr style="background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db;position:sticky;bottom:0;z-index:8;">`;
+  rowTot+=`<td style="padding:8px 12px;position:sticky;left:0;background:#f3f4f6;z-index:9;font-weight:800;">TOTAL GENERAL</td>`;
+  colDefs.forEach(col=>{
+    const v=calcPivVal(totGlobal[col.id]);
+    const bg=col.isTotal?'background:#e8f5e9;':'';
+    rowTot+=`<td style="text-align:right;${bg}padding:8px 10px;">${fmtPiv(v)}</td>`;
+  });
+  rowTot+='</tr>';
 
-  // Fila total general
-  // Recalcular totG desde estructura (ya sumado en el loop)
-  let acumTotR={costo:0,dh:0,mzn:0};
-  const celT=mO.map(m=>{
-    if(vistaPiv==='acumulado'){acumTotR.costo+=totG[m].costo;acumTotR.dh+=totG[m].dh;}
-    const obj=vistaPiv==='acumulado'?acumTotR:totG[m];
-    const disp=metricaPiv==='costo'?'C$ '+fmt(Math.round(obj.costo)):metricaPiv==='dh'?fmt(Math.round(obj.dh)):metricaPiv==='dhmzn'?(obj.mzn>0?(obj.dh/obj.mzn).toFixed(2):'—'):(obj.dh>0?'C$ '+fmt(Math.round(obj.costo/obj.dh)):'—');
-    return`<td class="t-right"${vistaPiv==='acumulado'?' style="color:#9a3412"':''}>${disp}</td>`;
-  }).join('');
-  const totGDisp=metricaPiv==='costo'?'C$ '+fmt(Math.round(totGTotal.costo)):metricaPiv==='dh'?fmt(Math.round(totGTotal.dh)):metricaPiv==='dhmzn'?(totGTotal.mzn>0?(totGTotal.dh/totGTotal.mzn).toFixed(2):'—'):(totGTotal.dh>0?'C$ '+fmt(Math.round(totGTotal.costo/totGTotal.dh)):'—');
-  document.getElementById(`tft-piv-${sufijo}`).innerHTML=`<td>TOTAL GENERAL</td>${celT}<td class="t-right" style="background:#e8f5e9">${totGDisp}</td>`;
+  tbl.innerHTML=thead+`<tbody>${rows.join('')}</tbody><tfoot>${rowTot}</tfoot>`;
 }
 
 // ─── EXPORTAR EXCEL ───
@@ -1362,30 +1668,24 @@ function exportarPivoteExcel(){
   const est=seccionPiv==='n1'?_pivDatos.estN1:_pivDatos.estN6;
   if(!est||Object.keys(est).length===0){alert('Sin datos para exportar');return;}
   const mesSet=new Set();
-  function recMeses(obj){if(typeof obj!=='object'||obj===null)return;Object.keys(obj).forEach(k=>{if(/^\d{4}-\d{2}$/.test(k))mesSet.add(k);else recMeses(obj[k]);});}
-  recMeses(est);
+  function recM(o){if(!o)return;for(const k of Object.keys(o)){if(/^\d{4}-\d{2}$/.test(k))mesSet.add(k);else recM(o[k]);}}
+  recM(est);
   const mO=Array.from(mesSet).sort();
   const wb=XLSX.utils.book_new();
-  const rows=[['Cultivo','Nivel1','Nivel2','Cuenta','Nombre Cuenta',...mO.map(etqMesAnio),'Total']];
-  Object.keys(est).sort().forEach(cultivo=>{
-    Object.keys(est[cultivo]).sort().forEach(L1=>{
-      if(jerarquiaPiv===5){
-        const slot=est[cultivo][L1]['__total__']||{};
-        let tot=0;const vals=mO.map(m=>{const v=slot[m]?slot[m].costo:0;tot+=v;return v;});
-        rows.push([cultivo,L1,'','','Costo Total',...vals,tot]);
-      } else {
-        Object.keys(est[cultivo][L1]).sort().forEach(L2=>{
-          Object.keys(est[cultivo][L1][L2]).sort().forEach(cc=>{
-            let tot=0;
-            const vals=mO.map(m=>{const v=est[cultivo][L1][L2][cc][m];const c=v?v.costo:0;tot+=c;return c;});
-            rows.push([cultivo,L1===('__root__')?'':L1,L2===('__root__')?'':L2,cc,NOM_CC[cc]||cc,...vals,tot]);
-          });
+  const rows=[['Cultivo','L1','L2','Cuenta','Nombre',...mO.map(etqMesAnio),'Total']];
+  Object.keys(est).sort().forEach(cu=>{
+    Object.keys(est[cu]).sort().forEach(L1=>{
+      Object.keys(est[cu][L1]).sort().forEach(L2=>{
+        Object.keys(est[cu][L1][L2]).sort().forEach(cc=>{
+          let tot=0;
+          const vals=mO.map(m=>{const s=est[cu][L1][L2][cc][m];const v=calcPivVal(s||null);tot+=v;return Math.round(v*100)/100;});
+          rows.push([cu,L1==='__'?'':L1,L2==='__'?'':L2,cc==='__'?'':cc,NOM_CC[cc]||cc,...vals,Math.round(tot*100)/100]);
         });
-      }
+      });
     });
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb,ws,`Pivote_N${seccionPiv==='n1'?'1':'6'}`);
+  XLSX.utils.book_append_sheet(wb,ws,`Pivote_${seccionPiv}`);
   XLSX.writeFile(wb,`PivoteMO_${seccionPiv}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 // ─── POPUP ORIGEN ───
