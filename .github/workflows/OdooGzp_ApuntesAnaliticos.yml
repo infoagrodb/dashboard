@@ -17,8 +17,6 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Llamar a Odoo JSON-RPC y guardar resultado
-        env:
-          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
         run: |
           echo "Llamando a Odoo account.analytic.line..."
           curl -s -X POST https://grupozp.odoo.com/jsonrpc \
@@ -33,7 +31,7 @@ jobs:
               "args": [
                 "grupozp-main-13656030",
                 7,
-                "'"$ODOO_PASSWORD"'",
+                "Meganet37**",
                 "account.analytic.line",
                 "search_read",
                 [],
@@ -71,20 +69,4 @@ jobs:
           git config user.email "actions@github.com"
           git add OdooGzp_ApuntesAnaliticos.json
           git commit -m "Actualización automática de Apuntes Analíticos desde Odoo" || echo "No hay cambios"
-          intento=1
-          maximo_intentos=5
-          while [ $intento -le $maximo_intentos ]; do
-            echo "Intento de push #$intento..."
-            if git pull --rebase origin main && git push origin main; then
-              echo "Push exitoso."
-              break
-            fi
-            if [ $intento -eq $maximo_intentos ]; then
-              echo "Se agotaron los intentos de push."
-              exit 1
-            fi
-            espera=$(( (RANDOM % 5) + 3 ))
-            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
-            sleep $espera
-            intento=$((intento + 1))
-          done
+          git push origin main
