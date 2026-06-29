@@ -17,7 +17,7 @@
   --ok-bg:#d1fae5; --ok-text:#065f46; --warn-bg:#fef3c7; --warn-text:#b45309; --bad-bg:#fee2e2; --bad-text:#991b1b;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-main);font-size:12px;overflow:hidden;height:100vh;display:flex;}
+body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-main);font-size:12px;overflow-x:hidden;height:100vh;display:flex;}
 
 /* ===== SIDEBAR ===== */
 .sidebar{width:var(--nav-w);background:var(--brand-primary);display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:100;transition:width .25s ease;overflow:hidden;}
@@ -40,7 +40,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-ma
 .nav-text{overflow:hidden;white-space:nowrap;}
 
 /* ===== MAIN ===== */
-.main{margin-left:var(--nav-w);width:calc(100% - var(--nav-w));height:100vh;display:flex;flex-direction:column;transition:margin-left .25s,width .25s;}
+.main{margin-left:var(--nav-w);width:calc(100% - var(--nav-w));height:100vh;display:flex;flex-direction:column;transition:margin-left .25s,width .25s;overflow:hidden;min-width:0;}
 .main.expanded{margin-left:var(--nav-w-collapsed);width:calc(100% - var(--nav-w-collapsed));}
 
 /* ===== TOPBAR ===== */
@@ -54,12 +54,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-ma
 .btn-update:hover{opacity:.9;}
 
 /* ===== FILTER BAR ===== */
-.filter-bar{background:#fff;border-bottom:1px solid var(--border-light);padding:5px 14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;position:relative;z-index:50;}
+.filter-bar{background:#fff;border-bottom:1px solid var(--border-light);padding:5px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;position:relative;z-index:50;}
 .filter-group{display:flex;flex-direction:column;gap:2px;position:relative;}
 .filter-group label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
-.form-control{background:#fff;border:1px solid var(--border-light);border-radius:5px;color:var(--text-main);font-size:11px;padding:3px 7px;height:24px;font-family:inherit;font-weight:500;outline:none;cursor:pointer;min-width:120px;}
+.form-control{background:#fff;border:1px solid var(--border-light);border-radius:5px;color:var(--text-main);font-size:11px;padding:3px 7px;height:24px;font-family:inherit;font-weight:500;outline:none;cursor:pointer;min-width:80px;max-width:100%;}
 .msel{position:relative;}
-.msel-btn{width:100%;text-align:left;padding:3px 7px;border-radius:5px;border:1px solid var(--border-light);background:#fff;font-size:11px;font-family:inherit;font-weight:500;height:24px;cursor:pointer;color:var(--text-main);min-width:120px;}
+.msel-btn{width:100%;text-align:left;padding:3px 7px;border-radius:5px;border:1px solid var(--border-light);background:#fff;font-size:11px;font-family:inherit;font-weight:500;height:24px;cursor:pointer;color:var(--text-main);min-width:80px;outline:none;}
 .msel-panel{display:none;position:absolute;top:calc(100% + 2px);left:0;background:#fff;border:1px solid var(--border-light);border-radius:6px;box-shadow:var(--shadow-md);padding:5px;max-height:200px;overflow-y:auto;min-width:180px;z-index:200;}
 .msel-panel.open{display:block;}
 .msel-item{display:flex;align-items:center;gap:5px;padding:4px 6px;font-size:11px;border-radius:4px;cursor:pointer;}
@@ -69,19 +69,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-ma
 .filter-divider{width:1px;height:28px;background:var(--border-light);margin:0 4px;}
 
 /* ===== CONTENT AREA ===== */
-.content-area{flex:1;overflow-y:auto;padding:10px 14px;}
+.content-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 14px;-webkit-overflow-scrolling:touch;}
 .page{display:none;} .page.active{display:block;}
 
 /* ===== CARDS & GRIDS ===== */
 .section-title{font-size:11px;font-weight:700;color:var(--brand-primary);text-transform:uppercase;margin:10px 0 6px;border-left:3px solid #52b788;padding-left:7px;}
-.chart-card{background:#fff;border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;margin-bottom:8px;box-shadow:var(--shadow-sm);}
+.chart-card{background:#fff;border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;margin-bottom:8px;box-shadow:var(--shadow-sm);overflow:hidden;min-width:0;}
 .chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;border-bottom:1px solid var(--border-light);padding-bottom:4px;}
 .chart-title{font-size:11px;font-weight:700;color:var(--text-main);}
 .chart-desc{font-size:10px;color:var(--text-muted);margin-top:1px;}
-.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
-.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;}
+.grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px;}
+.grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px;}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px;}
-.kpi-card{background:#fff;border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;border-top:3px solid var(--brand-primary);box-shadow:var(--shadow-sm);}
+.kpi-card{background:#fff;border:1px solid var(--border-light);border-radius:8px;padding:8px 12px;border-top:3px solid var(--brand-primary);box-shadow:var(--shadow-sm);min-width:0;overflow:hidden;}
 .kpi-card.bad{border-top-color:#e74c3c;} .kpi-card.warn{border-top-color:var(--brand-accent);}
 .kpi-title{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;}
 .kpi-value{font-size:19px;font-weight:700;color:var(--brand-primary);line-height:1.1;margin:3px 0;}
@@ -138,7 +138,66 @@ table.heat-table td:first-child{text-align:left;font-weight:600;color:var(--bran
 .ciclo-check input{display:none;}
 .ciclo-check.selected{color:#fff;}
 input.factor-input{width:70px;padding:2px 5px;font-size:11px;border:1px solid var(--border-light);border-radius:4px;text-align:right;font-family:inherit;}
-@media(max-width:1024px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:1200px){
+  .grid-3{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:1100px){
+  :root{--nav-w:180px;}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .filter-bar{gap:6px;}
+  .form-control,.msel-btn{min-width:90px;font-size:10px;}
+  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}
+}
+@media(max-width:768px){
+  /* Sidebar auto-colapsado en móvil */
+  .sidebar{width:var(--nav-w-collapsed);}
+  .sidebar-brand,.nav-text,.nav-label{display:none;}
+  .main{margin-left:var(--nav-w-collapsed);width:calc(100% - var(--nav-w-collapsed));}
+  .grid-2,.grid-3{grid-template-columns:1fr;}
+  .filter-bar{flex-direction:column;align-items:stretch;gap:4px;}
+  .filter-group{width:100%;}
+  .form-control,.msel-btn{min-width:100%;width:100%;}
+  .filter-divider{display:none;}
+  .content-area{padding:6px 8px;}
+  .kpi-grid{grid-template-columns:1fr 1fr;}
+  .kpi-value{font-size:16px;}
+  .chart-card{padding:6px 8px;}
+  .topbar{padding:4px 8px;}
+  .page-title{font-size:11px;}
+}
+@media(max-width:480px){
+  .kpi-grid{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .main{margin-left:0;width:100%;}
+}
+
+.ch-sm{position:relative;width:100%;height:190px;}
+.ch-md{position:relative;width:100%;height:230px;}
+.ch-lg{position:relative;width:100%;height:280px;}
+.ch-xl{position:relative;width:100%;height:320px;}
+@media(max-width:1100px){
+  .ch-sm{height:150px;}
+  .ch-md{height:170px;}
+  .ch-lg{height:200px;}
+  .ch-xl{height:220px;}
+}
+@media(max-width:768px){
+  .ch-sm{height:130px;}
+  .ch-md{height:150px;}
+  .ch-lg{height:170px;}
+  .ch-xl{height:190px;}
+}
+
+canvas{max-width:100%;}
+.ch-sm,.ch-md,.ch-lg,.ch-xl{width:100%;overflow:hidden;}
+
+.msel-btn:focus,.msel-btn:active,.form-control:focus,.form-control:active{
+  outline:none;
+  border-color:var(--border-light);
+  box-shadow:none;
+}
 </style>
 </head>
 
@@ -245,11 +304,11 @@ input.factor-input{width:70px;padding:2px 5px;font-size:11px;border:1px solid va
   <div id="comp-kpis" class="kpi-grid"></div>
   <div class="chart-card" id="comp-chart-wrap" style="display:none">
     <div class="chart-header"><div><div class="chart-title" id="comp-chart-title">Lts/HM por actividad</div><div class="chart-desc">Comparativo por ciclo</div></div></div>
-    <div style="position:relative;height:280px"><canvas id="ch_comp_actividad"></canvas></div>
+    <div class="ch-lg"><canvas id="ch_comp_actividad"></canvas></div>
   </div>
   <div class="chart-card" id="comp-eq-wrap" style="display:none">
     <div class="chart-header"><div><div class="chart-title" id="comp-eq-title">HM y Lts/HM por equipo</div><div class="chart-desc">Barras=HM · Línea=Lts/HM · Azul=actual · Gris=anterior</div></div></div>
-    <div style="position:relative;height:320px"><canvas id="ch_comp_equipos"></canvas></div>
+    <div class="ch-xl"><canvas id="ch_comp_equipos"></canvas></div>
     <div class="note" id="comp-eq-note"></div>
   </div>
 </div>
@@ -270,7 +329,7 @@ input.factor-input{width:70px;padding:2px 5px;font-size:11px;border:1px solid va
       <div id="modal-kpis" class="kpi-grid" style="margin-bottom:10px"></div>
       <div class="chart-card" style="margin-bottom:8px">
         <div class="chart-header"><div><div class="chart-title" id="modal-chart1-title">Lts/HM por actividad</div><div class="chart-desc">Comparativo entre ciclos para este equipo</div></div></div>
-        <div style="position:relative;height:260px"><canvas id="modal-ch-actividad"></canvas></div>
+        <div class="ch-lg"><canvas id="modal-ch-actividad"></canvas></div>
       </div>
       <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Resumen por ciclo</div></div></div><div id="modal-tabla"></div></div>
     </div>
@@ -666,18 +725,18 @@ function renderResumen(groups){
   document.getElementById('page-resumen').innerHTML = kpiHtml + `
     <div class="section-title">1. Avance general del ciclo</div>
     <div class="grid-2">
-      <div class="chart-card"><div class="chart-title">Avance acumulado (Mz) - ${tituloAct}</div><div style="position:relative;width:100%;height:230px"><canvas id="c1"></canvas></div></div>
-      <div class="chart-card"><div class="chart-title">Manzanas por dia - click para filtrar</div><div style="position:relative;width:100%;height:230px"><canvas id="c2"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Avance acumulado (Mz) - ${tituloAct}</div><div class="ch-md"><canvas id="c1"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Manzanas por dia - click para filtrar</div><div class="ch-md"><canvas id="c2"></canvas></div></div>
     </div>
-    <div class="chart-card"><div class="chart-title">Avance por finca (top 10) - click para filtrar</div><div style="position:relative;width:100%;height:190px"><canvas id="c3"></canvas></div></div>
+    <div class="chart-card"><div class="chart-title">Avance por finca (top 10) - click para filtrar</div><div class="ch-sm"><canvas id="c3"></canvas></div></div>
     <div class="section-title">2. Eficiencia vs presupuesto</div>
     <div class="grid-2">
-      <div class="chart-card"><div class="chart-title">Lts/Mz acumulado vs presupuesto</div><div style="position:relative;width:100%;height:210px"><canvas id="c4"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2d6a4f"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
-      <div class="chart-card"><div class="chart-title">HM/Mz acumulado vs presupuesto</div><div style="position:relative;width:100%;height:210px"><canvas id="c5"></canvas></div><div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
+      <div class="chart-card"><div class="chart-title">Lts/Mz acumulado vs presupuesto</div><div class="ch-sm"><canvas id="c4"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2d6a4f"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
+      <div class="chart-card"><div class="chart-title">HM/Mz acumulado vs presupuesto</div><div class="ch-sm"><canvas id="c5"></canvas></div><div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
     </div>
     <div class="grid-2">
-      <div class="chart-card"><div class="chart-title">Lts/Mz por actividad vs presupuesto - click para cambiar actividad</div><div style="position:relative;width:100%;height:240px"><canvas id="c6"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2d6a4f"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
-      <div class="chart-card"><div class="chart-title">HM/Mz por actividad vs presupuesto - click para cambiar actividad</div><div style="position:relative;width:100%;height:240px"><canvas id="c7"></canvas></div><div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
+      <div class="chart-card"><div class="chart-title">Lts/Mz por actividad vs presupuesto - click para cambiar actividad</div><div class="ch-md"><canvas id="c6"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2d6a4f"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
+      <div class="chart-card"><div class="chart-title">HM/Mz por actividad vs presupuesto - click para cambiar actividad</div><div class="ch-md"><canvas id="c7"></canvas></div><div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
     </div>
     <div class="section-title">Mapa de calor — Eficiencia por actividad vs presupuesto</div>
     <div class="chart-card" style="overflow:auto">
@@ -686,8 +745,8 @@ function renderResumen(groups){
     </div>
     <div class="section-title">3. Recursos y operacion</div>
     <div class="grid-2">
-      <div class="chart-card"><div class="chart-title">Horas motor por categoria de equipo - click para filtrar</div><div style="position:relative;width:100%;height:230px"><canvas id="c8"></canvas></div><div class="legend" id="legend8"></div></div>
-      <div class="chart-card"><div class="chart-title">Litros despachados por semana - click para filtrar</div><div style="position:relative;width:100%;height:230px"><canvas id="c9"></canvas></div></div>
+      <div class="chart-card"><div class="chart-title">Horas motor por categoria de equipo - click para filtrar</div><div class="ch-md"><canvas id="c8"></canvas></div><div class="legend" id="legend8"></div></div>
+      <div class="chart-card"><div class="chart-title">Litros despachados por semana - click para filtrar</div><div class="ch-md"><canvas id="c9"></canvas></div></div>
     </div>
     <div class="section-title">4. Tabla de alertas por finca</div>
     <div class="chart-card">
@@ -1080,11 +1139,11 @@ function renderAlertTable(payload){
 function renderAvanzado(groups){
   document.getElementById('page-avanzado').innerHTML=`
     <div class="section-title">B1. Comparativo entre ciclos - Avance acumulado (Mz)</div>
-    <div class="chart-card"><div style="position:relative;width:100%;height:240px"><canvas id="cb1"></canvas></div><div class="legend" id="legendb1"></div></div>
+    <div class="chart-card"><div class="ch-md"><canvas id="cb1"></canvas></div><div class="legend" id="legendb1"></div></div>
     <div class="section-title">B2. Comparativo entre ciclos - Lts/Mz acumulado</div>
-    <div class="chart-card"><div style="position:relative;width:100%;height:240px"><canvas id="cb2"></canvas></div><div class="legend" id="legendb2"></div></div>
+    <div class="chart-card"><div class="ch-md"><canvas id="cb2"></canvas></div><div class="legend" id="legendb2"></div></div>
     <div class="section-title">C1. Comparativo entre ciclos - HM/Mz acumulado</div>
-    <div class="chart-card"><div style="position:relative;width:100%;height:240px"><canvas id="cc1"></canvas></div><div class="legend" id="legendc1"></div></div>
+    <div class="chart-card"><div class="ch-md"><canvas id="cc1"></canvas></div><div class="legend" id="legendc1"></div></div>
     <div class="section-title">C2. Mapa de calor Finca x Actividad (Lts/Mz real)</div>
     <div class="chart-card" style="overflow:auto"><div id="heatmap"></div></div>
   `;
@@ -1342,7 +1401,7 @@ function renderContent(rows){
           <div class="chart-desc">Barras = HM totales trabajadas (eje izquierdo) · Línea = Lts/HM (eje derecho) · Línea punteada amarilla = promedio Lts/HM</div>
         </div>
       </div>
-      <div style="position:relative;height:360px"><canvas id="ch_eq_combo"></canvas></div>
+      <div class="ch-xl"><canvas id="ch_eq_combo"></canvas></div>
       <div class="legend">
         <span><span class="ldot" style="background:#2E6FBA"></span>Horas Motor totales</span>
         <span><span class="ldot" style="background:#D9445E;border-radius:50%"></span>Lts/HM (sobre promedio)</span>
@@ -1352,9 +1411,9 @@ function renderContent(rows){
     </div>
     <div class="section-title">2. Uso por Actividad (Horas Motor)</div>
     <div class="grid-3">
-      <div class="chart-card"><div class="chart-header"><div><div class="chart-title">¿Dónde va el tiempo? — HM por actividad</div><div class="chart-desc">Distribución porcentual del total de horas motor</div></div></div><div style="position:relative;height:280px"><canvas id="ch_act_donut"></canvas></div></div>
-      <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Eficiencia por actividad — Lts/HM</div><div class="chart-desc">Cuánto combustible consume cada actividad por hora trabajada</div></div></div><div style="position:relative;height:280px"><canvas id="ch_act_eficiencia"></canvas></div></div>
-      <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Intensidad — HM promedio por equipo</div><div class="chart-desc">Qué tan intensiva es cada actividad por equipo que participa</div></div></div><div style="position:relative;height:280px"><canvas id="ch_act_intensidad"></canvas></div></div>
+      <div class="chart-card"><div class="chart-header"><div><div class="chart-title">¿Dónde va el tiempo? — HM por actividad</div><div class="chart-desc">Distribución porcentual del total de horas motor</div></div></div><div class="ch-lg"><canvas id="ch_act_donut"></canvas></div></div>
+      <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Eficiencia por actividad — Lts/HM</div><div class="chart-desc">Cuánto combustible consume cada actividad por hora trabajada</div></div></div><div class="ch-lg"><canvas id="ch_act_eficiencia"></canvas></div></div>
+      <div class="chart-card"><div class="chart-header"><div><div class="chart-title">Intensidad — HM promedio por equipo</div><div class="chart-desc">Qué tan intensiva es cada actividad por equipo que participa</div></div></div><div class="ch-lg"><canvas id="ch_act_intensidad"></canvas></div></div>
     </div>
     <div class="section-title">3. Equipos sin Horas Motor registradas</div>
     <div class="kpi-grid" id="kpi-sinhm"></div>
@@ -1364,7 +1423,7 @@ function renderContent(rows){
     <div class="section-title">5. Concentración de uso</div>
     <div class="chart-card">
       <div class="chart-header"><div><div class="chart-title">Concentración de HM — ¿cuántos equipos cargan el trabajo?</div><div class="chart-desc">Top ${top20n} equipo(s) (${top20n} de ${eqConHm.length} con HM) generan el ${concPct}% de las horas motor totales</div></div></div>
-      <div style="position:relative;height:260px"><canvas id="ch_concentracion"></canvas></div>
+      <div class="ch-lg"><canvas id="ch_concentracion"></canvas></div>
     </div>
   `;
 
