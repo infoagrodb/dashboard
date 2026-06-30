@@ -1,0 +1,87 @@
+name: OdooGzp_Contratos
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
+
+jobs:
+  fetch-odoo-contratos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo hr.contract..."
+          curl -s -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "grupozp-main-13656030",
+                7,
+                "'"$ODOO_PASSWORD"'",
+                "hr.contract",
+                "search_read",
+                [],
+                [
+                  "employee_id",
+                  "department_id",
+                  "job_id",
+                  "date_start",
+                  "currency_id",
+                  "analytic_account_id",
+                  "contract_type_id"
+                ]
+              ]
+            }
+          }' > GZP/OdooGzpContratos.json
+
+          echo "Verificando contenido..."
+          if [ ! -s GZP/OdooGzpContratos.json ]; then
+            echo "❌ Error: GZP/OdooGzpContratos.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 GZP/OdooGzpContratos.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add GZP/OdooGzpContratos.json
+          git commit -m "Actualización automática de hr.contract desde Odoo" || echo "No hay cambios"
+
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado (probablemente otro workflow empujó al mismo tiempo). Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done
