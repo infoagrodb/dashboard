@@ -9187,6 +9187,7 @@ const RG_CATEGORIAS_RESUMEN = [
   { nombre: 'Servicios, Alquiler y Mto', vista: 'serviciosmto', color: '#7c3aed' }
 ];
 let RG_RESUMEN_DATA = null;
+let RG_CAT_CULTIVO_INICIALIZADO = false; // controla que "Mani" solo se preseleccione en la primera carga, no en cada Recalcular
 let ultimoResumenGeneralParaExcel = [];
 let RG_ACT_FILAS = [];
 let RG_ACT_ORDEN = 'actividad-finca';
@@ -10582,7 +10583,7 @@ function construirVistaResumenGeneral() {
   // completo dentro de la propia sección de Mano de Obra, esto solo limpia ESTA tabla comparativa).
   const ciclosOrdenados = [...todosCiclos]
     .filter(c => mznPorCicloFinca[c] && Object.keys(mznPorCicloFinca[c]).length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
+    .sort((a, b) => b.localeCompare(a, 'es', {numeric:true})); // descendente: ciclo más reciente primero
   const fincasOrdenadas = [...todasFincas].sort((a, b) => a.localeCompare(b, 'es'));
 
   RG_RESUMEN_DATA = { costoPorCategoriaCicloFinca, mznPorCicloFinca, ciclosOrdenados, fincasOrdenadas };
@@ -10590,7 +10591,10 @@ function construirVistaResumenGeneral() {
   // Combo de Cultivo: se deriva de los propios Ciclos (vía detectCult), no hace falta una lista
   // aparte. Como el Excel de Siembra ya solo trae Maní/Caña/Cacao, en la práctica esto da esos 3.
   const cultivosOrdenados = [...new Set(ciclosOrdenados.map(c => detectCult(c)))].filter(c => c !== 'Otro').sort();
-  const cultivosPrev = $('.chk-rgcat-cultivo:checked').map(function() { return $(this).val(); }).get().filter(v => cultivosOrdenados.includes(v));
+  const cultivosPrevRaw = $('.chk-rgcat-cultivo:checked').map(function() { return $(this).val(); }).get().filter(v => cultivosOrdenados.includes(v));
+  // Por defecto (primera carga, sin selección previa) se arranca filtrado en "Mani".
+  const cultivosPrev = (!RG_CAT_CULTIVO_INICIALIZADO && cultivosOrdenados.includes('Mani')) ? ['Mani'] : cultivosPrevRaw;
+  RG_CAT_CULTIVO_INICIALIZADO = true;
   construirComboMultiAB('contentDropdownRgCatCultivo', 'chk-rgcat-cultivo', cultivosOrdenados.map(c => ({value: c, label: c})), cultivosPrev, 'cambiarFiltroCultivoRG');
   actualizarTextoComboAB('chk-rgcat-cultivo', 'txtRgCatCultivoLabel', 'Todos los Cultivos');
 
@@ -10632,6 +10636,7 @@ function repintarResumenGeneral() {
 
   const { costoPorCategoriaCicloFinca, mznPorCicloFinca, ciclosOrdenados, fincasOrdenadas } = RG_RESUMEN_DATA;
   const meta = parseFloat($('#inputMetaCostoMzn').val()) || 0;
+  const incluirCierre = $('#chkRgIncluirCierre').is(':checked');
   const fincasSel = $('.chk-rg-finca:checked').map(function() { return $(this).val(); }).get();
   const cultivosSel = $('.chk-rgcat-cultivo:checked').map(function() { return $(this).val(); }).get();
   const ciclosSelRaw = $('.chk-rg-ciclo:checked').map(function() { return $(this).val(); }).get();
