@@ -2753,18 +2753,36 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script>
-const URL_MOVIMIENTOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_MovimientosInventario.json';
-const URL_PRODUCTOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooZP_Productos.json';
-const URL_VALUACIONES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ValuacionesInventario.json';
-const URL_COMPRAS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_OrdenCompraGZP.json';
-const URL_APUNTES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesContables.json';
-const URL_ANALITICOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesAnaliticos.json';
-const URL_SIEMBRA      = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/siembra.json';
-const URL_AVANCES_CAMPO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/odoo.json';
-const URL_COSTOS_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json';
-const URL_DIAS_HOMBRE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json';
-const URL_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DetalleDespachosCombustible.json';
-const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/histmo.json';
+// ── URLs con Worker live + fallback GitHub ────────────────────────────────
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+
+// Odoo en vivo vía Worker
+const URL_MOVIMIENTOS          = WORKER+'/query?base=gzp&model=stock.move.line&fields=product_category_name,date,move_id,picking_code,x_studio_bodega_origen,x_studio_n_orden_de_trabajo,x_studio_n_solicitud_materiales,x_studio_documento_origen,x_studio_equipofinca,origin,reference,product_id,x_studio_numero_de_parte,quantity,product_uom_id,location_id,location_dest_id';
+const URL_PRODUCTOS            = WORKER+'/query?base=gzp&model=product.template&fields=x_studio_id,default_code,name,part_number,uom_id,list_price,type,categ_id,standard_price,qty_available,virtual_available';
+const URL_VALUACIONES          = WORKER+'/query?base=gzp&model=stock.valuation.layer&fields=categ_id,product_id,x_studio_tipo_de_ubicacion_destino,x_studio_bodega,x_studio_cuenta_de_inventarios,create_date,x_studio_fecha_del_asiento,reference,x_studio_equipofinca,x_studio_numero_de_parte,quantity,uom_id,value,x_studio_distribucion_analitica,x_studio_cuenta_predeterminada_para_consumos,x_studio_tipo_producto';
+const URL_COMPRAS              = WORKER+'/query?base=gzp&model=purchase.report&fields=date_order,effective_date,order_id,partner_id,picking_type_id,product_id,category_id,user_id,qty_to_be_billed,qty_ordered,qty_received,qty_billed,currency_id,untaxed_total,price_total,state';
+const URL_APUNTES              = WORKER+'/query?base=gzp&model=account.move.line&fields=date,move_name,account_id,partner_id,name,product_uom_category_id,debit,credit,parent_state,x_studio_es_cierre_ab,analytic_distribution';
+const URL_ANALITICOS           = WORKER+'/query?base=gzp&model=account.analytic.line&fields=date,x_studio_cuenta_analitica_unificada,amount,x_studio_es_cierre_de_ab,move_line_id,name,product_id,unit_amount,product_uom_id,ref,general_account_id';
+const URL_AVANCES_CAMPO        = WORKER+'/query?base=info&model=x_orden_campo_line_b660b&fields=id,x_orden_campo_id,x_studio_fecha,x_studio_ciclo,x_studio_productor,x_studio_proveedor_del_servicio,x_studio_finca,x_studio_lote_agricola,x_studio_activiadad_realizada,x_studio_avance_mzn,x_studio_compaia,x_name,x_studio_sector_1,x_studio_categoria_actividad';
+const URL_COSTOS_MO            = WORKER+'/query?base=gzp&model=hr.payslip.line&fields=name,x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_empleado,x_studio_puesto_historico,x_studio_tipo_contrato,x_studio_actividad_agricola_1,x_studio_cuenta_contable_debito,total';
+const URL_DIAS_HOMBRE          = WORKER+'/query?base=gzp&model=hr.payslip.worked_days&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_puesto_historico,x_studio_empleado,x_studio_actividad_agricola_1,x_studio_dias_efectivos,x_studio_septimo_dia,x_studio_horas_extras,x_studio_alimentacion,x_studio_feriado';
+const URL_DESPACHOS_COMBUSTIBLE= WORKER+'/query?base=info&model=x_despacho_de_combusti_line_59f76&fields=id,x_studio_reporte,x_studio_fecha,x_studio_ciclo,x_studio_sector_1,x_studio_sku_en_reporte,x_studio_finca,x_studio_equipo,x_studio_actividad,x_studio_um,x_studio_hora_motor,x_studio_cantidad_ltrs,x_studio_categoria_de_equipo,x_studio_compaia,x_studio_hme,x_studio_proveedor_del_servicio,x_studio_productor,x_studio_ticket,x_studio_reporte_consolidado,x_studio_estado_del_consolidado,x_studio_bodega,x_studio_categoria_actividad';
+
+// Archivos locales (no son modelos Odoo) — quedan en GitHub
+const URL_SIEMBRA       = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/siembra.json';
+const URL_HISTORICO_MO  = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/histmo.json';
+
+// Fallbacks GitHub (si el Worker falla)
+const URL_FB_MOVIMIENTOS           = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_MovimientosInventario.json';
+const URL_FB_PRODUCTOS             = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooZP_Productos.json';
+const URL_FB_VALUACIONES           = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ValuacionesInventario.json';
+const URL_FB_COMPRAS               = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_OrdenCompraGZP.json';
+const URL_FB_APUNTES               = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesContables.json';
+const URL_FB_ANALITICOS            = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesAnaliticos.json';
+const URL_FB_AVANCES_CAMPO         = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/odoo.json';
+const URL_FB_COSTOS_MO             = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json';
+const URL_FB_DIAS_HOMBRE           = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json';
+const URL_FB_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DetalleDespachosCombustible.json';
 
 let DATA_MOVIMIENTOS = [];
 let DATA_PRODUCTOS = [];
@@ -3404,41 +3422,71 @@ function cacheSet(key, data) {
   } catch { /* sessionStorage lleno — ignorar, no es crítico */ }
 }
 
-// Fetch con cache: primero revisa sessionStorage; si no está, descarga y guarda.
+// Fetch con cache: intenta Worker (Odoo en vivo) primero; si falla, cae a GitHub.
+// El Worker devuelve {ok:true, result:[...]}; GitHub devuelve JSON directo o {result:[...]}.
+const _WORKER_BASE = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+
+// Mapa Worker URL → GitHub fallback URL
+const _FB_MAP = {
+  [URL_MOVIMIENTOS]:           URL_FB_MOVIMIENTOS,
+  [URL_PRODUCTOS]:             URL_FB_PRODUCTOS,
+  [URL_VALUACIONES]:           URL_FB_VALUACIONES,
+  [URL_COMPRAS]:               URL_FB_COMPRAS,
+  [URL_APUNTES]:               URL_FB_APUNTES,
+  [URL_ANALITICOS]:            URL_FB_ANALITICOS,
+  [URL_AVANCES_CAMPO]:         URL_FB_AVANCES_CAMPO,
+  [URL_COSTOS_MO]:             URL_FB_COSTOS_MO,
+  [URL_DIAS_HOMBRE]:           URL_FB_DIAS_HOMBRE,
+  [URL_DESPACHOS_COMBUSTIBLE]: URL_FB_DESPACHOS_COMBUSTIBLE,
+};
+
+async function _fetchGitHub(url, tipo) {
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
+  if (tipo === 'arraybuffer') return resp.arrayBuffer();
+  const text = await resp.text();
+  if (text.trimStart().startsWith('<')) {
+    const esRL = text.includes('Rate limit') || text.includes('rate limit');
+    throw new Error(esRL
+      ? 'GitHub Rate Limit: demasiadas solicitudes en poco tiempo. Espera unos minutos y recarga.'
+      : `Respuesta inesperada (HTML) de ${url}`);
+  }
+  if (tipo === 'json_raw') return JSON.parse(text);
+  const parsed = JSON.parse(text);
+  return parsed.result ?? parsed ?? [];
+}
+
 async function fetchConCache(url, cacheKey, tipo = 'json') {
   const cached = cacheGet(cacheKey);
   if (cached !== null) return cached;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
+
   let data;
-  if (tipo === 'json') {
-    const text = await resp.text();
-    // GitHub devuelve una página HTML cuando se supera el rate limit — detectarlo antes de parsear
-    if (text.trimStart().startsWith('<')) {
-      const esRateLimit = text.includes('Rate limit') || text.includes('rate limit');
-      throw new Error(esRateLimit
-        ? 'GitHub Rate Limit: demasiadas solicitudes en poco tiempo. Espera unos minutos y recarga.'
-        : `Respuesta inesperada (HTML) de ${url} — posible error de red o archivo no encontrado.`);
+
+  // ── Intento 1: Worker (Odoo en vivo) ──────────────────────────────────
+  if (url.startsWith(_WORKER_BASE) && tipo !== 'arraybuffer' && tipo !== 'json_raw') {
+    try {
+      const resp = await fetch(url);
+      if (resp.ok) {
+        const j = await resp.json();
+        if (j.ok && Array.isArray(j.result) && j.result.length > 0) {
+          data = j.result;
+          console.info(`✅ Worker live: ${cacheKey} (${data.length} registros)`);
+        }
+      }
+    } catch(e) {
+      console.warn(`Worker falló para ${cacheKey}:`, e.message);
     }
-    data = JSON.parse(text).result || JSON.parse(text) || [];
-  } else if (tipo === 'json_raw') {
-    const text = await resp.text();
-    if (text.trimStart().startsWith('<')) {
-      const esRateLimit = text.includes('Rate limit') || text.includes('rate limit');
-      throw new Error(esRateLimit
-        ? 'GitHub Rate Limit: demasiadas solicitudes. Espera unos minutos y recarga.'
-        : `Respuesta HTML inesperada de ${url}`);
-    }
-    data = JSON.parse(text);
-  } else if (tipo === 'arraybuffer') {
-    data = await resp.arrayBuffer();
-    return data;
   }
-  // Importante: NO se cachea un resultado vacío. Un archivo de Odoo realmente vacío es prácticamente
-  // imposible (siempre hay al menos histórico); un array vacío casi siempre significa que la
-  // respuesta no fue el JSON esperado (error transitorio de GitHub, archivo corrupto, etc.). Si se
-  // cacheara igual, ese "vacío" quedaría atascado hasta 10 minutos aunque el archivo real sí tenga
-  // datos — exactamente el síntoma de "no carga nada" que parecía un bug del código de los gráficos.
+
+  // ── Intento 2: GitHub fallback ─────────────────────────────────────────
+  if (!data) {
+    const fbUrl = _FB_MAP[url] || url;
+    if (fbUrl !== url) console.info(`↩ Fallback GitHub: ${cacheKey}`);
+    data = await _fetchGitHub(fbUrl, tipo);
+    if (tipo === 'arraybuffer') return data; // arraybuffer no se cachea
+  }
+
+  // No cachear vacíos — un array vacío casi siempre es error transitorio
   if (Array.isArray(data) && data.length === 0) {
     console.warn(`fetchConCache: ${cacheKey} llegó vacío — no se cachea, se reintentará en la próxima carga.`);
     return data;
