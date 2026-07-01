@@ -1268,11 +1268,11 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
     </div>
 
     <div style="display:flex; gap:8px; border-bottom:1px solid var(--line); padding-bottom:0;">
-      <button class="subtab-btn active" id="subtabAbDetalle" onclick="mostrarSubVistaAB('detalle')"><i class="fa-solid fa-sitemap"></i> Detalle por Cuenta</button>
-      <button class="subtab-btn" id="subtabAbComparativo" onclick="mostrarSubVistaAB('comparativo')"><i class="fa-solid fa-chart-line"></i> Comparativo de Ciclos</button>
+      <button class="subtab-btn active" id="subtabAbComparativo" onclick="mostrarSubVistaAB('comparativo')"><i class="fa-solid fa-chart-line"></i> Comparativo de Ciclos</button>
+      <button class="subtab-btn" id="subtabAbDetalle" onclick="mostrarSubVistaAB('detalle')"><i class="fa-solid fa-sitemap"></i> Detalle por Cuenta</button>
     </div>
 
-    <div id="subviewAbDetalle" style="display:flex; flex-direction:column; gap:16px;">
+    <div id="subviewAbDetalle" style="display:none; flex-direction:column; gap:16px;">
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-icon" style="background:var(--green);"><i class="fa-solid fa-coins"></i></div><div><div class="label">Costo Acumulado (Semilla + Insumos)</div><div class="value" id="kpiAbTotal" style="color:var(--green);">C$ 0.00</div></div></div>
         <div class="kpi"><div class="kpi-icon" style="background:var(--blue);"><i class="fa-solid fa-boxes-stacked"></i></div><div><div class="label">Identificado por Producto</div><div class="value" id="kpiAbProducto" style="color:var(--blue);">C$ 0.00</div></div></div>
@@ -1324,29 +1324,31 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
       </div>
     </div>
 
-    <div id="subviewAbComparativo" style="display:none; flex-direction:column; gap:16px;">
+    <div id="subviewAbComparativo" style="display:flex; flex-direction:column; gap:16px;">
 
+      <!-- CARDS POR CATEGORÍA: 2 columnas -->
       <div class="kpi-row" style="grid-template-columns: repeat(2, 1fr);">
         <div class="card" style="margin:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-seedling" style="color:#16a34a;"></i> Uso de Semilla por Manzana — Comparativo entre Ciclos</h3>
+            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-seedling" style="color:#16a34a;"></i> Semilla por Manzana</h3>
             <button class="btn-export-excel" style="background:#16a34a; padding:5px 10px; font-size:11px;" onclick="abrirModalDetalleAB('semilla')"><i class="fa-solid fa-table-list"></i> Ver Detalle por Finca</button>
           </div>
-          <div class="table-scroll" style="max-height:220px;"><table><thead><tr>
+          <div class="table-scroll" style="max-height:200px;"><table><thead><tr>
             <th>Ciclo</th><th class="right">Cantidad Total</th><th class="right">Mzn</th>
-            <th class="right">Cantidad/Mzn</th><th class="right">Costo Total (C$)</th><th class="right">Costo/Mzn (C$)</th>
+            <th class="right">Cant/Mzn</th><th class="right">Costo Total (C$)</th><th class="right">C$/Mzn</th>
           </tr></thead><tbody id="tblKpiSemillaBody"></tbody></table></div>
         </div>
         <div class="card" style="margin:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-shield-virus" style="color:#dc2626;"></i> Protectores de Cultivo (Herbicida+Insecticida+Fungicidas) por Manzana</h3>
-            <button class="btn-export-excel" style="background:var(--red); padding:5px 10px; font-size:11px;" onclick="abrirModalDetalleAB('protectores')"><i class="fa-solid fa-table-list"></i> Ver Detalle por Producto</button>
+            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-shield-virus" style="color:#dc2626;"></i> Protectores de Cultivo (Herbicida+Insecticida+Fungicidas+Fertilizantes+Coadyudantes)</h3>
+            <button class="btn-export-excel" style="background:var(--red); padding:5px 10px; font-size:11px;" onclick="abrirModalDetalleAB('protectores')"><i class="fa-solid fa-table-list"></i> Ver Detalle</button>
           </div>
-          <div class="table-scroll" style="max-height:220px;"><table><thead><tr>
-            <th>Ciclo</th><th class="right">Mzn</th><th class="right">Costo Total (C$)</th><th class="right">Costo/Mzn (C$)</th>
-            <th class="right">Δ vs. Ciclo Anterior</th>
+          <div class="table-scroll" style="max-height:200px;"><table><thead><tr>
+            <th>Ciclo</th><th class="right">Mzn</th><th class="right">Costo Total (C$)</th>
+            <th class="right">C$/Mzn</th><th class="right">Δ vs. Anterior</th>
           </tr></thead><tbody id="tblKpiProtectoresBody"></tbody></table></div>
         </div>
+
       </div>
 
       <div class="card">
@@ -2618,16 +2620,50 @@ const URL_VALUACIONES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/
 const URL_COMPRAS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_OrdenCompraGZP.json';
 const URL_APUNTES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesContables.json';
 const URL_ANALITICOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesAnaliticos.json';
-const URL_SIEMBRA = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Siembra%20Ciclos%20Grupo%20ZP.xlsx';
+const URL_SIEMBRA = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/siembra.json';
 const URL_AVANCES_CAMPO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/odoo.json';
 const URL_COSTOS_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json';
 const URL_DIAS_HOMBRE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json';
 const URL_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DetalleDespachosCombustible.json';
-const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/Historico%20Mano%20de%20obra%20GZP%202019-2024.xlsx';
+const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/histmo.json';
+
+// ── Worker (Odoo en vivo) — fuente principal, 100% directo ──────────────
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+let CUENTAS_ANALITICAS_ACTIVAS = []; // campo de filtro por ciclo (futuro)
+
+// Mapa completo: URL_* → Worker con campos exactos del YML
+const _WORKER_MAP = {
+  // ── GZP (grupozp.odoo.com, uid:7) ──────────────────────────────────────
+  [URL_ANALITICOS]:
+    WORKER+'/query?base=gzp&model=account.analytic.line&fields=date,x_studio_cuenta_analitica_unificada,amount,x_studio_es_cierre_de_ab,move_line_id,name,product_id,unit_amount,product_uom_id,ref,general_account_id',
+  [URL_APUNTES]:
+    WORKER+'/query?base=gzp&model=account.move.line&fields=date,move_name,account_id,partner_id,name,product_uom_category_id,debit,credit,parent_state,x_studio_es_cierre_ab,analytic_distribution',
+  [URL_VALUACIONES]:
+    WORKER+'/query?base=gzp&model=stock.valuation.layer&fields=categ_id,product_id,x_studio_tipo_de_ubicacion_destino,x_studio_bodega,x_studio_cuenta_de_inventarios,create_date,x_studio_fecha_del_asiento,reference,x_studio_equipofinca,x_studio_numero_de_parte,quantity,uom_id,value,x_studio_distribucion_analitica,x_studio_cuenta_predeterminada_para_consumos,x_studio_tipo_producto',
+  [URL_MOVIMIENTOS]:
+    WORKER+'/query?base=gzp&model=stock.move.line&fields=product_category_name,date,move_id,picking_code,x_studio_bodega_origen,x_studio_n_orden_de_trabajo,x_studio_n_solicitud_materiales,x_studio_documento_origen,x_studio_equipofinca,origin,reference,product_id,x_studio_numero_de_parte,quantity,product_uom_id,location_id,location_dest_id',
+  [URL_PRODUCTOS]:
+    WORKER+'/query?base=gzp&model=product.template&fields=x_studio_id,default_code,name,part_number,uom_id,list_price,type,categ_id,standard_price,qty_available,virtual_available',
+  [URL_COMPRAS]:
+    WORKER+'/query?base=gzp&model=purchase.report&fields=date_order,effective_date,order_id,partner_id,picking_type_id,product_id,category_id,user_id,qty_to_be_billed,qty_ordered,qty_received,qty_billed,currency_id,untaxed_total,price_total,state',
+  [URL_COSTOS_MO]:
+    WORKER+'/query?base=gzp&model=hr.payslip.line&fields=name,x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_empleado,x_studio_puesto_historico,x_studio_tipo_contrato,x_studio_actividad_agricola_1,x_studio_cuenta_contable_debito,total',
+  [URL_DIAS_HOMBRE]:
+    WORKER+'/query?base=gzp&model=hr.payslip.worked_days&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_puesto_historico,x_studio_empleado,x_studio_actividad_agricola_1,x_studio_dias_efectivos,x_studio_septimo_dia,x_studio_horas_extras,x_studio_alimentacion,x_studio_feriado',
+  // ── INFOAGRO (infoagro.odoo.com, uid:12) ───────────────────────────────
+  [URL_AVANCES_CAMPO]:
+    WORKER+'/query?base=info&model=x_orden_campo_line_b660b&fields=id,x_orden_campo_id,x_studio_fecha,x_studio_ciclo,x_studio_productor,x_studio_proveedor_del_servicio,x_studio_finca,x_studio_lote_agricola,x_studio_activiadad_realizada,x_studio_avance_mzn,x_studio_compaia,x_name,x_studio_sector_1,x_studio_categoria_actividad',
+  [URL_DESPACHOS_COMBUSTIBLE]:
+    WORKER+'/query?base=info&model=x_despacho_de_combusti_line_59f76&fields=id,x_studio_reporte,x_studio_fecha,x_studio_ciclo,x_studio_sector_1,x_studio_sku_en_reporte,x_studio_finca,x_studio_equipo,x_studio_actividad,x_studio_um,x_studio_hora_motor,x_studio_cantidad_ltrs,x_studio_categoria_de_equipo,x_studio_compaia,x_studio_hme,x_studio_proveedor_del_servicio,x_studio_productor,x_studio_ticket,x_studio_reporte_consolidado,x_studio_estado_del_consolidado,x_studio_bodega,x_studio_categoria_actividad',
+};
 
 let DATA_MOVIMIENTOS = [];
 let DATA_PRODUCTOS = [];
 let DATA_VALUACIONES = [];
+// Índice de valuaciones por (productoId + referencia) — evita O(n×m) en buscarCapasParaMovimiento
+// Se construye en construirIndiceValuaciones() justo después de asignar DATA_VALUACIONES
+let _IDX_VAL_REF = new Map();  // key: "productoId|referencia" → [capas...]
+let _IDX_VAL_PROD = new Map(); // key: "productoId" → [capas...] (fallback sin referencia)
 let DATA_COMPRAS = [];
 let DATA_APUNTES = [];
 let DATA_ANALITICOS = [];
@@ -2984,6 +3020,24 @@ function construirIndiceMznOdoo(registrosOdoo) {
 
 // tomando de OdooGzp_ValuacionesInventario.json la cuenta que concentra el mayor valor absoluto
 // para ese producto (un producto puede tener capas históricas en más de una cuenta si se reclasificó).
+function construirIndiceValuaciones() {
+  _IDX_VAL_REF  = new Map();
+  _IDX_VAL_PROD = new Map();
+  DATA_VALUACIONES.forEach(v => {
+    if (!v) return;
+    const pid = String(extraerIdOdoo(v.product_id));
+    const ref = (v.reference || '').trim();
+    // Índice por producto + referencia
+    const keyRef = pid + '|' + ref;
+    if (!_IDX_VAL_REF.has(keyRef)) _IDX_VAL_REF.set(keyRef, []);
+    _IDX_VAL_REF.get(keyRef).push(v);
+    // Índice solo por producto (fallback)
+    if (!_IDX_VAL_PROD.has(pid)) _IDX_VAL_PROD.set(pid, []);
+    _IDX_VAL_PROD.get(pid).push(v);
+  });
+  console.info(`🗂️ Índice valuaciones: ${_IDX_VAL_REF.size} combinaciones producto+ref, ${_IDX_VAL_PROD.size} productos únicos`);
+}
+
 function construirMapaProductoCuenta() {
   const acumulador = {}; // pid -> { cuenta: valorAbsAcumulado }
   (DATA_VALUACIONES || []).forEach(v => {
@@ -3013,39 +3067,40 @@ function extraerIdOdoo(campo) {
 // + quantity, usando la fecha como criterio de desempate cuando un mismo
 // "reference" se repite varias veces (ej. mismo proveedor, mismo día, distintos lotes).
 function buscarCapasParaMovimiento(row) {
+  // Usa _IDX_VAL_REF y _IDX_VAL_PROD (Maps) — O(1) en vez de O(n) por fila
+  const pid    = String(row.productoId);
   const refRow = (row.referencia || '').trim();
   const fechaRow = (row.fecha || '').substring(0, 10);
 
-  // 1) Coincidencia fuerte: mismo producto + misma referencia + misma cantidad
-  let capas = DATA_VALUACIONES.filter(v => {
-    if (!v || extraerIdOdoo(v.product_id) !== row.productoId) return false;
-    if ((v.reference || '').trim() !== refRow) return false;
-    return Math.abs(Math.abs(v.quantity || 0) - Math.abs(row.cantidad)) < 0.01;
-  });
+  // 1) Coincidencia fuerte: producto + referencia (lookup O(1))
+  const keyRef = pid + '|' + refRow;
+  let candidatos = _IDX_VAL_REF.get(keyRef) || [];
+
+  // Filtrar por cantidad exacta
+  let capas = candidatos.filter(v =>
+    Math.abs(Math.abs(v.quantity || 0) - Math.abs(row.cantidad)) < 0.01
+  );
   if (capas.length === 1) return capas;
 
-  // 2) Si hay varias capas con esa combinación, afinamos por fecha exacta del asiento
+  // 2) Varias con mismo producto+ref+cantidad → afinar por fecha
   if (capas.length > 1) {
     const porFecha = capas.filter(v => {
       const f = ((v.x_studio_fecha_del_asiento || v.create_date || '') + '').substring(0, 10);
       return f === fechaRow;
     });
-    if (porFecha.length) return porFecha;
-    return capas; // si no afina por fecha, devolvemos todas (mejor sumar de más que mostrar 0)
+    return porFecha.length ? porFecha : capas;
   }
 
-  // 3) Sin cantidad exacta: mismo producto + misma referencia (cubre redondeos de UoM)
-  capas = DATA_VALUACIONES.filter(v => v && extraerIdOdoo(v.product_id) === row.productoId && (v.reference || '').trim() === refRow);
-  if (capas.length) return capas;
+  // 3) Sin cantidad exacta: producto + referencia (cubre redondeos de UoM)
+  if (candidatos.length) return candidatos;
 
-  // 4) Último recurso: mismo producto + misma fecha + misma cantidad (sin referencia)
-  capas = DATA_VALUACIONES.filter(v => {
-    if (!v || extraerIdOdoo(v.product_id) !== row.productoId) return false;
+  // 4) Último recurso: producto solo → filtrar por fecha + cantidad (O(k) donde k << n)
+  const porProd = _IDX_VAL_PROD.get(pid) || [];
+  return porProd.filter(v => {
     const f = ((v.x_studio_fecha_del_asiento || v.create_date || '') + '').substring(0, 10);
     if (f !== fechaRow) return false;
     return Math.abs(Math.abs(v.quantity || 0) - Math.abs(row.cantidad)) < 0.01;
   });
-  return capas;
 }
 
 function acortarNombreBodega(name) {
@@ -3216,22 +3271,94 @@ function cacheGet(key) {
 }
 function cacheSet(key, data) {
   try {
-    sessionStorage.setItem('gzp_' + key, JSON.stringify({ ts: Date.now(), data }));
-  } catch { /* sessionStorage lleno — ignorar, no es crítico */ }
+    const payload = JSON.stringify({ ts: Date.now(), data });
+    sessionStorage.setItem('gzp_' + key, payload);
+  } catch(e) {
+    // sessionStorage lleno (cuota ~5-10MB) — los datos no se cachean, cada carga va al Worker/GitHub
+    const kb = Math.round(JSON.stringify(data).length / 1024);
+    console.warn(`⚠️ cacheSet: no se pudo guardar '${key}' (~${kb} KB) — sessionStorage lleno. Error: ${e.message}`);
+  }
 }
 
 // Fetch con cache: primero revisa sessionStorage; si no está, descarga y guarda.
 async function fetchConCache(url, cacheKey, tipo = 'json') {
   const cached = cacheGet(cacheKey);
   if (cached !== null) return cached;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
+
   let data;
-  if (tipo === 'json') {
-    data = (await resp.json()).result || [];
-  } else if (tipo === 'arraybuffer') {
-    data = await resp.arrayBuffer();
-    // ArrayBuffer no es serializable, no lo cacheamos
+  const _esLocal = location.protocol === 'file:';
+  const _wUrl    = (!_esLocal && _WORKER_MAP) ? _WORKER_MAP[url] : null;
+
+  // ── Worker (fuente principal desde https://) ───────────────────────────
+  if (_wUrl && tipo === 'json') {
+    // Si hay filtro de ciclos activo, agregar dominio por cuenta analítica
+    let workerFinal = _wUrl;
+    if (CUENTAS_ANALITICAS_ACTIVAS && CUENTAS_ANALITICAS_ACTIVAS.length) {
+      const campo = _wUrl.includes('account.analytic.line')
+        ? 'x_studio_cuenta_analitica_unificada'
+        : _wUrl.includes('hr.payslip')
+          ? 'x_studio_cuenta_analitica_en_recibo_de_pago'
+          : null;
+      if (campo) {
+        workerFinal = _wUrl + '&domain=' + encodeURIComponent(
+          JSON.stringify([[campo, 'in', CUENTAS_ANALITICAS_ACTIVAS]])
+        );
+      }
+    }
+    try {
+      // Paginación secuencial — una página a la vez para respetar timeout del Worker
+      const PAGE = 8000;
+      const allData = [];
+      let offset = 0, pg = 1;
+      while (true) {
+        const sep = workerFinal.includes('?') ? '&' : '?';
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 20000); // 20s por página
+        const r = await fetch(`${workerFinal}${sep}limit=${PAGE}&offset=${offset}`, { signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) throw new Error(`Worker HTTP ${r.status}`);
+        const j = await r.json();
+        if (!j.ok) throw new Error(j.error || 'Worker error');
+        const lote = j.result || [];
+        allData.push(...lote);
+        console.info(`📦 Worker ${cacheKey} p${pg}: ${lote.length} reg (total: ${allData.length.toLocaleString()})`);
+        if (lote.length < PAGE) break;
+        offset += PAGE; pg++;
+        if (pg > 50) { console.warn(`${cacheKey}: límite 50 páginas`); break; }
+      }
+      if (allData.length > 0) {
+        data = allData;
+        console.info(`✅ ${cacheKey}: ${data.length.toLocaleString()} registros desde Odoo`);
+      }
+    } catch(e) {
+      console.warn(`⚠️ Worker falló ${cacheKey}: ${e.message}`);
+      data = null;
+    }
+  }
+
+  // ── GitHub (solo si: file://, Worker sin mapa, o Worker falló) ────────
+  if (!data) {
+    if (_wUrl) console.info(`↩ ${cacheKey}: usando GitHub como respaldo`);
+    const resp = await fetch(url);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
+    if (tipo === 'arraybuffer') return resp.arrayBuffer();
+    const text = await resp.text();
+    if (text.trimStart().startsWith('<')) {
+      const esRL = text.includes('Rate limit') || text.includes('rate limit');
+      throw new Error(esRL
+        ? 'GitHub Rate Limit — espera unos minutos y recarga.'
+        : `Respuesta HTML inesperada de ${url}`);
+    }
+    if (tipo === 'json_raw') {
+      data = JSON.parse(text);
+    } else {
+      const parsed = JSON.parse(text);
+      data = parsed.result ?? parsed ?? [];
+    }
+  }
+
+  if (Array.isArray(data) && data.length === 0) {
+    console.warn(`fetchConCache: ${cacheKey} vacío — no se cachea.`);
     return data;
   }
   cacheSet(cacheKey, data);
@@ -3263,6 +3390,7 @@ async function cargarArchivosYConstruirVista() {
     DATA_PRODUCTOS.forEach(p => { if (p && p.x_studio_id) cachedFullProductsMap[p.x_studio_id.toString()] = p; });
 
     actualizarLoadingTexto('Panel de almacenes listo — mostrando resultados...', 45);
+    construirIndiceValuaciones(); // O(n) una vez — evita O(n×m) en buscarCapasParaMovimiento
     construirMapaProductoCuenta();
     procesarMovimientosLogisticaPura();
 
@@ -3279,12 +3407,12 @@ async function cargarArchivosYConstruirVista() {
       fetchConCache(URL_COMPRAS, 'compras').catch(e => { console.warn('compras:', e); return []; }),
       fetchConCache(URL_APUNTES, 'apuntes').catch(e => { console.warn('apuntes:', e); return []; }),
       fetchConCache(URL_ANALITICOS, 'analiticos').catch(e => { console.warn('analiticos:', e); return []; }),
-      fetchConCache(URL_SIEMBRA, 'siembra', 'arraybuffer').catch(e => { console.warn('siembra:', e); return null; }),
+      fetchConCache(URL_SIEMBRA, 'siembra', 'json_raw').catch(e => { console.warn('siembra:', e); return null; }),
       fetchConCache(URL_AVANCES_CAMPO, 'avances').catch(e => { console.warn('avances:', e); return []; }),
       fetchConCache(URL_COSTOS_MO, 'costosMO').catch(e => { console.warn('costosMO:', e); return []; }),
       fetchConCache(URL_DIAS_HOMBRE, 'diasHombre').catch(e => { console.warn('diasHombre:', e); return []; }),
       fetchConCache(URL_DESPACHOS_COMBUSTIBLE, 'despachos').catch(e => { console.warn('despachos:', e); return []; }),
-      fetchConCache(URL_HISTORICO_MO, 'histMO', 'arraybuffer').catch(e => { console.warn('histMO:', e); return null; }),
+      fetchConCache(URL_HISTORICO_MO, 'histMO', 'json_raw').catch(e => { console.warn('histMO:', e); return null; }),
     ]);
 
     DATA_COMPRAS               = resCompras;
@@ -3295,20 +3423,15 @@ async function cargarArchivosYConstruirVista() {
     DATA_DESPACHOS_COMBUSTIBLE = resDespachos;
 
     // Procesar archivos Excel (no cacheables como ArrayBuffer serializado)
-    if (resSiembra) {
-      try {
-        const wbSiembra = XLSX.read(resSiembra, { type: 'array' });
-        const wsSiembra = wbSiembra.Sheets[wbSiembra.SheetNames[0]];
-        const filasSiembra = XLSX.utils.sheet_to_json(wsSiembra, { header: 1, defval: null });
-        construirIndiceSiembra(filasSiembra);
-      } catch (e) { console.warn('siembra parse:', e); }
+    if (resSiembra && Array.isArray(resSiembra)) {
+      try { construirIndiceSiembra(resSiembra); }
+      catch (e) { console.warn('siembra parse:', e); }
     }
     if (resAvances && Array.isArray(resAvances)) construirIndiceMznOdoo(resAvances);
-    if (resHistMOBuf) {
+    if (resHistMOBuf && typeof resHistMOBuf === 'object') {
       try {
-        const wbHist = XLSX.read(new Uint8Array(resHistMOBuf), { type: 'array' });
-        if (wbHist.SheetNames.includes('CostoMO')) DATA_HISTORICO_MO_COSTO = XLSX.utils.sheet_to_json(wbHist.Sheets['CostoMO'], { defval: '' });
-        if (wbHist.SheetNames.includes('DHMO'))    DATA_HISTORICO_MO_DH    = XLSX.utils.sheet_to_json(wbHist.Sheets['DHMO'],   { defval: '' });
+        if (Array.isArray(resHistMOBuf.CostoMO)) DATA_HISTORICO_MO_COSTO = resHistMOBuf.CostoMO;
+        if (Array.isArray(resHistMOBuf.DHMO))    DATA_HISTORICO_MO_DH    = resHistMOBuf.DHMO;
       } catch (e) { console.warn('histMO parse:', e); }
     }
 
@@ -5245,6 +5368,54 @@ function renderKpiSemillaYProtectoresAB() {
     return porCiclo;
   }
 
+  function mznDeCiclo(porCiclo, ciclo) {
+    return Object.values((porCiclo[ciclo] || {}).mznPorFinca || {}).reduce((s,v) => s+v, 0);
+  }
+
+  // --- Resumen Total (suma de las 5 categorías) ---
+  const semTot  = agregarPorCiclo(l => l.cuentaSimple === 'Semilla');
+  const protTot = agregarPorCiclo(l => ['Herbicida','Insecticida','Fungicidas','Fertilizantes','Coadyudantes'].includes(l.cuentaSimple));
+  const fertTot = agregarPorCiclo(l => l.cuentaSimple === 'Fertilizantes');
+  const coadTot = agregarPorCiclo(l => l.cuentaSimple === 'Coadyudantes');
+
+  // Unión de todos los ciclos que aparecen en cualquier categoría
+  const todosCiclos = [...new Set([
+    ...Object.keys(semTot), ...Object.keys(protTot),
+    ...Object.keys(fertTot), ...Object.keys(coadTot)
+  ])].sort();
+
+  const prevTotal = {};
+  let filasResumen = '';
+  todosCiclos.forEach(ciclo => {
+    const mzn = mznDeCiclo(semTot, ciclo) || mznDeCiclo(protTot, ciclo) ||
+                mznDeCiclo(fertTot, ciclo) || mznDeCiclo(coadTot, ciclo);
+    const semVal  = mzn ? Math.abs((semTot[ciclo]  || {valor:0}).valor) / mzn : null;
+    const protVal = mzn ? Math.abs((protTot[ciclo] || {valor:0}).valor) / mzn : null;
+    const fertVal = mzn ? Math.abs((fertTot[ciclo] || {valor:0}).valor) / mzn : null;
+    const coadVal = mzn ? Math.abs((coadTot[ciclo] || {valor:0}).valor) / mzn : null;
+    const total   = (semVal||0) + (protVal||0) + (fertVal||0) + (coadVal||0);
+    const cult    = ciclo.split(' ')[0];
+    const ant     = prevTotal[cult];
+    let deltaTxt  = '—';
+    if (total > 0 && ant != null && ant > 0) {
+      const pct = ((total - ant) / ant) * 100;
+      deltaTxt = `<span style="color:${pct>0?'var(--red)':'#16a34a'};font-weight:600;">${pct>0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    filasResumen += `<tr>
+      <td><strong>${ciclo}</strong></td>
+      <td class="right">${mzn ? formatNum(mzn) : '—'}</td>
+      <td class="right">${semVal  !== null ? formatNum(semVal)  : '—'}</td>
+      <td class="right" style="color:#dc2626;">${protVal !== null ? formatNum(protVal) : '—'}</td>
+      <td class="right" style="color:#d97706;">${fertVal !== null ? formatNum(fertVal) : '—'}</td>
+      <td class="right" style="color:#7c3aed;">${coadVal !== null ? formatNum(coadVal) : '—'}</td>
+      <td class="right" style="font-weight:700; color:#16a34a;">${total>0 ? formatNum(total) : '—'}</td>
+      <td class="right">${deltaTxt}</td>
+    </tr>`;
+    if (total > 0) prevTotal[cult] = total;
+  });
+  $('#tblKpiResumenTotalBody').html(filasResumen ||
+    '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:12px;">Sin datos con cruce Finca/Ciclo.</td></tr>');
+
   // --- Semilla ---
   const semillaPorCiclo = agregarPorCiclo(l => l.cuentaSimple === 'Semilla');
   const ciclosSemilla = Object.keys(semillaPorCiclo).sort();
@@ -5264,8 +5435,8 @@ function renderKpiSemillaYProtectoresAB() {
   });
   $('#tblKpiSemillaBody').html(filasSemilla || '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Semilla con cruce Finca/Ciclo.</td></tr>');
 
-  // --- Protectores de Cultivo (Herbicida + Insecticida + Fungicidas) ---
-  const protectoresPorCiclo = agregarPorCiclo(l => ['Herbicida', 'Insecticida', 'Fungicidas'].includes(l.cuentaSimple));
+  // --- Protectores de Cultivo (Herbicida + Insecticida + Fungicidas + Fertilizantes + Coadyudantes) ---
+  const protectoresPorCiclo = agregarPorCiclo(l => ['Herbicida', 'Insecticida', 'Fungicidas', 'Fertilizantes', 'Coadyudantes'].includes(l.cuentaSimple));
   const ciclosProtectores = Object.keys(protectoresPorCiclo).sort();
   const valoresPrevPorCultivo = {}; // cultivo -> último costo/mzn visto, para no comparar Mani vs Caña entre sí
   let filasProtectores = '';
@@ -5291,6 +5462,58 @@ function renderKpiSemillaYProtectoresAB() {
     if (costoMzn !== null) valoresPrevPorCultivo[cultivoCiclo] = costoMzn;
   });
   $('#tblKpiProtectoresBody').html(filasProtectores || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Protectores de Cultivo con cruce Finca/Ciclo.</td></tr>');
+
+  // --- Fertilizantes (11405) ---
+  const fertilizantesPorCiclo = agregarPorCiclo(l => l.cuentaSimple === 'Fertilizantes');
+  const ciclosFert = Object.keys(fertilizantesPorCiclo).sort();
+  const prevFert = {};
+  let filasFert = '';
+  ciclosFert.forEach(ciclo => {
+    const d = fertilizantesPorCiclo[ciclo];
+    d.valor = Math.abs(d.valor);
+    const mzn = Object.values(d.mznPorFinca).reduce((s, v) => s + v, 0);
+    const costoMzn = mzn ? d.valor / mzn : null;
+    const cult = ciclo.split(' ')[0];
+    const ant = prevFert[cult];
+    let deltaTxt = '—';
+    if (costoMzn !== null && ant != null && ant > 0) {
+      const pct = ((costoMzn - ant) / ant) * 100;
+      deltaTxt = `<span style="color:${pct > 0 ? 'var(--red)' : '#16a34a'}; font-weight:600;">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    filasFert += `<tr><td><strong>${ciclo}</strong></td>
+      <td class="right">${mzn ? formatNum(mzn) : '—'}</td>
+      <td class="right">${formatNum(d.valor)}</td>
+      <td class="right" style="color:#d97706; font-weight:600;">${costoMzn !== null ? formatNum(costoMzn) : '—'}</td>
+      <td class="right">${deltaTxt}</td></tr>`;
+    if (costoMzn !== null) prevFert[cult] = costoMzn;
+  });
+  $('#tblKpiFertilizantesBody').html(filasFert || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Fertilizantes.</td></tr>');
+
+  // --- Coadyudantes (11406) ---
+  const coadyudantesPorCiclo = agregarPorCiclo(l => l.cuentaSimple === 'Coadyudantes');
+  const ciclosCoad = Object.keys(coadyudantesPorCiclo).sort();
+  const prevCoad = {};
+  let filasCoad = '';
+  ciclosCoad.forEach(ciclo => {
+    const d = coadyudantesPorCiclo[ciclo];
+    d.valor = Math.abs(d.valor);
+    const mzn = Object.values(d.mznPorFinca).reduce((s, v) => s + v, 0);
+    const costoMzn = mzn ? d.valor / mzn : null;
+    const cult = ciclo.split(' ')[0];
+    const ant = prevCoad[cult];
+    let deltaTxt = '—';
+    if (costoMzn !== null && ant != null && ant > 0) {
+      const pct = ((costoMzn - ant) / ant) * 100;
+      deltaTxt = `<span style="color:${pct > 0 ? 'var(--red)' : '#16a34a'}; font-weight:600;">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    filasCoad += `<tr><td><strong>${ciclo}</strong></td>
+      <td class="right">${mzn ? formatNum(mzn) : '—'}</td>
+      <td class="right">${formatNum(d.valor)}</td>
+      <td class="right" style="color:#7c3aed; font-weight:600;">${costoMzn !== null ? formatNum(costoMzn) : '—'}</td>
+      <td class="right">${deltaTxt}</td></tr>`;
+    if (costoMzn !== null) prevCoad[cult] = costoMzn;
+  });
+  $('#tblKpiCoadyudantesBody').html(filasCoad || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Coadyudantes.</td></tr>');
 }
 
 // ===================== MODAL DE DETALLE (columnas separadas por nivel, sin indentación apilada) =====================
@@ -5330,7 +5553,7 @@ function abrirModalFincaSemilla(ciclo) {
 // Protectores, nivel 1: Ciclo (fila de la tarjeta) -> modal con desglose por Sub Categoría.
 function abrirModalSubCategoriaProtectores(ciclo) {
   const porSub = {};
-  AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas'].includes(l.cuentaSimple) && l.ciclo === ciclo).forEach(l => {
+  AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas', 'Fertilizantes', 'Coadyudantes'].includes(l.cuentaSimple) && l.ciclo === ciclo).forEach(l => {
     if (!porSub[l.cuentaSimple]) porSub[l.cuentaSimple] = { valor: 0, mznPorFinca: {} };
     porSub[l.cuentaSimple].valor += l.valor;
     if (l.mzn !== null && l.mzn !== undefined) porSub[l.cuentaSimple].mznPorFinca[l.finca] = l.mzn;
@@ -5355,7 +5578,7 @@ function abrirModalSubCategoriaProtectores(ciclo) {
   </tr></thead><tbody>${filasHtml || '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">Sin datos.</td></tr>'}</tbody></table>
   <p style="font-size:11px; color:var(--muted); margin-top:10px;"><i class="fa-solid fa-circle-info"></i> Clic en una Sub Categoría para ver sus productos.</p></div>`;
 
-  abrirKpiDetalleModal(`<i class="fa-solid fa-shield-virus" style="color:var(--red);"></i> Protectores de Cultivo — ${ciclo} — Sub Categorías`, '', contenido);
+  abrirKpiDetalleModal(`<i class="fa-solid fa-shield-virus" style="color:var(--red);"></i> Protectores de Cultivo (Insumos) — ${ciclo} — Sub Categorías`, '', contenido);
 }
 
 // Protectores, nivel 2: Sub Categoría (fila del modal anterior) -> modal con los productos, con botón "Volver".
@@ -5427,7 +5650,7 @@ function abrirModalDetalleAB(tipo) {
 
   } else if (tipo === 'protectores') {
     const filas = [];
-    AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas'].includes(l.cuentaSimple)).forEach(l => {
+    AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas', 'Fertilizantes', 'Coadyudantes'].includes(l.cuentaSimple)).forEach(l => {
       const key = `${l.ciclo}||${l.cuentaSimple}||${l.sku}`;
       let f = filas.find(x => x._key === key);
       if (!f) { f = { _key: key, ciclo: l.ciclo, sub: l.cuentaSimple, sku: l.sku, nombre: l.nombre, cantidad: 0, valor: 0, mznPorFinca: {} }; filas.push(f); }
