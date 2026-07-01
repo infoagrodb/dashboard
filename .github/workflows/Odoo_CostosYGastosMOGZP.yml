@@ -1,4 +1,4 @@
-name: OdooGzp_ApuntesContables
+ame: Odoo_CostosYGastosMOGZP
  
 on:
   schedule:
@@ -19,33 +19,28 @@ jobs:
         env:
           GZP_API_KEY: ${{ secrets.GZP_API_KEY }}
         run: |
-          echo "Descargando account.move.line..."
+          echo "Descargando hr.payslip.line..."
           curl -sf -X POST https://grupozp.odoo.com/jsonrpc \
           -H "Content-Type: application/json" \
-          -d "{\"jsonrpc\":\"2.0\",\"method\":\"call\",\"id\":1,\"params\":{\"service\":\"object\",\"method\":\"execute_kw\",\"args\":[\"grupozp-main-13656030\",7,\"$GZP_API_KEY\",\"account.move.line\",\"search_read\",[[]],{\"fields\":[\"date\",\"move_name\",\"account_id\",\"partner_id\",\"name\",\"product_uom_category_id\",\"debit\",\"credit\",\"parent_state\",\"x_studio_es_cierre_ab\",\"analytic_distribution\"],\"limit\":0}]}}" \
-          > _raw_contables.json
+          -d "{\"jsonrpc\":\"2.0\",\"method\":\"call\",\"id\":1,\"params\":{\"service\":\"object\",\"method\":\"execute_kw\",\"args\":[\"grupozp-main-13656030\",7,\"$GZP_API_KEY\",\"hr.payslip.line\",\"search_read\",[[]],{\"fields\":[\"name\",\"x_studio_nombre_del_lote\",\"x_studio_fecha_final_lote\",\"x_studio_cuenta_analitica_en_recibo_de_pago\",\"x_studio_empleado\",\"x_studio_puesto_historico\",\"x_studio_tipo_contrato\",\"x_studio_actividad_agricola_1\",\"x_studio_cuenta_contable_debito\",\"total\"],\"limit\":0}]}}" \
+          > _raw_mo.json
  
-          [ -s _raw_contables.json ] || { echo "❌ Vacío"; exit 1; }
+          [ -s _raw_mo.json ] || { echo "❌ Vacío"; exit 1; }
  
-          echo "Filtrando con jq..."
-          jq '
-            .result |= map(
-              select(
-                .account_id != false and
-                .account_id != null and
-                (
-                  (.account_id[1] // "") | split(" ")[0]
-                ) as $cod |
-                ($cod | test("^(113|114|115)"))
-              )
+          # Filtrar con jq: solo registros con cuenta analítica asignada (no false/null/"")
+          jq '.result |= map(
+            select(
+              .x_studio_cuenta_analitica_en_recibo_de_pago != false and
+              .x_studio_cuenta_analitica_en_recibo_de_pago != null and
+              .x_studio_cuenta_analitica_en_recibo_de_pago != ""
             )
-          ' _raw_contables.json > OdooGzp_ApuntesContables.json
+          )' _raw_mo.json > CostosyGastosMOGZP.json
  
-          rm _raw_contables.json
+          rm _raw_mo.json
  
-          TOTAL=$(jq '.result | length' OdooGzp_ApuntesContables.json)
-          SIZE=$(wc -c < OdooGzp_ApuntesContables.json)
-          echo "✅ ApuntesContables filtrados: $TOTAL registros — $SIZE bytes"
+          TOTAL=$(jq '.result | length' CostosyGastosMOGZP.json)
+          echo "✅ CostosyGastosMO filtrados: $TOTAL registros"
+          echo "   Tamaño: $(wc -c < CostosyGastosMOGZP.json) bytes"
  
       - name: Commit y push
         env:
@@ -53,11 +48,10 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add OdooGzp_ApuntesContables.json
-          git commit -m "Auto: ApuntesContables GZP (filtrado 113xx-115xx)" || echo "Sin cambios"
+          git add CostosyGastosMOGZP.json
+          git commit -m "Auto: CostosyGastosMO GZP (filtrado)" || echo "Sin cambios"
           for i in 1 2 3 4 5; do
             git pull --rebase origin main && git push origin main && break
             [ $i -eq 5 ] && exit 1
             sleep $(( (RANDOM % 5) + 3 ))
           done
- 
