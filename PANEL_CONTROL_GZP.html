@@ -2627,35 +2627,8 @@ const URL_DIAS_HOMBRE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/
 const URL_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DetalleDespachosCombustible.json';
 const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/histmo.json';
 
-// ── Worker (Odoo en vivo) — fuente principal, 100% directo ──────────────
+// Worker disponible para consultas puntuales (no se usa para carga del panel)
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
-let CUENTAS_ANALITICAS_ACTIVAS = []; // campo de filtro por ciclo (futuro)
-
-// Mapa completo: URL_* → Worker con campos exactos del YML
-const _WORKER_MAP = {
-  // ── GZP (grupozp.odoo.com, uid:7) ──────────────────────────────────────
-  [URL_ANALITICOS]:
-    WORKER+'/query?base=gzp&model=account.analytic.line&fields=date,x_studio_cuenta_analitica_unificada,amount,x_studio_es_cierre_de_ab,move_line_id,name,product_id,unit_amount,product_uom_id,ref,general_account_id',
-  [URL_APUNTES]:
-    WORKER+'/query?base=gzp&model=account.move.line&fields=date,move_name,account_id,partner_id,name,product_uom_category_id,debit,credit,parent_state,x_studio_es_cierre_ab,analytic_distribution',
-  [URL_VALUACIONES]:
-    WORKER+'/query?base=gzp&model=stock.valuation.layer&fields=categ_id,product_id,x_studio_tipo_de_ubicacion_destino,x_studio_bodega,x_studio_cuenta_de_inventarios,create_date,x_studio_fecha_del_asiento,reference,x_studio_equipofinca,x_studio_numero_de_parte,quantity,uom_id,value,x_studio_distribucion_analitica,x_studio_cuenta_predeterminada_para_consumos,x_studio_tipo_producto',
-  [URL_MOVIMIENTOS]:
-    WORKER+'/query?base=gzp&model=stock.move.line&fields=product_category_name,date,move_id,picking_code,x_studio_bodega_origen,x_studio_n_orden_de_trabajo,x_studio_n_solicitud_materiales,x_studio_documento_origen,x_studio_equipofinca,origin,reference,product_id,x_studio_numero_de_parte,quantity,product_uom_id,location_id,location_dest_id',
-  [URL_PRODUCTOS]:
-    WORKER+'/query?base=gzp&model=product.template&fields=x_studio_id,default_code,name,part_number,uom_id,list_price,type,categ_id,standard_price,qty_available,virtual_available',
-  [URL_COMPRAS]:
-    WORKER+'/query?base=gzp&model=purchase.report&fields=date_order,effective_date,order_id,partner_id,picking_type_id,product_id,category_id,user_id,qty_to_be_billed,qty_ordered,qty_received,qty_billed,currency_id,untaxed_total,price_total,state',
-  [URL_COSTOS_MO]:
-    WORKER+'/query?base=gzp&model=hr.payslip.line&fields=name,x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_empleado,x_studio_puesto_historico,x_studio_tipo_contrato,x_studio_actividad_agricola_1,x_studio_cuenta_contable_debito,total',
-  [URL_DIAS_HOMBRE]:
-    WORKER+'/query?base=gzp&model=hr.payslip.worked_days&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_puesto_historico,x_studio_empleado,x_studio_actividad_agricola_1,x_studio_dias_efectivos,x_studio_septimo_dia,x_studio_horas_extras,x_studio_alimentacion,x_studio_feriado',
-  // ── INFOAGRO (infoagro.odoo.com, uid:12) ───────────────────────────────
-  [URL_AVANCES_CAMPO]:
-    WORKER+'/query?base=info&model=x_orden_campo_line_b660b&fields=id,x_orden_campo_id,x_studio_fecha,x_studio_ciclo,x_studio_productor,x_studio_proveedor_del_servicio,x_studio_finca,x_studio_lote_agricola,x_studio_activiadad_realizada,x_studio_avance_mzn,x_studio_compaia,x_name,x_studio_sector_1,x_studio_categoria_actividad',
-  [URL_DESPACHOS_COMBUSTIBLE]:
-    WORKER+'/query?base=info&model=x_despacho_de_combusti_line_59f76&fields=id,x_studio_reporte,x_studio_fecha,x_studio_ciclo,x_studio_sector_1,x_studio_sku_en_reporte,x_studio_finca,x_studio_equipo,x_studio_actividad,x_studio_um,x_studio_hora_motor,x_studio_cantidad_ltrs,x_studio_categoria_de_equipo,x_studio_compaia,x_studio_hme,x_studio_proveedor_del_servicio,x_studio_productor,x_studio_ticket,x_studio_reporte_consolidado,x_studio_estado_del_consolidado,x_studio_bodega,x_studio_categoria_actividad',
-};
 
 let DATA_MOVIMIENTOS = [];
 let DATA_PRODUCTOS = [];
@@ -3269,100 +3242,37 @@ function cacheGet(key) {
     return data;
   } catch { return null; }
 }
-// Datasets muy grandes que no tienen sentido cachear en sessionStorage (~5-10MB límite)
-// El Worker los sirve paginados — es más rápido que parsear 50MB de JSON del storage
-const _NO_CACHE_KEYS = new Set(['apuntes','analiticos','costosMO','diasHombre','despachos']);
-
 function cacheSet(key, data) {
-  if (_NO_CACHE_KEYS.has(key)) return; // muy grande — siempre del Worker
   try {
-    const payload = JSON.stringify({ ts: Date.now(), data });
-    sessionStorage.setItem('gzp_' + key, payload);
-  } catch(e) {
-    const kb = Math.round(JSON.stringify(data).length / 1024);
-    console.warn(`⚠️ cacheSet: no se pudo guardar '${key}' (~${kb} KB) — sessionStorage lleno. Error: ${e.message}`);
-  }
+    sessionStorage.setItem('gzp_' + key, JSON.stringify({ ts: Date.now(), data }));
+  } catch { /* sessionStorage lleno — ignorar, no es crítico */ }
 }
 
 // Fetch con cache: primero revisa sessionStorage; si no está, descarga y guarda.
 async function fetchConCache(url, cacheKey, tipo = 'json') {
   const cached = cacheGet(cacheKey);
   if (cached !== null) return cached;
-
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
   let data;
-  const _esLocal = location.protocol === 'file:';
-  const _wUrl    = (!_esLocal && _WORKER_MAP) ? _WORKER_MAP[url] : null;
-
-  // ── Worker (fuente principal desde https://) ───────────────────────────
-  if (_wUrl && tipo === 'json') {
-    // Si hay filtro de ciclos activo, agregar dominio por cuenta analítica
-    let workerFinal = _wUrl;
-    if (CUENTAS_ANALITICAS_ACTIVAS && CUENTAS_ANALITICAS_ACTIVAS.length) {
-      const campo = _wUrl.includes('account.analytic.line')
-        ? 'x_studio_cuenta_analitica_unificada'
-        : _wUrl.includes('hr.payslip')
-          ? 'x_studio_cuenta_analitica_en_recibo_de_pago'
-          : null;
-      if (campo) {
-        workerFinal = _wUrl + '&domain=' + encodeURIComponent(
-          JSON.stringify([[campo, 'in', CUENTAS_ANALITICAS_ACTIVAS]])
-        );
-      }
-    }
-    try {
-      // Paginación secuencial — una página a la vez para respetar timeout del Worker
-      const PAGE = 8000;
-      const allData = [];
-      let offset = 0, pg = 1;
-      while (true) {
-        const sep = workerFinal.includes('?') ? '&' : '?';
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 20000); // 20s por página
-        const r = await fetch(`${workerFinal}${sep}limit=${PAGE}&offset=${offset}`, { signal: ctrl.signal });
-        clearTimeout(t);
-        if (!r.ok) throw new Error(`Worker HTTP ${r.status}`);
-        const j = await r.json();
-        if (!j.ok) throw new Error(j.error || 'Worker error');
-        const lote = j.result || [];
-        allData.push(...lote);
-        console.info(`📦 Worker ${cacheKey} p${pg}: ${lote.length} reg (total: ${allData.length.toLocaleString()})`);
-        if (lote.length < PAGE) break;
-        offset += PAGE; pg++;
-        if (pg > 50) { console.warn(`${cacheKey}: límite 50 páginas`); break; }
-      }
-      if (allData.length > 0) {
-        data = allData;
-        console.info(`✅ ${cacheKey}: ${data.length.toLocaleString()} registros desde Odoo`);
-      }
-    } catch(e) {
-      console.warn(`⚠️ Worker falló ${cacheKey}: ${e.message}`);
-      data = null;
-    }
-  }
-
-  // ── GitHub (solo si: file://, Worker sin mapa, o Worker falló) ────────
-  if (!data) {
-    if (_wUrl) console.info(`↩ ${cacheKey}: usando GitHub como respaldo`);
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
-    if (tipo === 'arraybuffer') return resp.arrayBuffer();
+  if (tipo === 'json') {
     const text = await resp.text();
     if (text.trimStart().startsWith('<')) {
       const esRL = text.includes('Rate limit') || text.includes('rate limit');
       throw new Error(esRL
-        ? 'GitHub Rate Limit — espera unos minutos y recarga.'
-        : `Respuesta HTML inesperada de ${url}`);
+        ? 'GitHub Rate Limit: demasiadas solicitudes. Espera unos minutos y recarga.'
+        : `Respuesta inesperada (HTML) de ${url} — posible error de red o archivo no encontrado.`);
     }
-    if (tipo === 'json_raw') {
-      data = JSON.parse(text);
-    } else {
-      const parsed = JSON.parse(text);
-      data = parsed.result ?? parsed ?? [];
-    }
+    const parsed = JSON.parse(text);
+    data = parsed.result ?? parsed ?? [];
+  } else if (tipo === 'json_raw') {
+    const text = await resp.text();
+    data = JSON.parse(text);
+  } else if (tipo === 'arraybuffer') {
+    return resp.arrayBuffer();
   }
-
   if (Array.isArray(data) && data.length === 0) {
-    console.warn(`fetchConCache: ${cacheKey} vacío — no se cachea.`);
+    console.warn(`fetchConCache: ${cacheKey} llegó vacío — no se cachea.`);
     return data;
   }
   cacheSet(cacheKey, data);
