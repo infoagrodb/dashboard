@@ -30,7 +30,7 @@
   ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; border: 2px solid #e5e7eb; }
   ::-webkit-scrollbar-thumb:hover { background: var(--primary-hover); }
 
-  html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
+  html, body { height: 100%; height: 100dvh; margin: 0; padding: 0; overflow: hidden; }
 
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -55,6 +55,9 @@
   .header-title-area h1 { margin: 0 0 2px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
   .header-title-area p { margin: 0; font-size: 13px; color: #1f2937; }
   .header-action-area { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .header-quick-actions { display: flex; align-items: flex-end; gap: 14px; }
+  .header-menu-panel { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .btn-menu-mobile, .btn-table-menu-mobile { display: none; }
 
   .header-filter-group { display: flex; flex-direction: column; gap: 4px; width: 220px; position: relative; }
   .header-filter-group .label-container { display: flex; justify-content: space-between; align-items: center; height: 16px; }
@@ -175,7 +178,7 @@
   }
   .btn-excel:hover { background-color: #16a34a; }
 
-  .table-container { background-color: var(--card-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid var(--border-color); overflow: auto; flex: 1; box-shadow: var(--shadow-sm); }
+  .table-container { background-color: var(--card-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid var(--border-color); overflow: auto; flex: 1; box-shadow: var(--shadow-sm); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 
   table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
 
@@ -258,21 +261,108 @@
   .popup-multi-block { border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; overflow: hidden; }
   .popup-block-title { background-color: #f1f5f9; color: #334155; font-size: 12px; font-weight: 700; padding: 6px 12px; border-bottom: 1px solid var(--border-color); }
 
-  @media (max-width: 1100px) { .inline-column-selector { display: none; } }
+  /* ===== TABLET (<=1100px): la selección de columnas pasa a envolver en vez de ocultarse ===== */
+  @media (max-width: 1100px) {
+    .inline-column-selector { flex-wrap: wrap; overflow: visible; }
+    .table-toolbar-left { row-gap: 8px; }
+  }
+
+  /* ===== TABLET / MÓVIL GRANDE (<=768px) ===== */
   @media (max-width: 768px) {
-    header { flex-direction: column; text-align: center; align-items: stretch; padding: 14px 16px; }
-    .header-action-area { flex-direction: column; align-items: stretch; }
+    /* --- Banner/header más delgado --- */
+    .header-wrapper { padding: 8px 0 10px; }
+    header { flex-direction: column; text-align: center; align-items: stretch; padding: 8px 14px; gap: 10px; }
+    .header-title-area h1 { font-size: 16px; margin-bottom: 0; }
+    .header-title-area p { font-size: 10.5px; opacity: 0.85; }
+    .header-action-area { flex-direction: column; align-items: stretch; gap: 0; }
+
+    /* --- Fila delgada: Filtros + Menú lado a lado --- */
+    .header-quick-actions { display: flex; gap: 8px; width: 100%; }
+    .header-quick-actions .btn-toggle-filters { flex: 1 1 0; justify-content: center; height: 36px; font-size: 12.5px; }
+    .btn-menu-mobile { display: inline-flex; background-color: rgba(17,24,39,0.85); }
+    .btn-menu-mobile:hover, .btn-menu-mobile.active-menu { background-color: #111827; }
+
+    /* --- Panel de menú (Compañía + Actualizar) como popup desplegable --- */
+    .header-menu-panel {
+      flex-direction: column; align-items: stretch; gap: 10px;
+      max-height: 400px; overflow: hidden; opacity: 1; margin-top: 10px;
+      background-color: rgba(255,255,255,0.5); border-radius: 10px; padding: 10px;
+      transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease, padding 0.3s ease;
+    }
+    .header-menu-panel.collapsed { max-height: 0; opacity: 0; margin-top: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
     .header-filter-group { width: 100%; }
+
     .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar .filter-group { flex: 0 0 auto; }
     .toolbar-wrapper { max-height: none; }
     .toolbar-wrapper:not(.collapsed) { max-height: 1400px; }
     .btn-clear-filters { width: 100%; justify-content: center; }
-    .table-toolbar { flex-direction: row; }
-    .table-toolbar-left { justify-content: flex-start; }
+
+    /* --- Barra de opciones de tabla: se colapsa detrás de un botón tipo menú --- */
+    .table-toolbar { flex-direction: column; align-items: stretch; padding: 8px 10px; }
+    .btn-table-menu-mobile { display: flex; width: 100%; justify-content: center; height: 36px; font-size: 12.5px; background-color: #475569; }
+    .btn-table-menu-mobile:hover, .btn-table-menu-mobile.active-menu { background-color: #334155; }
+    .table-toolbar-left {
+      flex-direction: column; align-items: stretch; width: 100%; gap: 8px;
+      max-height: 600px; overflow: hidden; opacity: 1; margin-top: 10px;
+      transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    }
+    .table-toolbar-left.collapsed { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
+    .table-toolbar-left > .btn,
+    .table-toolbar-left > .btn-excel,
+    .table-toolbar-left > .pivot-mode-selector { width: 100%; justify-content: center; text-align: center; }
     .pivot-mode-selector { flex-wrap: wrap; }
+    .pivot-mode-btn { flex: 1 1 auto; padding: 7px 10px; }
+    .inline-column-selector { flex-direction: column; align-items: flex-start; width: 100%; gap: 8px; }
+    .inline-column-selector .col-label-btn { width: 100%; }
+    .col-label-btn { min-height: 34px; padding: 6px 12px; }
     .modal-card { width: 94%; }
     .modal-body { max-height: 65vh; }
-    .container { padding: 12px; }
+    .container { padding: 10px; }
+
+    /* Tabla: columnas congeladas más angostas para dejar espacio a los datos */
+    #tablaHeader tr:first-child th:first-child,
+    .freeze-col-1 { min-width: 118px !important; max-width: 118px !important; }
+    #tablaHeader tr:first-child th:nth-child(2),
+    .freeze-col-2,
+    .row-finca-header td:nth-child(2) { left: 118px !important; min-width: 118px !important; max-width: 118px !important; }
+    table { font-size: 12px; }
+    #tablaHeader th { padding: 8px 10px; font-size: 10px; }
+    td { padding: 7px 10px; }
+    .badge-pct { min-width: 46px; font-size: 10px; padding: 2px 6px; }
+
+    /* Modal de gráfico: se adapta a pantallas angostas */
+    #popupGraficoOverlay .modal-card { width: 96%; }
+    #popupGraficoOverlay .modal-body { min-height: 0 !important; padding: 14px !important; }
+    #popupGraficoOverlay .modal-body > div[style*="height:430px"] { height: 280px !important; }
+    #popupGraficoOverlay h3 { font-size: 14px; }
+  }
+
+  /* ===== MÓVIL PEQUEÑO (<=480px) ===== */
+  @media (max-width: 480px) {
+    .header-title-area h1 { font-size: 15px; }
+    .header-title-area p { font-size: 9.5px; }
+    .table-toolbar-left { gap: 8px; }
+    .table-toolbar-left > .btn,
+    .table-toolbar-left > .btn-excel { font-size: 12px; padding: 0 10px; }
+    #tablaHeader tr:first-child th:first-child,
+    .freeze-col-1 { min-width: 96px !important; max-width: 96px !important; }
+    #tablaHeader tr:first-child th:nth-child(2),
+    .freeze-col-2,
+    .row-finca-header td:nth-child(2) { left: 96px !important; min-width: 96px !important; max-width: 96px !important; }
+    table { font-size: 11px; }
+    #tablaHeader th { padding: 7px 8px; font-size: 9px; }
+    td { padding: 6px 8px; }
+    .modal-card { width: 96%; border-radius: 12px; }
+    .popup-item { flex-direction: column; gap: 2px; }
+    .popup-value { text-align: left; }
+  }
+
+  /* Objetivos táctiles más cómodos en pantallas táctiles */
+  @media (hover: none) and (pointer: coarse) {
+    .multiselect-dropdown, .col-label-btn, .btn, .btn-excel, .btn-toggle-filters, .pivot-mode-btn { min-height: 38px; }
+    .multiselect-item { padding: 10px 14px; }
+    .btn-clear-individual { width: 22px; height: 22px; }
   }
 </style>
 </head>
@@ -285,18 +375,23 @@
       <p>Matriz Pivot Tridimensional • Umbral Mínimo: 55% • Sincronización: <span id="fechaActualizacion">-</span></p>
     </div>
     <div class="header-action-area">
-      <button class="btn-toggle-filters" onclick="toggleFiltrosPanel()">🔍 Filtros</button>
-      <div class="header-filter-group">
-        <div class="label-container">
-          <label>Compañía</label>
-          <button class="btn-clear-individual" id="btn_clear_compania" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'compania', 'dropCompania', 'optsCompania', 'btn_clear_compania')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
-        </div>
-        <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
-        <div class="multiselect-options" id="optsCompania"></div>
+      <div class="header-quick-actions">
+        <button class="btn-toggle-filters" onclick="toggleFiltrosPanel()">🔍 Filtros</button>
+        <button class="btn-toggle-filters btn-menu-mobile" id="btnToggleHeaderMenu" onclick="toggleHeaderMenu()">☰ Menú</button>
       </div>
-      <button class="btn" onclick="cargarDatosDesdeGitHub()">🔄 Actualizar</button>
+      <div class="header-menu-panel collapsed" id="headerMenuPanel">
+        <div class="header-filter-group">
+          <div class="label-container">
+            <label>Compañía</label>
+            <button class="btn-clear-individual" id="btn_clear_compania" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'compania', 'dropCompania', 'optsCompania', 'btn_clear_compania')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
+          <div class="multiselect-options" id="optsCompania"></div>
+        </div>
+        <button class="btn" onclick="cargarDatosDesdeGitHub()">🔄 Actualizar</button>
+      </div>
     </div>
   </header>
 </div>
@@ -349,7 +444,8 @@
   </div>
 
   <div class="table-toolbar">
-    <div class="table-toolbar-left">
+    <button class="btn-toggle-filters btn-table-menu-mobile" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
+    <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
       <button class="btn btn-secondary" id="btnToggleGlobal" style="height:28px; padding:0 12px; font-size:12px;" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
       
       <div class="pivot-mode-selector">
@@ -434,6 +530,14 @@ let estadoGlobalColapsado = false;
 let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: true, g15: true };
 
 function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
+function toggleHeaderMenu() {
+  document.getElementById('headerMenuPanel').classList.toggle('collapsed');
+  document.getElementById('btnToggleHeaderMenu').classList.toggle('active-menu');
+}
+function toggleTableMenu() {
+  document.getElementById('tableToolbarLeft').classList.toggle('collapsed');
+  document.getElementById('btnToggleTableMenu').classList.toggle('active-menu');
+}
 
 document.getElementById('pivotBody').addEventListener('click', function(e) {
   const cell = e.target.closest('.interactive-cell');
