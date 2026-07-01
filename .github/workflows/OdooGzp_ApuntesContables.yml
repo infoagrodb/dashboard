@@ -2,89 +2,45 @@ name: OdooGzp_ApuntesContables
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
-  workflow_dispatch:          # Permite ejecución manual
+    - cron: "30 5 * * *"    # 11:30 PM Nicaragua
+    - cron: "30 18 * * *"   # 12:30 PM Nicaragua
+  workflow_dispatch:
 
 permissions:
-  contents: write   # Permite hacer commit y push
+  contents: write
 
 jobs:
-  fetch-odoo-apuntes-contables:
+  fetch:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Llamar a Odoo JSON-RPC y guardar resultado
+      - name: Fetch desde Odoo y filtrar cuentas del panel
         env:
-          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+          GZP_API_KEY: ${{ secrets.GZP_API_KEY }}
         run: |
-          echo "Llamando a Odoo account.move.line..."
-          curl -s -X POST https://grupozp.odoo.com/jsonrpc \
+          echo "Descargando account.move.line..."
+          curl -sf -X POST https://grupozp.odoo.com/jsonrpc \
           -H "Content-Type: application/json" \
-          -d '{
-            "jsonrpc": "2.0",
-            "method": "call",
-            "id": 1,
-            "params": {
-              "service": "object",
-              "method": "execute",
-              "args": [
-                "grupozp-main-13656030",
-                7,
-                "'"$ODOO_PASSWORD"'",
-                "account.move.line",
-                "search_read",
-                [],
-                [
-                  "date",
-                  "move_name",
-                  "account_id",
-                  "partner_id",
-                  "name",
-                  "product_uom_category_id",
-                  "debit",
-                  "credit",
-                  "parent_state",
-                  "x_studio_es_cierre_ab",
-                  "analytic_distribution"
-                ]
-              ]
-            }
-          }' > OdooGzp_ApuntesContables.json
+          -d "{\"jsonrpc\":\"2.0\",\"method\":\"call\",\"id\":1,\"params\":{\"service\":\"object\",\"method\":\"execute_kw\",\"args\":[\"grupozp-main-13656030\",7,\"$GZP_API_KEY\",\"account.move.line\",\"search_read\",[[\"account_id.code\",\"in\",[\"11301\",\"11302\",\"11303\",\"11304\",\"11305\",\"11306\",\"11307\",\"11308\",\"11309\",\"11321\",\"11332\",\"11401\",\"11402\",\"11403\",\"11404\",\"11405\",\"11406\",\"11407\",\"11408\",\"11409\",\"11410\",\"11411\",\"11412\",\"11413\",\"11414\",\"11415\",\"11416\",\"11417\",\"11418\",\"11419\",\"11420\",\"11421\",\"11422\",\"11423\",\"11424\",\"11425\",\"11450\",\"11451\",\"11452\",\"11453\",\"11501\",\"11502\",\"11503\",\"11504\",\"11505\",\"11506\",\"11507\",\"11508\"]]],{\"fields\":[\"date\",\"move_name\",\"account_id\",\"partner_id\",\"name\",\"product_uom_category_id\",\"debit\",\"credit\",\"parent_state\",\"x_studio_es_cierre_ab\",\"analytic_distribution\"],\"limit\":0}]}}" \
+          > OdooGzp_ApuntesContables.json
 
-          echo "Verificando contenido..."
-          if [ ! -s OdooGzp_ApuntesContables.json ]; then
-            echo "❌ Error: OdooGzp_ApuntesContables.json está vacío o no se generó correctamente."
-            exit 1
-          fi
+          [ -s OdooGzp_ApuntesContables.json ] || { echo "❌ Vacío"; exit 1; }
 
-          echo "✅ Archivo generado correctamente:"
-          head -n 10 OdooGzp_ApuntesContables.json
+          TOTAL=$(jq '.result | length' OdooGzp_ApuntesContables.json 2>/dev/null || echo 0)
+          echo "✅ ApuntesContables filtrados: $TOTAL registros"
+          echo "   Tamaño: $(wc -c < OdooGzp_ApuntesContables.json) bytes"
 
-      - name: Commit y push del JSON
+      - name: Commit y push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add OdooGzp_ApuntesContables.json
-          git commit -m "Actualización automática de Apuntes Contables desde Odoo" || echo "No hay cambios"
-          intento=1
-          maximo_intentos=5
-          while [ $intento -le $maximo_intentos ]; do
-            echo "Intento de push #$intento..."
-            if git pull --rebase origin main && git push origin main; then
-              echo "Push exitoso."
-              break
-            fi
-            if [ $intento -eq $maximo_intentos ]; then
-              echo "Se agotaron los intentos de push."
-              exit 1
-            fi
-            espera=$(( (RANDOM % 5) + 3 ))
-            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
-            sleep $espera
-            intento=$((intento + 1))
+          git commit -m "Auto: ApuntesContables GZP (filtrado por cuentas)" || echo "Sin cambios"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin main && break
+            [ $i -eq 5 ] && exit 1
+            sleep $(( (RANDOM % 5) + 3 ))
           done
