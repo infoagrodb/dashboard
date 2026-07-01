@@ -673,11 +673,20 @@ function totalMes(rows){
   return dias.reduce((s,fecha)=>s+avgDay(rows.filter(r=>r.f===fecha)),0);
 }
 
+const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
+const GITHUB_PV = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json";
+
+async function fetchLiveOrGitHub(workerUrl, githubUrl) {
+  try {
+    const r = await fetch(workerUrl);
+    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+  } catch(e) {}
+  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+}
+
 async function loadData(){
-  const url="https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json";
   try{
-    const resp=await fetch(url+"?cache="+Date.now());
-    const json=await resp.json();
+    const json = await fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_pluviosidad", GITHUB_PV);
     
     let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
     if(!records.length && json.records) records = json.records;

@@ -502,11 +502,21 @@
     return `${parts[2].padStart(2, "0")}-${MESES_ABR[monthIdx] || parts[1]}-${yearShort}`;
   }
 
-  async function loadData() {
-    const url = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odoo.json";
+  const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
+  const GITHUB_FALLBACK = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odoo.json";
+
+  async function fetchConFallback(workerUrl, githubUrl) {
     try {
-      const response = await fetch(url + "?cache=" + Date.now());
-      const json = await response.json();
+      const r = await fetch(workerUrl);
+      if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+    } catch(e) {}
+    return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+  }
+
+  async function loadData() {
+    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_b660b";
+    try {
+      const json = await fetchConFallback(workerUrl, GITHUB_FALLBACK);
       
       let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
       if(!records.length && json.records) records = json.records;

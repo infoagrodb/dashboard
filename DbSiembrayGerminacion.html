@@ -937,13 +937,25 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
 
 function cerrarModalPopup() { document.getElementById('popupDetalleOverlay').classList.remove('show'); }
 
+const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
+
+async function fetchLiveOrGitHub(workerUrl, githubUrl) {
+  try {
+    const r = await fetch(workerUrl);
+    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+  } catch(e) {}
+  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+}
+
 async function cargarDatosDesdeGitHub() {
   const tbody = document.getElementById('pivotBody');
   tbody.innerHTML = '<tr><td class="loading">Sincronizando orígenes de datos remotos y cruzando dimensiones...</td></tr>';
   try {
-    const siembraRes = await fetch('https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentosSiembra.json').then(r => r.json());
-    const germinacionRes = await fetch('https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentoGerminacio.json').then(r => r.json());
-    const lluviaRes = await fetch('https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json').then(r => r.json());
+    const [siembraRes, germinacionRes, lluviaRes] = await Promise.all([
+      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_siembra", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentosSiembra.json"),
+      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_germinaciones", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/Odoo_RecuentoGerminacio.json"),
+      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_pluviosidad", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/odooPV.json"),
+    ]);
 
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];

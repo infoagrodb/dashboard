@@ -548,8 +548,20 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 Chart.register(ChartDataLabels);
 Chart.defaults.plugins.datalabels={display:false};
 
-const URL_COSTOS   ="https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json";
-const URL_DIAS     ="https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json";
+const WORKER       ="https://weathered-recipe-d18c.ignagher.workers.dev";
+// Campos mínimos — Odoo solo devuelve lo que el dashboard realmente usa
+const URL_COSTOS   = WORKER+"/query?base=gzp&model=hr.payslip.line&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_cuenta_contable_debito,x_studio_puesto_historico,x_studio_actividad_agricola_1,total";
+const URL_COSTOS_FB="https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json";
+const URL_DIAS     = WORKER+"/query?base=gzp&model=hr.payslip.worked_days&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_puesto_historico,x_studio_actividad_agricola_1,x_studio_dias_efectivos";
+const URL_DIAS_FB  ="https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json";
+
+async function fetchLiveOrGitHub(workerUrl, githubUrl) {
+  try {
+    const r = await fetch(workerUrl);
+    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+  } catch(e) {}
+  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+}
 const URL_SIEMBRAS ="https://raw.githubusercontent.com/infoagrodb/dashboard/main/Siembra%20Ciclos%20Grupo%20ZP.xlsx";
 const URL_HISTORICO="https://raw.githubusercontent.com/infoagrodb/dashboard/main/Historico%20Mano%20de%20obra%20GZP%202019-2024.xlsx";
 const CUENTAS_N1   =["11410","11411","11412","11413","11414","11415","11416","11425"];
@@ -683,8 +695,17 @@ function poblarMs(ns,items,onchange,defaultSel){
 window.addEventListener('DOMContentLoaded',async()=>{
   const setS=m=>document.getElementById('loader-status').textContent=m;
   try{
-    setS('Maestro de siembras...');
-    const resS=await fetch(URL_SIEMBRAS);
+    setS('Cargando datos en paralelo...');
+
+    // Lanzar las 4 fuentes al mismo tiempo
+    const [resS, resC, resD, resH] = await Promise.all([
+      fetch(URL_SIEMBRAS),
+      fetchLiveOrGitHub(URL_COSTOS, URL_COSTOS_FB),
+      fetchLiveOrGitHub(URL_DIAS,   URL_DIAS_FB),
+      fetch(URL_HISTORICO),
+    ]);
+
+    setS('Procesando maestro de siembras...');
     if(resS.ok){
       const wb=XLSX.read(new Uint8Array(await resS.arrayBuffer()),{type:'array'});
       RAW_SB=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:""});
@@ -696,10 +717,9 @@ window.addEventListener('DOMContentLoaded',async()=>{
       });
     }
 
-    setS('Costos Odoo...');
-    const resC=await fetch(URL_COSTOS);
-    if(resC.ok){
-      const json=await resC.json();
+    setS('Procesando costos MO...');
+    if(resC){
+      const json=resC;
       (json.result&&Array.isArray(json.result)?json.result:Object.values(json)).forEach(row=>{
         const cc=String(limpiar(row["x_studio_cuenta_contable_debito"]||"")).split(" ")[0];
         if(!esN1(cc)&&!esN6(cc))return;
@@ -715,10 +735,9 @@ window.addEventListener('DOMContentLoaded',async()=>{
       });
     }
 
-    setS('Dias Hombre...');
-    const resD=await fetch(URL_DIAS);
-    if(resD.ok){
-      const json=await resD.json();
+    setS('Procesando días hombre...');
+    if(resD){
+      const json=resD;
       (json.result&&Array.isArray(json.result)?json.result:Object.values(json)).forEach(row=>{
         const ca=limpiar(row["x_studio_cuenta_analitica_en_recibo_de_pago"]);
         const fecha=row["x_studio_fecha_final_lote"]||"";
@@ -755,8 +774,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
     DS_C.forEach(c=>{if(c.fecha&&c.ca!==''&&c.mes)SERIE.push({ciclo:c.ciclo,finca:c.finca,puesto:c.puesto,mes:c.mes,costo:c.monto,dh:0,cultivo:c.cultivo});});
     DS_DH.forEach(d=>{if(d.fecha&&d.ca!==''&&d.mes)SERIE.push({ciclo:d.ciclo,finca:d.finca,puesto:d.puesto,mes:d.mes,costo:0,dh:d.dh,cultivo:d.cultivo});});
 
-    setS('Historico 2019-2024...');
-    const resH=await fetch(URL_HISTORICO);
+    setS('Procesando histórico 2019-2024...');
     if(resH.ok){
       const wb=XLSX.read(new Uint8Array(await resH.arrayBuffer()),{type:'array'});
       if(wb.SheetNames.includes("CostoMO")){
