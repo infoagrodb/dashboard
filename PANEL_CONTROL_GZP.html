@@ -3269,12 +3269,16 @@ function cacheGet(key) {
     return data;
   } catch { return null; }
 }
+// Datasets muy grandes que no tienen sentido cachear en sessionStorage (~5-10MB límite)
+// El Worker los sirve paginados — es más rápido que parsear 50MB de JSON del storage
+const _NO_CACHE_KEYS = new Set(['apuntes','analiticos','costosMO','diasHombre','despachos']);
+
 function cacheSet(key, data) {
+  if (_NO_CACHE_KEYS.has(key)) return; // muy grande — siempre del Worker
   try {
     const payload = JSON.stringify({ ts: Date.now(), data });
     sessionStorage.setItem('gzp_' + key, payload);
   } catch(e) {
-    // sessionStorage lleno (cuota ~5-10MB) — los datos no se cachean, cada carga va al Worker/GitHub
     const kb = Math.round(JSON.stringify(data).length / 1024);
     console.warn(`⚠️ cacheSet: no se pudo guardar '${key}' (~${kb} KB) — sessionStorage lleno. Error: ${e.message}`);
   }
@@ -3435,7 +3439,7 @@ async function cargarArchivosYConstruirVista() {
       } catch (e) { console.warn('histMO parse:', e); }
     }
 
-    // Si el usuario ya entró a una sección que depende de analítica, refrescarla automáticamente
+    // Fase 2 completa — reconstruir la vista activa (el usuario puede haber navegado mientras cargaba)
     const vistaActiva = document.querySelector('#main > div[id^="view"]:not([style*="display: none"])');
     if (vistaActiva) {
       const vistaId = vistaActiva.id.replace('view', '').toLowerCase();
@@ -3446,8 +3450,18 @@ async function cargarArchivosYConstruirVista() {
         'serviciosmto': construirVistaServiciosMto,
         'taller': construirVistaTaller,
         'manoobra': construirVistaManoObra,
+        'resumengeneral': construirVistaResumenGeneral,
       };
-      if (reconstruir[vistaId]) reconstruir[vistaId]();
+      if (reconstruir[vistaId]) {
+        console.info(`🔄 Fase 2 completa — reconstruyendo vista: ${vistaId}`);
+        reconstruir[vistaId]();
+      }
+    }
+    // Notificar al usuario que los datos están listos
+    const btnAct = document.getElementById('btnActualizarDatos');
+    if (btnAct) {
+      btnAct.style.background = '#16a34a';
+      setTimeout(() => { btnAct.style.background = ''; }, 3000);
     }
 
   } catch (error) {
@@ -4711,7 +4725,10 @@ let ultimoActivoBiologicoParaExcel = [];
 
 function construirVistaActivoBiologico() {
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblActivoBiologicoBody').html('<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.</td></tr>');
+    const spinHtml = '<tr><td colspan="20" style="text-align:center; padding:32px;"><i class="fa-solid fa-spinner fa-spin" style="color:var(--blue); font-size:20px;"></i><div style="color:var(--muted); font-size:12px; margin-top:8px;">Cargando datos analíticos desde Odoo...</div></td></tr>';
+    $('#tblActivoBiologicoBody').html(spinHtml);
+    $('#tblKpiSemillaBody').html(spinHtml);
+    $('#tblKpiProtectoresBody').html(spinHtml);
     return;
   }
 
@@ -5697,7 +5714,7 @@ let ultimoRiegoParaExcel = [];
 
 function construirVistaRiego() {
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblRiegoBody').html('<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.</td></tr>');
+    $('#tblRiegoBody').html('<tr><td colspan="7" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -6431,7 +6448,7 @@ function clasificarLineaCB(r) {
 
 function construirVistaCombustible() {
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblCombustibleBody').html('<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.</td></tr>');
+    $('#tblCombustibleBody').html('<tr><td colspan="6" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -7183,7 +7200,7 @@ function toggleSmCierre(checked) {
 
 function construirVistaServiciosMto() {
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblServiciosMtoBody').html('<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.</td></tr>');
+    $('#tblServiciosMtoBody').html('<tr><td colspan="7" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -7905,7 +7922,7 @@ function clasificarLineaMO(r) {
 
 function construirVistaManoObra() {
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblConciliacionMOBody').html('<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.</td></tr>');
+    $('#tblConciliacionMOBody').html('<tr><td colspan="6" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
