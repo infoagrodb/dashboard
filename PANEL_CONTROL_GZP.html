@@ -2614,18 +2614,18 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
 
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 <script>
-const URL_MOVIMIENTOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_MovimientosInventario.json';
-const URL_PRODUCTOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooZP_Productos.json';
-const URL_VALUACIONES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ValuacionesInventario.json';
-const URL_COMPRAS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_OrdenCompraGZP.json';
-const URL_APUNTES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesContables.json';
-const URL_ANALITICOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesAnaliticos.json';
-const URL_SIEMBRA = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/siembra.json';
-const URL_AVANCES_CAMPO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/odoo.json';
-const URL_COSTOS_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json';
-const URL_DIAS_HOMBRE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json';
-const URL_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DetalleDespachosCombustible.json';
-const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/histmo.json';
+const URL_MOVIMIENTOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_MovimientosInventario.json';
+const URL_PRODUCTOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_Productos.json';
+const URL_VALUACIONES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ValuacionesInventario.json';
+const URL_COMPRAS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_Compras_Ordenes.json';
+const URL_APUNTES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ApuntesContables.json';
+const URL_ANALITICOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ApuntesAnaliticos.json';
+const URL_SIEMBRA = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_Siembra_Ciclos.json';
+const URL_AVANCES_CAMPO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_AvancesActividades.json';
+const URL_COSTOS_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ManoObra_CostosGastos.json';
+const URL_DIAS_HOMBRE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ManoObra_DiasHombre.json';
+const URL_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Combustible_Despachos.json';
+const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ManoObra_Historico.json';
 
 // Worker disponible para consultas puntuales (no se usa para carga del panel)
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
@@ -10314,9 +10314,9 @@ function exportarResumenGeneralAExcel() {
 </script>
 
 <!-- ============================================================
-     CHATBOT GZP - Asistente Inteligente del Dashboard
-     Usa Claude API (claude-sonnet-4-6) con contexto de datos
-     en memoria del dashboard.
+     CHATBOT GZP v2 — Lee JSONs directamente desde GitHub
+     Catalogo inteligente: carga solo los JSONs relevantes
+     a la pregunta del usuario
      ============================================================ -->
 <style>
 #gzp-chat-fab {
@@ -10339,7 +10339,7 @@ function exportarResumenGeneralAExcel() {
 }
 #gzp-chat-window {
   position: fixed; bottom: 96px; right: 28px;
-  width: 420px; max-height: 600px;
+  width: 440px; max-height: 620px;
   background: var(--panel); border: 1px solid var(--line);
   border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,.18);
   display: none; flex-direction: column; z-index: 9998;
@@ -10357,23 +10357,25 @@ function exportarResumenGeneralAExcel() {
 #gzp-chat-header .info { flex: 1; }
 #gzp-chat-header .info strong { display: block; font-size: 14px; }
 #gzp-chat-header .info span { font-size: 11px; opacity: .8; }
-#gzp-chat-header .status-dot {
+#gzp-chat-status-dot {
   width: 8px; height: 8px; background: #4ade80; border-radius: 50%;
-  border: 2px solid rgba(255,255,255,.5); margin-left: -6px; margin-top: 14px;
+  border: 2px solid rgba(255,255,255,.5); flex-shrink: 0;
+  transition: background .3s;
 }
-#gzp-chat-close { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; padding: 0 4px; opacity: .8; line-height: 1; }
+#gzp-chat-status-dot.loading { background: #f59e0b; }
+#gzp-chat-close { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; padding: 0 4px; opacity: .8; }
 #gzp-chat-close:hover { opacity: 1; }
 #gzp-chat-suggestions {
   padding: 10px 12px 6px; display: flex; flex-wrap: wrap; gap: 6px;
   border-bottom: 1px solid var(--line); flex-shrink: 0;
 }
-.gzp-suggestion-btn {
+.gzp-sug {
   background: var(--panel2); border: 1px solid var(--line);
   border-radius: 20px; padding: 5px 11px; font-size: 11px;
   color: var(--blue); cursor: pointer; white-space: nowrap;
-  transition: background .15s, border-color .15s; font-family: inherit;
+  transition: background .15s; font-family: inherit;
 }
-.gzp-suggestion-btn:hover { background: #eff6ff; border-color: var(--blue); }
+.gzp-sug:hover { background: #eff6ff; border-color: var(--blue); }
 #gzp-chat-messages {
   flex: 1; overflow-y: auto; padding: 14px 14px 8px;
   display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth;
@@ -10383,7 +10385,7 @@ function exportarResumenGeneralAExcel() {
 .gzp-msg { display: flex; gap: 8px; align-items: flex-end; animation: gzpFadeIn .2s ease; }
 @keyframes gzpFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
 .gzp-msg.user { flex-direction: row-reverse; }
-.gzp-bubble { max-width: 85%; padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.55; color: var(--white); }
+.gzp-bubble { max-width: 88%; padding: 9px 13px; border-radius: 14px; font-size: 13px; line-height: 1.55; color: var(--white); }
 .gzp-msg.bot .gzp-bubble { background: var(--panel2); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
 .gzp-msg.user .gzp-bubble { background: linear-gradient(135deg, #1e40af, #3b82f6); color: #fff; border-bottom-right-radius: 4px; }
 .gzp-msg.bot .gzp-avatar {
@@ -10391,7 +10393,7 @@ function exportarResumenGeneralAExcel() {
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
   font-size: 13px; flex-shrink: 0;
 }
-.gzp-typing { display: flex; gap: 4px; padding: 10px 14px; align-items: center; }
+.gzp-typing { display: flex; gap: 4px; padding: 8px 12px; align-items: center; }
 .gzp-typing span { width: 7px; height: 7px; background: #94a3b8; border-radius: 50%; animation: gzpBounce 1.2s infinite; }
 .gzp-typing span:nth-child(2) { animation-delay: .2s; }
 .gzp-typing span:nth-child(3) { animation-delay: .4s; }
@@ -10410,19 +10412,23 @@ function exportarResumenGeneralAExcel() {
 #gzp-chat-send {
   width: 38px; height: 38px; background: linear-gradient(135deg, #1e40af, #3b82f6);
   border: none; border-radius: 10px; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .15s;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
-#gzp-chat-send:disabled { opacity: .5; cursor: default; }
+#gzp-chat-send:disabled { opacity: .45; cursor: default; }
 #gzp-chat-send svg { width: 17px; height: 17px; fill: #fff; }
-.gzp-data-tag {
-  display: inline-block; background: #eff6ff; color: #1e40af;
-  border: 1px solid #bfdbfe; border-radius: 6px; font-size: 10px;
-  padding: 1px 6px; margin-top: 5px; font-weight: 600;
-}
+.gzp-tag { display: inline-block; border-radius: 6px; font-size: 10px; padding: 1px 7px; margin-top: 5px; font-weight: 600; }
+.gzp-tag.data  { background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; }
+.gzp-tag.warn  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+.gzp-tag.ok    { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
 .gzp-bubble table { border-collapse: collapse; width: 100%; margin-top: 6px; font-size: 12px; }
 .gzp-bubble table th { background: #1e40af; color: #fff; padding: 4px 8px; text-align: left; }
 .gzp-bubble table td { padding: 3px 8px; border-bottom: 1px solid var(--line); }
 .gzp-bubble table tr:nth-child(even) td { background: #f8fafc; }
+#gzp-loading-bar {
+  height: 2px; background: linear-gradient(90deg, #3b82f6, #06b6d4);
+  width: 0%; transition: width .3s; flex-shrink: 0;
+  display: none;
+}
 </style>
 
 <button id="gzp-chat-fab" onclick="gzpToggleChat()" title="Asistente GZP">
@@ -10435,30 +10441,33 @@ function exportarResumenGeneralAExcel() {
     <div class="avatar">&#129302;</div>
     <div class="info">
       <strong>Asistente GZP</strong>
-      <span>Analista de costos agricolas</span>
+      <span id="gzp-chat-status-text">Listo &mdash; datos en tiempo real</span>
     </div>
-    <div class="status-dot"></div>
+    <div id="gzp-chat-status-dot"></div>
     <button id="gzp-chat-close" onclick="gzpToggleChat()">&times;</button>
   </div>
+  <div id="gzp-loading-bar"></div>
   <div id="gzp-chat-suggestions">
-    <button class="gzp-suggestion-btn" onclick="gzpSend(this.textContent)">&#127807; Mzn siembra Mani 2026</button>
-    <button class="gzp-suggestion-btn" onclick="gzpSend(this.textContent)">&#128200; Costo/Mzn por ciclo</button>
-    <button class="gzp-suggestion-btn" onclick="gzpSend(this.textContent)">&#9981; Ciclos disponibles</button>
-    <button class="gzp-suggestion-btn" onclick="gzpSend(this.textContent)">&#128184; Top costos AB</button>
-    <button class="gzp-suggestion-btn" onclick="gzpSend(this.textContent)">&#9928; Combustible acumulado</button>
+    <button class="gzp-sug" onclick="gzpSend(this.textContent)">&#127807; Mzn siembra Mani 2026</button>
+    <button class="gzp-sug" onclick="gzpSend(this.textContent)">&#128200; Costo/Mzn por ciclo</button>
+    <button class="gzp-sug" onclick="gzpSend(this.textContent)">&#9981; Ciclos disponibles</button>
+    <button class="gzp-sug" onclick="gzpSend(this.textContent)">&#128184; Top costos AB</button>
+    <button class="gzp-sug" onclick="gzpSend(this.textContent)">&#9928; Combustible acumulado</button>
+    <button class="gzp-sug" onclick="gzpSend(this.textContent)">&#128104;&#8205;&#127806; Mano de obra Mani 2026</button>
   </div>
   <div id="gzp-chat-messages">
     <div class="gzp-msg bot">
       <div class="gzp-avatar">&#129302;</div>
       <div class="gzp-bubble">
         Hola! Soy el asistente del Dashboard GZP.<br><br>
-        Puedo responderte sobre <strong>manzanas de siembra, costos por ciclo, Activo Biologico, combustible, Mano de Obra y Riego</strong> usando los datos ya cargados en el dashboard.<br><br>
-        <span class="gzp-data-tag">&#128196; Datos en tiempo real</span>
+        Leo los datos directamente desde los JSON del repositorio &mdash; <strong>contabilidad, costos agricolas, mano de obra, combustible, inventario, campo y mas</strong>.<br><br>
+        Puedo cruzar datos de <strong>GZP e Infoagro</strong> usando la llave Siembra/Ciclo/Finca.<br><br>
+        <span class="gzp-tag data">&#128196; Lee JSONs en tiempo real</span>
       </div>
     </div>
   </div>
   <div id="gzp-chat-input-area">
-    <textarea id="gzp-chat-input" placeholder="Pregunta sobre costos, ciclos, manzanas..." rows="1"
+    <textarea id="gzp-chat-input" placeholder="Pregunta sobre costos, ciclos, manzanas, campo..." rows="1"
       onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gzpEnviar();}"
       oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,100)+'px';"
     ></textarea>
@@ -10470,210 +10479,355 @@ function exportarResumenGeneralAExcel() {
 
 <script>
 (function() {
-  let GZP_CHAT_OPEN = false;
-  let GZP_CHAT_HISTORY = [];
-  let GZP_CHAT_BUSY = false;
+  const WORKER   = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+  const RAW      = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/';
+  const MAX_BYTES = 400000; // ~400KB por JSON antes de resumir
 
+  let GZP_OPEN    = false;
+  let GZP_HISTORY = [];
+  let GZP_BUSY    = false;
+  const GZP_CACHE = {}; // cache de JSONs ya descargados en esta sesion
+
+  // ── Catalogo de fuentes ────────────────────────────────────────
+  const CATALOGO = [
+    // Llave maestra — siempre se carga
+    { archivo: 'gzp_Siembra_Ciclos.json',
+      temas: ['siembra','manzana','mzn','ciclo','finca','analitica','llave','cultivo','relacion'],
+      siempre: true },
+
+    // Contables / Financieros GZP
+    { archivo: 'gzp_ApuntesAnaliticos.json',
+      temas: ['costo','analitico','cuenta','gasto','ab','activo','biologico','insumo','herbicida','fungicida','fertilizante','semilla'] },
+    { archivo: 'gzp_ApuntesContables.json',
+      temas: ['contable','asiento','mayor','balance','financiero','debe','haber','journal'] },
+    { archivo: 'gzp_Compras_Ordenes.json',
+      temas: ['compra','orden','proveedor','precio','factura','adquisicion'] },
+    { archivo: 'gzp_Contratos.json',
+      temas: ['contrato','servicio','alquiler','arriendo','proveedor'] },
+    { archivo: 'gzp_ValuacionesInventario.json',
+      temas: ['valuacion','valor','inventario','costo promedio','bodega','stock'] },
+    { archivo: 'gzp_MovimientosInventario.json',
+      temas: ['movimiento','inventario','bodega','entrada','salida','traslado','existencia'] },
+    { archivo: 'gzp_Productos.json',
+      temas: ['producto','sku','catalogo','articulo','descripcion'] },
+    { archivo: 'gzp_Empleados.json',
+      temas: ['empleado','trabajador','personal','cargo','departamento','nomina'] },
+    { archivo: 'gzp_Contratos.json',
+      temas: ['contrato','servicio','alquiler'] },
+
+    // Mano de Obra GZP
+    { archivo: 'gzp_ManoObra_CostosGastos.json',
+      temas: ['mano de obra','nomina','salario','jornal','planilla','costo mo','gasto mo'] },
+    { archivo: 'gzp_ManoObra_DiasHombre.json',
+      temas: ['dias hombre','dh','jornada','labor','rendimiento','dias trabajados'] },
+    { archivo: 'gzp_ManoObra_Historico.json',
+      temas: ['historico','tendencia','comparativo','anual','serie','evolucion','mo historico'] },
+
+    // Campo / Operacional Infoagro
+    { archivo: 'info_AvancesActividades.json',
+      temas: ['avance','actividad','campo','labor','tarea','progreso','operacion'] },
+    { archivo: 'info_Campo_Siembra.json',
+      temas: ['siembra campo','densidad','recuento siembra','plantas','stand'] },
+    { archivo: 'info_Campo_Germinacion.json',
+      temas: ['germinacion','emergencia','nacencia','porcentaje germinacion'] },
+    { archivo: 'info_Campo_Enfermedades.json',
+      temas: ['enfermedad','plaga','incidencia','severidad','fungicida','sanidad'] },
+    { archivo: 'info_Campo_MadurezyProyeccionCosecha.json',
+      temas: ['madurez','cosecha','proyeccion','estimacion','maduracion','rendimiento esperado'] },
+    { archivo: 'info_Acopio.json',
+      temas: ['acopio','produccion','cosecha real','tonelada','quintal','rendimiento'] },
+
+    // Insumos / Combustible
+    { archivo: 'info_Insumos_Consumo.json',
+      temas: ['insumo','consumo','aplicacion','uso','litros aplicados','dosis'] },
+    { archivo: 'info_Combustible_Despachos.json',
+      temas: ['combustible','diesel','gasolina','litros','tractor','despacho','equipo'] },
+
+    // Clima
+    { archivo: 'info_Pluviosidad.json',
+      temas: ['lluvia','pluviosidad','precipitacion','clima','mm','agua'] },
+  ];
+
+  // ── UI helpers ─────────────────────────────────────────────────
   window.gzpToggleChat = function() {
-    GZP_CHAT_OPEN = !GZP_CHAT_OPEN;
+    GZP_OPEN = !GZP_OPEN;
     const win = document.getElementById('gzp-chat-window');
-    if (GZP_CHAT_OPEN) {
-      win.classList.add('open');
+    win.classList.toggle('open', GZP_OPEN);
+    if (GZP_OPEN) {
       document.getElementById('gzp-chat-badge').style.display = 'none';
       setTimeout(() => document.getElementById('gzp-chat-input').focus(), 100);
-    } else {
-      win.classList.remove('open');
     }
   };
 
   window.gzpSend = function(texto) {
-    if (!GZP_CHAT_OPEN) gzpToggleChat();
+    if (!GZP_OPEN) gzpToggleChat();
     document.getElementById('gzp-chat-input').value = texto;
     gzpEnviar();
   };
 
-  function gzpExtraerContexto() {
-    const ctx = {};
-    try {
-      if (typeof INDICE_MZN_ODOO !== 'undefined') {
-        ctx.manzanas_por_finca_ciclo = Object.entries(INDICE_MZN_ODOO).map(([k,v]) => {
-          const [finca,ciclo] = k.split('||'); return {finca,ciclo,mzn:v};
-        });
-      }
-      if (typeof AB_PIVOT_DATA !== 'undefined' && AB_PIVOT_DATA) {
-        const res = {};
-        function walkAB(n) {
-          if (!n) return;
-          if (n.ciclos) Object.entries(n.ciclos).forEach(([c,d]) => {
-            if (!res[c]) res[c] = {valor:0,mzn:0};
-            res[c].valor += Math.abs(d.valor||0);
-            if (d.mzn) res[c].mzn = d.mzn;
-          });
-          if (n.hijos) Object.values(n.hijos).forEach(walkAB);
-        }
-        if (AB_PIVOT_DATA.estructura) Object.values(AB_PIVOT_DATA.estructura).forEach(walkAB);
-        ctx.activo_biologico_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(d.valor), mzn:d.mzn,
-          costo_mzn: d.mzn ? Math.round(d.valor/d.mzn) : null
-        }));
-      }
-      if (typeof CB_FILAS !== 'undefined' && CB_FILAS.length) {
-        const res = {};
-        CB_FILAS.forEach(f => {
-          if (!f||!f.ciclo) return;
-          if (!res[f.ciclo]) res[f.ciclo] = {costo:0,litros:0,mzn:f.mzn||0};
-          res[f.ciclo].costo += Math.abs(f.costo||0);
-          res[f.ciclo].litros += f.litros||0;
-          if (f.mzn) res[f.ciclo].mzn = f.mzn;
-        });
-        ctx.combustible_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(d.costo), litros:Math.round(d.litros),
-          mzn:d.mzn, costo_mzn: d.mzn ? Math.round(d.costo/d.mzn) : null
-        }));
-      }
-      if (typeof CAPA !== 'undefined' && CAPA && CAPA.length) {
-        const res = {};
-        CAPA.forEach(r => {
-          if (!r||!r.ciclo||r.ciclo==='SIN MAESTRO') return;
-          if (!res[r.ciclo]) res[r.ciclo] = {costo:0,mzn:r.mzn||0};
-          res[r.ciclo].costo += r.costo||0;
-          if (r.mzn) res[r.ciclo].mzn = r.mzn;
-        });
-        ctx.mano_de_obra_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(Math.abs(d.costo)), mzn:d.mzn,
-          costo_mzn: d.mzn ? Math.round(Math.abs(d.costo)/d.mzn) : null
-        }));
-      }
-      if (typeof RG_PIVOT_DATA !== 'undefined' && RG_PIVOT_DATA) {
-        const res = {};
-        function walkRG(n) {
-          if (!n||!n.ciclos) return;
-          Object.entries(n.ciclos).forEach(([c,d]) => {
-            if (!res[c]) res[c] = {valor:0,mzn:0};
-            res[c].valor += Math.abs(d.valor||0);
-            if (d.mzn) res[c].mzn = d.mzn;
-          });
-          if (n.hijos) Object.values(n.hijos).forEach(walkRG);
-        }
-        if (RG_PIVOT_DATA.estructura) Object.values(RG_PIVOT_DATA.estructura).forEach(walkRG);
-        ctx.riego_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(d.valor), mzn:d.mzn,
-          costo_mzn: d.mzn ? Math.round(d.valor/d.mzn) : null
-        }));
-      }
-    } catch(e) { console.warn('GZP Chat ctx error:', e); }
-    return ctx;
+  function setStatus(texto, loading) {
+    document.getElementById('gzp-chat-status-text').textContent = texto;
+    const dot = document.getElementById('gzp-chat-status-dot');
+    dot.className = loading ? 'loading' : '';
+    const bar = document.getElementById('gzp-loading-bar');
+    bar.style.display = loading ? 'block' : 'none';
+    if (loading) { bar.style.width = '0%'; setTimeout(() => bar.style.width = '70%', 50); }
+    else { bar.style.width = '100%'; setTimeout(() => { bar.style.width = '0%'; bar.style.display = 'none'; }, 400); }
   }
 
-  function gzpSystemPrompt(ctx) {
-    return `Eres el Asistente de Analisis del Dashboard de Costos Agricolas de Grupo ZP (GZP), empresa agricola en Nicaragua (cultivos: Mani, Cana, Cacao, Sorgo).
-
-Tienes acceso a datos actuales del dashboard en memoria. Responde SIEMPRE en espanol, conciso y directo. Usa formato "C$ X,XXX" para cordobas. Usa tablas Markdown cuando sea util.
-
-DATOS ACTUALES:
-${JSON.stringify(ctx, null, 1)}
-
-REGLAS:
-- Mzn = Manzanas de siembra (area agricola Nicaragua, aprox 0.7 ha).
-- C$/Mzn = metrica principal de eficiencia del dashboard.
-- Si preguntan por ciclo especifico, filtra por nombre del ciclo (ej "Mani 2026").
-- No inventes numeros. Si no hay dato, dilo.
-- Puedes comparar ciclos, calcular totales, identificar el mas caro/barato, tendencias.
-- Si los datos de una seccion estan vacios, indica que esa seccion aun no fue cargada en el dashboard.`;
-  }
-
-  function gzpAddMsg(role, html, isHtml) {
+  function addMsg(role, html, isHtml) {
     const c = document.getElementById('gzp-chat-messages');
     const d = document.createElement('div');
     d.className = 'gzp-msg ' + role;
-    const content = isHtml ? html : html.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    const body = isHtml ? html : html.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
     d.innerHTML = role === 'bot'
-      ? `<div class="gzp-avatar">&#129302;</div><div class="gzp-bubble">${content}</div>`
-      : `<div class="gzp-bubble">${content}</div>`;
+      ? `<div class="gzp-avatar">&#129302;</div><div class="gzp-bubble">${body}</div>`
+      : `<div class="gzp-bubble">${body}</div>`;
     c.appendChild(d);
     c.scrollTop = c.scrollHeight;
   }
 
-  function gzpShowTyping() {
+  function showTyping() {
     const c = document.getElementById('gzp-chat-messages');
     const d = document.createElement('div');
     d.className = 'gzp-msg bot'; d.id = 'gzp-typing';
     d.innerHTML = `<div class="gzp-avatar">&#129302;</div><div class="gzp-bubble" style="padding:8px 14px;"><div class="gzp-typing"><span></span><span></span><span></span></div></div>`;
     c.appendChild(d); c.scrollTop = c.scrollHeight;
   }
+  function hideTyping() { const e = document.getElementById('gzp-typing'); if(e) e.remove(); }
 
-  function gzpHideTyping() { const e = document.getElementById('gzp-typing'); if(e) e.remove(); }
-
-  function gzpMd(md) {
+  function mdToHtml(md) {
     let h = md;
     // Tablas Markdown
     h = h.replace(/((?:^\|.+\|\s*\n)+)/gm, block => {
-      const rows = block.trim().split('\n').filter(r=>r.trim());
+      const rows = block.trim().split('\n').filter(r => r.trim());
       if (rows.length < 2) return block;
       let t = '<table>';
-      rows.forEach((row,i) => {
+      rows.forEach((row, i) => {
         if (row.match(/^\|[-:\s|]+\|$/)) return;
-        const cells = row.split('|').slice(1,-1).map(c=>c.trim());
-        const tag = i===0 ? 'th' : 'td';
-        t += '<tr>' + cells.map(c=>`<${tag}>${c}</${tag}>`).join('') + '</tr>';
+        const cells = row.split('|').slice(1,-1).map(c => c.trim());
+        const tag = i === 0 ? 'th' : 'td';
+        t += '<tr>' + cells.map(c => `<${tag}>${c}</${tag}>`).join('') + '</tr>';
       });
       return t + '</table>';
     });
-    h = h.replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
-    h = h.replace(/\n/g,'<br>');
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/\n/g, '<br>');
     return h;
   }
 
+  // ── Seleccion inteligente de fuentes ───────────────────────────
+  function seleccionarFuentes(pregunta) {
+    const q = pregunta.toLowerCase();
+    const seleccionadas = [];
+
+    CATALOGO.forEach(f => {
+      if (f.siempre) { seleccionadas.push(f); return; }
+      const match = f.temas.some(t => q.includes(t));
+      if (match) seleccionadas.push(f);
+    });
+
+    // Si no matcheo nada especifico, cargar las mas generales
+    if (seleccionadas.length <= 1) {
+      ['gzp_ApuntesAnaliticos.json', 'info_AvancesActividades.json', 'gzp_ManoObra_CostosGastos.json']
+        .forEach(arch => {
+          if (!seleccionadas.find(f => f.archivo === arch)) {
+            const f = CATALOGO.find(c => c.archivo === arch);
+            if (f) seleccionadas.push(f);
+          }
+        });
+    }
+
+    return seleccionadas;
+  }
+
+  // ── Descarga y procesamiento de JSONs ─────────────────────────
+  async function descargarJSON(archivo) {
+    if (GZP_CACHE[archivo]) return GZP_CACHE[archivo];
+    try {
+      const r = await fetch(RAW + archivo);
+      if (!r.ok) return null;
+      const text = await r.text();
+      // Si es muy grande, resumir
+      if (text.length > MAX_BYTES) {
+        const data = JSON.parse(text);
+        const resumen = resumirJSON(archivo, data, text.length);
+        GZP_CACHE[archivo] = resumen;
+        return resumen;
+      }
+      const data = JSON.parse(text);
+      GZP_CACHE[archivo] = data;
+      return data;
+    } catch(e) {
+      console.warn('GZP Chat - error cargando', archivo, e);
+      return null;
+    }
+  }
+
+  // ── Resumidor de JSONs grandes ────────────────────────────────
+  function resumirJSON(archivo, data, byteSize) {
+    const arr = Array.isArray(data) ? data : (data.result || Object.values(data)[0] || []);
+    if (!Array.isArray(arr) || arr.length === 0) return data;
+
+    const muestra = arr.slice(0, 300);
+    const campos = muestra.length > 0 ? Object.keys(muestra[0]) : [];
+
+    // Resumen especifico por tipo de JSON
+    if (archivo.includes('ManoObra_CostosGastos') || archivo.includes('ManoObra_DiasHombre')) {
+      // Agrupar por ciclo + puesto
+      const grupos = {};
+      arr.forEach(r => {
+        const ciclo = r.ciclo || r.x_studio_ciclo?.[1] || 'Sin Ciclo';
+        const k = ciclo;
+        if (!grupos[k]) grupos[k] = { ciclo, registros: 0, costo: 0, dh: 0 };
+        grupos[k].registros++;
+        grupos[k].costo += r.costo || r.amount || 0;
+        grupos[k].dh += r.dias_hombre || r.x_studio_dias_hombre || 0;
+      });
+      return { _resumen: true, _archivo: archivo, _total_registros: arr.length, _bytes_original: byteSize, por_ciclo: Object.values(grupos) };
+    }
+
+    if (archivo.includes('ApuntesAnaliticos')) {
+      const grupos = {};
+      arr.forEach(r => {
+        const cuenta = r.x_studio_cuenta_analitica_unificada || 'Sin Cuenta';
+        const ciclo = cuenta.split('-')[0]?.trim() || 'Sin Ciclo';
+        if (!grupos[ciclo]) grupos[ciclo] = { ciclo, registros: 0, monto: 0 };
+        grupos[ciclo].registros++;
+        grupos[ciclo].monto += r.amount || 0;
+      });
+      return { _resumen: true, _archivo: archivo, _total_registros: arr.length, _bytes_original: byteSize, por_ciclo: Object.values(grupos), muestra_100: arr.slice(0,100) };
+    }
+
+    if (archivo.includes('ApuntesContables')) {
+      const grupos = {};
+      arr.forEach(r => {
+        const cuenta = r.account_id?.[1] || 'Sin Cuenta';
+        if (!grupos[cuenta]) grupos[cuenta] = { cuenta, registros: 0, debe: 0, haber: 0 };
+        grupos[cuenta].registros++;
+        grupos[cuenta].debe  += r.debit  || 0;
+        grupos[cuenta].haber += r.credit || 0;
+      });
+      return { _resumen: true, _archivo: archivo, _total_registros: arr.length, _bytes_original: byteSize, por_cuenta: Object.values(grupos).slice(0, 200) };
+    }
+
+    // Generico: primeros 500 registros + metadata
+    return { _resumen: true, _archivo: archivo, _total_registros: arr.length, _bytes_original: byteSize, campos, muestra: muestra };
+  }
+
+  // ── System prompt ──────────────────────────────────────────────
+  function buildSystemPrompt(datosCargados) {
+    const lista = datosCargados.map(d => `- ${d.archivo}: ${d.ok ? 'OK' : 'ERROR'} (${d.registros} registros)`).join('\n');
+    return `Eres el Asistente de Analisis del Dashboard de Grupo ZP (GZP), empresa agricola en Nicaragua.
+
+Tienes acceso directo a los datos reales del repositorio. Responde SIEMPRE en espanol, de forma concisa y precisa. Usa "C$ X,XXX" para cordobas. Usa tablas Markdown cuando muestres comparativos.
+
+== DATOS CARGADOS PARA ESTA PREGUNTA ==
+${lista}
+
+== CONTEXTO DE NEGOCIO ==
+- GZP (Grupo ZP): empresa agricola. Cultivos: Mani, Cana, Cacao, Sorgo.
+- Infoagro: operaciones de campo (avances, recuentos, combustible, insumos).
+- gzp_Siembra_Ciclos.json es la LLAVE MAESTRA que relaciona Cuenta Analitica (contabilidad GZP) con Finca, Ciclo y Manzanas.
+- Mzn = Manzana de siembra (unidad area Nicaragua, ~0.7 ha). C$/Mzn = metrica clave de eficiencia.
+- Ciclos tienen formato "Cultivo Ano" ej: "Mani 2026", "Cana 2025".
+- Los datos _resumen:true son resumenes de JSONs grandes — indica cuantos registros totales tiene el archivo original.
+
+== REGLAS ==
+- No inventes numeros. Si el dato no esta en los datos cargados, dilo claramente.
+- Si el JSON relevante no fue cargado para esta pregunta, indicalo y sugiere que el usuario reformule.
+- Puedes cruzar GZP e Infoagro usando Finca+Ciclo como llave.
+- Si ves _resumen:true significa que el JSON original era muy grande y se cargo un resumen.`;
+  }
+
+  // ── Envio principal ────────────────────────────────────────────
   window.gzpEnviar = async function() {
-    if (GZP_CHAT_BUSY) return;
+    if (GZP_BUSY) return;
     const inp = document.getElementById('gzp-chat-input');
-    const txt = (inp.value||'').trim();
+    const txt = (inp.value || '').trim();
     if (!txt) return;
     inp.value = ''; inp.style.height = 'auto';
-    gzpAddMsg('user', txt, false);
-    GZP_CHAT_HISTORY.push({role:'user', content:txt});
-    GZP_CHAT_BUSY = true;
+
+    addMsg('user', txt, false);
+    GZP_HISTORY.push({ role: 'user', content: txt });
+    GZP_BUSY = true;
     document.getElementById('gzp-chat-send').disabled = true;
-    gzpShowTyping();
+
     try {
-      const ctx = gzpExtraerContexto();
-      const resp = await fetch('https://weathered-recipe-d18c.ignagher.workers.dev/chat', {
+      // 1. Seleccionar fuentes relevantes
+      const fuentes = seleccionarFuentes(txt);
+      setStatus(`Cargando ${fuentes.length} fuente(s)...`, true);
+
+      // 2. Descargar JSONs en paralelo
+      const resultados = await Promise.all(
+        fuentes.map(async f => {
+          const data = await descargarJSON(f.archivo);
+          const arr = Array.isArray(data) ? data : (data?.result || (data && typeof data === 'object' ? [data] : []));
+          return { archivo: f.archivo, ok: !!data, data, registros: Array.isArray(arr) ? arr.length : (data ? 1 : 0) };
+        })
+      );
+
+      // 3. Construir contexto para Claude
+      const contexto = {};
+      resultados.forEach(r => { if (r.ok) contexto[r.archivo] = r.data; });
+
+      setStatus('Analizando...', true);
+      showTyping();
+
+      // 4. Llamar al Worker /chat
+      const resp = await fetch(`${WORKER}/chat`, {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
-          system: gzpSystemPrompt(ctx),
-          messages: GZP_CHAT_HISTORY
+          system: buildSystemPrompt(resultados),
+          messages: [
+            ...GZP_HISTORY.slice(-8), // ultimos 8 turnos de historia
+            {
+              role: 'user',
+              content: `DATOS JSON CARGADOS:\n${JSON.stringify(contexto, null, 1).slice(0, 180000)}\n\nPREGUNTA: ${txt}`
+            }
+          ]
         })
       });
+
       const data = await resp.json();
-      gzpHideTyping();
+      hideTyping();
+
       if (data.error) {
-        gzpAddMsg('bot', 'Error: ' + data.error.message, true);
+        addMsg('bot', `Error: ${data.error.message || JSON.stringify(data.error)}`, true);
       } else {
-        const ans = data.content.map(b=>b.text||'').join('');
-        GZP_CHAT_HISTORY.push({role:'assistant', content:ans});
-        if (GZP_CHAT_HISTORY.length > 20) GZP_CHAT_HISTORY = GZP_CHAT_HISTORY.slice(-20);
-        gzpAddMsg('bot', gzpMd(ans) + '<br><span class="gzp-data-tag">&#128196; Datos en tiempo real</span>', true);
+        const ans = data.content?.map(b => b.text || '').join('') || 'Sin respuesta';
+        GZP_HISTORY.push({ role: 'assistant', content: ans });
+        if (GZP_HISTORY.length > 16) GZP_HISTORY = GZP_HISTORY.slice(-16);
+
+        const archivosUsados = resultados.filter(r=>r.ok).map(r=>r.archivo.replace('.json','')).join(', ');
+        addMsg('bot',
+          mdToHtml(ans) +
+          `<br><span class="gzp-tag ok">&#128196; ${resultados.filter(r=>r.ok).length} fuentes leidas</span> ` +
+          `<span class="gzp-tag data" title="${archivosUsados}">&#128269; ${archivosUsados.substring(0,60)}${archivosUsados.length>60?'...':''}</span>`,
+          true
+        );
       }
+
     } catch(e) {
-      gzpHideTyping();
-      gzpAddMsg('bot', 'Error de conexion con el asistente.', true);
+      hideTyping();
+      addMsg('bot', `Error de conexion: ${e.message}`, true);
       console.error('GZP Chat:', e);
     }
-    GZP_CHAT_BUSY = false;
+
+    setStatus('Listo \u2014 datos en tiempo real', false);
+    GZP_BUSY = false;
     document.getElementById('gzp-chat-send').disabled = false;
     document.getElementById('gzp-chat-input').focus();
   };
 
   // Badge inicial
   setTimeout(() => {
-    if (!GZP_CHAT_OPEN) {
+    if (!GZP_OPEN) {
       const b = document.getElementById('gzp-chat-badge');
       if (b) b.style.display = 'flex';
     }
-  }, 3000);
+  }, 3500);
 })();
 </script>
 
