@@ -1,0 +1,62 @@
+name: OdooGzp_ApuntesAnaliticos
+
+on:
+  schedule:
+    - cron: "30 5 * * *"    # 11:30 PM Nicaragua
+    - cron: "30 18 * * *"   # 12:30 PM Nicaragua
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Fetch desde Odoo y filtrar cuentas relevantes
+        env:
+          GZP_API_KEY: ${{ secrets.GZP_API_KEY }}
+        run: |
+          echo "Descargando account.analytic.line..."
+          curl -sf -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d "{\"jsonrpc\":\"2.0\",\"method\":\"call\",\"id\":1,\"params\":{\"service\":\"object\",\"method\":\"execute_kw\",\"args\":[\"grupozp-main-13656030\",7,\"$GZP_API_KEY\",\"account.analytic.line\",\"search_read\",[[]],{\"fields\":[\"date\",\"x_studio_cuenta_analitica_unificada\",\"amount\",\"x_studio_es_cierre_de_ab\",\"move_line_id\",\"name\",\"product_id\",\"unit_amount\",\"product_uom_id\",\"ref\",\"general_account_id\"],\"limit\":0}]}}" \
+          > _raw_analiticos.json
+
+          [ -s _raw_analiticos.json ] || { echo "❌ Vacío"; exit 1; }
+
+          # Filtrar solo cuentas usadas por el panel (AB, Riego, Combustible, MO, Servicios, Taller)
+          CUENTAS='["11401","11402","11403","11404","11405","11406","11407","11408","11409","11410","11411","11412","11413","11414","11415","11416","11418","11419","11420","11421","11422","11423","11425","11502","11503","11504","11505","11506","11507","11508"]'
+
+          jq --argjson c "$CUENTAS" '
+            .result |= map(
+              select(
+                .general_account_id != false and
+                .general_account_id != null and
+                ((.general_account_id[1] // "") | split(" ")[0]) as $cod |
+                ($c | index($cod)) != null
+              )
+            )
+          ' _raw_analiticos.json > gzp_ApuntesAnaliticos.json
+
+          rm _raw_analiticos.json
+
+          TOTAL_RAW=$(jq '.result | length' gzp_ApuntesAnaliticos.json 2>/dev/null || echo 0)
+          echo "✅ ApuntesAnaliticos filtrados: $TOTAL_RAW registros"
+          echo "   Tamaño: $(wc -c < gzp_ApuntesAnaliticos.json) bytes"
+
+      - name: Commit y push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add gzp_ApuntesAnaliticos.json
+          git commit -m "Auto: ApuntesAnaliticos GZP (filtrado)" || echo "Sin cambios"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin main && break
+            [ $i -eq 5 ] && exit 1
+            sleep $(( (RANDOM % 5) + 3 ))
+          done

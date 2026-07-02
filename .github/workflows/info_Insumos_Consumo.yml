@@ -1,0 +1,88 @@
+name: Odoo Proxy Detalle Consumo Insumos
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-odoo-detalle-consumo-insumos:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo Detalle de Consumo de Insumos..."
+          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "infoagro",
+                2,
+                "'"$ODOO_PASSWORD"'",
+                "x_orden_campo_line_662d7",
+                "search_read",
+                [],
+                [
+                  "id","x_studio_reporte_consolidado","x_orden_campo_id",
+                  "x_studio_fecha","x_studio_ciclo","x_studio_sector_1",
+                  "x_studio_keyfincainsumo","x_studio_lote_agricola",
+                  "x_studio_categoria_actividad","x_studio_categoria_insumo",
+                  "x_studio_actividad_realizada","x_studio_codigo_externo",
+                  "x_studio_insumo_utilizado","x_studio_related_field_312_1j9n5lns3",
+                  "x_studio_um","x_studio_cantidad_gastada",
+                  "x_studio_area_mzn_aplicada","x_studio_salidas_de_bodega",
+                  "x_studio_compaia"
+                ]
+              ]
+            }
+          }' > info_Insumos_Consumo.json
+
+          echo "Verificando contenido..."
+          if [ ! -s info_Insumos_Consumo.json ]; then
+            echo "❌ Error: info_Insumos_Consumo.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 info_Insumos_Consumo.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add info_Insumos_Consumo.json
+          git commit -m "Actualización automática de datos Detalle Consumo Insumos desde Odoo" || echo "No hay cambios"
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done

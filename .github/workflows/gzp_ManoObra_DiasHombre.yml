@@ -1,0 +1,90 @@
+name: Odoo Proxy DiasHombreMOGZP
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
+
+jobs:
+  fetch-odoo-diashombre:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo Días Hombre..."
+          curl -s -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "grupozp-main-13656030",
+                7,
+                "'"$ODOO_PASSWORD"'",
+                "hr.payslip.worked_days",
+                "search_read",
+                [],
+                [
+                  "x_studio_nombre_del_lote",
+                  "x_studio_fecha_final_lote",
+                  "x_studio_cuenta_analitica_en_recibo_de_pago",
+                  "x_studio_puesto_historico",
+                  "x_studio_empleado",
+                  "x_studio_actividad_agricola_1",
+                  "x_studio_dias_efectivos",
+                  "x_studio_septimo_dia",
+                  "x_studio_horas_extras",
+                  "x_studio_alimentacion",
+                  "x_studio_feriado"
+                ]
+              ]
+            }
+          }' > gzp_ManoObra_DiasHombre.json
+
+          echo "Verificando contenido..."
+          if [ ! -s gzp_ManoObra_DiasHombre.json ]; then
+            echo "❌ Error: gzp_ManoObra_DiasHombre.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 gzp_ManoObra_DiasHombre.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add gzp_ManoObra_DiasHombre.json
+          git commit -m "Actualización automática de datos Días Hombre desde Odoo" || echo "No hay cambios"
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done

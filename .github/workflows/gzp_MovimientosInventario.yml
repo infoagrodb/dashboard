@@ -1,0 +1,96 @@
+name: OdooGzp_MovimientosInventario
+
+on:
+  schedule:
+    - cron: "0 */2 * * *"   # Ejecuta cada 2 horas
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-odoo-movimientos-inventario:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo stock.move.line..."
+          curl -s -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "grupozp-main-13656030",
+                7,
+                "'"$ODOO_PASSWORD"'",
+                "stock.move.line",
+                "search_read",
+                [],
+                [
+                  "product_category_name",
+                  "date",
+                  "move_id",
+                  "picking_code",
+                  "x_studio_bodega_origen",
+                  "x_studio_n_orden_de_trabajo",
+                  "x_studio_n_solicitud_materiales",
+                  "x_studio_documento_origen",
+                  "x_studio_equipofinca",
+                  "origin",
+                  "reference",
+                  "product_id",
+                  "x_studio_numero_de_parte",
+                  "quantity",
+                  "product_uom_id",
+                  "location_id",
+                  "location_dest_id"
+                ]
+              ]
+            }
+          }' > gzp_MovimientosInventario.json
+
+          echo "Verificando contenido..."
+          if [ ! -s gzp_MovimientosInventario.json ]; then
+            echo "❌ Error: gzp_MovimientosInventario.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 gzp_MovimientosInventario.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add gzp_MovimientosInventario.json
+          git commit -m "Actualización automática de Movimientos de Inventario desde Odoo" || echo "No hay cambios"
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done

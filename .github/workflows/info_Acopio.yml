@@ -1,0 +1,91 @@
+name: Odoo Proxy Recuento Acopio
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
+
+jobs:
+  fetch-odoo-recuento-acopio:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo Recuento de Acopio..."
+          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "infoagro",
+                2,
+                "'"$ODOO_PASSWORD"'",
+                "x_acopio_line_6d652",
+                "search_read",
+                [],
+                [
+                  "id","x_studio_compania","x_studio_sector",
+                  "x_studio_productor_asignado","x_studio_related_field_2b5_1j9a3sf7i",
+                  "x_studio_fecha_y_hora_de_salida_d","x_studio_remision",
+                  "x_studio_finca","x_studio_lote","x_studio_variedades",
+                  "x_studio_tolvada_grande","x_studio_tolvada_mediana",
+                  "x_studio_total_tolvada_ajustada","x_studio_pesoestimadofincalote",
+                  "x_studio_peso_netofincalote","x_studio_humedad_previae",
+                  "x_studio_humedad_finale","x_studio_material_extranoe",
+                  "x_studio_caracole","x_studio_lske","x_studio_mani_oro",
+                  "x_studio_aflatoxinae","x_studio_camion","x_studio_furgon",
+                  "x_studio_conductor","x_studio_fecha_y_hora_llegadacomasa",
+                  "x_studio_numero_asignadoe","x_studio_fecha_peso_tarae"
+                ]
+              ]
+            }
+          }' > info_Acopio.json
+
+          echo "Verificando contenido..."
+          if [ ! -s info_Acopio.json ]; then
+            echo "❌ Error: info_Acopio.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 info_Acopio.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add info_Acopio.json
+          git commit -m "Actualización automática de datos Recuento de Acopio desde Odoo" || echo "No hay cambios"
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done

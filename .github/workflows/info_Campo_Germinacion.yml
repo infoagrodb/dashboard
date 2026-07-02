@@ -1,0 +1,85 @@
+name: Odoo Proxy Recuentos Germinación
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
+  workflow_dispatch:          # Permite ejecución manual
+
+permissions:
+  contents: write   # Permite hacer commit y push
+
+jobs:
+  fetch-odoo-recuentos-germinacion:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo JSON-RPC y guardar resultado
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo Recuentos de Germinación..."
+          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "infoagro",
+                2,
+                "'"$ODOO_PASSWORD"'",
+                "x_germinaciones",
+                "search_read",
+                [],
+                [
+                  "id","x_studio_reporte_de_siembra_1","x_studio_fecha_de_siembra",
+                  "x_studio_sector","x_studio_lote_comasa","x_studio_variedad",
+                  "x_studio_calibre","x_studio_fecha","x_name","x_studio_ciclo",
+                  "x_studio_finca","x_studio_lote_de_la_finca","x_studio_dds",
+                  "x_studio_area_en_mzn","x_studio_cant_plantas_x_mtr_lineal",
+                  "x_studio_observacion","x_studio_company_id"
+                ]
+              ]
+            }
+          }' > info_Campo_Germinacion.json
+
+          echo "Verificando contenido..."
+          if [ ! -s info_Campo_Germinacion.json ]; then
+            echo "❌ Error: info_Campo_Germinacion.json está vacío o no se generó correctamente."
+            exit 1
+          fi
+
+          echo "✅ Archivo generado correctamente:"
+          head -n 10 info_Campo_Germinacion.json
+
+      - name: Commit y push del JSON
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add info_Campo_Germinacion.json
+          git commit -m "Actualización automática de datos Recuentos de Germinación desde Odoo" || echo "No hay cambios"
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado (probablemente otro workflow empujo al mismo tiempo). Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done
