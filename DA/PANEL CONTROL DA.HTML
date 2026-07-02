@@ -1,1 +1,558 @@
 
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMASA · Dashboard de Presupuesto</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  /* ── CONFIG: cambia solo esta línea cuando el túnel cambie ── */
+  :root {
+    --api: 'https://calvin-temporary-three-extends.trycloudflare.com';
+    --green:  #1baf7a;
+    --blue:   #2a78d6;
+    --red:    #d03b3b;
+    --amber:  #eda100;
+    --ink:    #1a1a18;
+    --ink2:   #52514e;
+    --ink3:   #898781;
+    --bg:     #f4f3ef;
+    --card:   #ffffff;
+    --border: rgba(0,0,0,0.09);
+    --radius: 10px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+
+  /* ── TOPBAR ── */
+  header {
+    background: #0d3b2e;
+    color: #fff;
+    padding: 0 1.5rem;
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+    box-shadow: 0 1px 4px rgba(0,0,0,.3);
+  }
+  header .brand { display: flex; align-items: center; gap: 10px; }
+  header .brand svg { width: 26px; height: 26px; flex-shrink: 0; }
+  header .brand-name { font-size: 15px; font-weight: 600; letter-spacing: .3px; }
+  header .brand-sub  { font-size: 11px; opacity: .6; font-weight: 400; }
+  .conn-badge {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; opacity: .85; background: rgba(255,255,255,.1);
+    padding: 4px 10px; border-radius: 20px;
+  }
+  .conn-dot { width: 7px; height: 7px; border-radius: 50%; background: #fab219; flex-shrink:0; transition: background .3s; }
+  .conn-dot.ok  { background: #1baf7a; }
+  .conn-dot.err { background: #e24b4a; }
+
+  /* ── LAYOUT ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+
+  /* ── FILTROS ── */
+  .filter-bar {
+    background: var(--card);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem 1.1rem;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+    margin-bottom: 1.2rem;
+  }
+  .filter-bar label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--ink3); font-weight: 500; }
+  .filter-bar select, .filter-bar input {
+    height: 34px; padding: 0 10px;
+    border: 0.5px solid rgba(0,0,0,.18);
+    border-radius: 7px; font-size: 13px;
+    background: #fafaf8; color: var(--ink);
+    min-width: 140px; cursor: pointer;
+  }
+  .filter-bar select:focus, .filter-bar input:focus { outline: 2px solid #1baf7a; outline-offset: 1px; }
+  .btn-apply {
+    height: 34px; padding: 0 18px;
+    background: #0d3b2e; color: #fff;
+    border: none; border-radius: 7px;
+    font-size: 13px; font-weight: 500; cursor: pointer;
+    align-self: flex-end;
+    transition: background .15s;
+  }
+  .btn-apply:hover { background: #1a5c44; }
+  .btn-reset {
+    height: 34px; padding: 0 14px;
+    background: transparent; color: var(--ink2);
+    border: 0.5px solid var(--border); border-radius: 7px;
+    font-size: 13px; cursor: pointer; align-self: flex-end;
+  }
+  .btn-reset:hover { background: var(--bg); }
+
+  /* ── KPIs ── */
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 1.2rem; }
+  .kpi {
+    background: var(--card); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.1rem;
+    position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent, #2a78d6);
+  }
+  .kpi .lbl { font-size: 11px; color: var(--ink3); font-weight: 500; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
+  .kpi .val { font-size: 22px; font-weight: 600; color: var(--ink); line-height: 1; }
+  .kpi .sub { font-size: 11px; color: var(--ink3); margin-top: 4px; }
+
+  /* ── CHARTS ROW ── */
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin-bottom: 1.2rem; }
+  @media (max-width: 700px) { .charts-row { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--card); border: 0.5px solid var(--border);
+    border-radius: var(--radius); padding: 1.1rem;
+  }
+  .chart-card h3 { font-size: 13px; font-weight: 600; color: var(--ink2); margin-bottom: 10px; }
+  .legend-row { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 8px; }
+  .legend-row span { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--ink3); }
+  .legend-row i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  /* ── TABLA ── */
+  .tbl-card {
+    background: var(--card); border: 0.5px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .tbl-header {
+    padding: 0.8rem 1.1rem; display: flex; align-items: center;
+    justify-content: space-between; border-bottom: 0.5px solid var(--border);
+  }
+  .tbl-header h3 { font-size: 13px; font-weight: 600; color: var(--ink2); }
+  .tbl-header .rows-info { font-size: 11px; color: var(--ink3); }
+  .tbl-scroll { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; table-layout: fixed; }
+  thead th {
+    background: #f7f6f2; padding: 9px 10px;
+    text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--ink3); text-transform: uppercase; letter-spacing: .4px;
+    border-bottom: 0.5px solid var(--border);
+    white-space: nowrap;
+  }
+  thead th.r { text-align: right; }
+  tbody td {
+    padding: 8px 10px; border-bottom: 0.5px solid rgba(0,0,0,.05);
+    color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: #f7f6f2; }
+  .td-r { text-align: right; font-variant-numeric: tabular-nums; }
+  .neg { color: var(--red); }
+  .pos { color: #1a6e3a; }
+
+  /* ── PAGINACIÓN ── */
+  .pagination {
+    display: flex; align-items: center; gap: 8px;
+    padding: 0.75rem 1.1rem; border-top: 0.5px solid var(--border);
+    font-size: 12px; color: var(--ink3);
+  }
+  .pagination button {
+    height: 28px; padding: 0 10px;
+    border: 0.5px solid var(--border); border-radius: 6px;
+    background: #fafaf8; color: var(--ink); cursor: pointer; font-size: 12px;
+  }
+  .pagination button:disabled { opacity: .35; cursor: default; }
+  .pagination button:not(:disabled):hover { background: #eeecea; }
+  .page-size select { height: 28px; font-size: 12px; border: 0.5px solid var(--border); border-radius: 6px; padding: 0 6px; background: #fafaf8; }
+  .spacer { flex: 1; }
+
+  /* ── LOADING ── */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(255,255,255,.6); backdrop-filter: blur(2px);
+    z-index: 200; align-items: center; justify-content: center; flex-direction: column; gap: 12px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner { width: 36px; height: 36px; border: 3px solid #ddd; border-top-color: #0d3b2e; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-txt { font-size: 13px; color: var(--ink2); }
+
+  /* ── EMPTY ── */
+  .empty { padding: 3rem; text-align: center; color: var(--ink3); font-size: 13px; }
+
+  /* ── FOOTER ── */
+  footer { text-align: center; padding: 2rem 0 1rem; font-size: 11px; color: var(--ink3); }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="loading-txt" id="loading-txt">Cargando datos...</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <svg viewBox="0 0 26 26" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="26" height="26" rx="6" fill="rgba(255,255,255,.15)"/>
+      <path d="M6 18 L13 6 L20 18" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8.5 14 H17.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+    <div>
+      <div class="brand-name">COMASA</div>
+      <div class="brand-sub">Dashboard de Presupuesto</div>
+    </div>
+  </div>
+  <div class="conn-badge">
+    <span class="conn-dot" id="conn-dot"></span>
+    <span id="conn-txt">Conectando...</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- FILTROS -->
+  <div class="filter-bar">
+    <label>Ciclo
+      <select id="f-ciclo"><option value="">Todos</option></select>
+    </label>
+    <label>Familia de cuenta
+      <select id="f-familia"><option value="">Todas</option></select>
+    </label>
+    <label>Clasificación
+      <select id="f-clasif"><option value="">Todas</option></select>
+    </label>
+    <label>Grupo
+      <select id="f-grupo"><option value="">Todos</option></select>
+    </label>
+    <label>Versión PP
+      <select id="f-version"><option value="">Todas</option></select>
+    </label>
+    <button class="btn-apply" onclick="applyFilters()">Aplicar filtros</button>
+    <button class="btn-reset" onclick="resetFilters()">Limpiar</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-row">
+    <div class="kpi" style="--accent:#2a78d6">
+      <div class="lbl">Presupuesto total</div>
+      <div class="val" id="k-pp">—</div>
+      <div class="sub">USD</div>
+    </div>
+    <div class="kpi" style="--accent:#1baf7a">
+      <div class="lbl">Real ejecutado</div>
+      <div class="val" id="k-real">—</div>
+      <div class="sub">USD</div>
+    </div>
+    <div class="kpi" style="--accent:#eda100">
+      <div class="lbl">Saldo pendiente</div>
+      <div class="val" id="k-saldo">—</div>
+      <div class="sub">USD</div>
+    </div>
+    <div class="kpi" style="--accent:#4a3aa7">
+      <div class="lbl">Registros</div>
+      <div class="val" id="k-count">—</div>
+      <div class="sub">filas filtradas</div>
+    </div>
+    <div class="kpi" style="--accent:#0d3b2e">
+      <div class="lbl">Ejecución</div>
+      <div class="val" id="k-pct">—</div>
+      <div class="sub">% del presupuesto</div>
+    </div>
+  </div>
+
+  <!-- GRÁFICAS -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Presupuesto vs. real — por clasificación</h3>
+      <div class="legend-row">
+        <span><i style="background:#2a78d6"></i>Presupuesto</span>
+        <span><i style="background:#1baf7a"></i>Real ejecutado</span>
+      </div>
+      <div style="position:relative;width:100%;height:240px">
+        <canvas id="chart-clasif" role="img" aria-label="Presupuesto vs real por clasificación"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Saldo por familia de cuenta</h3>
+      <div class="legend-row">
+        <span><i style="background:#eda100"></i>Saldo USD</span>
+      </div>
+      <div style="position:relative;width:100%;height:240px">
+        <canvas id="chart-familia" role="img" aria-label="Saldo por familia de cuenta"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="tbl-card">
+    <div class="tbl-header">
+      <h3>Detalle de movimientos</h3>
+      <span class="rows-info" id="rows-info"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:16%">Centro de costo</th>
+            <th style="width:18%">Cuenta contable</th>
+            <th style="width:9%">Ciclo</th>
+            <th style="width:8%">Mes</th>
+            <th style="width:9%">Origen</th>
+            <th style="width:10%">Clasificación</th>
+            <th style="width:10%" class="r">Presupuesto</th>
+            <th style="width:10%" class="r">Real $</th>
+            <th style="width:10%" class="r">Saldo</th>
+          </tr>
+        </thead>
+        <tbody id="tbl-body">
+          <tr><td colspan="9" class="empty">Cargando datos...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <button id="btn-prev" disabled onclick="prevPage()">&#8592; Anterior</button>
+      <span id="page-info">—</span>
+      <button id="btn-next" disabled onclick="nextPage()">Siguiente &#8594;</button>
+      <span class="spacer"></span>
+      <span class="page-size">
+        Filas por página:
+        <select onchange="changePageSize(this.value)">
+          <option value="50">50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </span>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  COMASA · Sistema de Información · Datos en tiempo real vía DAB + Cloudflare Tunnel
+  <br><span id="footer-url" style="opacity:.6;font-size:10px"></span>
+</footer>
+
+<script>
+/* ═══════════════════════════════════════════════
+   CONFIGURACIÓN — cambia solo esta variable
+   cuando el túnel cambie de URL
+═══════════════════════════════════════════════ */
+const API_BASE = 'https://calvin-temporary-three-extends.trycloudflare.com/api/IS_SqlPresupuestodsc';
+
+/* ═══ ESTADO ═══ */
+let allData = [];
+let filtered = [];
+let currentPage = 0;
+let pageSize = 50;
+let chartClasif = null;
+let chartFamilia = null;
+
+/* ═══ FORMATO ═══ */
+function fmt(n) {
+  if (n == null || isNaN(n)) return '—';
+  const v = parseFloat(n);
+  if (Math.abs(v) >= 1e6) return (v < 0 ? '-' : '') + '$' + (Math.abs(v) / 1e6).toFixed(2) + 'M';
+  if (Math.abs(v) >= 1e3) return (v < 0 ? '-' : '') + '$' + (Math.abs(v) / 1e3).toFixed(1) + 'K';
+  return (v < 0 ? '-' : '') + '$' + Math.abs(v).toFixed(0);
+}
+
+/* ═══ CARGA INICIAL ═══ */
+async function loadAll() {
+  showOverlay(true);
+  document.getElementById('footer-url').textContent = API_BASE;
+  let url = API_BASE + '?$first=200';
+  let pages = 0;
+  allData = [];
+  try {
+    while (url && pages < 30) {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const d = await r.json();
+      if (d.value) allData = allData.concat(d.value);
+      url = d.nextLink || null;
+      pages++;
+      setOverlayTxt(`Cargando... ${allData.length.toLocaleString()} filas`);
+    }
+    setConnected(true, `${allData.length.toLocaleString()} filas · en vivo`);
+    populateFilters();
+    applyFilters();
+  } catch (e) {
+    setConnected(false, 'Sin conexión con la API');
+    document.getElementById('tbl-body').innerHTML =
+      `<tr><td colspan="9" class="empty" style="color:#d03b3b">
+        No se pudo conectar a la API.<br>
+        Verifica que <code>dab start</code> y <code>cloudflared.exe tunnel</code> estén corriendo.
+      </td></tr>`;
+  }
+  showOverlay(false);
+}
+
+function setConnected(ok, msg) {
+  document.getElementById('conn-dot').className = 'conn-dot ' + (ok ? 'ok' : 'err');
+  document.getElementById('conn-txt').textContent = msg;
+}
+function showOverlay(show) {
+  document.getElementById('overlay').classList.toggle('show', show);
+}
+function setOverlayTxt(t) {
+  document.getElementById('loading-txt').textContent = t;
+}
+
+/* ═══ FILTROS ═══ */
+function populateFilters() {
+  const fill = (id, key) => {
+    const vals = [...new Set(allData.map(r => r[key]).filter(Boolean))].sort();
+    const sel = document.getElementById(id);
+    vals.forEach(v => { const o = document.createElement('option'); o.value = v; o.textContent = v; sel.appendChild(o); });
+  };
+  fill('f-ciclo', 'Ciclo');
+  fill('f-familia', 'FAMILIACUENTA');
+  fill('f-clasif', 'CLASIFICACION');
+  fill('f-grupo', 'GRUPO');
+  fill('f-version', 'VERSIONPP');
+}
+
+function applyFilters() {
+  const ciclo   = document.getElementById('f-ciclo').value;
+  const familia = document.getElementById('f-familia').value;
+  const clasif  = document.getElementById('f-clasif').value;
+  const grupo   = document.getElementById('f-grupo').value;
+  const version = document.getElementById('f-version').value;
+  filtered = allData.filter(r =>
+    (!ciclo   || r.Ciclo        === ciclo)   &&
+    (!familia || r.FAMILIACUENTA === familia) &&
+    (!clasif  || r.CLASIFICACION === clasif)  &&
+    (!grupo   || r.GRUPO         === grupo)   &&
+    (!version || r.VERSIONPP     === version)
+  );
+  currentPage = 0;
+  updateKPIs();
+  updateCharts();
+  renderTable();
+}
+
+function resetFilters() {
+  ['f-ciclo','f-familia','f-clasif','f-grupo','f-version'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  applyFilters();
+}
+
+/* ═══ KPIs ═══ */
+function updateKPIs() {
+  const pp    = filtered.reduce((a, r) => a + (parseFloat(r.PRESUPUESTO) || 0), 0);
+  const real  = filtered.reduce((a, r) => a + (parseFloat(r.RealDolar)   || 0), 0);
+  const saldo = filtered.reduce((a, r) => a + (parseFloat(r.SaldoPp)     || 0), 0);
+  const pct   = pp !== 0 ? Math.round((real / Math.abs(pp)) * 100) : 0;
+  document.getElementById('k-pp').textContent    = fmt(pp);
+  document.getElementById('k-real').textContent  = fmt(real);
+  document.getElementById('k-saldo').textContent = fmt(saldo);
+  document.getElementById('k-count').textContent = filtered.length.toLocaleString();
+  document.getElementById('k-pct').textContent   = pct + '%';
+}
+
+/* ═══ GRÁFICAS ═══ */
+function updateCharts() {
+  // Clasificación — PP vs Real
+  const byClasif = {};
+  filtered.forEach(r => {
+    const k = r.CLASIFICACION || 'Sin clasificación';
+    if (!byClasif[k]) byClasif[k] = { pp: 0, real: 0 };
+    byClasif[k].pp   += parseFloat(r.PRESUPUESTO) || 0;
+    byClasif[k].real += parseFloat(r.RealDolar)   || 0;
+  });
+  const labels1 = Object.keys(byClasif).slice(0, 8);
+  if (chartClasif) chartClasif.destroy();
+  chartClasif = new Chart(document.getElementById('chart-clasif'), {
+    type: 'bar',
+    data: {
+      labels: labels1.map(l => l.length > 20 ? l.slice(0, 20) + '…' : l),
+      datasets: [
+        { label: 'Presupuesto', data: labels1.map(k => Math.round(byClasif[k].pp)),   backgroundColor: '#2a78d6', borderRadius: 4 },
+        { label: 'Real',        data: labels1.map(k => Math.round(byClasif[k].real)), backgroundColor: '#1baf7a', borderRadius: 4 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#898781', maxRotation: 35, autoSkip: false }, grid: { display: false } },
+        y: { ticks: { font: { size: 10 }, color: '#898781', callback: v => fmt(v) }, grid: { color: '#eeede9' } }
+      }
+    }
+  });
+
+  // Familia — Saldo
+  const byFam = {};
+  filtered.forEach(r => {
+    const k = r.FAMILIACUENTA || 'Sin familia';
+    byFam[k] = (byFam[k] || 0) + (parseFloat(r.SaldoPp) || 0);
+  });
+  const labels2 = Object.keys(byFam).slice(0, 10);
+  if (chartFamilia) chartFamilia.destroy();
+  chartFamilia = new Chart(document.getElementById('chart-familia'), {
+    type: 'bar',
+    data: {
+      labels: labels2.map(l => l.length > 18 ? l.slice(0, 18) + '…' : l),
+      datasets: [{
+        label: 'Saldo',
+        data: labels2.map(k => Math.round(byFam[k])),
+        backgroundColor: labels2.map(k => byFam[k] < 0 ? '#d03b3b' : '#eda100'),
+        borderRadius: 4
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => fmt(c.raw) } } },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#898781', maxRotation: 35, autoSkip: false }, grid: { display: false } },
+        y: { ticks: { font: { size: 10 }, color: '#898781', callback: v => fmt(v) }, grid: { color: '#eeede9' } }
+      }
+    }
+  });
+}
+
+/* ═══ TABLA ═══ */
+function renderTable() {
+  const start = currentPage * pageSize;
+  const slice = filtered.slice(start, start + pageSize);
+  const tbody = document.getElementById('tbl-body');
+  const totalPages = Math.ceil(filtered.length / pageSize);
+
+  document.getElementById('rows-info').textContent =
+    `${filtered.length.toLocaleString()} registros`;
+
+  if (!slice.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="empty">Sin resultados para los filtros aplicados.</td></tr>';
+  } else {
+    tbody.innerHTML = slice.map(r => {
+      const saldo = parseFloat(r.SaldoPp) || 0;
+      const cls   = saldo < 0 ? 'neg' : 'pos';
+      return `<tr>
+        <td title="${r.CENTRO_COSTO || ''}">${r.Centroccdesc || r.CENTRO_COSTO || '—'}</td>
+        <td title="${r.CUENTA_CONTABLE || ''}">${r.Cuentaccdesc || '—'}</td>
+        <td>${r.Ciclo || '—'}</td>
+        <td>${r.Mes || '—'}</td>
+        <td>${(r.ORIGEN || '').trim() || '—'}</td>
+        <td>${r.CLASIFICACION || '—'}</td>
+        <td class="td-r">${fmt(r.PRESUPUESTO)}</td>
+        <td class="td-r">${fmt(r.RealDolar)}</td>
+        <td class="td-r ${cls}">${fmt(r.SaldoPp)}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  document.getElementById('page-info').textContent =
+    `Página ${currentPage + 1} de ${Math.max(1, totalPages)}`;
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = currentPage >= totalPages - 1;
+}
+
+function prevPage() { if (currentPage > 0) { currentPage--; renderTable(); } }
+function nextPage() { currentPage++; renderTable(); }
+function changePageSize(v) { pageSize = parseInt(v); currentPage = 0; renderTable(); }
+
+/* ═══ INICIO ═══ */
+loadAll();
+</script>
+</body>
+</html>
