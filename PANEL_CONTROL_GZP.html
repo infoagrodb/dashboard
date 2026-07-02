@@ -1007,7 +1007,7 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
     <button class="nav-btn" id="navBtnCombustible" onclick="mostrarVista('combustible')" style="padding-left:20px;"><i class="fa-solid fa-gas-pump"></i> <span class="nav-label">Combustible Tractores</span></button>
     <button class="nav-btn" id="navBtnRiego" onclick="mostrarVista('riego')" style="padding-left:20px;"><i class="fa-solid fa-droplet"></i> <span class="nav-label">Bombeo y Riego</span></button>
     <button class="nav-btn" id="navBtnServiciosMto" onclick="mostrarVista('serviciosmto')" style="padding-left:20px;"><i class="fa-solid fa-screwdriver-wrench"></i> <span class="nav-label">Servicios, Alquiler y Mto</span></button>
-    <button class="nav-btn active" id="navBtnResumenGeneral" onclick="mostrarVista('resumengeneral')" style="padding-left:20px;"><i class="fa-solid fa-chart-pie"></i> <span class="nav-label">Consolidado General</span></button>
+    <button class="nav-btn" id="navBtnResumenGeneral" onclick="mostrarVista('resumengeneral')" style="padding-left:20px;"><i class="fa-solid fa-chart-pie"></i> <span class="nav-label">Consolidado General</span></button>
 
     <div class="nav-section-label" style="font-size:11px; color:#e2e8f0; padding-top:10px;">Taller Agrícola</div>
     <button class="nav-btn" id="navBtnTaller" onclick="mostrarVista('taller')" style="padding-left:20px;"><i class="fa-solid fa-toolbox"></i> <span class="nav-label">Taller Agrícola</span></button>
@@ -1016,7 +1016,7 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
 
     <div class="nav-section-label" style="font-size:11px; color:#e2e8f0; padding-top:4px;">Análisis Auxiliares Contables</div>
     <div class="nav-section-label" style="font-size:9.5px; padding-left:18px; padding-top:6px;">Inventarios y Compras</div>
-    <button class="nav-btn" id="navBtnInventario" onclick="mostrarVista('inventario')" style="padding-left:28px;"><i class="fa-solid fa-warehouse"></i> <span class="nav-label">Productos</span></button>
+    <button class="nav-btn active" id="navBtnInventario" onclick="mostrarVista('inventario')" style="padding-left:28px;"><i class="fa-solid fa-warehouse"></i> <span class="nav-label">Productos</span></button>
     <button class="nav-btn" id="navBtnCompras" onclick="mostrarVista('compras')" style="padding-left:28px;"><i class="fa-solid fa-cart-shopping"></i> <span class="nav-label">Compras</span></button>
     <button class="nav-btn" id="navBtnContabilidad" onclick="mostrarVista('contabilidad')" style="padding-left:28px;"><i class="fa-solid fa-scale-balanced"></i> <span class="nav-label">Cuadre auxiliar inventario</span></button>
   </div>
@@ -1038,7 +1038,7 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
 </div>
 
 <div id="main">
-  <div id="viewInventario" style="display:none; flex-direction:column; gap:16px;">
+  <div id="viewInventario" style="display:flex; flex-direction:column; gap:16px;">
   <div class="top-filters-box">
     <div class="filter-cell">
       <label><i class="fa-solid fa-warehouse"></i> Bodegas Físicas Habilitadas</label>
@@ -1268,11 +1268,11 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
     </div>
 
     <div style="display:flex; gap:8px; border-bottom:1px solid var(--line); padding-bottom:0;">
-      <button class="subtab-btn active" id="subtabAbDetalle" onclick="mostrarSubVistaAB('detalle')"><i class="fa-solid fa-sitemap"></i> Detalle por Cuenta</button>
-      <button class="subtab-btn" id="subtabAbComparativo" onclick="mostrarSubVistaAB('comparativo')"><i class="fa-solid fa-chart-line"></i> Comparativo de Ciclos</button>
+      <button class="subtab-btn active" id="subtabAbComparativo" onclick="mostrarSubVistaAB('comparativo')"><i class="fa-solid fa-chart-line"></i> Comparativo de Ciclos</button>
+      <button class="subtab-btn" id="subtabAbDetalle" onclick="mostrarSubVistaAB('detalle')"><i class="fa-solid fa-sitemap"></i> Detalle por Cuenta</button>
     </div>
 
-    <div id="subviewAbDetalle" style="display:flex; flex-direction:column; gap:16px;">
+    <div id="subviewAbDetalle" style="display:none; flex-direction:column; gap:16px;">
       <div class="kpi-row">
         <div class="kpi"><div class="kpi-icon" style="background:var(--green);"><i class="fa-solid fa-coins"></i></div><div><div class="label">Costo Acumulado (Semilla + Insumos)</div><div class="value" id="kpiAbTotal" style="color:var(--green);">C$ 0.00</div></div></div>
         <div class="kpi"><div class="kpi-icon" style="background:var(--blue);"><i class="fa-solid fa-boxes-stacked"></i></div><div><div class="label">Identificado por Producto</div><div class="value" id="kpiAbProducto" style="color:var(--blue);">C$ 0.00</div></div></div>
@@ -1324,29 +1324,31 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
       </div>
     </div>
 
-    <div id="subviewAbComparativo" style="display:none; flex-direction:column; gap:16px;">
+    <div id="subviewAbComparativo" style="display:flex; flex-direction:column; gap:16px;">
 
+      <!-- CARDS POR CATEGORÍA: 2 columnas -->
       <div class="kpi-row" style="grid-template-columns: repeat(2, 1fr);">
         <div class="card" style="margin:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-seedling" style="color:#16a34a;"></i> Uso de Semilla por Manzana — Comparativo entre Ciclos</h3>
+            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-seedling" style="color:#16a34a;"></i> Semilla por Manzana</h3>
             <button class="btn-export-excel" style="background:#16a34a; padding:5px 10px; font-size:11px;" onclick="abrirModalDetalleAB('semilla')"><i class="fa-solid fa-table-list"></i> Ver Detalle por Finca</button>
           </div>
-          <div class="table-scroll" style="max-height:220px;"><table><thead><tr>
+          <div class="table-scroll" style="max-height:200px;"><table><thead><tr>
             <th>Ciclo</th><th class="right">Cantidad Total</th><th class="right">Mzn</th>
-            <th class="right">Cantidad/Mzn</th><th class="right">Costo Total (C$)</th><th class="right">Costo/Mzn (C$)</th>
+            <th class="right">Cant/Mzn</th><th class="right">Costo Total (C$)</th><th class="right">C$/Mzn</th>
           </tr></thead><tbody id="tblKpiSemillaBody"></tbody></table></div>
         </div>
         <div class="card" style="margin:0;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-shield-virus" style="color:#dc2626;"></i> Protectores de Cultivo (Herbicida+Insecticida+Fungicidas) por Manzana</h3>
-            <button class="btn-export-excel" style="background:var(--red); padding:5px 10px; font-size:11px;" onclick="abrirModalDetalleAB('protectores')"><i class="fa-solid fa-table-list"></i> Ver Detalle por Producto</button>
+            <h3 style="margin-bottom:8px;"><i class="fa-solid fa-shield-virus" style="color:#dc2626;"></i> Protectores de Cultivo (Herbicida+Insecticida+Fungicidas+Fertilizantes+Coadyudantes)</h3>
+            <button class="btn-export-excel" style="background:var(--red); padding:5px 10px; font-size:11px;" onclick="abrirModalDetalleAB('protectores')"><i class="fa-solid fa-table-list"></i> Ver Detalle</button>
           </div>
-          <div class="table-scroll" style="max-height:220px;"><table><thead><tr>
-            <th>Ciclo</th><th class="right">Mzn</th><th class="right">Costo Total (C$)</th><th class="right">Costo/Mzn (C$)</th>
-            <th class="right">Δ vs. Ciclo Anterior</th>
+          <div class="table-scroll" style="max-height:200px;"><table><thead><tr>
+            <th>Ciclo</th><th class="right">Mzn</th><th class="right">Costo Total (C$)</th>
+            <th class="right">C$/Mzn</th><th class="right">Δ vs. Anterior</th>
           </tr></thead><tbody id="tblKpiProtectoresBody"></tbody></table></div>
         </div>
+
       </div>
 
       <div class="card">
@@ -2045,7 +2047,7 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
   </div><!-- /viewTaller -->
 
 
-  <div id="viewResumenGeneral" style="display:flex; flex-direction:column; gap:16px;">
+  <div id="viewResumenGeneral" style="display:none; flex-direction:column; gap:16px;">
     <div class="info-toggle-bar">
       <button class="info-toggle-btn" onclick="toggleInfoCard('infocard_6')" title="Ver descripción de esta sección">
         <i class="fa-solid fa-circle-info"></i>
@@ -2063,12 +2065,11 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
     </div>
 
     <div style="display:flex; gap:8px; border-bottom:1px solid var(--line); padding-bottom:0;">
-      <button class="subtab-btn" id="subtabRgCategoria" onclick="mostrarSubVistaRGGeneral('categoria')"><i class="fa-solid fa-table"></i> Resumen por Categoría</button>
+      <button class="subtab-btn active" id="subtabRgCategoria" onclick="mostrarSubVistaRGGeneral('categoria')"><i class="fa-solid fa-table"></i> Resumen por Categoría</button>
       <button class="subtab-btn" id="subtabRgActividad" onclick="mostrarSubVistaRGGeneral('actividad')"><i class="fa-solid fa-sitemap"></i> Costo por Manzana por Actividad</button>
-      <button class="subtab-btn active" id="subtabRgGraficos" onclick="mostrarSubVistaRGGeneral('graficos')"><i class="fa-solid fa-chart-line"></i> Gráficos por Cultivo</button>
     </div>
 
-    <div id="subviewRgCategoria" style="display:none; flex-direction:column; gap:16px;">
+    <div id="subviewRgCategoria" style="display:flex; flex-direction:column; gap:16px;">
       <div class="card">
         <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:end;">
           <div class="filter-cell" style="min-width:220px;">
@@ -2198,43 +2199,6 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
         </div>
       </div>
     </div>
-
-    <div id="subviewRgGraficos" style="display:flex; flex-direction:column; gap:16px;">
-      <div class="card">
-        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center; justify-content:space-between;">
-          <div class="tb-toggle-group" id="grupoCultivoConsolidado">
-            <button class="tb-toggle active" id="btnCultivoMani" onclick="cambiarCultivoConsolidado('Mani')"><i class="fa-solid fa-seedling"></i> Maní</button>
-            <button class="tb-toggle" id="btnCultivoCaña" onclick="cambiarCultivoConsolidado('Caña')"><i class="fa-solid fa-leaf"></i> Caña</button>
-            <button class="tb-toggle" id="btnCultivoCacao" onclick="cambiarCultivoConsolidado('Cacao')"><i class="fa-solid fa-cookie"></i> Cacao</button>
-            <button class="tb-toggle" id="btnCultivoOtro" onclick="cambiarCultivoConsolidado('Otro')"><i class="fa-solid fa-layer-group"></i> Otros</button>
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:end;">
-            <div class="filter-cell" style="min-width:200px;">
-              <label>Ciclos a comparar <span style="font-weight:400; text-transform:none; color:var(--muted);">(últimos 3 por defecto)</span></label>
-              <div class="combo-dropdown-btn" onclick="toggleDropdownGenerico(event, 'contentDropdownRgGraficosCiclo')">
-                <span id="txtRgGraficosCicloLabel">Seleccionar...</span>
-                <i class="fa-solid fa-chevron-down"></i>
-              </div>
-              <div class="combo-dropdown-content" id="contentDropdownRgGraficosCiclo" onclick="event.stopPropagation()"></div>
-            </div>
-            <div class="filter-cell" style="min-width:170px;">
-              <label>Vista</label>
-              <select id="selRgGraficosVista" onchange="repintarGraficosConsolidado()" style="padding:8px 10px; border:1px solid var(--line); border-radius:8px; font-size:12px; height:38px; background:var(--panel2); color:var(--white);">
-                <option value="acumulado">Acumulado</option>
-                <option value="mensual">Mensual</option>
-              </select>
-            </div>
-            <div class="filter-cell">
-              <label style="display:flex; align-items:center; gap:6px; cursor:pointer; height:38px; white-space:nowrap;">
-                <input type="checkbox" id="chkRgGraficosIncluirCierre" checked onchange="repintarGraficosConsolidado()"> Incluir "Cierre de Costeo AB"
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="contenedorGraficosConsolidado" style="display:flex; flex-direction:column; gap:16px;"></div>
-    </div>
-
 
   </div><!-- /viewResumenGeneral -->
 
@@ -2656,16 +2620,23 @@ const URL_VALUACIONES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/
 const URL_COMPRAS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_OrdenCompraGZP.json';
 const URL_APUNTES = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesContables.json';
 const URL_ANALITICOS = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/OdooGzp_ApuntesAnaliticos.json';
-const URL_SIEMBRA = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Siembra%20Ciclos%20Grupo%20ZP.xlsx';
+const URL_SIEMBRA = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/siembra.json';
 const URL_AVANCES_CAMPO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/odoo.json';
 const URL_COSTOS_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/CostosyGastosMOGZP.json';
 const URL_DIAS_HOMBRE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DiasHombreMOGZP.json';
 const URL_DESPACHOS_COMBUSTIBLE = 'https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/Odoo_DetalleDespachosCombustible.json';
-const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/Historico%20Mano%20de%20obra%20GZP%202019-2024.xlsx';
+const URL_HISTORICO_MO = 'https://raw.githubusercontent.com/infoagrodb/dashboard/main/histmo.json';
+
+// Worker disponible para consultas puntuales (no se usa para carga del panel)
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 
 let DATA_MOVIMIENTOS = [];
 let DATA_PRODUCTOS = [];
 let DATA_VALUACIONES = [];
+// Índice de valuaciones por (productoId + referencia) — evita O(n×m) en buscarCapasParaMovimiento
+// Se construye en construirIndiceValuaciones() justo después de asignar DATA_VALUACIONES
+let _IDX_VAL_REF = new Map();  // key: "productoId|referencia" → [capas...]
+let _IDX_VAL_PROD = new Map(); // key: "productoId" → [capas...] (fallback sin referencia)
 let DATA_COMPRAS = [];
 let DATA_APUNTES = [];
 let DATA_ANALITICOS = [];
@@ -3022,6 +2993,24 @@ function construirIndiceMznOdoo(registrosOdoo) {
 
 // tomando de OdooGzp_ValuacionesInventario.json la cuenta que concentra el mayor valor absoluto
 // para ese producto (un producto puede tener capas históricas en más de una cuenta si se reclasificó).
+function construirIndiceValuaciones() {
+  _IDX_VAL_REF  = new Map();
+  _IDX_VAL_PROD = new Map();
+  DATA_VALUACIONES.forEach(v => {
+    if (!v) return;
+    const pid = String(extraerIdOdoo(v.product_id));
+    const ref = (v.reference || '').trim();
+    // Índice por producto + referencia
+    const keyRef = pid + '|' + ref;
+    if (!_IDX_VAL_REF.has(keyRef)) _IDX_VAL_REF.set(keyRef, []);
+    _IDX_VAL_REF.get(keyRef).push(v);
+    // Índice solo por producto (fallback)
+    if (!_IDX_VAL_PROD.has(pid)) _IDX_VAL_PROD.set(pid, []);
+    _IDX_VAL_PROD.get(pid).push(v);
+  });
+  console.info(`🗂️ Índice valuaciones: ${_IDX_VAL_REF.size} combinaciones producto+ref, ${_IDX_VAL_PROD.size} productos únicos`);
+}
+
 function construirMapaProductoCuenta() {
   const acumulador = {}; // pid -> { cuenta: valorAbsAcumulado }
   (DATA_VALUACIONES || []).forEach(v => {
@@ -3051,39 +3040,40 @@ function extraerIdOdoo(campo) {
 // + quantity, usando la fecha como criterio de desempate cuando un mismo
 // "reference" se repite varias veces (ej. mismo proveedor, mismo día, distintos lotes).
 function buscarCapasParaMovimiento(row) {
+  // Usa _IDX_VAL_REF y _IDX_VAL_PROD (Maps) — O(1) en vez de O(n) por fila
+  const pid    = String(row.productoId);
   const refRow = (row.referencia || '').trim();
   const fechaRow = (row.fecha || '').substring(0, 10);
 
-  // 1) Coincidencia fuerte: mismo producto + misma referencia + misma cantidad
-  let capas = DATA_VALUACIONES.filter(v => {
-    if (!v || extraerIdOdoo(v.product_id) !== row.productoId) return false;
-    if ((v.reference || '').trim() !== refRow) return false;
-    return Math.abs(Math.abs(v.quantity || 0) - Math.abs(row.cantidad)) < 0.01;
-  });
+  // 1) Coincidencia fuerte: producto + referencia (lookup O(1))
+  const keyRef = pid + '|' + refRow;
+  let candidatos = _IDX_VAL_REF.get(keyRef) || [];
+
+  // Filtrar por cantidad exacta
+  let capas = candidatos.filter(v =>
+    Math.abs(Math.abs(v.quantity || 0) - Math.abs(row.cantidad)) < 0.01
+  );
   if (capas.length === 1) return capas;
 
-  // 2) Si hay varias capas con esa combinación, afinamos por fecha exacta del asiento
+  // 2) Varias con mismo producto+ref+cantidad → afinar por fecha
   if (capas.length > 1) {
     const porFecha = capas.filter(v => {
       const f = ((v.x_studio_fecha_del_asiento || v.create_date || '') + '').substring(0, 10);
       return f === fechaRow;
     });
-    if (porFecha.length) return porFecha;
-    return capas; // si no afina por fecha, devolvemos todas (mejor sumar de más que mostrar 0)
+    return porFecha.length ? porFecha : capas;
   }
 
-  // 3) Sin cantidad exacta: mismo producto + misma referencia (cubre redondeos de UoM)
-  capas = DATA_VALUACIONES.filter(v => v && extraerIdOdoo(v.product_id) === row.productoId && (v.reference || '').trim() === refRow);
-  if (capas.length) return capas;
+  // 3) Sin cantidad exacta: producto + referencia (cubre redondeos de UoM)
+  if (candidatos.length) return candidatos;
 
-  // 4) Último recurso: mismo producto + misma fecha + misma cantidad (sin referencia)
-  capas = DATA_VALUACIONES.filter(v => {
-    if (!v || extraerIdOdoo(v.product_id) !== row.productoId) return false;
+  // 4) Último recurso: producto solo → filtrar por fecha + cantidad (O(k) donde k << n)
+  const porProd = _IDX_VAL_PROD.get(pid) || [];
+  return porProd.filter(v => {
     const f = ((v.x_studio_fecha_del_asiento || v.create_date || '') + '').substring(0, 10);
     if (f !== fechaRow) return false;
     return Math.abs(Math.abs(v.quantity || 0) - Math.abs(row.cantidad)) < 0.01;
   });
-  return capas;
 }
 
 function acortarNombreBodega(name) {
@@ -3114,8 +3104,7 @@ function toggleDropdownGenerico(e, contentId) {
 // para que los KPIs se repinten ya convertidos.
 let APP_CURRENCY = 'NIO';
 let APP_EXCHANGE_RATE = 36.62; // tasa oficial BCN de referencia — editable por el usuario
-let VISTA_ACTUAL = 'resumengeneral';
-let FASE2_LISTA = false; // true cuando ya llegaron los archivos contables/agrícolas (Analíticos, Apuntes, MO, Combustible, etc.)
+let VISTA_ACTUAL = 'inventario';
 
 function cambiarMoneda(moneda) {
   APP_CURRENCY = moneda;
@@ -3130,13 +3119,6 @@ function actualizarTasaCambio(valor) {
   APP_EXCHANGE_RATE = tasa;
   if (APP_CURRENCY === 'USD') rerenderizarVistaActual();
 }
-// Renderiza un estado de "cargando" claro (en vez de mostrar ceros, que parece un error) cuando la
-// sección depende de archivos de la Fase 2 que todavía no han llegado en segundo plano.
-function renderCargandoFase2(tbodyId, colspan, kpiIds) {
-  $('#' + tbodyId).html(`<tr><td colspan="${colspan}" style="text-align:center; color:var(--muted); padding:40px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--blue);"></i><br><span style="margin-top:8px; display:inline-block;">Cargando datos contables desde GitHub (puede tardar unos segundos la primera vez)...</span></td></tr>`);
-  (kpiIds || []).forEach(id => $('#' + id).html('<i class="fa-solid fa-spinner fa-spin" style="font-size:13px;"></i>'));
-}
-
 function rerenderizarVistaActual() {
   const reconstruir = {
     'compras': construirVistaComprasYRotacion,
@@ -3257,9 +3239,6 @@ function cacheGet(key) {
     if (!raw) return null;
     const { ts, data } = JSON.parse(raw);
     if (Date.now() - ts > CACHE_TTL_MS) { sessionStorage.removeItem('gzp_' + key); return null; }
-    // Caché vacío de una sesión anterior (de antes de este arreglo) — se descarta para forzar un
-    // reintento real, en vez de quedar atascado mostrando "sin datos" el resto de la sesión.
-    if (Array.isArray(data) && data.length === 0) { sessionStorage.removeItem('gzp_' + key); return null; }
     return data;
   } catch { return null; }
 }
@@ -3277,19 +3256,23 @@ async function fetchConCache(url, cacheKey, tipo = 'json') {
   if (!resp.ok) throw new Error(`HTTP ${resp.status}: ${url}`);
   let data;
   if (tipo === 'json') {
-    data = (await resp.json()).result || [];
+    const text = await resp.text();
+    if (text.trimStart().startsWith('<')) {
+      const esRL = text.includes('Rate limit') || text.includes('rate limit');
+      throw new Error(esRL
+        ? 'GitHub Rate Limit: demasiadas solicitudes. Espera unos minutos y recarga.'
+        : `Respuesta inesperada (HTML) de ${url} — posible error de red o archivo no encontrado.`);
+    }
+    const parsed = JSON.parse(text);
+    data = parsed.result ?? parsed ?? [];
+  } else if (tipo === 'json_raw') {
+    const text = await resp.text();
+    data = JSON.parse(text);
   } else if (tipo === 'arraybuffer') {
-    data = await resp.arrayBuffer();
-    // ArrayBuffer no es serializable, no lo cacheamos
-    return data;
+    return resp.arrayBuffer();
   }
-  // Importante: NO se cachea un resultado vacío. Un archivo de Odoo realmente vacío es prácticamente
-  // imposible (siempre hay al menos histórico); un array vacío casi siempre significa que la
-  // respuesta no fue el JSON esperado (error transitorio de GitHub, archivo corrupto, etc.). Si se
-  // cacheara igual, ese "vacío" quedaría atascado hasta 10 minutos aunque el archivo real sí tenga
-  // datos — exactamente el síntoma de "no carga nada" que parecía un bug del código de los gráficos.
   if (Array.isArray(data) && data.length === 0) {
-    console.warn(`fetchConCache: ${cacheKey} llegó vacío — no se cachea, se reintentará en la próxima carga.`);
+    console.warn(`fetchConCache: ${cacheKey} llegó vacío — no se cachea.`);
     return data;
   }
   cacheSet(cacheKey, data);
@@ -3301,26 +3284,6 @@ function actualizarLoadingTexto(msg, pct) {
   const bar = document.getElementById('loadingBarFill');
   if (el) el.textContent = msg;
   if (bar && pct !== undefined) bar.style.width = pct + '%';
-}
-
-// Botón de auto-recuperación: borra todo el caché de sesión (por si quedó algo atascado de un
-// intento anterior fallido) y vuelve a correr la Fase 2 completa, sin necesidad de recargar la
-// página ni tocar la consola del navegador.
-async function reintentarCargaFase2() {
-  Object.keys(sessionStorage).filter(k => k.startsWith('gzp_')).forEach(k => sessionStorage.removeItem(k));
-  FASE2_LISTA = false;
-  if ($('#subviewRgGraficos').is(':visible')) {
-    $('#contenedorGraficosConsolidado').html('<div class="card" style="text-align:center; color:var(--muted); padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--blue);"></i><br><span style="margin-top:8px; display:inline-block;">Reintentando...</span></div>');
-  }
-  try {
-    await Promise.race([
-      cargarFase2(),
-      new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado (25s) — la conexión a GitHub parece estar colgada.')), 25000))
-    ]);
-  } catch (error) {
-    console.error('Error al reintentar Fase 2:', error);
-    mostrarErrorFase2Visible(error);
-  }
 }
 
 async function cargarArchivosYConstruirVista() {
@@ -3341,114 +3304,79 @@ async function cargarArchivosYConstruirVista() {
     DATA_PRODUCTOS.forEach(p => { if (p && p.x_studio_id) cachedFullProductsMap[p.x_studio_id.toString()] = p; });
 
     actualizarLoadingTexto('Panel de almacenes listo — mostrando resultados...', 45);
+    construirIndiceValuaciones(); // O(n) una vez — evita O(n×m) en buscarCapasParaMovimiento
     construirMapaProductoCuenta();
     procesarMovimientosLogisticaPura();
 
-    // Mostrar el panel inmediatamente con los datos disponibles. La vista de arranque es
-    // Consolidado General > Gráficos por Cultivo (lo primero que se quiere ver al abrir el panel);
-    // como todavía depende de la Fase 2, mostrarSubVistaRGGeneral ya sabe pintar el estado de
-    // "cargando" mientras tanto.
+    // Mostrar el panel inmediatamente con los datos disponibles
     $('#loading').fadeOut(200);
-    mostrarVista('resumengeneral');
-    mostrarSubVistaRGGeneral('graficos');
 
     // ── FASE 2: Archivos contables y agrícolas — se descargan en paralelo en background.
-    //    El usuario ya puede usar el Panel de Almacenes mientras llegan los demás. Se maneja con su
-    //    propio try/catch (no el de afuera) porque la pantalla de carga ya está oculta a esta altura
-    //    — si algo falla aquí, el error debe verse en pantalla, no escribirse en un elemento invisible.
-    try {
-      await Promise.race([
-        cargarFase2(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Tiempo de espera agotado (25s) — la conexión a GitHub parece estar colgada.')), 25000))
-      ]);
-    } catch (errorFase2) {
-      console.error('Error en Fase 2:', errorFase2);
-      mostrarErrorFase2Visible(errorFase2);
+    //    El usuario ya puede usar el Panel de Almacenes mientras llegan los demás.
+    actualizarLoadingTexto('Cargando analítica contable en segundo plano...', 50);
+
+    const [resCompras, resApuntes, resAnaliticos, resSiembra, resAvances,
+           resCostosMO, resDiasHombre, resDespachos, resHistMOBuf] = await Promise.all([
+
+      fetchConCache(URL_COMPRAS, 'compras').catch(e => { console.warn('compras:', e); return []; }),
+      fetchConCache(URL_APUNTES, 'apuntes').catch(e => { console.warn('apuntes:', e); return []; }),
+      fetchConCache(URL_ANALITICOS, 'analiticos').catch(e => { console.warn('analiticos:', e); return []; }),
+      fetchConCache(URL_SIEMBRA, 'siembra', 'json_raw').catch(e => { console.warn('siembra:', e); return null; }),
+      fetchConCache(URL_AVANCES_CAMPO, 'avances').catch(e => { console.warn('avances:', e); return []; }),
+      fetchConCache(URL_COSTOS_MO, 'costosMO').catch(e => { console.warn('costosMO:', e); return []; }),
+      fetchConCache(URL_DIAS_HOMBRE, 'diasHombre').catch(e => { console.warn('diasHombre:', e); return []; }),
+      fetchConCache(URL_DESPACHOS_COMBUSTIBLE, 'despachos').catch(e => { console.warn('despachos:', e); return []; }),
+      fetchConCache(URL_HISTORICO_MO, 'histMO', 'json_raw').catch(e => { console.warn('histMO:', e); return null; }),
+    ]);
+
+    DATA_COMPRAS               = resCompras;
+    DATA_APUNTES               = resApuntes;
+    DATA_ANALITICOS            = resAnaliticos;
+    DATA_COSTOS_MO             = resCostosMO;
+    DATA_DIAS_HOMBRE           = resDiasHombre;
+    DATA_DESPACHOS_COMBUSTIBLE = resDespachos;
+
+    // Procesar archivos Excel (no cacheables como ArrayBuffer serializado)
+    if (resSiembra && Array.isArray(resSiembra)) {
+      try { construirIndiceSiembra(resSiembra); }
+      catch (e) { console.warn('siembra parse:', e); }
     }
+    if (resAvances && Array.isArray(resAvances)) construirIndiceMznOdoo(resAvances);
+    if (resHistMOBuf && typeof resHistMOBuf === 'object') {
+      try {
+        if (Array.isArray(resHistMOBuf.CostoMO)) DATA_HISTORICO_MO_COSTO = resHistMOBuf.CostoMO;
+        if (Array.isArray(resHistMOBuf.DHMO))    DATA_HISTORICO_MO_DH    = resHistMOBuf.DHMO;
+      } catch (e) { console.warn('histMO parse:', e); }
+    }
+
+    // Fase 2 completa — reconstruir la vista activa (el usuario puede haber navegado mientras cargaba)
+    const vistaActiva = document.querySelector('#main > div[id^="view"]:not([style*="display: none"])');
+    if (vistaActiva) {
+      const vistaId = vistaActiva.id.replace('view', '').toLowerCase();
+      const reconstruir = {
+        'activobiologico': construirVistaActivoBiologico,
+        'riego': construirVistaRiego,
+        'combustible': construirVistaCombustible,
+        'serviciosmto': construirVistaServiciosMto,
+        'taller': construirVistaTaller,
+        'manoobra': construirVistaManoObra,
+        'resumengeneral': construirVistaResumenGeneral,
+      };
+      if (reconstruir[vistaId]) {
+        console.info(`🔄 Fase 2 completa — reconstruyendo vista: ${vistaId}`);
+        reconstruir[vistaId]();
+      }
+    }
+    // Notificar al usuario que los datos están listos
+    const btnAct = document.getElementById('btnActualizarDatos');
+    if (btnAct) {
+      btnAct.style.background = '#16a34a';
+      setTimeout(() => { btnAct.style.background = ''; }, 3000);
+    }
+
   } catch (error) {
     console.error(error);
     $('#loadingText').html(`<span style="color:#f87171;">Error cargando datos desde GitHub. Revisa la consola del navegador.</span>`);
-  }
-}
-
-// Pinta el error donde el usuario SÍ lo puede ver — el contenedor de Gráficos por Cultivo (la vista
-// de arranque) y, por si acaso, también el mensaje genérico de cada sección — en vez de quedar
-// como un spinner girando para siempre sin explicación.
-function mostrarErrorFase2Visible(error) {
-  const mensajeHtml = `<div class="card" style="text-align:center; color:var(--red); padding:30px;">
-    <i class="fa-solid fa-triangle-exclamation" style="font-size:20px;"></i>
-    <p style="margin:10px 0; font-weight:600;">No se pudieron cargar los datos contables desde GitHub.</p>
-    <p style="font-size:11px; color:var(--muted); max-width:480px; margin:0 auto 14px;">Detalle técnico: ${String(error && error.message || error).replace(/</g,'&lt;')}</p>
-    <button class="btn-export-excel" style="background:#0269a1;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button>
-  </div>`;
-  $('#contenedorGraficosConsolidado').html(mensajeHtml);
-}
-
-async function cargarFase2() {
-  actualizarLoadingTexto('Cargando analítica contable en segundo plano...', 50);
-
-  const [resCompras, resApuntes, resAnaliticos, resSiembra, resAvances,
-         resCostosMO, resDiasHombre, resDespachos, resHistMOBuf] = await Promise.all([
-
-    fetchConCache(URL_COMPRAS, 'compras').catch(e => { console.warn('compras:', e); return []; }),
-    fetchConCache(URL_APUNTES, 'apuntes').catch(e => { console.warn('apuntes:', e); return []; }),
-    fetchConCache(URL_ANALITICOS, 'analiticos').catch(e => { console.warn('analiticos:', e); return []; }),
-    fetchConCache(URL_SIEMBRA, 'siembra', 'arraybuffer').catch(e => { console.warn('siembra:', e); return null; }),
-    fetchConCache(URL_AVANCES_CAMPO, 'avances').catch(e => { console.warn('avances:', e); return []; }),
-    fetchConCache(URL_COSTOS_MO, 'costosMO').catch(e => { console.warn('costosMO:', e); return []; }),
-    fetchConCache(URL_DIAS_HOMBRE, 'diasHombre').catch(e => { console.warn('diasHombre:', e); return []; }),
-    fetchConCache(URL_DESPACHOS_COMBUSTIBLE, 'despachos').catch(e => { console.warn('despachos:', e); return []; }),
-    fetchConCache(URL_HISTORICO_MO, 'histMO', 'arraybuffer').catch(e => { console.warn('histMO:', e); return null; }),
-  ]);
-
-  DATA_COMPRAS               = resCompras;
-  DATA_APUNTES               = resApuntes;
-  DATA_ANALITICOS            = resAnaliticos;
-  DATA_COSTOS_MO             = resCostosMO;
-  DATA_DIAS_HOMBRE           = resDiasHombre;
-  DATA_DESPACHOS_COMBUSTIBLE = resDespachos;
-  FASE2_LISTA = true;
-
-  // Procesar archivos Excel (no cacheables como ArrayBuffer serializado)
-  if (resSiembra) {
-    try {
-      const wbSiembra = XLSX.read(resSiembra, { type: 'array' });
-      const wsSiembra = wbSiembra.Sheets[wbSiembra.SheetNames[0]];
-      const filasSiembra = XLSX.utils.sheet_to_json(wsSiembra, { header: 1, defval: null });
-      construirIndiceSiembra(filasSiembra);
-    } catch (e) { console.warn('siembra parse:', e); }
-  }
-  if (resAvances && Array.isArray(resAvances)) construirIndiceMznOdoo(resAvances);
-  if (resHistMOBuf) {
-    try {
-      const wbHist = XLSX.read(new Uint8Array(resHistMOBuf), { type: 'array' });
-      if (wbHist.SheetNames.includes('CostoMO')) DATA_HISTORICO_MO_COSTO = XLSX.utils.sheet_to_json(wbHist.Sheets['CostoMO'], { defval: '' });
-      if (wbHist.SheetNames.includes('DHMO'))    DATA_HISTORICO_MO_DH    = XLSX.utils.sheet_to_json(wbHist.Sheets['DHMO'],   { defval: '' });
-    } catch (e) { console.warn('histMO parse:', e); }
-  }
-
-  // Si el usuario ya entró a una sección que depende de analítica, refrescarla automáticamente
-  const vistaActiva = document.querySelector('#main > div[id^="view"]:not([style*="display: none"])');
-  if (vistaActiva) {
-    const vistaId = vistaActiva.id.replace('view', '').toLowerCase();
-    const reconstruir = {
-      'activobiologico': construirVistaActivoBiologico,
-      'riego': construirVistaRiego,
-      'combustible': construirVistaCombustible,
-      'serviciosmto': construirVistaServiciosMto,
-      'taller': construirVistaTaller,
-      'manoobra': construirVistaManoObra,
-      'resumengeneral': construirVistaResumenGeneral,
-    };
-    if (reconstruir[vistaId]) reconstruir[vistaId]();
-
-    // Si además el usuario está parado en la sub-pestaña "Comparativo de Ciclos" de alguna de
-    // estas 3 secciones, hay que repintar el gráfico también — construirVistaXXX() solo refresca
-    // los combos de filtro, no vuelve a dibujar el gráfico por sí solo.
-    if ($('#subviewSmComparativo').is(':visible')) { actualizarFiltrosSM(); renderComparativoSM(); }
-    if ($('#subviewAbComparativo').is(':visible')) { actualizarFiltrosAB(); renderComparativoAB(); }
-    if ($('#subviewRgComparativo').is(':visible')) { actualizarFiltrosRG(); renderComparativoRG(); }
-    if ($('#subviewRgGraficos').is(':visible')) { repintarGraficosConsolidado(); }
   }
 }
 
@@ -4706,9 +4634,11 @@ const CUENTAS_AB_FASE1 = ['11401', '11402', '11403', '11404', '11405', '11406'];
 let ultimoActivoBiologicoParaExcel = [];
 
 function construirVistaActivoBiologico() {
-  if (!FASE2_LISTA) { renderCargandoFase2('tblActivoBiologicoBody', 7, ['kpiAbTotal','kpiAbProducto','kpiAbCierres','kpiAbNoDefinidos']); return; }
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblActivoBiologicoBody').html('<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.<br><button class="btn-export-excel" style="background:#0269a1; margin-top:10px; font-size:11px;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button></td></tr>');
+    const spinHtml = '<tr><td colspan="20" style="text-align:center; padding:32px;"><i class="fa-solid fa-spinner fa-spin" style="color:var(--blue); font-size:20px;"></i><div style="color:var(--muted); font-size:12px; margin-top:8px;">Cargando datos analíticos desde Odoo...</div></td></tr>';
+    $('#tblActivoBiologicoBody').html(spinHtml);
+    $('#tblKpiSemillaBody').html(spinHtml);
+    $('#tblKpiProtectoresBody').html(spinHtml);
     return;
   }
 
@@ -5118,14 +5048,7 @@ function mostrarSubVistaAB(sub) {
   $('#subviewAbComparativo').css('display', sub === 'comparativo' ? 'flex' : 'none');
   $('#subtabAbDetalle').toggleClass('active', sub === 'detalle');
   $('#subtabAbComparativo').toggleClass('active', sub === 'comparativo');
-  if (sub === 'comparativo') {
-    if (!FASE2_LISTA || !AB_LINEAS_MENSUALES.length) {
-      $('#contenedorGraficosComparativoAB').html('<div class="card" style="text-align:center; color:var(--muted); padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--blue);"></i><br><span style="margin-top:8px; display:inline-block;">Cargando datos para el comparativo...</span></div>');
-      return;
-    }
-    actualizarFiltrosAB();
-    renderComparativoAB();
-  }
+  if (sub === 'comparativo') renderComparativoAB();
 }
 
 // Llena los combos multi-selección de Cultivo / Finca / Sub Categoría o Producto a partir de lo que
@@ -5372,6 +5295,54 @@ function renderKpiSemillaYProtectoresAB() {
     return porCiclo;
   }
 
+  function mznDeCiclo(porCiclo, ciclo) {
+    return Object.values((porCiclo[ciclo] || {}).mznPorFinca || {}).reduce((s,v) => s+v, 0);
+  }
+
+  // --- Resumen Total (suma de las 5 categorías) ---
+  const semTot  = agregarPorCiclo(l => l.cuentaSimple === 'Semilla');
+  const protTot = agregarPorCiclo(l => ['Herbicida','Insecticida','Fungicidas','Fertilizantes','Coadyudantes'].includes(l.cuentaSimple));
+  const fertTot = agregarPorCiclo(l => l.cuentaSimple === 'Fertilizantes');
+  const coadTot = agregarPorCiclo(l => l.cuentaSimple === 'Coadyudantes');
+
+  // Unión de todos los ciclos que aparecen en cualquier categoría
+  const todosCiclos = [...new Set([
+    ...Object.keys(semTot), ...Object.keys(protTot),
+    ...Object.keys(fertTot), ...Object.keys(coadTot)
+  ])].sort();
+
+  const prevTotal = {};
+  let filasResumen = '';
+  todosCiclos.forEach(ciclo => {
+    const mzn = mznDeCiclo(semTot, ciclo) || mznDeCiclo(protTot, ciclo) ||
+                mznDeCiclo(fertTot, ciclo) || mznDeCiclo(coadTot, ciclo);
+    const semVal  = mzn ? Math.abs((semTot[ciclo]  || {valor:0}).valor) / mzn : null;
+    const protVal = mzn ? Math.abs((protTot[ciclo] || {valor:0}).valor) / mzn : null;
+    const fertVal = mzn ? Math.abs((fertTot[ciclo] || {valor:0}).valor) / mzn : null;
+    const coadVal = mzn ? Math.abs((coadTot[ciclo] || {valor:0}).valor) / mzn : null;
+    const total   = (semVal||0) + (protVal||0) + (fertVal||0) + (coadVal||0);
+    const cult    = ciclo.split(' ')[0];
+    const ant     = prevTotal[cult];
+    let deltaTxt  = '—';
+    if (total > 0 && ant != null && ant > 0) {
+      const pct = ((total - ant) / ant) * 100;
+      deltaTxt = `<span style="color:${pct>0?'var(--red)':'#16a34a'};font-weight:600;">${pct>0?'▲':'▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    filasResumen += `<tr>
+      <td><strong>${ciclo}</strong></td>
+      <td class="right">${mzn ? formatNum(mzn) : '—'}</td>
+      <td class="right">${semVal  !== null ? formatNum(semVal)  : '—'}</td>
+      <td class="right" style="color:#dc2626;">${protVal !== null ? formatNum(protVal) : '—'}</td>
+      <td class="right" style="color:#d97706;">${fertVal !== null ? formatNum(fertVal) : '—'}</td>
+      <td class="right" style="color:#7c3aed;">${coadVal !== null ? formatNum(coadVal) : '—'}</td>
+      <td class="right" style="font-weight:700; color:#16a34a;">${total>0 ? formatNum(total) : '—'}</td>
+      <td class="right">${deltaTxt}</td>
+    </tr>`;
+    if (total > 0) prevTotal[cult] = total;
+  });
+  $('#tblKpiResumenTotalBody').html(filasResumen ||
+    '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:12px;">Sin datos con cruce Finca/Ciclo.</td></tr>');
+
   // --- Semilla ---
   const semillaPorCiclo = agregarPorCiclo(l => l.cuentaSimple === 'Semilla');
   const ciclosSemilla = Object.keys(semillaPorCiclo).sort();
@@ -5391,8 +5362,8 @@ function renderKpiSemillaYProtectoresAB() {
   });
   $('#tblKpiSemillaBody').html(filasSemilla || '<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Semilla con cruce Finca/Ciclo.</td></tr>');
 
-  // --- Protectores de Cultivo (Herbicida + Insecticida + Fungicidas) ---
-  const protectoresPorCiclo = agregarPorCiclo(l => ['Herbicida', 'Insecticida', 'Fungicidas'].includes(l.cuentaSimple));
+  // --- Protectores de Cultivo (Herbicida + Insecticida + Fungicidas + Fertilizantes + Coadyudantes) ---
+  const protectoresPorCiclo = agregarPorCiclo(l => ['Herbicida', 'Insecticida', 'Fungicidas', 'Fertilizantes', 'Coadyudantes'].includes(l.cuentaSimple));
   const ciclosProtectores = Object.keys(protectoresPorCiclo).sort();
   const valoresPrevPorCultivo = {}; // cultivo -> último costo/mzn visto, para no comparar Mani vs Caña entre sí
   let filasProtectores = '';
@@ -5418,6 +5389,58 @@ function renderKpiSemillaYProtectoresAB() {
     if (costoMzn !== null) valoresPrevPorCultivo[cultivoCiclo] = costoMzn;
   });
   $('#tblKpiProtectoresBody').html(filasProtectores || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Protectores de Cultivo con cruce Finca/Ciclo.</td></tr>');
+
+  // --- Fertilizantes (11405) ---
+  const fertilizantesPorCiclo = agregarPorCiclo(l => l.cuentaSimple === 'Fertilizantes');
+  const ciclosFert = Object.keys(fertilizantesPorCiclo).sort();
+  const prevFert = {};
+  let filasFert = '';
+  ciclosFert.forEach(ciclo => {
+    const d = fertilizantesPorCiclo[ciclo];
+    d.valor = Math.abs(d.valor);
+    const mzn = Object.values(d.mznPorFinca).reduce((s, v) => s + v, 0);
+    const costoMzn = mzn ? d.valor / mzn : null;
+    const cult = ciclo.split(' ')[0];
+    const ant = prevFert[cult];
+    let deltaTxt = '—';
+    if (costoMzn !== null && ant != null && ant > 0) {
+      const pct = ((costoMzn - ant) / ant) * 100;
+      deltaTxt = `<span style="color:${pct > 0 ? 'var(--red)' : '#16a34a'}; font-weight:600;">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    filasFert += `<tr><td><strong>${ciclo}</strong></td>
+      <td class="right">${mzn ? formatNum(mzn) : '—'}</td>
+      <td class="right">${formatNum(d.valor)}</td>
+      <td class="right" style="color:#d97706; font-weight:600;">${costoMzn !== null ? formatNum(costoMzn) : '—'}</td>
+      <td class="right">${deltaTxt}</td></tr>`;
+    if (costoMzn !== null) prevFert[cult] = costoMzn;
+  });
+  $('#tblKpiFertilizantesBody').html(filasFert || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Fertilizantes.</td></tr>');
+
+  // --- Coadyudantes (11406) ---
+  const coadyudantesPorCiclo = agregarPorCiclo(l => l.cuentaSimple === 'Coadyudantes');
+  const ciclosCoad = Object.keys(coadyudantesPorCiclo).sort();
+  const prevCoad = {};
+  let filasCoad = '';
+  ciclosCoad.forEach(ciclo => {
+    const d = coadyudantesPorCiclo[ciclo];
+    d.valor = Math.abs(d.valor);
+    const mzn = Object.values(d.mznPorFinca).reduce((s, v) => s + v, 0);
+    const costoMzn = mzn ? d.valor / mzn : null;
+    const cult = ciclo.split(' ')[0];
+    const ant = prevCoad[cult];
+    let deltaTxt = '—';
+    if (costoMzn !== null && ant != null && ant > 0) {
+      const pct = ((costoMzn - ant) / ant) * 100;
+      deltaTxt = `<span style="color:${pct > 0 ? 'var(--red)' : '#16a34a'}; font-weight:600;">${pct > 0 ? '▲' : '▼'} ${Math.abs(pct).toFixed(1)}%</span>`;
+    }
+    filasCoad += `<tr><td><strong>${ciclo}</strong></td>
+      <td class="right">${mzn ? formatNum(mzn) : '—'}</td>
+      <td class="right">${formatNum(d.valor)}</td>
+      <td class="right" style="color:#7c3aed; font-weight:600;">${costoMzn !== null ? formatNum(costoMzn) : '—'}</td>
+      <td class="right">${deltaTxt}</td></tr>`;
+    if (costoMzn !== null) prevCoad[cult] = costoMzn;
+  });
+  $('#tblKpiCoadyudantesBody').html(filasCoad || '<tr><td colspan="5" style="text-align:center; color:var(--muted); padding:12px;">Sin datos de Coadyudantes.</td></tr>');
 }
 
 // ===================== MODAL DE DETALLE (columnas separadas por nivel, sin indentación apilada) =====================
@@ -5457,7 +5480,7 @@ function abrirModalFincaSemilla(ciclo) {
 // Protectores, nivel 1: Ciclo (fila de la tarjeta) -> modal con desglose por Sub Categoría.
 function abrirModalSubCategoriaProtectores(ciclo) {
   const porSub = {};
-  AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas'].includes(l.cuentaSimple) && l.ciclo === ciclo).forEach(l => {
+  AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas', 'Fertilizantes', 'Coadyudantes'].includes(l.cuentaSimple) && l.ciclo === ciclo).forEach(l => {
     if (!porSub[l.cuentaSimple]) porSub[l.cuentaSimple] = { valor: 0, mznPorFinca: {} };
     porSub[l.cuentaSimple].valor += l.valor;
     if (l.mzn !== null && l.mzn !== undefined) porSub[l.cuentaSimple].mznPorFinca[l.finca] = l.mzn;
@@ -5482,7 +5505,7 @@ function abrirModalSubCategoriaProtectores(ciclo) {
   </tr></thead><tbody>${filasHtml || '<tr><td colspan="4" style="text-align:center; color:var(--muted); padding:20px;">Sin datos.</td></tr>'}</tbody></table>
   <p style="font-size:11px; color:var(--muted); margin-top:10px;"><i class="fa-solid fa-circle-info"></i> Clic en una Sub Categoría para ver sus productos.</p></div>`;
 
-  abrirKpiDetalleModal(`<i class="fa-solid fa-shield-virus" style="color:var(--red);"></i> Protectores de Cultivo — ${ciclo} — Sub Categorías`, '', contenido);
+  abrirKpiDetalleModal(`<i class="fa-solid fa-shield-virus" style="color:var(--red);"></i> Protectores de Cultivo (Insumos) — ${ciclo} — Sub Categorías`, '', contenido);
 }
 
 // Protectores, nivel 2: Sub Categoría (fila del modal anterior) -> modal con los productos, con botón "Volver".
@@ -5554,7 +5577,7 @@ function abrirModalDetalleAB(tipo) {
 
   } else if (tipo === 'protectores') {
     const filas = [];
-    AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas'].includes(l.cuentaSimple)).forEach(l => {
+    AB_LINEAS_MENSUALES.filter(l => ['Herbicida', 'Insecticida', 'Fungicidas', 'Fertilizantes', 'Coadyudantes'].includes(l.cuentaSimple)).forEach(l => {
       const key = `${l.ciclo}||${l.cuentaSimple}||${l.sku}`;
       let f = filas.find(x => x._key === key);
       if (!f) { f = { _key: key, ciclo: l.ciclo, sub: l.cuentaSimple, sku: l.sku, nombre: l.nombre, cantidad: 0, valor: 0, mznPorFinca: {} }; filas.push(f); }
@@ -5600,9 +5623,8 @@ const CUENTAS_RIEGO_FASE = ['11408', '11409', '11421'];
 let ultimoRiegoParaExcel = [];
 
 function construirVistaRiego() {
-  if (!FASE2_LISTA) { renderCargandoFase2('tblRiegoBody', 7, ['kpiRgTotal','kpiRgProducto','kpiRgCierres','kpiRgNoDefinidos']); return; }
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblRiegoBody').html('<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.<br><button class="btn-export-excel" style="background:#0269a1; margin-top:10px; font-size:11px;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button></td></tr>');
+    $('#tblRiegoBody').html('<tr><td colspan="7" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -6111,14 +6133,7 @@ function mostrarSubVistaRG(sub) {
   $('#subviewRgComparativo').css('display', sub === 'comparativo' ? 'flex' : 'none');
   $('#subtabRgDetalle').toggleClass('active', sub === 'detalle');
   $('#subtabRgComparativo').toggleClass('active', sub === 'comparativo');
-  if (sub === 'comparativo') {
-    if (!FASE2_LISTA || !RG_LINEAS_MENSUALES.length) {
-      $('#contenedorGraficosComparativoRG').html('<div class="card" style="text-align:center; color:var(--muted); padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--blue);"></i><br><span style="margin-top:8px; display:inline-block;">Cargando datos para el comparativo...</span></div>');
-      return;
-    }
-    actualizarFiltrosRG();
-    renderComparativoRG();
-  }
+  if (sub === 'comparativo') renderComparativoRG();
 }
 
 // Llena los combos multi-selección de Cultivo / Finca / Sub Categoría o Producto a partir de lo que
@@ -6342,9 +6357,8 @@ function clasificarLineaCB(r) {
 }
 
 function construirVistaCombustible() {
-  if (!FASE2_LISTA) { renderCargandoFase2('tblCombustibleBody', 6, ['kpiCbTotal','kpiCbProducto','kpiCbCierres','kpiCbNoDefinido']); return; }
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblCombustibleBody').html('<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.<br><button class="btn-export-excel" style="background:#0269a1; margin-top:10px; font-size:11px;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button></td></tr>');
+    $('#tblCombustibleBody').html('<tr><td colspan="6" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -7095,9 +7109,8 @@ function toggleSmCierre(checked) {
 }
 
 function construirVistaServiciosMto() {
-  if (!FASE2_LISTA) { renderCargandoFase2('tblServiciosMtoBody', 7, ['kpiSmTotal','kpiSmProducto','kpiSmCierres','kpiSmNoDefinidos']); return; }
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblServiciosMtoBody').html('<tr><td colspan="7" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.<br><button class="btn-export-excel" style="background:#0269a1; margin-top:10px; font-size:11px;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button></td></tr>');
+    $('#tblServiciosMtoBody').html('<tr><td colspan="7" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -7542,14 +7555,7 @@ function mostrarSubVistaSM(sub) {
   $('#subviewSmComparativo').css('display', sub === 'comparativo' ? 'flex' : 'none');
   $('#subtabSmDetalle').toggleClass('active', sub === 'detalle');
   $('#subtabSmComparativo').toggleClass('active', sub === 'comparativo');
-  if (sub === 'comparativo') {
-    if (!FASE2_LISTA || !SM_LINEAS_MENSUALES.length) {
-      $('#contenedorGraficosComparativoSM').html('<div class="card" style="text-align:center; color:var(--muted); padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--blue);"></i><br><span style="margin-top:8px; display:inline-block;">Cargando datos para el comparativo...</span></div>');
-      return;
-    }
-    actualizarFiltrosSM(); // re-sincroniza los combos con los datos más recientes antes de pintar
-    renderComparativoSM();
-  }
+  if (sub === 'comparativo') renderComparativoSM();
 }
 
 // Llena los combos multi-selección de Cultivo / Finca / Sub Categoría o Producto a partir de lo que
@@ -7826,9 +7832,8 @@ function clasificarLineaMO(r) {
 }
 
 function construirVistaManoObra() {
-  if (!FASE2_LISTA) { renderCargandoFase2('tblConciliacionMOBody', 6, ['kpiMoTotal','kpiMoNomina','kpiMoCierres','kpiMoNoDefinido']); return; }
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblConciliacionMOBody').html('<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.<br><button class="btn-export-excel" style="background:#0269a1; margin-top:10px; font-size:11px;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button></td></tr>');
+    $('#tblConciliacionMOBody').html('<tr><td colspan="6" style="text-align:center; padding:32px;"><i class=\"fa-solid fa-spinner fa-spin\" style=\"color:var(--blue); font-size:20px;\"></i><div style=\"color:var(--muted); font-size:12px; margin-top:8px;\">Cargando datos analíticos desde Odoo...</div></td></tr>');
     return;
   }
 
@@ -9072,18 +9077,9 @@ let ultimoRGActividadParaExcel = [];
 function mostrarSubVistaRGGeneral(sub) {
   $('#subviewRgCategoria').css('display', sub === 'categoria' ? 'flex' : 'none');
   $('#subviewRgActividad').css('display', sub === 'actividad' ? 'flex' : 'none');
-  $('#subviewRgGraficos').css('display', sub === 'graficos' ? 'flex' : 'none');
   $('#subtabRgCategoria').toggleClass('active', sub === 'categoria');
   $('#subtabRgActividad').toggleClass('active', sub === 'actividad');
-  $('#subtabRgGraficos').toggleClass('active', sub === 'graficos');
   if (sub === 'actividad' && !RG_ACT_FILAS.length) construirVistaRGActividad();
-  if (sub === 'graficos') {
-    if (!FASE2_LISTA) {
-      $('#contenedorGraficosConsolidado').html('<div class="card" style="text-align:center; color:var(--muted); padding:30px;"><i class="fa-solid fa-spinner fa-spin" style="font-size:18px; color:var(--blue);"></i><br><span style="margin-top:8px; display:inline-block;">Cargando datos para los gráficos...</span></div>');
-      return;
-    }
-    repintarGraficosConsolidado();
-  }
 }
 
 // Combina TODAS las secciones por Actividad+Finca+Ciclo. Las que sí registran Actividad
@@ -9229,10 +9225,7 @@ function repintarTablaRGActividad() {
     (!actividadesSel.length || actividadesSel.includes(f.actividad))
   );
 
-  // Mismo criterio que en el Resumen por Categoría: se excluyen ciclos administrativos/overhead de
-  // Mano de Obra (sin Manzanas reales, ej. "Administracion 2024") para no mostrar columnas vacías
-  // en las demás secciones.
-  const ciclos = [...new Set(filasFiltradas.filter(f => f.mzn !== null && f.mzn !== undefined).map(f => f.ciclo))].sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
+  const ciclos = [...new Set(filasFiltradas.map(f => f.ciclo))].sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
   const nivel0Es = RG_ACT_ORDEN === 'actividad-finca' ? 'actividad' : 'finca';
   const nivel1Es = RG_ACT_ORDEN === 'actividad-finca' ? 'finca' : 'actividad';
   const etiqueta0 = RG_ACT_ORDEN === 'actividad-finca' ? 'Actividad' : 'Finca';
@@ -9337,245 +9330,6 @@ function exportarRGActividadAExcel() {
   XLSX.writeFile(wb, `Resumen_General_Por_Actividad_${new Date().toISOString().substring(0,10)}.xlsx`);
 }
 
-// ===================== CONSOLIDADO GENERAL — GRÁFICOS POR CULTIVO =====================
-// Reutiliza los mismos datasets mensuales que ya alimentan los Comparativos de cada sección
-// (AB/RG/SM/CB_LINEAS_MENSUALES, SERIE+CAPA de Mano de Obra) — no se recalcula nada nuevo, solo se
-// agrupa por Cultivo y se dibuja un gráfico por Sección, igual que el estilo "Historia C$/Mzn" de
-// Mano de Obra (cada línea = un Ciclo, eje X = Ene→Dic).
-let RG_CULTIVO_ACTIVO = 'Mani';
-let RG_GRAFICOS_CICLOS_SEL = null; // null = aún no se ha calculado "últimos 3" para el cultivo activo
-const RG_SECCIONES_CONSOLIDADO = [
-  { id: 'ab_semilla', titulo: 'Semilla', icono: 'fa-seed', color: '#16a34a' },
-  { id: 'ab_insumos', titulo: 'Protectores de Cultivo (Insumos)', icono: 'fa-spray-can', color: '#65a30d' },
-  { id: 'mo', titulo: 'Mano de Obra', icono: 'fa-users', color: '#2563eb' },
-  { id: 'combustible', titulo: 'Combustible Tractores', icono: 'fa-gas-pump', color: '#d97706' },
-  { id: 'riego', titulo: 'Bombeo y Riego', icono: 'fa-droplet', color: '#0891b2' },
-  { id: 'serviciosmto', titulo: 'Servicios, Alquiler y Mto', icono: 'fa-screwdriver-wrench', color: '#7c3aed' },
-];
-let CHARTS_CONSOLIDADO_INSTANCES = {};
-
-// Normaliza el campo "cultivo" (que en cada sección viene de un origen distinto: regex sobre Ciclo
-// en AB/RG/SM/CB, o detectCult() en Mano de Obra) a uno de los 4 grupos fijos del selector.
-function normalizarCultivoConsolidado(c) {
-  const s = String(c || '').toLowerCase();
-  if (s.startsWith('mani') || s.startsWith('maní')) return 'Mani';
-  if (s.startsWith('caña') || s.startsWith('cana')) return 'Caña';
-  if (s.startsWith('cacao')) return 'Cacao';
-  return 'Otro';
-}
-
-function cambiarCultivoConsolidado(cultivo) {
-  RG_CULTIVO_ACTIVO = cultivo;
-  $('#grupoCultivoConsolidado .tb-toggle').removeClass('active');
-  $('#btnCultivo' + cultivo).addClass('active');
-  RG_GRAFICOS_CICLOS_SEL = null; // fuerza recalcular "últimos 3" para el nuevo cultivo
-  repintarGraficosConsolidado();
-}
-
-// Agrupa un array de líneas mensuales genéricas {ciclo, mes, valor, mzn, cultivo} (formato común de
-// AB/RG/SM/CB_LINEAS_MENSUALES) en { ciclo -> {meses: Array(12), mzn} }, filtrando por cultivo.
-function agruparLineasPorCicloMes(lineas, cultivoSel) {
-  const porCiclo = {};
-  (lineas || []).forEach(l => {
-    if (!l || normalizarCultivoConsolidado(l.cultivo) !== cultivoSel) return;
-    const idx = (typeof l.mes === 'number') ? l.mes - 1 : null;
-    if (idx === null || idx < 0 || idx > 11) return;
-    if (!porCiclo[l.ciclo]) porCiclo[l.ciclo] = { meses: Array(12).fill(0), mzn: null };
-    porCiclo[l.ciclo].meses[idx] += (l.valor || 0);
-    if (l.mzn !== null && l.mzn !== undefined) porCiclo[l.ciclo].mzn = l.mzn;
-  });
-  return porCiclo;
-}
-
-// Caso especial Mano de Obra: SERIE no trae mzn por línea (viene de CAPA, agregado por Finca), y el
-// mes está en formato "YYYY-MM" en vez de número 1-12. AB/RG/SM/CB_LINEAS_MENSUALES nunca incluyen
-// líneas de Cierre de Costeo AB (solo entran ahí líneas con producto real), pero Mano de Obra SÍ las
-// trae mezcladas dentro de SERIE (como un "puesto" especial) — por eso el toggle "Incluir Cierre"
-// solo necesita filtrar aquí.
-function agruparMOPorCicloMes(cultivoSel, incluirCierre) {
-  const porCiclo = {};
-  const mznPorCicloFinca = {};
-  (CAPA || []).forEach(r => {
-    if (!r || !r.ciclo || r.ciclo === 'SIN MAESTRO') return;
-    if (normalizarCultivoConsolidado(r.cultivo) !== cultivoSel) return;
-    if (!mznPorCicloFinca[r.ciclo]) mznPorCicloFinca[r.ciclo] = {};
-    if (r.mzn) mznPorCicloFinca[r.ciclo][r.finca] = r.mzn;
-  });
-  (SERIE || []).forEach(s => {
-    if (!s || !s.ciclo || s.ciclo === 'SIN MAESTRO') return;
-    if (normalizarCultivoConsolidado(s.cultivo) !== cultivoSel) return;
-    if (!incluirCierre && s.puesto === '🏁 Cierre de Costeo AB') return;
-    if (!s.mes) return;
-    const mesNum = parseInt(String(s.mes).split('-')[1], 10);
-    if (!mesNum || mesNum < 1 || mesNum > 12) return;
-    if (!porCiclo[s.ciclo]) porCiclo[s.ciclo] = { meses: Array(12).fill(0), mzn: null };
-    porCiclo[s.ciclo].meses[mesNum - 1] += (s.costo || 0);
-  });
-  Object.keys(porCiclo).forEach(ciclo => {
-    const fincas = mznPorCicloFinca[ciclo] || {};
-    const total = Object.values(fincas).reduce((s, v) => s + v, 0);
-    porCiclo[ciclo].mzn = total > 0 ? total : null;
-  });
-  return porCiclo;
-}
-
-function repintarGraficosConsolidado() {
-  // Igual que construirVistaResumenGeneral()/construirVistaRGActividad(): se garantiza que las 5
-  // secciones ya construyeron sus estructuras (AB/RG/SM/CB_LINEAS_MENSUALES, CAPA, SERIE) ANTES de
-  // agregarlas — sin importar si el usuario llegó aquí directo, sin haber pasado por "Resumen por
-  // Categoría" primero (esta pestaña ahora es la que carga de entrada al abrir el panel).
-  construirVistaActivoBiologico();
-  construirVistaManoObra();
-  construirVistaRiego();
-  construirVistaCombustible();
-  construirVistaServiciosMto();
-
-  Object.values(CHARTS_CONSOLIDADO_INSTANCES).forEach(c => c.destroy());
-  CHARTS_CONSOLIDADO_INSTANCES = {};
-  const vista = $('#selRgGraficosVista').val() || 'acumulado';
-  const cultivo = RG_CULTIVO_ACTIVO;
-  const incluirCierre = $('#chkRgGraficosIncluirCierre').is(':checked');
-
-  const datosPorSeccion = {
-    ab_semilla: null, // se calcula abajo con agruparABPorCuenta (necesita cruzar SKU -> Cuenta)
-    ab_insumos: null,
-    mo: agruparMOPorCicloMes(cultivo, incluirCierre),
-    combustible: agruparLineasPorCicloMes(CB_LINEAS_MENSUALES, cultivo),
-    riego: agruparLineasPorCicloMes(RG_LINEAS_MENSUALES, cultivo),
-    serviciosmto: agruparLineasPorCicloMes(SM_LINEAS_MENSUALES, cultivo),
-  };
-
-  // AB_LINEAS_MENSUALES no guarda el código de cuenta (solo "cuentaSimple" ya sin el número) — para
-  // separar Semilla vs Protectores de Cultivo se cruza por SKU contra un mapa sku->cuenta construido
-  // una sola vez desde AB_PIVOT_DATA.estructura (la misma fuente que ya usa el resto de Activo Biológico).
-  const skuACuenta = {};
-  if (AB_PIVOT_DATA && AB_PIVOT_DATA.estructura) {
-    Object.keys(AB_PIVOT_DATA.estructura).forEach(cuenta => {
-      Object.keys(AB_PIVOT_DATA.estructura[cuenta]).forEach(finca => {
-        Object.keys(AB_PIVOT_DATA.estructura[cuenta][finca]).forEach(sku => { skuACuenta[sku] = cuenta; });
-      });
-    });
-  }
-  function agruparABPorCuenta(esSemilla) {
-    const porCiclo = {};
-    (AB_LINEAS_MENSUALES || []).forEach(l => {
-      if (!l || normalizarCultivoConsolidado(l.cultivo) !== cultivo) return;
-      const cuenta = skuACuenta[l.sku] || '';
-      const esEstaCuenta = esSemilla ? cuenta.startsWith('11401') : (cuenta && !cuenta.startsWith('11401'));
-      if (!esEstaCuenta) return;
-      const idx = (typeof l.mes === 'number') ? l.mes - 1 : null;
-      if (idx === null || idx < 0 || idx > 11) return;
-      if (!porCiclo[l.ciclo]) porCiclo[l.ciclo] = { meses: Array(12).fill(0), mzn: null };
-      porCiclo[l.ciclo].meses[idx] += (l.valor || 0);
-      if (l.mzn !== null && l.mzn !== undefined) porCiclo[l.ciclo].mzn = l.mzn;
-    });
-    return porCiclo;
-  }
-  datosPorSeccion.ab_semilla = agruparABPorCuenta(true);
-  datosPorSeccion.ab_insumos = agruparABPorCuenta(false);
-
-  // --- Filtro de Ciclos: unión de todos los ciclos que aparecen en cualquiera de las 6 secciones
-  // para este cultivo. Por defecto se seleccionan los 3 más recientes (lo primero que se quiere ver
-  // al abrir el panel), pero el usuario puede elegir cualquier combinación desde el combo.
-  const todosCiclosCultivo = new Set();
-  Object.values(datosPorSeccion).forEach(porCiclo => Object.keys(porCiclo || {}).forEach(c => todosCiclosCultivo.add(c)));
-  const ciclosDisponibles = [...todosCiclosCultivo].sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
-
-  if (RG_GRAFICOS_CICLOS_SEL === null) {
-    RG_GRAFICOS_CICLOS_SEL = ciclosDisponibles.slice(-3); // últimos 3 (el array ya viene ordenado cronológicamente)
-  } else {
-    RG_GRAFICOS_CICLOS_SEL = RG_GRAFICOS_CICLOS_SEL.filter(c => ciclosDisponibles.includes(c));
-    if (!RG_GRAFICOS_CICLOS_SEL.length) RG_GRAFICOS_CICLOS_SEL = ciclosDisponibles.slice(-3);
-  }
-  construirComboMultiAB('contentDropdownRgGraficosCiclo', 'chk-rg-graficos-ciclo',
-    ciclosDisponibles.map(c => ({ value: c, label: c })), RG_GRAFICOS_CICLOS_SEL, 'actualizarCiclosConsolidadoYRender');
-  actualizarTextoComboAB('chk-rg-graficos-ciclo', 'txtRgGraficosCicloLabel', 'Seleccionar...');
-
-  function filtrarSoloCiclosSel(porCiclo) {
-    const out = {};
-    Object.keys(porCiclo || {}).forEach(c => { if (RG_GRAFICOS_CICLOS_SEL.includes(c)) out[c] = porCiclo[c]; });
-    return out;
-  }
-
-  let html = '';
-  RG_SECCIONES_CONSOLIDADO.forEach(sec => {
-    html += `<div class="card">
-      <h3 style="margin-bottom:2px;"><i class="fa-solid ${sec.icono}"></i> ${sec.titulo} <span style="color:var(--muted); font-size:11px; font-weight:normal;">Costo/Mzn por mes, cada línea es un Ciclo de ${cultivo === 'Otro' ? 'Otros cultivos' : cultivo}</span></h3>
-      <div id="kpisConsolidado_${sec.id}" style="display:flex; gap:10px; flex-wrap:wrap; margin:10px 0;"></div>
-      <div style="position:relative; height:300px;"><canvas id="chartConsolidado_${sec.id}"></canvas></div>
-    </div>`;
-  });
-  $('#contenedorGraficosConsolidado').html(html);
-
-  RG_SECCIONES_CONSOLIDADO.forEach(sec => dibujarGraficoConsolidado(sec, filtrarSoloCiclosSel(datosPorSeccion[sec.id]), vista));
-}
-
-function actualizarCiclosConsolidadoYRender() {
-  RG_GRAFICOS_CICLOS_SEL = $('.chk-rg-graficos-ciclo:checked').map(function() { return $(this).val(); }).get();
-  repintarGraficosConsolidado();
-}
-
-function dibujarGraficoConsolidado(sec, porCiclo, vista) {
-  const ciclos = Object.keys(porCiclo || {}).sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
-  if (!ciclos.length) {
-    $(`#kpisConsolidado_${sec.id}`).html('');
-    $(`#chartConsolidado_${sec.id}`).closest('.card').find('div[style*="height:300px"]').html('<p style="text-align:center; color:var(--muted); padding:40px 0;">Sin movimientos para este cultivo en esta sección.</p>');
-    return;
-  }
-
-  const datasets = [];
-  let kpisHtml = '';
-  const resumenPorCiclo = [];
-
-  ciclos.forEach((ciclo, i) => {
-    const info = porCiclo[ciclo];
-    let montoEnPunto;
-    if (vista === 'acumulado') {
-      let acum = 0;
-      montoEnPunto = info.meses.map(v => { acum += v; return Math.abs(acum); });
-    } else {
-      montoEnPunto = info.meses.map(v => Math.abs(v));
-    }
-    const mzn = info.mzn;
-    const serie = montoEnPunto.map(m => (mzn && mzn > 0) ? m / mzn : 0);
-    datasets.push({
-      label: ciclo, data: serie, borderColor: COLORES_CICLO_AB[i % COLORES_CICLO_AB.length],
-      backgroundColor: COLORES_CICLO_AB[i % COLORES_CICLO_AB.length], fill: false, tension: 0.3, pointRadius: 4,
-      montoEnPunto, mzn
-    });
-    const totalValor = Math.abs(info.meses.reduce((s, v) => s + v, 0));
-    resumenPorCiclo.push({ ciclo, totalValor, mzn, costoMzn: (mzn && mzn > 0) ? totalValor / mzn : null });
-  });
-
-  resumenPorCiclo.forEach((rc, i) => {
-    const color = COLORES_CICLO_AB[i % COLORES_CICLO_AB.length];
-    kpisHtml += kpiMiniCardAB(`Costo Total · ${rc.ciclo}`, formatNum(rc.totalValor) + ' C$', color);
-    kpisHtml += kpiMiniCardAB(`Costo/Mzn · ${rc.ciclo}`, rc.costoMzn !== null ? formatNum(rc.costoMzn) + ' C$' : '—', color);
-  });
-  $(`#kpisConsolidado_${sec.id}`).html(kpisHtml);
-
-  const ctx = document.getElementById('chartConsolidado_' + sec.id);
-  if (!ctx) return;
-  const chart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: MESES_NOMBRE_AB, datasets },
-    options: {
-      responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
-      scales: { y: { beginAtZero: true, title: { display: true, text: 'C$/Mzn' } } },
-      plugins: {
-        legend: { position: 'bottom' },
-        tooltip: { callbacks: { label: (c) => {
-          const ds = c.dataset;
-          const monto = ds.montoEnPunto ? ds.montoEnPunto[c.dataIndex] : null;
-          const detalle = (monto !== null && ds.mzn) ? ` (${formatNum(monto)} C$ ÷ ${formatNum(ds.mzn)} Mzn)` : '';
-          return `${ds.label}: ${formatNum(c.parsed.y)} C$/Mzn${detalle}`;
-        } } }
-      }
-    }
-  });
-  CHARTS_CONSOLIDADO_INSTANCES[sec.id] = chart;
-}
-
 // ===================== TALLER AGRÍCOLA (cuentas 11502-11508) =====================
 // Mismo principio contable que el resto (ApuntesAnaliticos reconcilia exacto), pero con 3
 // diferencias estructurales importantes:
@@ -9669,9 +9423,8 @@ function clasificarLineaTaller(r) {
 }
 
 function construirVistaTaller() {
-  if (!FASE2_LISTA) { renderCargandoFase2('tblTallerBody', 6, ['kpiTallerTotal','kpiTallerProducto','kpiTallerCierres','kpiTallerNoDefinidos']); return; }
   if (!DATA_ANALITICOS || DATA_ANALITICOS.length === 0) {
-    $('#tblTallerBody').html('<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.<br><button class="btn-export-excel" style="background:#0269a1; margin-top:10px; font-size:11px;" onclick="reintentarCargaFase2()"><i class="fa-solid fa-rotate"></i> Reintentar Carga</button></td></tr>');
+    $('#tblTallerBody').html('<tr><td colspan="6" style="text-align:center; color:var(--muted); padding:20px;">No se pudo cargar OdooGzp_ApuntesAnaliticos.json.</td></tr>');
     return;
   }
 
@@ -10338,11 +10091,6 @@ function abrirModalComposicionTaller(tipo) {
 
 
 function construirVistaResumenGeneral() {
-  if (!FASE2_LISTA) {
-    renderCargandoFase2('tblResumenGeneralBody', 10, []);
-    $('#tblResumenGeneralHeader').html('');
-    return;
-  }
   // Garantiza que las 5 secciones ya construyeron sus estructuras globales, sin importar en qué
   // orden el usuario haya navegado el panel.
   construirVistaActivoBiologico();
@@ -10420,16 +10168,7 @@ function construirVistaResumenGeneral() {
   const todasFincas = new Set();
   RG_CATEGORIAS_RESUMEN.forEach(cat => Object.keys(costoPorCategoriaCicloFinca[cat.nombre]).forEach(c => todosCiclos.add(c)));
   Object.keys(mznPorCicloFinca).forEach(ciclo => { todosCiclos.add(ciclo); Object.keys(mznPorCicloFinca[ciclo]).forEach(f => todasFincas.add(f)); });
-
-  // Mano de Obra trae "Ciclos" administrativos/overhead (Administracion 2024, Admon 2022, Agricola
-  // 2022...) que no son cultivos reales — nunca tienen Manzanas sembradas, y por diseño las demás
-  // secciones (Activo Biológico, Riego, Combustible, Servicios) nunca tienen costo ahí, así que esas
-  // columnas se ven "vacías" aunque el resto de columnas sí tenga datos. Se excluyen aquí para que
-  // el consolidado solo compare ciclos de cultivo reales (el dato administrativo sigue disponible
-  // completo dentro de la propia sección de Mano de Obra, esto solo limpia ESTA tabla comparativa).
-  const ciclosOrdenados = [...todosCiclos]
-    .filter(c => mznPorCicloFinca[c] && Object.keys(mznPorCicloFinca[c]).length > 0)
-    .sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
+  const ciclosOrdenados = [...todosCiclos].sort((a, b) => a.localeCompare(b, 'es', {numeric:true}));
   const fincasOrdenadas = [...todasFincas].sort((a, b) => a.localeCompare(b, 'es'));
 
   RG_RESUMEN_DATA = { costoPorCategoriaCicloFinca, mznPorCicloFinca, ciclosOrdenados, fincasOrdenadas };
