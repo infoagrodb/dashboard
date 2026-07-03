@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMASA · Presupuesto vs Ejecución</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --green:   #1baf7a;
+  --blue:    #2a78d6;
+  --red:     #c0392b;
+  --amber:   #e67e22;
+  --purple:  #8e44ad;
+  --ink:     #1a1a18;
+  --ink2:    #52514e;
+  --ink3:    #898781;
+  --bg:      #f0f2f0;
+  --card:    #ffffff;
+  --border:  rgba(0,0,0,0.08);
+  --radius:  10px;
+  --hdr:     #0d3b2e;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+
+/* ── HEADER ── */
+header{
+  background:var(--hdr);color:#fff;
+  padding:0 1.5rem;height:52px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-name{font-size:15px;font-weight:600}
+.brand-sub{font-size:11px;opacity:.6}
+.conn-badge{display:flex;align-items:center;gap:6px;font-size:11px;
+  background:rgba(255,255,255,.1);padding:4px 10px;border-radius:20px}
+.dot{width:7px;height:7px;border-radius:50%;background:#fab219;flex-shrink:0;transition:background .3s}
+.dot.ok{background:#1baf7a}.dot.err{background:#e24b4a}
+
+/* ── TOOLBAR ── */
+.toolbar{
+  background:var(--card);border-bottom:0.5px solid var(--border);
+  padding:.7rem 1.5rem;display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  position:sticky;top:52px;z-index:190;
+}
+.toolbar select,.toolbar button{
+  height:32px;padding:0 10px;border-radius:7px;font-size:12px;cursor:pointer;
+  border:0.5px solid rgba(0,0,0,.15);background:#fafaf8;color:var(--ink);
+}
+.toolbar label{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--ink3);font-weight:500}
+.btn-primary{background:var(--hdr)!important;color:#fff!important;border:none!important;font-weight:500;padding:0 16px!important}
+.btn-primary:hover{background:#1a5c44!important}
+.btn-ghost{background:transparent!important;color:var(--ink2)!important}
+.sep{width:1px;height:20px;background:var(--border);margin:0 4px}
+
+/* ── MAIN ── */
+main{padding:1.2rem 1.5rem;max-width:1400px;margin:0 auto}
+
+/* ── KPIs ── */
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:1.2rem}
+.kpi{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);
+  padding:.9rem 1rem;position:relative;overflow:hidden}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--ac,#2a78d6)}
+.kpi-lbl{font-size:10px;color:var(--ink3);font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px}
+.kpi-val{font-size:21px;font-weight:700;color:var(--ink);line-height:1}
+.kpi-sub{font-size:10px;color:var(--ink3);margin-top:3px}
+.kpi-trend{font-size:11px;font-weight:600;margin-top:4px}
+.trend-up{color:var(--red)}.trend-ok{color:var(--green)}
+
+/* ── PROYECCION BADGE ── */
+.proj-bar{
+  background:linear-gradient(135deg,#0d3b2e,#1a6644);
+  color:#fff;border-radius:var(--radius);padding:.9rem 1.2rem;
+  margin-bottom:1.2rem;display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;
+}
+.proj-item{display:flex;flex-direction:column;gap:2px}
+.proj-lbl{font-size:10px;opacity:.7;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+.proj-val{font-size:18px;font-weight:700}
+.proj-sep{width:1px;background:rgba(255,255,255,.2);align-self:stretch}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:1.2rem;margin-bottom:1.2rem}
+@media(max-width:800px){.charts-row{grid-template-columns:1fr}}
+.chart-card{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);padding:1rem}
+.chart-card h3{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+.legend span{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--ink3)}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block}
+
+/* ── PIVOT TABLE ── */
+.pivot-wrap{background:var(--card);border:0.5px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1.2rem}
+.pivot-hdr{
+  padding:.7rem 1rem;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:0.5px solid var(--border);gap:10px;flex-wrap:wrap;
+}
+.pivot-hdr h3{font-size:13px;font-weight:600;color:var(--ink2)}
+.pivot-scroll{overflow-x:auto}
+.pivot-tbl{border-collapse:collapse;font-size:11px;white-space:nowrap;min-width:100%}
+.pivot-tbl th{
+  background:#f2f4f2;padding:6px 8px;text-align:right;font-size:10px;font-weight:600;
+  color:var(--ink3);border:0.5px solid #e4e6e4;position:sticky;top:0;
+}
+.pivot-tbl th.left{text-align:left}
+.pivot-tbl th.mes-hdr{text-align:center;border-bottom:2px solid var(--border);background:#e8ebe8;color:var(--ink2);font-size:11px}
+.pivot-tbl td{padding:5px 8px;border:0.5px solid #ededeb;text-align:right;vertical-align:middle}
+.pivot-tbl td.dim{text-align:left;cursor:pointer}
+.pivot-tbl tr:hover td{background:#f7f8f7}
+/* Niveles */
+.row-clasif td.dim{font-weight:700;background:#e8ebe8;font-size:11px;color:var(--ink)}
+.row-grupo  td.dim{font-weight:600;background:#f2f4f2;padding-left:16px;color:var(--ink)}
+.row-cuenta td.dim{font-weight:400;padding-left:28px;color:var(--ink2)}
+.row-centro td.dim{font-weight:400;padding-left:40px;color:var(--ink3);font-size:10px}
+.row-total  td{font-weight:700;background:#dde8dd;border-top:2px solid #9ebd9e}
+/* Valores */
+.v-pp{color:#1a4d8c}.v-real{color:#1a6e3a}.v-neg{color:var(--red)}.v-pos{color:#1a6e3a}
+.v-zero{color:var(--ink3)}
+/* Expand arrow */
+.arrow{display:inline-block;width:14px;cursor:pointer;user-select:none;color:var(--ink3);transition:transform .15s}
+.arrow.open{transform:rotate(90deg)}
+
+/* ── DRILL-DOWN MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.show{display:flex}
+.modal{background:var(--card);border-radius:12px;width:min(95vw,1000px);max-height:85vh;
+  display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+.modal-hdr{padding:.9rem 1.2rem;background:var(--hdr);color:#fff;display:flex;align-items:center;justify-content:space-between}
+.modal-hdr h4{font-size:13px;font-weight:600}
+.modal-hdr .ctx{font-size:11px;opacity:.7;margin-top:2px}
+.modal-close{background:rgba(255,255,255,.15);border:none;color:#fff;width:28px;height:28px;
+  border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.modal-body{overflow:auto;flex:1}
+.modal-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.modal-tbl th{background:#f2f4f2;padding:8px 10px;text-align:left;font-size:11px;font-weight:600;
+  color:var(--ink3);border-bottom:0.5px solid var(--border);position:sticky;top:0;white-space:nowrap}
+.modal-tbl th.r{text-align:right}
+.modal-tbl td{padding:7px 10px;border-bottom:0.5px solid rgba(0,0,0,.05);white-space:nowrap}
+.modal-tbl tr:hover td{background:#f7f8f7}
+.modal-footer{padding:.6rem 1rem;border-top:0.5px solid var(--border);font-size:11px;color:var(--ink3);display:flex;justify-content:space-between;align-items:center}
+.modal-spin{padding:2rem;text-align:center;color:var(--ink3);font-size:13px}
+
+/* ── LOADING ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.65);
+  backdrop-filter:blur(2px);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+.overlay.show{display:flex}
+.spinner{width:34px;height:34px;border:3px solid #ddd;border-top-color:var(--hdr);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin-txt{font-size:13px;color:var(--ink2)}
+.empty{padding:2.5rem;text-align:center;color:var(--ink3);font-size:13px}
+footer{text-align:center;padding:1.5rem 0 1rem;font-size:10px;color:var(--ink3)}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="overlay" id="overlay">
+  <div class="spinner"></div>
+  <div class="spin-txt" id="spin-txt">Leyendo configuración...</div>
+</div>
+
+<!-- DRILL-DOWN MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div>
+        <h4 id="modal-title">Detalle de movimientos</h4>
+        <div class="ctx" id="modal-ctx"></div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body">
+      <div class="modal-spin">Cargando movimientos...</div>
+    </div>
+    <div class="modal-footer">
+      <span id="modal-info"></span>
+      <span>Doble clic en una fila para ver el detalle contable</span>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">
+    <svg width="26" height="26" viewBox="0 0 26 26" fill="none">
+      <rect width="26" height="26" rx="6" fill="rgba(255,255,255,.15)"/>
+      <path d="M5 19L10 7L15 13L19 9L23 19" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div>
+      <div class="brand-name">COMASA · DA</div>
+      <div class="brand-sub">Presupuesto vs Ejecución</div>
+    </div>
+  </div>
+  <div class="conn-badge">
+    <span class="dot" id="conn-dot"></span>
+    <span id="conn-txt">Iniciando...</span>
+  </div>
+</header>
+
+<!-- TOOLBAR -->
+<div class="toolbar">
+  <label>Ciclo
+    <select id="f-ciclo"><option value="">Todos</option></select>
+  </label>
+  <label>Clasificación
+    <select id="f-clasif"><option value="">Todas</option></select>
+  </label>
+  <label>Centro de costo
+    <select id="f-centro"><option value="">Todos</option></select>
+  </label>
+  <label>Versión PP
+    <select id="f-version"><option value="">Todas</option></select>
+  </label>
+  <label>Vista
+    <select id="f-vista" onchange="renderPivot()">
+      <option value="mes">Por mes (NOV→OCT)</option>
+      <option value="acum">Acumulado</option>
+    </select>
+  </label>
+  <div class="sep"></div>
+  <button class="btn-primary" onclick="applyFilters()">▶ Aplicar</button>
+  <button class="btn-ghost" onclick="resetFilters()">Limpiar</button>
+  <div class="sep"></div>
+  <label style="margin-left:auto;font-size:10px;color:var(--ink3)" id="lbl-filas"></label>
+</div>
+
+<main>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi" style="--ac:#2a78d6">
+      <div class="kpi-lbl">Presupuesto total</div>
+      <div class="kpi-val" id="k-pp">—</div>
+      <div class="kpi-sub">USD · ciclo seleccionado</div>
+    </div>
+    <div class="kpi" style="--ac:#1baf7a">
+      <div class="kpi-lbl">Real ejecutado</div>
+      <div class="kpi-val" id="k-real">—</div>
+      <div class="kpi-sub" id="k-real-sub">USD</div>
+    </div>
+    <div class="kpi" style="--ac:#e67e22">
+      <div class="kpi-lbl">Saldo disponible</div>
+      <div class="kpi-val" id="k-saldo">—</div>
+      <div class="kpi-sub">USD pendiente</div>
+    </div>
+    <div class="kpi" style="--ac:#8e44ad">
+      <div class="kpi-lbl">% Ejecución</div>
+      <div class="kpi-val" id="k-pct">—</div>
+      <div class="kpi-trend" id="k-trend"></div>
+    </div>
+    <div class="kpi" style="--ac:#c0392b">
+      <div class="kpi-lbl">Cuentas sobre ejecutadas</div>
+      <div class="kpi-val" id="k-sobre">—</div>
+      <div class="kpi-sub">cuentas con saldo negativo</div>
+    </div>
+    <div class="kpi" style="--ac:#0d3b2e">
+      <div class="kpi-lbl">Meses ejecutados</div>
+      <div class="kpi-val" id="k-meses">—</div>
+      <div class="kpi-sub">de 12 en el ciclo</div>
+    </div>
+  </div>
+
+  <!-- PROYECCIÓN -->
+  <div class="proj-bar" id="proj-bar">
+    <div class="proj-item">
+      <div class="proj-lbl">Proyección de cierre</div>
+      <div class="proj-val" id="p-proyeccion">—</div>
+    </div>
+    <div class="proj-sep"></div>
+    <div class="proj-item">
+      <div class="proj-lbl">Promedio mensual real</div>
+      <div class="proj-val" id="p-promedio">—</div>
+    </div>
+    <div class="proj-sep"></div>
+    <div class="proj-item">
+      <div class="proj-lbl">Meses restantes</div>
+      <div class="proj-val" id="p-restantes">—</div>
+    </div>
+    <div class="proj-sep"></div>
+    <div class="proj-item">
+      <div class="proj-lbl">Variación vs presupuesto</div>
+      <div class="proj-val" id="p-variacion">—</div>
+    </div>
+  </div>
+
+  <!-- GRÁFICAS -->
+  <div class="charts-row">
+    <div class="chart-card">
+      <h3>Presupuesto vs. Real — mensual (NOV → OCT)</h3>
+      <div class="legend">
+        <span><i style="background:#2a78d6"></i>Presupuesto</span>
+        <span><i style="background:#1baf7a"></i>Real ejecutado</span>
+        <span><i style="background:#e67e22;border-radius:50%"></i>% Ejecución</span>
+      </div>
+      <div style="position:relative;width:100%;height:220px">
+        <canvas id="chart-mes"></canvas>
+      </div>
+    </div>
+    <div class="chart-card">
+      <h3>Ejecución acumulada vs presupuesto acumulado</h3>
+      <div class="legend">
+        <span><i style="background:#2a78d6"></i>Ppto acumulado</span>
+        <span><i style="background:#1baf7a"></i>Real acumulado</span>
+      </div>
+      <div style="position:relative;width:100%;height:220px">
+        <canvas id="chart-acum"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- PIVOT TABLE -->
+  <div class="pivot-wrap">
+    <div class="pivot-hdr">
+      <h3>Detalle Presupuesto vs Ejecución · <span id="pivot-ciclo-lbl">todos los ciclos</span></h3>
+      <div style="font-size:11px;color:var(--ink3)">Doble clic en cuenta/centro → ver movimientos contables</div>
+    </div>
+    <div class="pivot-scroll">
+      <table class="pivot-tbl" id="pivot-tbl">
+        <thead id="pivot-thead"></thead>
+        <tbody id="pivot-tbody">
+          <tr><td colspan="20" class="empty">Cargando...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</main>
+
+<footer>COMASA · Sistema de Información · Presupuesto vs Ejecución · <span id="ft"></span></footer>
+
+<script>
+const CONFIG_URL = 'https://infoagrodb.github.io/dashboard/config.json';
+const MESES = [
+  {n:11,lbl:'NOV'},{n:12,lbl:'DIC'},{n:1,lbl:'ENE'},{n:2,lbl:'FEB'},
+  {n:3,lbl:'MAR'},{n:4,lbl:'ABR'},{n:5,lbl:'MAY'},{n:6,lbl:'JUN'},
+  {n:7,lbl:'JUL'},{n:8,lbl:'AGO'},{n:9,lbl:'SEP'},{n:10,lbl:'OCT'}
+];
+
+let API_BASE = '', DSC_BASE = '';
+let allData = [], filtered = [];
+let chartMes = null, chartAcum = null;
+let expandState = {};
+
+/* ══ FORMATO ══ */
+const fmt = (n,dec=0) => {
+  if(n==null||isNaN(n))return '—';
+  const v=parseFloat(n);
+  if(Math.abs(v)>=1e6)return(v<0?'-':'')+'$'+(Math.abs(v)/1e6).toFixed(2)+'M';
+  if(Math.abs(v)>=1e3)return(v<0?'-':'')+'$'+(Math.abs(v)/1e3).toFixed(1)+'K';
+  return(v<0?'-':'')+'$'+Math.abs(v).toFixed(dec);
+};
+const pct = (real,pp) => pp?Math.round(real/Math.abs(pp)*100)+'%':'—';
+const cls = v => parseFloat(v)<0?'v-neg':'v-pos';
+
+/* ══ INICIO ══ */
+async function init(){
+  show(true,'Leyendo configuración...');
+  try{
+    const cfg = await fetch(CONFIG_URL+'?t='+Date.now()).then(r=>r.json());
+    API_BASE = cfg.api_url+'/api/IS_SqlPresupuestovsEjecucionComasa';
+    DSC_BASE = cfg.api_url+'/api/IS_SqlPresupuestodsc';
+    document.getElementById('ft').textContent = `Config v${cfg.version} · ${cfg.updated}`;
+    await loadAll();
+  }catch(e){
+    API_BASE = 'https://discussions-paintball-producing-matched.trycloudflare.com/api/IS_SqlPresupuestovsEjecucionComasa';
+    DSC_BASE = 'https://discussions-paintball-producing-matched.trycloudflare.com/api/IS_SqlPresupuestodsc';
+    await loadAll();
+  }
+}
+
+async function loadAll(){
+  show(true,'Conectando a la API...');
+  let url = API_BASE+'?$first=200';
+  let pages=0; allData=[];
+  try{
+    while(url&&pages<100){
+      const r=await fetch(url);
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      const d=await r.json();
+      if(d.value)allData=allData.concat(d.value);
+      url=d.nextLink||null; pages++;
+      show(true,`Cargando... ${allData.length.toLocaleString()} filas`);
+    }
+    setConn(true,`${allData.length.toLocaleString()} filas · en vivo`);
+    populateFilters();
+    applyFilters();
+  }catch(e){
+    setConn(false,'Sin conexión con la API');
+    document.getElementById('pivot-tbody').innerHTML=
+      `<tr><td colspan="20" class="empty" style="color:#c0392b">
+        No se pudo conectar a la API.<br>
+        Verifica que <code>dab start</code> y <code>cloudflared</code> estén activos,<br>
+        luego actualiza <code>config.json</code> en GitHub con la nueva URL.
+      </td></tr>`;
+  }
+  show(false);
+}
+
+/* ══ FILTROS ══ */
+function populateFilters(){
+  const fill=(id,key)=>{
+    const vals=[...new Set(allData.map(r=>r[key]).filter(Boolean))].sort();
+    const sel=document.getElementById(id);
+    vals.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});
+  };
+  fill('f-ciclo','Ciclo');
+  fill('f-clasif','CLASIFICACION');
+  fill('f-centro','Centrocc');
+  fill('f-version','Version');
+}
+
+function applyFilters(){
+  const ciclo  =document.getElementById('f-ciclo').value;
+  const clasif =document.getElementById('f-clasif').value;
+  const centro =document.getElementById('f-centro').value;
+  const version=document.getElementById('f-version').value;
+  filtered=allData.filter(r=>
+    (!ciclo  ||r.Ciclo        ===ciclo)  &&
+    (!clasif ||r.CLASIFICACION===clasif) &&
+    (!centro ||r.Centrocc     ===centro) &&
+    (!version||r.Version      ===version)
+  );
+  document.getElementById('lbl-filas').textContent=`${filtered.length.toLocaleString()} registros`;
+  document.getElementById('pivot-ciclo-lbl').textContent=
+    ciclo?`Ciclo ${ciclo.slice(0,4)}/${ciclo.slice(4)}`:'todos los ciclos';
+  updateKPIs();
+  updateCharts();
+  renderPivot();
+}
+
+function resetFilters(){
+  ['f-ciclo','f-clasif','f-centro','f-version'].forEach(id=>document.getElementById(id).value='');
+  applyFilters();
+}
+
+/* ══ KPIs ══ */
+function updateKPIs(){
+  const pp   =filtered.reduce((a,r)=>a+(parseFloat(r.TotalPP)||0),0);
+  const real =filtered.reduce((a,r)=>a+(parseFloat(r.TotalReal)||0),0);
+  const saldo=filtered.reduce((a,r)=>a+(parseFloat(r.TotalSaldo)||0),0);
+  const sobre=[...new Set(filtered.filter(r=>parseFloat(r.TotalSaldo)<0).map(r=>r.Cuentacc))].length;
+  const mesesConReal=[...new Set(filtered.filter(r=>parseFloat(r.TotalReal)!==0).map(r=>r.Mes))].length;
+  const pctVal=pp?Math.round(real/Math.abs(pp)*100):0;
+
+  document.getElementById('k-pp').textContent   =fmt(pp);
+  document.getElementById('k-real').textContent =fmt(real);
+  document.getElementById('k-saldo').textContent=fmt(saldo);
+  document.getElementById('k-pct').textContent  =pctVal+'%';
+  document.getElementById('k-sobre').textContent=sobre;
+  document.getElementById('k-meses').textContent=mesesConReal+' / 12';
+
+  const trend=document.getElementById('k-trend');
+  if(pctVal>100){trend.textContent='⚠ Sobre ejecutado';trend.className='kpi-trend trend-up';}
+  else if(pctVal>80){trend.textContent='✓ En buen ritmo';trend.className='kpi-trend trend-ok';}
+  else{trend.textContent='▼ Por debajo del plan';trend.className='kpi-trend';}
+
+  // Proyección
+  const promMensual=mesesConReal?real/mesesConReal:0;
+  const restantes=12-mesesConReal;
+  const proyeccion=real+(promMensual*restantes);
+  const variacion=proyeccion-pp;
+  document.getElementById('p-proyeccion').textContent=fmt(proyeccion);
+  document.getElementById('p-promedio').textContent  =fmt(promMensual);
+  document.getElementById('p-restantes').textContent =restantes+' meses';
+  document.getElementById('p-variacion').textContent =(variacion>=0?'+':'')+fmt(variacion);
+}
+
+/* ══ GRÁFICAS ══ */
+function updateCharts(){
+  // Agrupar por mes
+  const byMes={};
+  MESES.forEach(m=>{byMes[m.n]={pp:0,real:0};});
+  filtered.forEach(r=>{
+    const m=parseInt(r.Mes);
+    if(!byMes[m])byMes[m]={pp:0,real:0};
+    byMes[m].pp  +=parseFloat(r.TotalPP)||0;
+    byMes[m].real+=parseFloat(r.TotalReal)||0;
+  });
+  const labels=MESES.map(m=>m.lbl);
+  const ppVals =MESES.map(m=>Math.round(byMes[m.n]?.pp||0));
+  const realVals=MESES.map(m=>Math.round(byMes[m.n]?.real||0));
+  const pctVals =MESES.map(m=>{
+    const p=byMes[m.n]?.pp||0;
+    return p?Math.round((byMes[m.n]?.real||0)/Math.abs(p)*100):0;
+  });
+
+  if(chartMes)chartMes.destroy();
+  chartMes=new Chart(document.getElementById('chart-mes'),{
+    data:{
+      labels,
+      datasets:[
+        {type:'bar',label:'Presupuesto',data:ppVals,backgroundColor:'rgba(42,120,214,.7)',borderRadius:4,yAxisID:'y'},
+        {type:'bar',label:'Real',data:realVals,backgroundColor:'rgba(27,175,122,.8)',borderRadius:4,yAxisID:'y'},
+        {type:'line',label:'% Ejec',data:pctVals,borderColor:'#e67e22',backgroundColor:'transparent',
+          pointBackgroundColor:'#e67e22',pointRadius:3,tension:.3,yAxisID:'y2'}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='y2'?c.raw+'%':fmt(c.raw)}}},
+      scales:{
+        y:{ticks:{font:{size:10},color:'#898781',callback:v=>fmt(v)},grid:{color:'#eee'}},
+        y2:{position:'right',ticks:{font:{size:10},color:'#e67e22',callback:v=>v+'%'},grid:{display:false},min:0,max:150}
+      }
+    }
+  });
+
+  // Acumulado
+  let ppAcum=0,realAcum=0;
+  const ppAcumVals=[],realAcumVals=[];
+  MESES.forEach(m=>{
+    ppAcum  +=byMes[m.n]?.pp||0;
+    realAcum+=byMes[m.n]?.real||0;
+    ppAcumVals.push(Math.round(ppAcum));
+    realAcumVals.push(Math.round(realAcum));
+  });
+
+  if(chartAcum)chartAcum.destroy();
+  chartAcum=new Chart(document.getElementById('chart-acum'),{
+    type:'line',
+    data:{
+      labels,
+      datasets:[
+        {label:'Ppto acumulado',data:ppAcumVals,borderColor:'#2a78d6',backgroundColor:'rgba(42,120,214,.1)',fill:true,tension:.3,pointRadius:3},
+        {label:'Real acumulado',data:realAcumVals,borderColor:'#1baf7a',backgroundColor:'rgba(27,175,122,.1)',fill:true,tension:.3,pointRadius:3}
+      ]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+      scales:{
+        x:{ticks:{font:{size:10},color:'#898781'},grid:{display:false}},
+        y:{ticks:{font:{size:10},color:'#898781',callback:v=>fmt(v)},grid:{color:'#eee'}}
+      }
+    }
+  });
+}
+
+/* ══ PIVOT TABLE ══ */
+function renderPivot(){
+  const vista=document.getElementById('f-vista').value;
+
+  // Construir encabezados de meses
+  const thead=document.getElementById('pivot-thead');
+  let hdr1='<tr><th class="left" rowspan="2" style="min-width:200px">Clasificación / Grupo / Cuenta / Centro</th>';
+  MESES.forEach(m=>{hdr1+=`<th class="mes-hdr" colspan="3">${m.lbl}</th>`;});
+  hdr1+='<th class="mes-hdr" colspan="3">TOTAL CICLO</th></tr>';
+  let hdr2='<tr>';
+  for(let i=0;i<13;i++){hdr2+='<th>Ppto</th><th>Real</th><th>Saldo</th>';}
+  hdr2+='</tr>';
+  thead.innerHTML=hdr1+hdr2;
+
+  // Agrupar datos
+  const tree={};
+  filtered.forEach(r=>{
+    const cl=r.CLASIFICACION||'Sin clasificación';
+    const gr=r.GRUPO||'Sin grupo';
+    const cu=r.Cuentacc||'?';
+    const ce=r.Centrocc||'?';
+    const m =parseInt(r.Mes);
+    if(!tree[cl])tree[cl]={grupos:{},pp:0,real:0,saldo:0,mes:{}};
+    if(!tree[cl].grupos[gr])tree[cl].grupos[gr]={cuentas:{},pp:0,real:0,saldo:0,mes:{}};
+    if(!tree[cl].grupos[gr].cuentas[cu])tree[cl].grupos[gr].cuentas[cu]={centros:{},pp:0,real:0,saldo:0,mes:{},cuentacc:cu};
+    if(!tree[cl].grupos[gr].cuentas[cu].centros[ce])tree[cl].grupos[gr].cuentas[cu].centros[ce]={pp:0,real:0,saldo:0,mes:{},centrocc:ce,centrodesc:r.Centroccdesc||ce,cuentadesc:r.Cuentaccdesc||cu,ciclo:r.Ciclo};
+    const pp=parseFloat(r.TotalPP)||0;
+    const real=parseFloat(r.TotalReal)||0;
+    const saldo=parseFloat(r.TotalSaldo)||0;
+    // acumular por mes
+    const agg=(obj)=>{
+      obj.pp+=pp;obj.real+=real;obj.saldo+=saldo;
+      if(!obj.mes[m])obj.mes[m]={pp:0,real:0,saldo:0};
+      obj.mes[m].pp+=pp;obj.mes[m].real+=real;obj.mes[m].saldo+=saldo;
+    };
+    agg(tree[cl]);
+    agg(tree[cl].grupos[gr]);
+    agg(tree[cl].grupos[gr].cuentas[cu]);
+    agg(tree[cl].grupos[gr].cuentas[cu].centros[ce]);
+  });
+
+  // Totales generales
+  let totPP=0,totReal=0,totSaldo=0;
+  const totMes={};
+  MESES.forEach(m=>{totMes[m.n]={pp:0,real:0,saldo:0};});
+  filtered.forEach(r=>{
+    const m=parseInt(r.Mes);
+    const pp=parseFloat(r.TotalPP)||0,real=parseFloat(r.TotalReal)||0,saldo=parseFloat(r.TotalSaldo)||0;
+    totPP+=pp;totReal+=real;totSaldo+=saldo;
+    if(totMes[m]){totMes[m].pp+=pp;totMes[m].real+=real;totMes[m].saldo+=saldo;}
+  });
+
+  const mesCols=(mes,ciclo)=>{
+    let html='';
+    MESES.forEach(m=>{
+      const d=mes[m.n]||{pp:0,real:0,saldo:0};
+      html+=`<td class="v-pp">${fmt(d.pp)}</td><td class="v-real">${fmt(d.real)}</td>`;
+      html+=`<td class="${cls(d.saldo)}">${fmt(d.saldo)}</td>`;
+    });
+    return html;
+  };
+
+  const totalCols=(obj)=>{
+    return `<td class="v-pp">${fmt(obj.pp)}</td><td class="v-real">${fmt(obj.real)}</td><td class="${cls(obj.saldo)}">${fmt(obj.saldo)}</td>`;
+  };
+
+  let rows='';
+  Object.entries(tree).sort(([a],[b])=>a.localeCompare(b)).forEach(([cl,clObj])=>{
+    const clKey='cl_'+cl;
+    const isOpen=expandState[clKey]!==false;
+    rows+=`<tr class="row-clasif">
+      <td class="dim" onclick="toggleRow('${clKey}',this)">
+        <span class="arrow ${isOpen?'open':''}">▶</span> ${cl}
+      </td>
+      ${mesCols(clObj.mes)}${totalCols(clObj)}
+    </tr>`;
+    if(isOpen){
+      Object.entries(clObj.grupos).sort(([a],[b])=>a.localeCompare(b)).forEach(([gr,grObj])=>{
+        const grKey=clKey+'_gr_'+gr;
+        const grOpen=expandState[grKey]!==false;
+        rows+=`<tr class="row-grupo" data-parent="${clKey}">
+          <td class="dim" onclick="toggleRow('${grKey}',this)">
+            <span class="arrow ${grOpen?'open':''}">▶</span> ${gr}
+          </td>
+          ${mesCols(grObj.mes)}${totalCols(grObj)}
+        </tr>`;
+        if(grOpen){
+          Object.entries(grObj.cuentas).sort(([a],[b])=>a.localeCompare(b)).forEach(([cu,cuObj])=>{
+            const cuKey=grKey+'_cu_'+cu;
+            const cuOpen=expandState[cuKey]===true;
+            rows+=`<tr class="row-cuenta" data-parent="${grKey}">
+              <td class="dim" onclick="toggleRow('${cuKey}',this)">
+                <span class="arrow ${cuOpen?'open':''}">▶</span>
+                ${cu} ${cuObj.centros[Object.keys(cuObj.centros)[0]]?.cuentadesc||''}
+              </td>
+              ${mesCols(cuObj.mes)}${totalCols(cuObj)}
+            </tr>`;
+            if(cuOpen){
+              Object.entries(cuObj.centros).sort(([a],[b])=>a.localeCompare(b)).forEach(([ce,ceObj])=>{
+                rows+=`<tr class="row-centro" data-parent="${cuKey}">
+                  <td class="dim" 
+                    ondblclick="openDrillDown('${cu}','${ce}','${ceObj.ciclo||''}','${ceObj.cuentadesc||cu}','${ceObj.centrodesc||ce}')"
+                    title="Doble clic para ver movimientos contables">
+                    📄 ${ce} · ${ceObj.centrodesc||ce}
+                  </td>
+                  ${mesCols(ceObj.mes)}${totalCols(ceObj)}
+                </tr>`;
+              });
+            }
+          });
+        }
+      });
+    }
+  });
+
+  // Fila total general
+  rows+=`<tr class="row-total">
+    <td class="dim" style="text-align:left">TOTAL GENERAL</td>
+    ${MESES.map(m=>{
+      const d=totMes[m.n]||{pp:0,real:0,saldo:0};
+      return `<td>${fmt(d.pp)}</td><td>${fmt(d.real)}</td><td class="${cls(d.saldo)}">${fmt(d.saldo)}</td>`;
+    }).join('')}
+    <td>${fmt(totPP)}</td><td>${fmt(totReal)}</td><td class="${cls(totSaldo)}">${fmt(totSaldo)}</td>
+  </tr>`;
+
+  document.getElementById('pivot-tbody').innerHTML=rows||`<tr><td colspan="40" class="empty">Sin datos para los filtros aplicados.</td></tr>`;
+}
+
+function toggleRow(key,el){
+  expandState[key]=expandState[key]===false?true:false;
+  renderPivot();
+}
+
+/* ══ DRILL-DOWN ══ */
+async function openDrillDown(cuenta,centro,ciclo,cuentadesc,centrodesc){
+  document.getElementById('modal-title').textContent=`${cuentadesc||cuenta}`;
+  document.getElementById('modal-ctx').textContent=`${centrodesc||centro} · ${cuenta} · ${centro}${ciclo?' · Ciclo '+ciclo:''}`;
+  document.getElementById('modal-body').innerHTML='<div class="modal-spin">Cargando movimientos contables...</div>';
+  document.getElementById('modal-overlay').classList.add('show');
+
+  let filter=`Cuentacc eq '${cuenta}' and Centrocc eq '${centro}'`;
+  if(ciclo)filter+=` and Ciclo eq '${ciclo}'`;
+  const url=DSC_BASE+`?$filter=${encodeURIComponent(filter)}&$orderby=FECHA&$first=500`;
+
+  try{
+    const r=await fetch(url);
+    const d=await r.json();
+    const rows=d.value||[];
+    document.getElementById('modal-info').textContent=`${rows.length} movimientos`;
+    if(!rows.length){
+      document.getElementById('modal-body').innerHTML='<div class="modal-spin">Sin movimientos para esta combinación.</div>';
+      return;
+    }
+    let html=`<table class="modal-tbl">
+      <thead><tr>
+        <th>Asiento</th><th>Fecha</th><th>Origen</th>
+        <th>Cuenta</th><th>Centro</th>
+        <th>Referencia</th><th>Notas</th>
+        <th class="r">Débito $</th><th class="r">Crédito $</th>
+      </tr></thead><tbody>`;
+    rows.forEach(r=>{
+      const deb=parseFloat(r.DEBITO_DOLAR)||0;
+      const cre=parseFloat(r.CREDITO_DOLAR)||0;
+      html+=`<tr>
+        <td>${r.ASIENTO||'—'}</td>
+        <td>${r.FECHA?r.FECHA.slice(0,10):'—'}</td>
+        <td>${(r.ORIGEN||'').trim()||'—'}</td>
+        <td title="${r.CUENTA_CONTABLE||''}">${r.Cuentacc||r.CUENTA_CONTABLE||'—'}</td>
+        <td title="${r.CENTRO_COSTO||''}">${r.Centrocc||r.CENTRO_COSTO||'—'}</td>
+        <td>${r.REFERENCIA||'—'}</td>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis" title="${r.NOTAS||''}">${r.NOTAS||'—'}</td>
+        <td class="r" style="color:#1a4d8c">${deb?fmt(deb,2):'—'}</td>
+        <td class="r" style="color:#c0392b">${cre?fmt(cre,2):'—'}</td>
+      </tr>`;
+    });
+    html+='</tbody></table>';
+    document.getElementById('modal-body').innerHTML=html;
+  }catch(e){
+    document.getElementById('modal-body').innerHTML=
+      '<div class="modal-spin" style="color:#c0392b">Error al cargar los movimientos.</div>';
+  }
+}
+
+function closeModal(){
+  document.getElementById('modal-overlay').classList.remove('show');
+}
+document.getElementById('modal-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('modal-overlay'))closeModal();
+});
+
+/* ══ UTILS ══ */
+function show(v,txt){
+  document.getElementById('overlay').classList.toggle('show',v);
+  if(txt)document.getElementById('spin-txt').textContent=txt;
+}
+function setConn(ok,msg){
+  document.getElementById('conn-dot').className='dot '+(ok?'ok':'err');
+  document.getElementById('conn-txt').textContent=msg;
+}
+
+init();
+</script>
+</body>
+</html>
