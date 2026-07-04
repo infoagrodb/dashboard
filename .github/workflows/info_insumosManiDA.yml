@@ -19,7 +19,7 @@ jobs:
         env:
           ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
         run: |
-          echo "Llamando a Odoo - Insumos Consumo Mani Division Agricola..."
+          echo "Descargando todos los insumos desde Odoo..."
           curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
           -H "Content-Type: application/json" \
           -d '{
@@ -49,44 +49,56 @@ jobs:
                 ]
               ]
             }
-          }' > info_todos.json
+          }' > info_todos_raw.json
 
-          echo "Verificando contenido..."
-          if [ ! -s info_todos.json ]; then
-            echo "❌ Error: respuesta vacía"
+          if [ ! -s info_todos_raw.json ]; then
+            echo "❌ Respuesta vacía de Odoo"
             exit 1
           fi
 
-          echo "Filtrando solo Mani + Division Agricola Comasa (compaia id=2)..."
-          python3 << 'PYEOF'
-          import json
+          echo "Filtrando Mani + Division Agricola (id=2) en Python..."
+          python3 - << 'PYEOF'
+import json, sys
 
-          with open('info_todos.json') as f:
-              data = json.load(f)
+with open('info_todos_raw.json', encoding='utf-8') as f:
+    data = json.load(f)
 
-          todos = data.get('result', [])
-          print(f"Total registros descargados: {len(todos)}")
+if 'error' in data:
+    print(f"❌ Error Odoo: {data['error']['data']['message']}")
+    sys.exit(1)
 
-          filtrados = []
-          for r in todos:
-              ciclo = r.get('x_studio_ciclo', [])
-              cia   = r.get('x_studio_compaia', [])
-              ciclo_nombre = ciclo[1] if isinstance(ciclo, list) and len(ciclo) > 1 else str(ciclo)
-              cia_id = cia[0] if isinstance(cia, list) and len(cia) > 0 else None
-              if 'Mani' in ciclo_nombre and cia_id == 2:
-                  filtrados.append(r)
+todos = data.get('result', [])
+print(f"Total descargados: {len(todos)}")
 
-          print(f"Registros Mani + Division Agricola: {len(filtrados)}")
+filtrados = []
+for r in todos:
+    ciclo = r.get('x_studio_ciclo', [])
+    cia   = r.get('x_studio_compaia', [])
+    ciclo_nombre = ciclo[1] if isinstance(ciclo, list) and len(ciclo) > 1 else str(ciclo)
+    cia_id = cia[0] if isinstance(cia, list) and len(cia) > 0 else None
+    if 'Mani' in ciclo_nombre and cia_id == 2:
+        filtrados.append(r)
 
-          resultado = {"jsonrpc": "2.0", "id": 1, "result": filtrados}
-          with open('info_Insumos_Consumo_Mani_DA.json', 'w', encoding='utf-8') as f:
-              json.dump(resultado, f, ensure_ascii=False, indent=2)
+print(f"Filtrados Mani + Div. Agricola: {len(filtrados)}")
 
-          print("✅ info_Insumos_Consumo_Mani_DA.json generado correctamente")
-          PYEOF
+# Agrupar por ciclo para info
+ciclos = {}
+for r in filtrados:
+    c = r.get('x_studio_ciclo', [None,'?'])
+    cn = c[1] if isinstance(c, list) else str(c)
+    ciclos[cn] = ciclos.get(cn, 0) + 1
+for c, n in sorted(ciclos.items()):
+    print(f"  {c}: {n} registros")
 
-          echo "Muestra del resultado:"
-          head -c 500 info_Insumos_Consumo_Mani_DA.json
+resultado = {"jsonrpc": "2.0", "id": 1, "result": filtrados}
+with open('info_Insumos_Consumo_Mani_DA.json', 'w', encoding='utf-8') as f:
+    json.dump(resultado, f, ensure_ascii=False, indent=2)
+
+print("✅ info_Insumos_Consumo_Mani_DA.json generado")
+PYEOF
+
+          echo "Muestra:"
+          head -c 300 info_Insumos_Consumo_Mani_DA.json
 
       - name: Commit y push del JSON
         env:
@@ -95,21 +107,20 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add info_Insumos_Consumo_Mani_DA.json
-          git commit -m "Actualización automática Insumos Consumo Mani DA desde Odoo" || echo "No hay cambios"
+          git commit -m "Actualización Insumos Consumo Mani DA desde Odoo" || echo "Sin cambios"
           intento=1
           maximo_intentos=5
           while [ $intento -le $maximo_intentos ]; do
-            echo "Intento de push #$intento..."
+            echo "Intento push #$intento..."
             if git pull --rebase origin main && git push origin main; then
               echo "Push exitoso."
               break
             fi
             if [ $intento -eq $maximo_intentos ]; then
-              echo "Se agotaron los intentos de push."
+              echo "Intentos agotados."
               exit 1
             fi
             espera=$(( (RANDOM % 5) + 3 ))
-            echo "Push rechazado. Esperando ${espera}s..."
             sleep $espera
             intento=$((intento + 1))
           done
