@@ -15,61 +15,17 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Llamar a Odoo JSON-RPC y guardar resultado
-        env:
-          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+      - name: Preparar scripts
         run: |
-          echo "Descargando todos los insumos desde Odoo..."
-          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
-          -H "Content-Type: application/json" \
-          -d '{
-            "jsonrpc": "2.0",
-            "method": "call",
-            "id": 1,
-            "params": {
-              "service": "object",
-              "method": "execute",
-              "args": [
-                "infoagro",
-                2,
-                "'"$ODOO_PASSWORD"'",
-                "x_orden_campo_line_662d7",
-                "search_read",
-                [],
-                [
-                  "id","x_studio_reporte_consolidado","x_orden_campo_id",
-                  "x_studio_fecha","x_studio_ciclo","x_studio_sector_1",
-                  "x_studio_keyfincainsumo","x_studio_lote_agricola",
-                  "x_studio_categoria_actividad","x_studio_categoria_insumo",
-                  "x_studio_actividad_realizada","x_studio_codigo_externo",
-                  "x_studio_insumo_utilizado","x_studio_related_field_312_1j9n5lns3",
-                  "x_studio_um","x_studio_cantidad_gastada",
-                  "x_studio_area_mzn_aplicada","x_studio_salidas_de_bodega",
-                  "x_studio_compaia"
-                ]
-              ]
-            }
-          }' > info_todos_raw.json
-
-          if [ ! -s info_todos_raw.json ]; then
-            echo "❌ Respuesta vacía de Odoo"
-            exit 1
-          fi
-
-          echo "Filtrando Mani + Division Agricola (id=2) en Python..."
-          python3 - << 'PYEOF'
+          cat > filtrar_mani.py << 'EOF'
 import json, sys
-
 with open('info_todos_raw.json', encoding='utf-8') as f:
     data = json.load(f)
-
 if 'error' in data:
-    print(f"❌ Error Odoo: {data['error']['data']['message']}")
+    print("ERROR Odoo:", data['error']['data']['message'])
     sys.exit(1)
-
 todos = data.get('result', [])
 print(f"Total descargados: {len(todos)}")
-
 filtrados = []
 for r in todos:
     ciclo = r.get('x_studio_ciclo', [])
@@ -78,49 +34,101 @@ for r in todos:
     cia_id = cia[0] if isinstance(cia, list) and len(cia) > 0 else None
     if 'Mani' in ciclo_nombre and cia_id == 2:
         filtrados.append(r)
-
-print(f"Filtrados Mani + Div. Agricola: {len(filtrados)}")
-
-# Agrupar por ciclo para info
+print(f"Filtrados Mani + Div. Agricola Comasa: {len(filtrados)}")
 ciclos = {}
 for r in filtrados:
-    c = r.get('x_studio_ciclo', [None,'?'])
+    c = r.get('x_studio_ciclo', [None, '?'])
     cn = c[1] if isinstance(c, list) else str(c)
     ciclos[cn] = ciclos.get(cn, 0) + 1
 for c, n in sorted(ciclos.items()):
     print(f"  {c}: {n} registros")
-
 resultado = {"jsonrpc": "2.0", "id": 1, "result": filtrados}
 with open('info_Insumos_Consumo_Mani_DA.json', 'w', encoding='utf-8') as f:
     json.dump(resultado, f, ensure_ascii=False, indent=2)
+print("Archivo generado correctamente")
+EOF
 
-print("✅ info_Insumos_Consumo_Mani_DA.json generado")
-PYEOF
+          cat > crear_payload.py << 'EOF'
+import json, os
+password = os.environ['ODOO_PASSWORD']
+payload = {
+    "jsonrpc": "2.0",
+    "method": "call",
+    "id": 1,
+    "params": {
+        "service": "object",
+        "method": "execute",
+        "args": [
+            "infoagro",
+            2,
+            password,
+            "x_orden_campo_line_662d7",
+            "search_read",
+            [],
+            [
+                "id","x_studio_reporte_consolidado","x_orden_campo_id",
+                "x_studio_fecha","x_studio_ciclo","x_studio_sector_1",
+                "x_studio_keyfincainsumo","x_studio_lote_agricola",
+                "x_studio_categoria_actividad","x_studio_categoria_insumo",
+                "x_studio_actividad_realizada","x_studio_codigo_externo",
+                "x_studio_insumo_utilizado","x_studio_related_field_312_1j9n5lns3",
+                "x_studio_um","x_studio_cantidad_gastada",
+                "x_studio_area_mzn_aplicada","x_studio_salidas_de_bodega",
+                "x_studio_compaia"
+            ]
+        ]
+    }
+}
+with open('payload.json', 'w') as f:
+    json.dump(payload, f)
+print("payload.json creado")
+EOF
 
-          echo "Muestra:"
-          head -c 300 info_Insumos_Consumo_Mani_DA.json
+      - name: Crear payload Odoo
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: python3 crear_payload.py
 
-      - name: Commit y push del JSON
+      - name: Llamar a Odoo JSON-RPC
+        run: |
+          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
+            -H "Content-Type: application/json" \
+            -d @payload.json \
+            > info_todos_raw.json
+          if [ ! -s info_todos_raw.json ]; then
+            echo "Error: respuesta vacia de Odoo"
+            exit 1
+          fi
+          echo "Respuesta recibida:"
+          head -c 200 info_todos_raw.json
+
+      - name: Filtrar Mani + Division Agricola
+        run: python3 filtrar_mani.py
+
+      - name: Verificar resultado
+        run: |
+          if [ ! -s info_Insumos_Consumo_Mani_DA.json ]; then
+            echo "Error: JSON filtrado vacio"
+            exit 1
+          fi
+          echo "Registros finales:"
+          python3 -c "import json; d=json.load(open('info_Insumos_Consumo_Mani_DA.json')); print(len(d['result']))"
+
+      - name: Commit y push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add info_Insumos_Consumo_Mani_DA.json
-          git commit -m "Actualización Insumos Consumo Mani DA desde Odoo" || echo "Sin cambios"
+          git commit -m "Actualizacion Insumos Consumo Mani DA desde Odoo" || echo "Sin cambios"
           intento=1
-          maximo_intentos=5
-          while [ $intento -le $maximo_intentos ]; do
-            echo "Intento push #$intento..."
+          while [ $intento -le 5 ]; do
             if git pull --rebase origin main && git push origin main; then
-              echo "Push exitoso."
+              echo "Push exitoso"
               break
             fi
-            if [ $intento -eq $maximo_intentos ]; then
-              echo "Intentos agotados."
-              exit 1
-            fi
-            espera=$(( (RANDOM % 5) + 3 ))
-            sleep $espera
+            if [ $intento -eq 5 ]; then exit 1; fi
+            sleep $(( (RANDOM % 5) + 3 ))
             intento=$((intento + 1))
           done
