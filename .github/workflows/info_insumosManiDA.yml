@@ -2,8 +2,8 @@ name: Odoo Proxy Insumos Consumo Mani DA
 
 on:
   schedule:
-    - cron: "0 */4 * * *"   # Ejecuta cada 4 horas
-  workflow_dispatch:          # Permite ejecución manual
+    - cron: "0 */4 * * *"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -35,62 +35,57 @@ jobs:
                 "'"$ODOO_PASSWORD"'",
                 "x_orden_campo_line_662d7",
                 "search_read",
+                [],
                 [
-                  ["x_studio_compaia", "=", 2],
-                  ["x_studio_ciclo.name", "ilike", "Mani"]
-                ],
-                [
-                  "id",
-                  "x_studio_reporte_consolidado",
-                  "x_orden_campo_id",
-                  "x_studio_fecha",
-                  "x_studio_ciclo",
-                  "x_studio_sector_1",
-                  "x_studio_keyfincainsumo",
-                  "x_studio_lote_agricola",
-                  "x_studio_categoria_actividad",
-                  "x_studio_categoria_insumo",
-                  "x_studio_actividad_realizada",
-                  "x_studio_codigo_externo",
-                  "x_studio_insumo_utilizado",
-                  "x_studio_related_field_312_1j9n5lns3",
-                  "x_studio_um",
-                  "x_studio_cantidad_gastada",
-                  "x_studio_area_mzn_aplicada",
-                  "x_studio_salidas_de_bodega",
+                  "id","x_studio_reporte_consolidado","x_orden_campo_id",
+                  "x_studio_fecha","x_studio_ciclo","x_studio_sector_1",
+                  "x_studio_keyfincainsumo","x_studio_lote_agricola",
+                  "x_studio_categoria_actividad","x_studio_categoria_insumo",
+                  "x_studio_actividad_realizada","x_studio_codigo_externo",
+                  "x_studio_insumo_utilizado","x_studio_related_field_312_1j9n5lns3",
+                  "x_studio_um","x_studio_cantidad_gastada",
+                  "x_studio_area_mzn_aplicada","x_studio_salidas_de_bodega",
                   "x_studio_compaia"
                 ]
               ]
             }
-          }' > info_Insumos_Consumo_Mani_DA.json
+          }' > info_todos.json
 
           echo "Verificando contenido..."
-          if [ ! -s info_Insumos_Consumo_Mani_DA.json ]; then
-            echo "❌ Error: info_Insumos_Consumo_Mani_DA.json está vacío."
+          if [ ! -s info_todos.json ]; then
+            echo "❌ Error: respuesta vacía"
             exit 1
           fi
 
-          # Verificar que es JSON válido
-          python3 -c "
-          import json,sys
-          with open('info_Insumos_Consumo_Mani_DA.json') as f:
-              d = json.load(f)
-          regs = len(d.get('result', []))
-          print(f'✅ JSON válido · {regs} registros Mani DA')
-          # Verificar que todos son Mani y Division Agricola
-          for r in d.get('result', []):
-              ciclo = r.get('x_studio_ciclo', [None, ''])
-              cia   = r.get('x_studio_compaia', [None, ''])
-              ciclo_n = ciclo[1] if isinstance(ciclo, list) else ciclo
-              cia_n   = cia[1]   if isinstance(cia, list)   else cia
-              if 'Mani' not in str(ciclo_n):
-                  print(f'⚠️ Registro fuera de Mani: id={r[\"id\"]} ciclo={ciclo_n}')
-              if cia[0] != 2:
-                  print(f'⚠️ Compañia incorrecta: id={r[\"id\"]} cia={cia_n}')
-          print('✅ Validación completada')
-          "
+          echo "Filtrando solo Mani + Division Agricola Comasa (compaia id=2)..."
+          python3 << 'PYEOF'
+          import json
 
-          echo "Primeros registros:"
+          with open('info_todos.json') as f:
+              data = json.load(f)
+
+          todos = data.get('result', [])
+          print(f"Total registros descargados: {len(todos)}")
+
+          filtrados = []
+          for r in todos:
+              ciclo = r.get('x_studio_ciclo', [])
+              cia   = r.get('x_studio_compaia', [])
+              ciclo_nombre = ciclo[1] if isinstance(ciclo, list) and len(ciclo) > 1 else str(ciclo)
+              cia_id = cia[0] if isinstance(cia, list) and len(cia) > 0 else None
+              if 'Mani' in ciclo_nombre and cia_id == 2:
+                  filtrados.append(r)
+
+          print(f"Registros Mani + Division Agricola: {len(filtrados)}")
+
+          resultado = {"jsonrpc": "2.0", "id": 1, "result": filtrados}
+          with open('info_Insumos_Consumo_Mani_DA.json', 'w', encoding='utf-8') as f:
+              json.dump(resultado, f, ensure_ascii=False, indent=2)
+
+          print("✅ info_Insumos_Consumo_Mani_DA.json generado correctamente")
+          PYEOF
+
+          echo "Muestra del resultado:"
           head -c 500 info_Insumos_Consumo_Mani_DA.json
 
       - name: Commit y push del JSON
