@@ -580,7 +580,6 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
   position: fixed;
   inset: 0;
   background: rgba(15,23,42,0.45);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -590,7 +589,21 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
   transition: opacity 0.2s ease;
   padding: 16px;
 }
+/* backdrop-filter movido a pseudo-elemento para no crear stacking context
+   que tape el chatbot aunque tenga z-index mayor */
+.modal-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(4px);
+  z-index: -1;
+  pointer-events: none;
+}
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
+/* El chatbot siempre encima de modales */
+#gzp-chat-root { z-index: 10000 !important; }
+#gzp-chat-fab  { z-index: 10000 !important; }
+#gzp-chat-window { z-index: 10000 !important; }
 .modal-box {
   background: var(--panel);
   width: min(1480px, 96vw);
@@ -615,7 +628,6 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
   position: fixed;
   inset: 0;
   background: rgba(15,23,42,0.6);
-  backdrop-filter: blur(3px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -624,6 +636,14 @@ code { font-family: 'JetBrains Mono', 'Consolas', monospace; font-size: 11px; ba
   pointer-events: none;
   transition: opacity 0.15s ease;
   padding: 16px;
+}
+.modal-child-overlay::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  backdrop-filter: blur(3px);
+  z-index: -1;
+  pointer-events: none;
 }
 .modal-child-overlay.open { opacity: 1; pointer-events: auto; }
 .modal-child-box {
@@ -10326,7 +10346,7 @@ function exportarResumenGeneralAExcel() {
   border: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   box-shadow: 0 4px 20px rgba(30,64,175,.45);
-  z-index: 9999; transition: transform .2s, box-shadow .2s;
+  z-index: 10000; isolation: isolate; transition: transform .2s, box-shadow .2s;
 }
 #gzp-chat-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(30,64,175,.6); }
 #gzp-chat-fab svg { width: 26px; height: 26px; fill: #fff; }
@@ -10342,8 +10362,8 @@ function exportarResumenGeneralAExcel() {
   width: 420px; max-height: 600px;
   background: var(--panel); border: 1px solid var(--line);
   border-radius: 16px; box-shadow: 0 12px 48px rgba(0,0,0,.18);
-  display: none; flex-direction: column; z-index: 9998;
-  overflow: hidden; font-family: 'Inter','Segoe UI',system-ui,sans-serif;
+  display: none; flex-direction: column; z-index: 10000;
+  isolation: isolate; overflow: hidden; font-family: 'Inter','Segoe UI',system-ui,sans-serif;
 }
 #gzp-chat-window.open { display: flex; }
 #gzp-chat-header {
@@ -10425,12 +10445,13 @@ function exportarResumenGeneralAExcel() {
 .gzp-bubble table tr:nth-child(even) td { background: #f8fafc; }
 </style>
 
-<button id="gzp-chat-fab" onclick="gzpToggleChat()" title="Asistente GZP">
+<div id="gzp-chat-root" style="position:fixed;bottom:0;right:0;z-index:10000;isolation:isolate;pointer-events:none;">
+<button id="gzp-chat-fab" onclick="gzpToggleChat()" title="Asistente GZP" style="pointer-events:auto;">
   <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 10H6v-2h12v2zm0-3H6V7h12v2z"/></svg>
   <div id="gzp-chat-badge">1</div>
 </button>
 
-<div id="gzp-chat-window">
+<div id="gzp-chat-window" style="pointer-events:auto;">
   <div id="gzp-chat-header">
     <div class="avatar">&#129302;</div>
     <div class="info">
@@ -10467,12 +10488,286 @@ function exportarResumenGeneralAExcel() {
     </button>
   </div>
 </div>
+</div><!-- /#gzp-chat-root -->
 
 <script>
 (function() {
   let GZP_CHAT_OPEN = false;
   let GZP_CHAT_HISTORY = [];
   let GZP_CHAT_BUSY = false;
+
+  // ── CDN BASE ──────────────────────────────────────────────────────────────
+  const GZP_CDN = 'https://infoagrodb.github.io/dashboard/';
+
+  // ── CATÁLOGO DE FUENTES ───────────────────────────────────────────────────
+  // Cada entrada define el archivo JSON y los temas (keywords) que lo hacen relevante.
+  // gzp_Siembra_Ciclos.json es la LLAVE MAESTRA: siempre se carga.
+  const GZP_FUENTES = [
+    // ── LLAVE MAESTRA (siempre se carga) ──────────────────────────────────
+    { archivo: "gzp_Siembra_Ciclos.json",
+      desc: "Llave maestra: relaciona Finca, Ciclo agricola y Manzanas sembradas. Es el maestro de ciclos para cruzar todas las demas fuentes.",
+      temas: ["siembra","manzanas","ciclo","finca","analitica","llave","maestro","cultivo"] },
+    // ── CONTABLES / FINANCIEROS ───────────────────────────────────────────
+    { archivo: "gzp_ApuntesAnaliticos.json",
+      desc: "Apuntes analiticos de Odoo: costos por cuenta analitica, ciclo, finca. Fuente primaria para C$/Mzn de Activo Biologico, Riego, Servicios y Taller.",
+      temas: ["costo","contabilidad","analitico","cuenta","gasto","activo biologico","riego","bombeo","servicios","alquiler","taller","mto"] },
+    { archivo: "gzp_ApuntesContables.json",
+      desc: "Asientos contables oficiales de Odoo (parent_state=posted). Usado para conciliacion y validacion de saldos contra apuntes analiticos.",
+      temas: ["contable","asiento","mayor","balance","financiero","conciliacion","saldo","cuenta contable"] },
+    { archivo: "gzp_Contratos.json",
+      desc: "Contratos con proveedores de servicios, alquiler de maquinaria y mantenimiento. Relacionados con la seccion Servicios/Alquiler/Mto.",
+      temas: ["contrato","proveedor","servicio","alquiler","mantenimiento","mto"] },
+    { archivo: "gzp_Compras_Ordenes.json",
+      desc: "Ordenes de compra de GZP: insumos, repuestos, combustible, servicios. Permite analizar compras por proveedor, producto y monto.",
+      temas: ["compra","orden","proveedor","precio","insumo","repuesto","adquisicion"] },
+    // ── AGRÍCOLAS / CAMPO (Infoagro) ──────────────────────────────────────
+    { archivo: "info_AvancesActividades.json",
+      desc: "Avances de actividades de campo por Finca/Ciclo/Actividad desde Infoagro. Registra porcentaje de avance, Mzn trabajadas, fecha.",
+      temas: ["avance","actividad","campo","labor","tarea","progreso","trabajo"] },
+    { archivo: "info_Campo_Siembra.json",
+      desc: "Datos de siembra en campo: densidad, distanciamiento, semilla utilizada, fecha de siembra por lote/finca.",
+      temas: ["siembra","germinacion","semilla","densidad","distanciamiento","lote"] },
+    { archivo: "info_Campo_Germinacion.json",
+      desc: "Evaluaciones de germinacion y emergencia de plantas. Porcentaje de stand logrado vs esperado.",
+      temas: ["germinacion","emergencia","stand","planta","porcentaje"] },
+    { archivo: "info_Campo_Enfermedades.json",
+      desc: "Monitoreo de enfermedades y plagas en campo. Incidencia, severidad, productos aplicados.",
+      temas: ["enfermedad","plaga","fungicida","incidencia","severidad","monitoreo","sanidad"] },
+    { archivo: "info_Campo_MadurezyProyeccionCosecha.json",
+      desc: "Evaluaciones de maduracion de cultivos y proyecciones de cosecha por finca/ciclo.",
+      temas: ["maduracion","cosecha","proyeccion","madurez","estimacion","rendimiento esperado"] },
+    { archivo: "info_Acopio.json",
+      desc: "Registros de acopio y cosecha real: quintales, peso, humedad, calidad. Produccion obtenida por ciclo/finca.",
+      temas: ["acopio","cosecha","produccion","rendimiento","quintal","peso","humedad","calidad"] },
+    // ── INVENTARIO / INSUMOS ──────────────────────────────────────────────
+    { archivo: "gzp_MovimientosInventario.json",
+      desc: "Movimientos fisicos de inventario en bodegas de GZP: entradas, salidas, transferencias por producto.",
+      temas: ["inventario","movimiento","bodega","stock","existencia","entrada","salida","transferencia"] },
+    { archivo: "gzp_ValuacionesInventario.json",
+      desc: "Valuacion monetaria del inventario por bodega y producto. Incluye x_studio_equipofinca para cruzar con Taller.",
+      temas: ["valuacion","valor","inventario","costo","bodega","precio promedio","saldo valorado"] },
+    { archivo: "gzp_Productos.json",
+      desc: "Catalogo maestro de productos de Odoo: nombre, categoria, unidad de medida, codigo interno.",
+      temas: ["producto","sku","catalogo","articulo","codigo","categoria","unidad"] },
+    { archivo: "info_Insumos_Consumo.json",
+      desc: "Consumo de insumos agricolas en campo por aplicacion: producto, dosis, Mzn tratadas, costo.",
+      temas: ["insumo","consumo","aplicacion","producto","uso","dosis","agroquimico","fertilizante"] },
+    // ── COMBUSTIBLE / MAQUINARIA ──────────────────────────────────────────
+    { archivo: "info_Combustible_Despachos.json",
+      desc: "Despachos de combustible (diesel) por equipo, finca y ciclo desde Infoagro. Incluye litros, horas motor efectivas (HME) y actividad.",
+      temas: ["combustible","diesel","litros","tractor","despacho","hme","hora motor","equipo","maquinaria"] },
+    { archivo: "gzp_Taller.json",
+      desc: "Costos de taller agricola: reparacion y mantenimiento de tractores, cosechadoras e implementos. Agrupado por familia de equipo y anio.",
+      temas: ["taller","reparacion","mantenimiento","maquinaria","implemento","hora","tractor","cosechadora","repuesto"] },
+    // ── MANO DE OBRA / NÓMINA ────────────────────────────────────────────
+    { archivo: "gzp_ManoObra_CostosGastos.json",
+      desc: "Costos y gastos de mano de obra de GZP: salarios, prestaciones, seguro social por finca, ciclo, puesto y actividad.",
+      temas: ["mano de obra","nomina","salario","costo","trabajador","prestacion","inss","mo"] },
+    { archivo: "gzp_ManoObra_DiasHombre.json",
+      desc: "Dias hombre trabajados por finca, ciclo, actividad y puesto. Metrica de productividad laboral.",
+      temas: ["dias hombre","jornada","labor","rendimiento","trabajador","productividad","dh"] },
+    { archivo: "gzp_ManoObra_Historico.json",
+      desc: "Historico anual de costos de mano de obra. Permite comparar tendencias entre ciclos y anios anteriores.",
+      temas: ["historico","mano de obra","tendencia","comparativo","anual","mo historico"] },
+    { archivo: "gzp_Empleados.json",
+      desc: "Catalogo de empleados: nombre, cargo, area, finca asignada. Base para analisis de nomina.",
+      temas: ["empleado","trabajador","cargo","nomina","personal","recurso humano","rrhh"] },
+    // ── OPERACIONAL / CLIMA ───────────────────────────────────────────────
+    { archivo: "info_Pluviosidad.json",
+      desc: "Registros de pluviosidad (lluvia) por finca y fecha. Milimetros acumulados, eventos de lluvia.",
+      temas: ["pluviosidad","lluvia","clima","precipitacion","mm","meteorologia","agua"] },
+  ];
+
+  // ── CACHE DE JSONs YA DESCARGADOS ─────────────────────────────────────────
+  const GZP_JSON_CACHE = {};
+
+  // ── SELECCIONAR FUENTES RELEVANTES SEGUN LA PREGUNTA ─────────────────────
+  // Siempre incluye la llave maestra. Luego busca coincidencia de keywords en el texto.
+  function gzpSeleccionarFuentes(texto) {
+    const q = texto.toLowerCase();
+    const seleccionados = new Set();
+    // Llave maestra siempre
+    seleccionados.add(GZP_FUENTES[0].archivo);
+    // Buscar por temas
+    GZP_FUENTES.forEach(f => {
+      if (f.temas.some(t => q.includes(t))) seleccionados.add(f.archivo);
+    });
+    // Si no matcheo nada extra, cargar las fuentes de costo principales
+    if (seleccionados.size <= 1) {
+      ["gzp_ApuntesAnaliticos.json","gzp_ManoObra_CostosGastos.json","info_Combustible_Despachos.json"].forEach(a => seleccionados.add(a));
+    }
+    return [...seleccionados];
+  }
+
+  // ── DESCARGAR UN JSON (con cache) ─────────────────────────────────────────
+  async function gzpFetchJson(archivo) {
+    if (GZP_JSON_CACHE[archivo]) return GZP_JSON_CACHE[archivo];
+    try {
+      const r = await fetch(GZP_CDN + archivo);
+      if (!r.ok) return null;
+      const data = await r.json();
+      GZP_JSON_CACHE[archivo] = data;
+      return data;
+    } catch(e) {
+      console.warn('GZP Chat fetch error:', archivo, e);
+      return null;
+    }
+  }
+
+  // ── EXTRAER DATOS CRUDOS (normalizar wrapper jsonrpc si existe) ───────────
+  function gzpRaw(data) {
+    if (data && data.result && (data.jsonrpc || data.id !== undefined)) return data.result;
+    return data;
+  }
+
+  // ── PRE-AGREGAR CADA FUENTE ANTES DE ENVIAR AL WORKER ────────────────────
+  // Los JSONs grandes (MO=29MB, Contables=10MB) NUNCA se mandan crudos.
+  // Se agregan aquí en el browser y solo se manda el resumen (~KB).
+  function gzpAgregarFuente(archivo, data) {
+    const raw = gzpRaw(data);
+
+    // ── gzp_Siembra_Ciclos ────────────────────────────────────────────────
+    if (archivo === 'gzp_Siembra_Ciclos.json') {
+      if (!Array.isArray(raw) || raw.length < 2) return raw;
+      const [hdr, ...rows] = raw;
+      const iFA=hdr.indexOf('Finca'), iCI=hdr.indexOf('Ciclo'), iMZ=hdr.indexOf('Mzn de siembra'), iAA=hdr.indexOf('Cuenta Analitica en Recibo de Pago');
+      return rows
+        .filter(r => r[iCI] && r[iCI] !== 'CACAO' && r[iCI] !== 'CANA' && r[iCI] !== 'MANI' && r[iCI] !== 'SORGO')
+        .map(r => ({ analitica: r[iAA], finca: r[iFA], ciclo: r[iCI], mzn: r[iMZ] }))
+        .filter(r => r.ciclo);
+    }
+
+    // ── gzp_ApuntesAnaliticos ─────────────────────────────────────────────
+    if (archivo === 'gzp_ApuntesAnaliticos.json') {
+      if (!Array.isArray(raw)) return raw;
+      const res = {};
+      raw.forEach(r => {
+        const cta = Array.isArray(r.x_studio_cuenta_analitica_unificada) ? r.x_studio_cuenta_analitica_unificada[1] : r.x_studio_cuenta_analitica_unificada;
+        const key = cta || 'SIN_CTA';
+        if (!res[key]) res[key] = { cuenta_analitica: key, total_amount: 0, registros: 0 };
+        res[key].total_amount += (r.amount || 0);
+        res[key].registros++;
+      });
+      return { _total_lineas: raw.length, por_cuenta_analitica: Object.values(res).sort((a,b)=>Math.abs(b.total_amount)-Math.abs(a.total_amount)).slice(0,60) };
+    }
+
+    // ── gzp_ApuntesContables ──────────────────────────────────────────────
+    if (archivo === 'gzp_ApuntesContables.json') {
+      if (!Array.isArray(raw)) return raw;
+      const res = {};
+      raw.forEach(r => {
+        const cta = Array.isArray(r.account_id) ? r.account_id[1] : (r.account_id || 'SIN');
+        if (!res[cta]) res[cta] = { cuenta: cta, debit: 0, credit: 0, lineas: 0 };
+        res[cta].debit += (r.debit || 0);
+        res[cta].credit += (r.credit || 0);
+        res[cta].lineas++;
+      });
+      return { _total_lineas: raw.length, por_cuenta: Object.values(res).sort((a,b) => (b.debit+b.credit)-(a.debit+a.credit)).slice(0,60) };
+    }
+
+    // ── gzp_ManoObra_CostosGastos ─────────────────────────────────────────
+    if (archivo === 'gzp_ManoObra_CostosGastos.json') {
+      if (!Array.isArray(raw)) return raw;
+      const res = {};
+      raw.forEach(r => {
+        const cta = Array.isArray(r.x_studio_cuenta_analitica_en_recibo_de_pago) ? r.x_studio_cuenta_analitica_en_recibo_de_pago[1] : '';
+        const puesto = r.x_studio_puesto_historico || 'SIN';
+        const key = `${cta}||${puesto}`;
+        if (!res[key]) res[key] = { cuenta_analitica: cta, puesto, total: 0, registros: 0 };
+        res[key].total += (r.total || 0);
+        res[key].registros++;
+      });
+      return { _total_lineas: raw.length, por_cuenta_puesto: Object.values(res).sort((a,b)=>b.total-a.total).slice(0,80) };
+    }
+
+    // ── gzp_ManoObra_DiasHombre ───────────────────────────────────────────
+    if (archivo === 'gzp_ManoObra_DiasHombre.json') {
+      if (!Array.isArray(raw)) return raw;
+      const res = {};
+      raw.forEach(r => {
+        const cta = Array.isArray(r.x_studio_cuenta_analitica) ? r.x_studio_cuenta_analitica[1] : (r.x_studio_cuenta_analitica||'SIN');
+        if (!res[cta]) res[cta] = { cuenta_analitica: cta, dias_hombre: 0, registros: 0 };
+        res[cta].dias_hombre += (r.unit_amount || r.x_studio_dias_hombre || 0);
+        res[cta].registros++;
+      });
+      return { _total_lineas: raw.length, por_cuenta: Object.values(res).sort((a,b)=>b.dias_hombre-a.dias_hombre).slice(0,60) };
+    }
+
+    // ── info_Combustible_Despachos ────────────────────────────────────────
+    if (archivo === 'info_Combustible_Despachos.json') {
+      if (!Array.isArray(raw)) return raw;
+      const res = {};
+      raw.forEach(r => {
+        const finca = r.x_studio_finca || 'SIN';
+        const ciclo = r.x_studio_ciclo || 'SIN';
+        const equipo = r.x_studio_categoria_de_equipo || r.x_studio_equipo || 'SIN';
+        const key = `${finca}||${ciclo}||${equipo}`;
+        if (!res[key]) res[key] = { finca, ciclo, categoria_equipo: equipo, litros: 0, hme: 0, registros: 0 };
+        res[key].litros += (r.x_studio_cantidad_ltrs || 0);
+        res[key].hme += (r.x_studio_hme || 0);
+        res[key].registros++;
+      });
+      return { _total_lineas: raw.length, por_finca_ciclo_equipo: Object.values(res).sort((a,b)=>b.litros-a.litros).slice(0,80) };
+    }
+
+    // ── gzp_MovimientosInventario ─────────────────────────────────────────
+    if (archivo === 'gzp_MovimientosInventario.json') {
+      if (!Array.isArray(raw)) return raw;
+      const res = {};
+      raw.forEach(r => {
+        const prod = Array.isArray(r.product_id) ? r.product_id[1] : (r.product_id||'SIN');
+        if (!res[prod]) res[prod] = { producto: prod, entradas: 0, salidas: 0, movimientos: 0 };
+        const qty = r.quantity_done || r.product_qty || 0;
+        if ((r.picking_type_code||'') === 'outgoing') res[prod].salidas += qty;
+        else res[prod].entradas += qty;
+        res[prod].movimientos++;
+      });
+      return { _total_lineas: raw.length, por_producto: Object.values(res).sort((a,b)=>b.movimientos-a.movimientos).slice(0,80) };
+    }
+
+    // ── gzp_ValuacionesInventario ─────────────────────────────────────────
+    if (archivo === 'gzp_ValuacionesInventario.json') {
+      if (!Array.isArray(raw)) return raw;
+      if (raw.length <= 200) return raw;
+      return { _total_lineas: raw.length, muestra: raw.slice(0, 200) };
+    }
+
+    // ── Archivos pequeños: pasar tal cual ─────────────────────────────────
+    if (Array.isArray(raw) && raw.length <= 300) return raw;
+    if (Array.isArray(raw)) return { _total_lineas: raw.length, muestra: raw.slice(0, 150) };
+    return raw;
+  }
+
+  // ── CONSTRUIR SYSTEM PROMPT CON DATOS PRE-AGREGADOS ──────────────────────
+  function gzpSystemPrompt(bloquesDatos) {
+    const instructivo = GZP_FUENTES
+      .filter(f => bloquesDatos[f.archivo] !== undefined)
+      .map(f => `• ${f.archivo}: ${f.desc}`)
+      .join('\n');
+
+    const datosStr = Object.entries(bloquesDatos)
+      .map(([arch, data]) => `=== ${arch} ===\n${JSON.stringify(data)}`)
+      .join('\n\n');
+
+    return `Eres el Asistente de Analisis del Dashboard de Costos Agricolas de Grupo ZP (GZP), empresa agricola en Nicaragua.
+Cultivos: Mani, Cana de Azucar, Cacao, Sorgo.
+
+FUENTES CARGADAS:
+${instructivo}
+
+DATOS PRE-AGREGADOS (browser-side desde GitHub Pages CDN):
+${datosStr}
+
+REGLAS:
+- Mzn = Manzana nicaraguense (~0.7 ha). C$/Mzn = metrica principal.
+- gzp_Siembra_Ciclos.json es la llave maestra de Finca+Ciclo+Mzn.
+- Los datos de ManoObra, ApuntesAnaliticos y Combustible ya vienen agrupados (no son lineas crudas).
+- Suma valores con signo; Math.abs() solo al mostrar. Las devoluciones tienen signo negativo.
+- Excluir ciclos "Administracion"/"Admon" de comparativos agricolas.
+- No inventes numeros. Si falta dato, indicalo.
+- Responde en espanol, conciso. Usa tablas Markdown para multiples valores.
+- cuenta_analitica sigue patron: [FINCA-CULTIVO] Descripcion, ej "[MANI-NORTE] Mani Norte 2026".`;
+  }
 
   window.gzpToggleChat = function() {
     GZP_CHAT_OPEN = !GZP_CHAT_OPEN;
@@ -10491,96 +10786,6 @@ function exportarResumenGeneralAExcel() {
     document.getElementById('gzp-chat-input').value = texto;
     gzpEnviar();
   };
-
-  function gzpExtraerContexto() {
-    const ctx = {};
-    try {
-      if (typeof INDICE_MZN_ODOO !== 'undefined') {
-        ctx.manzanas_por_finca_ciclo = Object.entries(INDICE_MZN_ODOO).map(([k,v]) => {
-          const [finca,ciclo] = k.split('||'); return {finca,ciclo,mzn:v};
-        });
-      }
-      if (typeof AB_PIVOT_DATA !== 'undefined' && AB_PIVOT_DATA) {
-        const res = {};
-        function walkAB(n) {
-          if (!n) return;
-          if (n.ciclos) Object.entries(n.ciclos).forEach(([c,d]) => {
-            if (!res[c]) res[c] = {valor:0,mzn:0};
-            res[c].valor += Math.abs(d.valor||0);
-            if (d.mzn) res[c].mzn = d.mzn;
-          });
-          if (n.hijos) Object.values(n.hijos).forEach(walkAB);
-        }
-        if (AB_PIVOT_DATA.estructura) Object.values(AB_PIVOT_DATA.estructura).forEach(walkAB);
-        ctx.activo_biologico_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(d.valor), mzn:d.mzn,
-          costo_mzn: d.mzn ? Math.round(d.valor/d.mzn) : null
-        }));
-      }
-      if (typeof CB_FILAS !== 'undefined' && CB_FILAS.length) {
-        const res = {};
-        CB_FILAS.forEach(f => {
-          if (!f||!f.ciclo) return;
-          if (!res[f.ciclo]) res[f.ciclo] = {costo:0,litros:0,mzn:f.mzn||0};
-          res[f.ciclo].costo += Math.abs(f.costo||0);
-          res[f.ciclo].litros += f.litros||0;
-          if (f.mzn) res[f.ciclo].mzn = f.mzn;
-        });
-        ctx.combustible_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(d.costo), litros:Math.round(d.litros),
-          mzn:d.mzn, costo_mzn: d.mzn ? Math.round(d.costo/d.mzn) : null
-        }));
-      }
-      if (typeof CAPA !== 'undefined' && CAPA && CAPA.length) {
-        const res = {};
-        CAPA.forEach(r => {
-          if (!r||!r.ciclo||r.ciclo==='SIN MAESTRO') return;
-          if (!res[r.ciclo]) res[r.ciclo] = {costo:0,mzn:r.mzn||0};
-          res[r.ciclo].costo += r.costo||0;
-          if (r.mzn) res[r.ciclo].mzn = r.mzn;
-        });
-        ctx.mano_de_obra_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(Math.abs(d.costo)), mzn:d.mzn,
-          costo_mzn: d.mzn ? Math.round(Math.abs(d.costo)/d.mzn) : null
-        }));
-      }
-      if (typeof RG_PIVOT_DATA !== 'undefined' && RG_PIVOT_DATA) {
-        const res = {};
-        function walkRG(n) {
-          if (!n||!n.ciclos) return;
-          Object.entries(n.ciclos).forEach(([c,d]) => {
-            if (!res[c]) res[c] = {valor:0,mzn:0};
-            res[c].valor += Math.abs(d.valor||0);
-            if (d.mzn) res[c].mzn = d.mzn;
-          });
-          if (n.hijos) Object.values(n.hijos).forEach(walkRG);
-        }
-        if (RG_PIVOT_DATA.estructura) Object.values(RG_PIVOT_DATA.estructura).forEach(walkRG);
-        ctx.riego_por_ciclo = Object.entries(res).map(([c,d]) => ({
-          ciclo:c, costo_total:Math.round(d.valor), mzn:d.mzn,
-          costo_mzn: d.mzn ? Math.round(d.valor/d.mzn) : null
-        }));
-      }
-    } catch(e) { console.warn('GZP Chat ctx error:', e); }
-    return ctx;
-  }
-
-  function gzpSystemPrompt(ctx) {
-    return `Eres el Asistente de Analisis del Dashboard de Costos Agricolas de Grupo ZP (GZP), empresa agricola en Nicaragua (cultivos: Mani, Cana, Cacao, Sorgo).
-
-Tienes acceso a datos actuales del dashboard en memoria. Responde SIEMPRE en espanol, conciso y directo. Usa formato "C$ X,XXX" para cordobas. Usa tablas Markdown cuando sea util.
-
-DATOS ACTUALES:
-${JSON.stringify(ctx, null, 1)}
-
-REGLAS:
-- Mzn = Manzanas de siembra (area agricola Nicaragua, aprox 0.7 ha).
-- C$/Mzn = metrica principal de eficiencia del dashboard.
-- Si preguntan por ciclo especifico, filtra por nombre del ciclo (ej "Mani 2026").
-- No inventes numeros. Si no hay dato, dilo.
-- Puedes comparar ciclos, calcular totales, identificar el mas caro/barato, tendencias.
-- Si los datos de una seccion estan vacios, indica que esa seccion aun no fue cargada en el dashboard.`;
-  }
 
   function gzpAddMsg(role, html, isHtml) {
     const c = document.getElementById('gzp-chat-messages');
@@ -10636,14 +10841,31 @@ REGLAS:
     document.getElementById('gzp-chat-send').disabled = true;
     gzpShowTyping();
     try {
-      const ctx = gzpExtraerContexto();
+      // 1. Seleccionar fuentes relevantes según keywords de la pregunta
+      const archivosNecesarios = gzpSeleccionarFuentes(txt);
+
+      // 2. Descargar JSONs en paralelo desde GitHub Pages CDN
+      const resultados = await Promise.all(
+        archivosNecesarios.map(async arch => {
+          const data = await gzpFetchJson(arch);
+          return { arch, data };
+        })
+      );
+
+      // 3. Pre-agregar cada fuente (reduce JSONs de MB a KB antes de enviar)
+      const bloquesDatos = {};
+      resultados.forEach(({ arch, data }) => {
+        if (data !== null) bloquesDatos[arch] = gzpAgregarFuente(arch, data);
+      });
+
+      // 4. Llamar al worker con datos reales
       const resp = await fetch('https://weathered-recipe-d18c.ignagher.workers.dev/chat', {
         method: 'POST',
         headers: {'Content-Type':'application/json'},
         body: JSON.stringify({
           model: 'claude-sonnet-4-6',
-          max_tokens: 1000,
-          system: gzpSystemPrompt(ctx),
+          max_tokens: 1500,
+          system: gzpSystemPrompt(bloquesDatos),
           messages: GZP_CHAT_HISTORY
         })
       });
@@ -10655,7 +10877,11 @@ REGLAS:
         const ans = data.content.map(b=>b.text||'').join('');
         GZP_CHAT_HISTORY.push({role:'assistant', content:ans});
         if (GZP_CHAT_HISTORY.length > 20) GZP_CHAT_HISTORY = GZP_CHAT_HISTORY.slice(-20);
-        gzpAddMsg('bot', gzpMd(ans) + '<br><span class="gzp-data-tag">&#128196; Datos en tiempo real</span>', true);
+        // Mostrar qué archivos se consultaron
+        const fuentesTag = archivosNecesarios.length > 0
+          ? `<br><span class="gzp-data-tag">&#128196; Fuentes: ${archivosNecesarios.join(', ')}</span>`
+          : '';
+        gzpAddMsg('bot', gzpMd(ans) + fuentesTag, true);
       }
     } catch(e) {
       gzpHideTyping();
