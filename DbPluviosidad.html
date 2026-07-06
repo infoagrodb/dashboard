@@ -678,17 +678,27 @@ function totalMes(rows){
 const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
 const GITHUB_PV = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Pluviosidad.json";
 
-async function fetchLiveOrGitHub(workerUrl, githubUrl) {
+async function fetchGitHubOrWorker(githubUrl, workerUrl) {
+  // GitHub es la fuente principal (datos siempre actualizados vía GitHub Actions)
+  try {
+    const r = await fetch(githubUrl + "?cache=" + Date.now());
+    if (r.ok) {
+      const j = await r.json();
+      const records = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : []);
+      if (records.length) return j;
+    }
+  } catch(e) {}
+  // Worker como fallback si GitHub no responde
   try {
     const r = await fetch(workerUrl);
     if (r.ok) { const j = await r.json(); if (j.ok) return j; }
   } catch(e) {}
-  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+  return { result: [] };
 }
 
 async function loadData(){
   try{
-    const json = await fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_pluviosidad", GITHUB_PV);
+    const json = await fetchGitHubOrWorker(GITHUB_PV, WORKER+"/query?base=info&model=x_pluviosidad");
     
     let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
     if(!records.length && json.records) records = json.records;
