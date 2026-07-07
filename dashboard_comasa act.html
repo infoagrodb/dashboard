@@ -198,6 +198,32 @@ canvas{max-width:100%;}
   border-color:var(--border-light);
   box-shadow:none;
 }
+/* ===== MZS: Análisis por Mz de Siembra (estilos propios, sin chocar con clases existentes) ===== */
+.mzs-filter-card{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;}
+.mzs-fgroup{display:flex;flex-direction:column;gap:4px;}
+.mzs-fgroup label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;}
+.mzs-toggle-group{display:inline-flex;border:1px solid var(--border-light);border-radius:6px;overflow:hidden;}
+.mzs-toggle-btn{background:#fff;border:none;padding:5px 12px;font-size:10px;font-weight:700;cursor:pointer;color:var(--text-muted);font-family:inherit;}
+.mzs-toggle-btn.active{background:var(--brand-primary);color:#fff;}
+.mzs-chip-row{display:flex;gap:6px;flex-wrap:wrap;max-width:340px;}
+.mzs-chip{padding:4px 10px;border-radius:12px;font-size:10px;font-weight:600;border:1px solid var(--border-light);background:#fff;color:var(--text-muted);cursor:pointer;}
+.mzs-chip.on{background:var(--brand-primary);color:#fff;border-color:var(--brand-primary);}
+.mzs-slider-wrap{position:relative;height:28px;padding:0 8px;}
+.mzs-slider-track{position:relative;top:13px;height:4px;background:#e2e8f0;border-radius:2px;}
+.mzs-slider-fill{position:absolute;height:4px;background:var(--brand-secondary);border-radius:2px;}
+input.mzs-slider-input{position:absolute;top:0;left:0;width:100%;height:28px;margin:0;-webkit-appearance:none;appearance:none;background:transparent;pointer-events:none;}
+input.mzs-slider-input::-webkit-slider-thumb{-webkit-appearance:none;pointer-events:auto;width:16px;height:16px;border-radius:50%;background:var(--brand-primary);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;}
+input.mzs-slider-input::-moz-range-thumb{pointer-events:auto;width:16px;height:16px;border-radius:50%;background:var(--brand-primary);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35);cursor:pointer;}
+input.mzs-slider-input::-webkit-slider-runnable-track{background:transparent;}
+input.mzs-slider-input::-moz-range-track{background:transparent;}
+.mzs-kpi-ciclo{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;}
+.mzs-kpi-trend{font-size:10px;font-weight:700;margin-bottom:4px;}
+.mzs-kpi-sub{font-size:9px;color:var(--text-muted);border-top:1px solid var(--border-light);padding-top:4px;margin-top:2px;}
+.mzs-trend-up{color:#b91c1c;} .mzs-trend-down{color:#065f46;}
+.mzs-insight-box{background:#fffbe6;border:1px solid #BA7517;border-radius:6px;padding:7px 10px;font-size:11px;color:#7A5008;margin-bottom:10px;}
+.mzs-insight-box b{color:#5c3a04;}
+table.mzs-matrix th,table.mzs-matrix td{cursor:pointer;}
+table.mzs-matrix td:first-child,table.mzs-matrix th:first-child{cursor:default;}
 </style>
 </head>
 
@@ -221,7 +247,7 @@ canvas{max-width:100%;}
   <div class="nav-section">
     <div class="nav-label">Análisis</div>
     <div class="nav-item" onclick="showPage('avanzado')" id="nav-avanzado">
-      <span class="nav-icon">🔬</span><span class="nav-text">Análisis Avanzado</span>
+      <span class="nav-icon">🌱</span><span class="nav-text">Análisis por Mz de Siembra</span>
     </div>
     <div class="nav-item" onclick="showPage('equipos')" id="nav-equipos">
       <span class="nav-icon">🚜</span><span class="nav-text">Equipos</span>
@@ -318,6 +344,15 @@ canvas{max-width:100%;}
 </div>
 
 <!-- MODAL EQUIPO -->
+<div class="modal-overlay" id="mzs-modal-overlay" onclick="if(event.target===this)mzs_closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left"><h2 id="mzs-modal-title">Detalle</h2><p id="mzs-modal-sub"></p></div>
+      <button class="modal-close" onclick="mzs_closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="mzs-modal-body"></div>
+  </div>
+</div>
 <div class="modal-overlay" id="eq-modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-header">
@@ -399,13 +434,14 @@ function showPage(name){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   document.getElementById('nav-'+name).classList.add('active');
-  const titles={resumen:'Resumen Operativo',avanzado:'Análisis Avanzado',equipos:'Análisis de Equipos'};
+  const titles={resumen:'Resumen Operativo',avanzado:'Análisis por Mz de Siembra',equipos:'Análisis de Equipos'};
   document.getElementById('page-title').textContent=titles[name]||name;
   // Mostrar filtros correctos
-  document.getElementById('filters-co').style.display=name==='equipos'?'none':'flex';
+  document.getElementById('filters-co').style.display=name==='resumen'?'flex':'none';
   document.getElementById('filters-eq').style.display=name==='equipos'?'flex':'none';
   // Re-renderizar si ya hay datos
   if(name==='equipos'&&raw2.length) renderEquipos();
+  else if(name==='avanzado'&&raw1.length) mzs_render();
   else if(name!=='equipos'&&raw1.length) render();
 }
 
@@ -729,6 +765,7 @@ function renderResumen(groups){
       <div class="chart-card"><div class="chart-title">Manzanas por dia - click para filtrar</div><div class="ch-md"><canvas id="c2"></canvas></div></div>
     </div>
     <div class="chart-card"><div class="chart-title">Avance por finca (top 10) - click para filtrar</div><div class="ch-sm"><canvas id="c3"></canvas></div></div>
+    <div id="siembra-2026-wrap"></div>
     <div class="section-title">2. Eficiencia vs presupuesto</div>
     <div class="grid-2">
       <div class="chart-card"><div class="chart-title">Lts/Mz acumulado vs presupuesto</div><div class="ch-sm"><canvas id="c4"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2d6a4f"></span>Real</span><span><span class="ldash"></span>Presupuesto</span></div></div>
@@ -753,11 +790,15 @@ function renderResumen(groups){
       <div class="table-controls"><label><input type="checkbox" id="chk-alertas" onchange="renderAlertTable(window._alertData)"> Mostrar solo alertas (sobre presupuesto)</label></div>
       <div id="alert-table-wrap" style="overflow:auto"></div>
     </div>
+    <div class="section-title">5. Mapa de calor Finca x Actividad (Lts/Mz real)</div>
+    <div class="chart-card" style="overflow:auto"><div id="heatmap"></div></div>
   `;
 
   drawResumenCharts(groups,unionDates,labels);
   buildAlertTable(groups);
   buildHeatmapActividad(groups);
+  buildSiembra2026(groups);
+  drawC2();
 }
 
 function drawResumenCharts(groups,unionDates,labels){
@@ -1094,6 +1135,153 @@ function buildHeatmapActividad(groups){
   wrap.innerHTML=html;
 }
 
+function buildSiembra2026(groups){
+  const wrap=document.getElementById('siembra-2026-wrap');
+  if(!wrap) return;
+
+  // Solo activa para Mani 2026 + Siembra entre las actividades seleccionadas
+  const esCiclo2026=norm(state.ciclo)==='mani 2026';
+  const esSiembra=state.actSel.some(a=>norm(a)==='siembra');
+  if(!esCiclo2026||!esSiembra){wrap.innerHTML='';return;}
+
+  // Placeholder Mz de Siembra por finca — Maní 2026
+  const PLACEHOLDER={
+    'Rancho Pando':200,'Llano Verde':93,'La Laguna':288,'Montana':225,
+    'Quinta Maria':171,'Palo de Pan':63,'San Martin':40,
+    'Santa Isabel':117,'Miramar':425,'San Luis':120,'La Concha':462,'Finca San Blas':1000
+  };
+  const TOTAL_PLAN=Object.values(PLACEHOLDER).reduce((a,b)=>a+b,0); // 4,069
+
+  // Acumular avance real por finca — SIN filtro de proveedor
+  // El placeholder aplica a toda la operación, no a un proveedor específico
+  const rawSiembra=raw1.filter(r=>
+    isEmpresa(r) &&
+    get(r,'ciclo')==='Mani 2026' &&
+    norm(get(r,'actividad'))==='siembra'
+  );
+
+  const realByFinca={};
+  rawSiembra.forEach(r=>{
+    const f=get(r,'finca'); if(!f) return;
+    realByFinca[f]=(realByFinca[f]||0)+rowAvance(r);
+  });
+
+  // Calcular avance promedio diario — SIN filtro de proveedor
+  const byDateSiembra={};
+  rawSiembra.forEach(r=>{
+    const d=get(r,'fecha'); if(!d) return;
+    byDateSiembra[d]=(byDateSiembra[d]||0)+rowAvance(r);
+  });
+  const datesConAvance=Object.entries(byDateSiembra).filter(([,v])=>v>0);
+  const totalReal=Object.values(realByFinca).reduce((a,b)=>a+b,0);
+  const diasConAvance=datesConAvance.length;
+  const avgDiario=diasConAvance>0?totalReal/diasConAvance:0;
+  const mzPendientes=Math.max(0,TOTAL_PLAN-totalReal);
+  const diasRestantes=avgDiario>0?Math.ceil(mzPendientes/avgDiario):null;
+
+  // Fecha estimada de cierre
+  let fechaCierre='-';
+  if(diasRestantes!=null){
+    const hoy=new Date();
+    hoy.setDate(hoy.getDate()+diasRestantes);
+    fechaCierre=hoy.toLocaleDateString('es-NI',{day:'2-digit',month:'short',year:'numeric'});
+  }
+
+  const pctGlobal=TOTAL_PLAN>0?(totalReal/TOTAL_PLAN*100):0;
+
+  // KPIs ejecutivos
+  const kpisHTML=`
+    <div class="kpi-grid">
+      <div class="kpi-card" style="border-top-color:#1b4332">
+        <div class="kpi-title">Mz sembradas</div>
+        <div class="kpi-value">${fmtN(totalReal,1)}</div>
+        <div class="kpi-sub">de ${fmtN(TOTAL_PLAN,0)} Mz planificadas</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:${pctGlobal>=80?'#27500A':pctGlobal>=50?'#BA7517':'#A32D2D'}">
+        <div class="kpi-title">% Cumplimiento global</div>
+        <div class="kpi-value">${pctGlobal.toFixed(1)}%</div>
+        <div class="kpi-sub">${fmtN(mzPendientes,1)} Mz pendientes</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#2E6FBA">
+        <div class="kpi-title">Ritmo promedio diario</div>
+        <div class="kpi-value">${avgDiario>0?avgDiario.toFixed(1):'-'} Mz/día</div>
+        <div class="kpi-sub">en ${diasConAvance} días con actividad</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#E0A52E">
+        <div class="kpi-title">Días restantes estimados</div>
+        <div class="kpi-value">${diasRestantes!=null?diasRestantes:'-'}</div>
+        <div class="kpi-sub">a ritmo actual sin descanso</div>
+      </div>
+      <div class="kpi-card" style="border-top-color:#7B5FC4">
+        <div class="kpi-title">Fecha estimada de cierre</div>
+        <div class="kpi-value" style="font-size:14px;margin-top:6px">${fechaCierre}</div>
+        <div class="kpi-sub">supuesto: ritmo constante</div>
+      </div>
+    </div>`;
+
+  // Tabla por finca
+  const filas=Object.entries(PLACEHOLDER).map(([finca,plan])=>{
+    const real=realByFinca[finca]||0;
+    const pct=plan>0?(real/plan*100):0;
+    const pendiente=Math.max(0,plan-real);
+    const diasF=avgDiario>0?Math.ceil(pendiente/avgDiario):null;
+    const semaforo=pct>=80?'cell-ok':pct>=50?'cell-warn':'cell-bad';
+    return {finca,plan,real,pct,pendiente,diasF,semaforo};
+  }).sort((a,b)=>b.pct-a.pct); // ordenar de mayor a menor cumplimiento
+
+  let tbl=`<table class="report-table">
+    <thead><tr>
+      <th>Finca</th>
+      <th>Plan (Mz)</th>
+      <th>Real (Mz)</th>
+      <th>% Cumplimiento</th>
+      <th>Mz pendientes</th>
+      <th>Días restantes est.</th>
+    </tr></thead><tbody>`;
+
+  filas.forEach(({finca,plan,real,pct,pendiente,diasF,semaforo})=>{
+    tbl+=`<tr>
+      <td style="font-weight:600">${finca}</td>
+      <td>${fmtN(plan,0)}</td>
+      <td>${fmtN(real,1)}</td>
+      <td class="${semaforo}">${pct.toFixed(1)}%</td>
+      <td>${fmtN(pendiente,1)}</td>
+      <td style="text-align:right;color:var(--text-muted)">${diasF!=null?diasF:'-'}</td>
+    </tr>`;
+  });
+
+  // Fila de totales
+  const totalPlan=Object.values(PLACEHOLDER).reduce((a,b)=>a+b,0);
+  const totalPendiente=Math.max(0,totalPlan-totalReal);
+  tbl+=`<tr class="total">
+    <td>TOTAL</td>
+    <td>${fmtN(totalPlan,0)}</td>
+    <td>${fmtN(totalReal,1)}</td>
+    <td class="${pctGlobal>=80?'cell-ok':pctGlobal>=50?'cell-warn':'cell-bad'}">${pctGlobal.toFixed(1)}%</td>
+    <td>${fmtN(totalPendiente,1)}</td>
+    <td style="text-align:right">${diasRestantes!=null?diasRestantes:'-'}</td>
+  </tr>`;
+  tbl+='</tbody></table>';
+
+  wrap.innerHTML=`
+    <div class="section-title" style="color:#1b4332">Avance de Siembra vs Plan — Maní 2026</div>
+    ${kpisHTML}
+    <div class="chart-card" style="overflow:auto">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Cumplimiento por finca — ordenado de mayor a menor avance</div>
+          <div class="chart-desc">Semáforo: verde ≥80% · amarillo 50–79% · rojo &lt;50% del plan</div>
+        </div>
+      </div>
+      ${tbl}
+      <div class="note" style="margin-top:10px">
+        ⚠️ <strong>Supuestos de proyección:</strong> ritmo constante (${avgDiario>0?avgDiario.toFixed(1):'-'} Mz/día promedio), 
+        sin días de descanso, calculado desde el primer día con avance registrado. 
+        Plan basado en placeholder de <strong>${fmtN(TOTAL_PLAN,0)} Mz</strong> — sujeto a ajuste cuando se confirme el plan final de siembra.
+      </div>
+    </div>`;
+}
+
 function buildAlertTable(groups){
   const ppto = groups[0].ppto;
   const pptoLts = PRESUPUESTOS[state.actSel[0]]?PRESUPUESTOS[state.actSel[0]].lts:ppto.lts;
@@ -1137,17 +1325,7 @@ function renderAlertTable(payload){
 }
 
 function renderAvanzado(groups){
-  document.getElementById('page-avanzado').innerHTML=`
-    <div class="section-title">B1. Comparativo entre ciclos - Avance acumulado (Mz)</div>
-    <div class="chart-card"><div class="ch-md"><canvas id="cb1"></canvas></div><div class="legend" id="legendb1"></div></div>
-    <div class="section-title">B2. Comparativo entre ciclos - Lts/Mz acumulado</div>
-    <div class="chart-card"><div class="ch-md"><canvas id="cb2"></canvas></div><div class="legend" id="legendb2"></div></div>
-    <div class="section-title">C1. Comparativo entre ciclos - HM/Mz acumulado</div>
-    <div class="chart-card"><div class="ch-md"><canvas id="cc1"></canvas></div><div class="legend" id="legendc1"></div></div>
-    <div class="section-title">C2. Mapa de calor Finca x Actividad (Lts/Mz real)</div>
-    <div class="chart-card" style="overflow:auto"><div id="heatmap"></div></div>
-  `;
-  drawB1(groups); drawAccRatioCompare(groups,'cb2','legendb2','accLts','Lts/Mz'); drawAccRatioCompare(groups,'cc1','legendc1','accHm','HM/Mz'); drawC2();
+  mzs_render();
 }
 
 function drawB1(groups){
@@ -2056,6 +2234,344 @@ document.addEventListener('click',e=>{
     }
   }
 });
+
+/* ========================================================================
+   MZS: ANÁLISIS POR Mz DE SIEMBRA
+   Reutiliza del HTML madre: raw1, raw2, get, norm, parseDate, rowAvance,
+   rowLts, rowHme, isHmCat, toNum, fmtN, PRESUPUESTOS, ACT_ORDER_LIST,
+   HM_CATS, charts, destroy, cicloSort. Todo lo propio va prefijado mzs_/MZS_
+   para no chocar con nada del dashboard existente.
+   ======================================================================== */
+const MZS_MESES_LBL=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MZS_MZ26_FINCAS={'rancho pando':200,'llano verde':93,'la laguna':288,'montana':225,'quinta maria':171,'palo de pan':63,'san martin':40,'santa isabel':117,'miramar':425,'san luis':120,'la concha':462,'finca san blas':1000,'finca san blass':1000};
+const MZS_FINCA_SECTOR={
+ 'la laguna':'Sector 1','llano verde':'Sector 1','montana':'Sector 1','quinta maria':'Sector 1','rancho pando':'Sector 1','san martin':'Sector 1',
+ 'finca las pistolas':'Sector 2','la concha':'Sector 2','miramar':'Sector 2','palo de pan':'Sector 2','san luis':'Sector 2','santa isabel':'Sector 2',
+ 'finca san blas':'Sector 3','finca san blass':'Sector 3','palmira':'Sector 3','roma':'Sector 3','santa rosa':'Sector 3'
+};
+const MZS_SECTORES=['Sector 1','Sector 2','Sector 3'];
+const MZS_CYCLE_COLORS=['#1b4332','#2E6FBA','#e76f51','#7B5FC4','#BA7517','#0891b2','#c026d3'];
+
+let mzsRaw1Init=false;
+let mzsCycles=[],mzsCyclesFull=[],mzsAllCiclos=[];
+let mzsMetrica='lts', mzsCiclosSel=new Set(), mzsSectorSel=null, mzsMesIni=1, mzsMesFin=12, mzsVista='acumulado';
+
+function mzs_cTrim(s){ return String(s||'').trim(); }
+function mzs_getSector(finca){ return MZS_FINCA_SECTOR[norm(finca)]||null; }
+function mzs_isComasa(r){ return isEmpresa(r) && norm(get(r,'proveedor del servicio'))==='comasa'; }
+function mzs_inMesRango(d,ini,fin){ const m=d.getMonth()+1; return m>=ini&&m<=fin; }
+function mzs_mz26Total(sector){
+  const seen=new Set(); let t=0;
+  Object.keys(MZS_MZ26_FINCAS).forEach(f=>{ const canon=f.replace(/blass$/,'blas'); if(seen.has(canon))return; seen.add(canon); if(!sector||mzs_getSector(f)===sector) t+=MZS_MZ26_FINCAS[f]; });
+  return t;
+}
+function mzs_rowsForCiclo(raw,ciclo,actList,iniOverride,finOverride){
+  const ini=iniOverride!=null?iniOverride:mzsMesIni, fin=finOverride!=null?finOverride:mzsMesFin;
+  return raw.filter(r=>{
+    if(!mzs_isComasa(r)||mzs_cTrim(get(r,'ciclo'))!==mzs_cTrim(ciclo)||!actList.includes(get(r,'actividad'))) return false;
+    if(mzsSectorSel && mzs_getSector(get(r,'finca'))!==mzsSectorSel) return false;
+    const d=parseDate(get(r,'fecha')); if(!d) return false;
+    if(!mzs_inMesRango(d,ini,fin)) return false;
+    return true;
+  });
+}
+function mzs_computeCycleData(ciclo,iniOverride,finOverride,usePlaceholder){
+  if(usePlaceholder===undefined) usePlaceholder=true;
+  const rSiembra=mzs_rowsForCiclo(raw1,ciclo,['Siembra'],iniOverride,finOverride);
+  let mzSiembra=rSiembra.reduce((s,r)=>s+rowAvance(r),0);
+  const isPlaceholder=norm(ciclo)==='mani 2026';
+  const usedPlaceholder=isPlaceholder&&usePlaceholder;
+  if(usedPlaceholder) mzSiembra=mzs_mz26Total(mzsSectorSel);
+
+  const rAll=mzs_rowsForCiclo(raw1,ciclo,ACT_ORDER_LIST,iniOverride,finOverride);
+  const rAllHm=mzs_rowsForCiclo(raw2,ciclo,ACT_ORDER_LIST,iniOverride,finOverride).filter(isHmCat);
+  const totalLts=rAll.reduce((s,r)=>s+rowLts(r),0);
+  const totalHm=rAllHm.reduce((s,r)=>s+rowHme(r),0);
+  const hasHmData=rAllHm.length>0;
+
+  const byAct={};
+  rAll.forEach(r=>{ const a=get(r,'actividad'); if(!byAct[a]) byAct[a]={lts:0,hm:0,mz:0,hasHm:false}; byAct[a].lts+=rowLts(r); byAct[a].mz+=rowAvance(r); });
+  rAllHm.forEach(r=>{ const a=get(r,'actividad'); if(!byAct[a]) byAct[a]={lts:0,hm:0,mz:0,hasHm:false}; byAct[a].hm+=rowHme(r); byAct[a].hasHm=true; });
+  const actsPresent=Object.keys(byAct).filter(a=>byAct[a].lts>0||byAct[a].hm>0).sort((a,b)=>{const ia=ACT_ORDER_LIST.indexOf(a),ib=ACT_ORDER_LIST.indexOf(b);return(ia<0?999:ia)-(ib<0?999:ib);});
+
+  const byMonth={};
+  const ensure=(k)=>{ if(!byMonth[k]) byMonth[k]={lts:0,hm:0,mzSiembra:0,byAct:{},fincaMz:{},hasHm:false}; return byMonth[k]; };
+  rAll.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.lts+=rowLts(r); const a=get(r,'actividad'); o.byAct[a]=(o.byAct[a]||0)+rowLts(r); });
+  rAllHm.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.hm+=rowHme(r); o.hasHm=true; });
+  rSiembra.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.mzSiembra+=rowAvance(r); const f=get(r,'finca')||'Sin finca'; o.fincaMz[f]=(o.fincaMz[f]||0)+rowAvance(r); });
+
+  const realLts=mzSiembra>0?totalLts/mzSiembra:0;
+  const realHm=(mzSiembra>0&&hasHmData)?totalHm/mzSiembra:null;
+  return {ciclo,mzSiembra,isPlaceholder:usedPlaceholder,totalLts,totalHm,hasHmData,realLts,realHm,byAct,actsPresent,byMonth};
+}
+function mzs_metricVal(c){ return mzsMetrica==='lts'?c.realLts:c.realHm; }
+function mzs_metricDec(){ return mzsMetrica==='lts'?2:3; }
+function mzs_metricLbl(){ return mzsMetrica==='lts'?'Lts/Mz':'HM/Mz'; }
+
+/* ===== FILTROS ===== */
+function mzs_buildFilters(){
+  document.getElementById('mzs-metrica-toggle').innerHTML=`
+    <button class="mzs-toggle-btn ${mzsMetrica==='lts'?'active':''}" onclick="mzs_setMetrica('lts')">Lts/Mz</button>
+    <button class="mzs-toggle-btn ${mzsMetrica==='hm'?'active':''}" onclick="mzs_setMetrica('hm')">HM/Mz</button>`;
+  document.getElementById('mzs-ciclo-chips').innerHTML=mzsAllCiclos.map(c=>`<div class="mzs-chip ${mzsCiclosSel.has(c)?'on':''}" onclick="mzs_toggleCiclo('${c}')">${c}</div>`).join('');
+  document.getElementById('mzs-sector-chips').innerHTML=['Todos',...MZS_SECTORES].map(s=>{ const val=s==='Todos'?'':s; const on=(mzsSectorSel||'')===val; return `<div class="mzs-chip ${on?'on':''}" onclick="mzs_setSector('${val}')">${s}</div>`; }).join('');
+  const rIni=document.getElementById('mzs-rng-ini'), rFin=document.getElementById('mzs-rng-fin');
+  rIni.value=mzsMesIni; rFin.value=mzsMesFin;
+  mzs_updateSliderUI();
+}
+function mzs_setMetrica(m){ mzsMetrica=m; mzs_buildFilters(); mzs_render(); }
+function mzs_toggleCiclo(c){ if(mzsCiclosSel.has(c))mzsCiclosSel.delete(c); else mzsCiclosSel.add(c); mzs_buildFilters(); mzs_recompute(); }
+function mzs_setSector(s){ mzsSectorSel=s||null; mzs_buildFilters(); mzs_recompute(); }
+function mzs_updateSliderUI(){
+  const pct=(v)=>((v-1)/11*100);
+  document.getElementById('mzs-slider-fill').style.left=pct(mzsMesIni)+'%';
+  document.getElementById('mzs-slider-fill').style.right=(100-pct(mzsMesFin))+'%';
+  document.getElementById('mzs-mes-range-lbl').textContent='Meses '+MZS_MESES_LBL[mzsMesIni-1]+' – '+MZS_MESES_LBL[mzsMesFin-1];
+}
+function mzs_onSliderChange(){
+  let a=+document.getElementById('mzs-rng-ini').value, b=+document.getElementById('mzs-rng-fin').value;
+  if(a>b){ [a,b]=[b,a]; }
+  mzsMesIni=a; mzsMesFin=b;
+  document.getElementById('mzs-rng-ini').value=mzsMesIni; document.getElementById('mzs-rng-fin').value=mzsMesFin;
+  mzs_updateSliderUI(); mzs_recompute();
+}
+function mzs_setVista(v){ mzsVista=v; mzs_render(); }
+
+function mzs_recompute(){
+  mzsCycles=mzsAllCiclos.filter(c=>mzsCiclosSel.has(c)).map(c=>mzs_computeCycleData(c,null,null,false)).filter(c=>c.mzSiembra>0);
+  mzsCyclesFull=mzsAllCiclos.filter(c=>mzsCiclosSel.has(c)).map(c=>mzs_computeCycleData(c,1,12,true)).filter(c=>c.mzSiembra>0);
+  mzs_renderBody();
+}
+
+/* ===== RENDER PRINCIPAL (llamado desde showPage/render del madre) ===== */
+function mzs_render(){
+  const page=document.getElementById('page-avanzado');
+  if(!mzsRaw1Init){
+    if(!raw1.length) { page.innerHTML='<div class="status-msg">Cargando datos...</div>'; return; }
+    mzsAllCiclos=[...new Set(raw1.filter(mzs_isComasa).map(r=>mzs_cTrim(get(r,'ciclo'))))].filter(c=>c&&norm(c).startsWith('mani')).sort(cicloSort);
+    mzsCiclosSel=new Set(mzsAllCiclos.slice(-4));
+    const latest=mzsAllCiclos[mzsAllCiclos.length-1];
+    if(latest){
+      let maxMonth=0;
+      raw1.forEach(r=>{
+        if(!mzs_isComasa(r)||mzs_cTrim(get(r,'ciclo'))!==latest||!ACT_ORDER_LIST.includes(get(r,'actividad'))) return;
+        if(rowLts(r)<=0) return;
+        const d=parseDate(get(r,'fecha')); if(!d) return;
+        const m=d.getMonth()+1; if(m>maxMonth) maxMonth=m;
+      });
+      mzsMesIni=1; mzsMesFin=maxMonth||12;
+    }
+    mzsRaw1Init=true;
+  }
+  page.innerHTML=`
+    <div class="chart-card mzs-filter-card">
+      <div class="mzs-fgroup"><label>Métrica</label><div class="mzs-toggle-group" id="mzs-metrica-toggle"></div></div>
+      <div class="mzs-fgroup"><label>Ciclos</label><div class="mzs-chip-row" id="mzs-ciclo-chips"></div></div>
+      <div class="mzs-fgroup"><label>Sector</label><div class="mzs-chip-row" id="mzs-sector-chips"></div></div>
+      <div class="mzs-fgroup" style="min-width:220px;flex:1;"><label id="mzs-mes-range-lbl">Meses Ene – Dic</label>
+        <div class="mzs-slider-wrap">
+          <div class="mzs-slider-track"><div class="mzs-slider-fill" id="mzs-slider-fill"></div></div>
+          <input type="range" min="1" max="12" step="1" id="mzs-rng-ini" class="mzs-slider-input" oninput="mzs_onSliderChange()">
+          <input type="range" min="1" max="12" step="1" id="mzs-rng-fin" class="mzs-slider-input" oninput="mzs_onSliderChange()">
+        </div>
+      </div>
+    </div>
+    <div id="mzs-rest-area"><div class="status-msg">Cargando...</div></div>
+  `;
+  mzs_buildFilters();
+  mzs_recompute();
+}
+
+function mzs_renderBody(){
+  const area=document.getElementById('mzs-rest-area');
+  if(!area) return;
+  if(!mzsCycles.length){ area.innerHTML='<div class="status-msg">Sin datos de Siembra para este filtro.</div>'; return; }
+
+  let kpiHtml='<div class="kpi-grid">';
+  mzsCycles.forEach((c,i)=>{
+    const val=mzs_metricVal(c);
+    const prev=i>0?mzsCycles[i-1]:null;
+    const prevVal=prev?mzs_metricVal(prev):null;
+    const trend=(prevVal!=null&&prevVal>0&&val!=null)?((val-prevVal)/prevVal*100):null;
+    const isLast=i===mzsCycles.length-1;
+    kpiHtml+=`<div class="kpi-card" style="${isLast?'border:2px solid var(--brand-secondary);':''}">
+      <div class="mzs-kpi-ciclo">${c.ciclo}${isLast?' · VIGENTE':''}</div>
+      <div class="kpi-value">${val!=null?val.toFixed(mzs_metricDec()):'—'}</div>
+      <div class="mzs-kpi-trend ${trend==null?'':(trend>0?'mzs-trend-up':'mzs-trend-down')}">${trend!=null?((trend>0?'▲':'▼')+' '+Math.abs(trend).toFixed(0)+'% vs '+prev.ciclo):'—'}</div>
+      <div class="mzs-kpi-sub">${fmtN(c.totalLts,0)} Lts · ${c.hasHmData?fmtN(c.totalHm,0)+' HM':'sin HM'} · ${fmtN(c.mzSiembra,1)} Mz</div>
+    </div>`;
+  });
+  kpiHtml+='</div>';
+
+  area.innerHTML=`
+    ${kpiHtml}
+    <div id="mzs-headline-slot"></div>
+    <div class="grid-2">
+      <div>
+        <div class="section-title">Mz Sembrada vs ${mzs_metricLbl()} por ciclo</div>
+        <div class="chart-card">
+          <div class="chart-desc">Barras: Mz sembrada del ciclo completo (Comasa${mzsSectorSel?' · '+mzsSectorSel:''}) · Línea: ${mzs_metricLbl()} del ciclo completo · no cambia con el filtro de meses · clic para ver el detalle</div>
+          <div class="ch-md"><canvas id="mzs-combo"></canvas></div>
+        </div>
+      </div>
+      <div>
+        <div class="section-title">Comparativo mensual entre ciclos — ${mzs_metricLbl()}
+          <span class="mzs-toggle-group"><button class="mzs-toggle-btn ${mzsVista==='mensual'?'active':''}" onclick="mzs_setVista('mensual')">Mensual</button><button class="mzs-toggle-btn ${mzsVista==='acumulado'?'active':''}" onclick="mzs_setVista('acumulado')">Acumulado</button></span>
+        </div>
+        <div class="chart-card">
+          <div class="chart-desc">Cada línea es un ciclo Maní · clic en un punto ve las Mz acumuladas que justifican el consumo a esa fecha.</div>
+          <div class="ch-md"><canvas id="mzs-cyclemonth"></canvas></div>
+        </div>
+      </div>
+    </div>
+    <div class="section-title">Evolución por Actividad y Ciclo</div>
+    <div class="chart-card" style="overflow-x:auto">
+      <div class="chart-desc">${mzs_metricLbl()} real por actividad y ciclo · verde = mejor, rojo = peor dentro de cada fila · clic en una celda para ver el detalle</div>
+      <div id="mzs-matrix-wrap"></div>
+    </div>
+  `;
+
+  mzs_drawCombo();
+  mzs_drawCycleMonthChart();
+  mzs_drawMatrix();
+  mzs_renderHeadline();
+}
+
+/* ===== COMBO: Mz Sembrada vs métrica (ciclo completo) ===== */
+function mzs_drawCombo(){
+  destroy('mzs-combo');
+  const labels=mzsCyclesFull.map(c=>c.ciclo);
+  const mzData=mzsCyclesFull.map(c=>+c.mzSiembra.toFixed(1));
+  const metData=mzsCyclesFull.map(c=>{ const v=mzs_metricVal(c); return v!=null?+v.toFixed(mzs_metricDec()):null; });
+  const ctx=document.getElementById('mzs-combo').getContext('2d');
+  charts['mzs-combo']=new Chart(ctx,{data:{labels,datasets:[
+    {type:'bar',label:'Mz Sembrada',data:mzData,backgroundColor:'rgba(45,106,79,.25)',borderColor:'rgba(45,106,79,.5)',borderWidth:1,borderRadius:4,yAxisID:'y',datalabels:{display:false}},
+    {type:'line',label:mzs_metricLbl(),data:metData,borderColor:'#e74c3c',backgroundColor:'#e74c3c',borderWidth:2,tension:.2,pointRadius:5,pointHoverRadius:7,yAxisID:'y1',spanGaps:false,
+      datalabels:{display:true,align:'top',formatter:v=>v==null?'':v.toFixed(mzs_metricDec()),font:{size:9,weight:'700'},color:'#991b1b'}}
+  ]},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:26}},
+    onClick:(evt,els)=>{ if(els.length){ mzs_openCicloModal(mzsCyclesFull[els[0].index]); } },
+    plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:9}}},
+      tooltip:{callbacks:{label:c=>c.dataset.yAxisID==='y'?`Mz Sembrada: ${fmtN(c.parsed.y)}`:(c.parsed.y==null?'Sin datos suficientes':`${c.dataset.label}: ${c.parsed.y.toFixed(mzs_metricDec())}`)}}},
+    scales:{
+      y:{position:'left',title:{display:true,text:'Mz avance',font:{size:9}},ticks:{font:{size:9}},grid:{color:'#f1f5f9'}},
+      y1:{position:'right',title:{display:true,text:mzs_metricLbl(),font:{size:9}},grid:{drawOnChartArea:false},ticks:{font:{size:9}}},
+      x:{grid:{display:false},ticks:{font:{size:9}}}
+    }}});
+}
+
+/* ===== COMPARATIVO MENSUAL ENTRE CICLOS ===== */
+function mzs_drawCycleMonthChart(){
+  destroy('mzs-cyclemonth');
+  const months=Array.from({length:12},(_,i)=>i+1).filter(m=>m>=mzsMesIni&&m<=mzsMesFin);
+  const labels=months.map(m=>MZS_MESES_LBL[m-1]);
+  const dec=mzs_metricDec();
+  const datasets=mzsCycles.map((c,ci)=>{
+    let acc=0;
+    const data=months.map(m=>{
+      const o=c.byMonth[m];
+      if(mzsMetrica==='lts'){
+        if(!o) return mzsVista==='mensual'?null:(acc>0&&c.mzSiembra>0?+(acc/c.mzSiembra).toFixed(dec):null);
+        const v=o.lts; acc+=v;
+        return c.mzSiembra>0?+((mzsVista==='mensual'?v:acc)/c.mzSiembra).toFixed(dec):null;
+      }else{
+        if(!o||!o.hasHm) return null;
+        acc+=o.hm;
+        return c.mzSiembra>0?+((mzsVista==='mensual'?o.hm:acc)/c.mzSiembra).toFixed(dec):null;
+      }
+    });
+    return {label:c.ciclo,data,borderColor:MZS_CYCLE_COLORS[ci%MZS_CYCLE_COLORS.length],backgroundColor:'transparent',borderWidth:2.5,pointRadius:3,pointHoverRadius:6,tension:.3,spanGaps:false,
+      datalabels:{display:(ctx)=>{const d=ctx.dataset.data;let li=-1;for(let i=d.length-1;i>=0;i--){if(d[i]!=null){li=i;break;}}return ctx.dataIndex===li;},formatter:v=>v!=null?v.toFixed(dec):'',font:{size:9,weight:'700'},color:MZS_CYCLE_COLORS[ci%MZS_CYCLE_COLORS.length],align:'top'}};
+  });
+  const ctx=document.getElementById('mzs-cyclemonth').getContext('2d');
+  charts['mzs-cyclemonth']=new Chart(ctx,{type:'line',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:26}},
+    interaction:{mode:'index',intersect:false},
+    onClick:(evt,els)=>{ if(els.length){ mzs_openMonthModal(months[els[0].index]); } },
+    onHover:(evt,els)=>{ evt.native.target.style.cursor=els.length?'pointer':'default'; },
+    plugins:{legend:{display:true,position:'bottom',labels:{font:{size:10},boxWidth:12}},
+      tooltip:{callbacks:{label:c=>c.parsed.y==null?(c.dataset.label+': sin datos'):`${c.dataset.label}: ${c.parsed.y.toFixed(dec)}`}}},
+    scales:{y:{beginAtZero:true,grid:{color:'#f1f5f9'},title:{display:true,text:mzs_metricLbl(),font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}
+  }});
+}
+
+/* ===== MATRIZ ACTIVIDAD x CICLO (color relativo por fila) ===== */
+function mzs_drawMatrix(){
+  const acts=[...new Set(mzsCycles.flatMap(c=>c.actsPresent))].sort((a,b)=>{const ia=ACT_ORDER_LIST.indexOf(a),ib=ACT_ORDER_LIST.indexOf(b);return(ia<0?999:ia)-(ib<0?999:ib);});
+  let html='<table class="heat-table mzs-matrix"><thead><tr><th>Actividad</th>'+mzsCycles.map(c=>`<th>${c.ciclo}</th>`).join('')+'</tr></thead><tbody>';
+  acts.forEach(a=>{
+    const rowVals=mzsCycles.map(c=>{ const d=c.byAct[a]; if(!d||c.mzSiembra<=0) return null; if(mzsMetrica==='hm'&&!d.hasHm) return null; return mzsMetrica==='lts'?(d.lts/c.mzSiembra):(d.hm/c.mzSiembra); });
+    const valid=rowVals.filter(v=>v!=null);
+    const min=valid.length?Math.min(...valid):0, max=valid.length?Math.max(...valid):0;
+    html+=`<tr><td>${a}</td>`;
+    mzsCycles.forEach((c,ci)=>{
+      const v=rowVals[ci];
+      if(v==null){ html+='<td style="color:#cbd5e1">—</td>'; return; }
+      const cls = valid.length>1 ? (v===min?'cell-ok':v===max?'cell-bad':'') : '';
+      html+=`<td class="${cls}" onclick="mzs_openDetailModal('${c.ciclo.replace(/'/g,"\\'")}','${a.replace(/'/g,"\\'")}')">${v.toFixed(mzs_metricDec())}</td>`;
+    });
+    html+='</tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('mzs-matrix-wrap').innerHTML=html;
+}
+
+/* ===== HEADLINE ===== */
+function mzs_renderHeadline(){
+  const slot=document.getElementById('mzs-headline-slot');
+  if(mzsCycles.length<2){ slot.innerHTML=''; return; }
+  const cur=mzsCycles[mzsCycles.length-1], prev=mzsCycles[mzsCycles.length-2];
+  const vc=mzs_metricVal(cur), vp=mzs_metricVal(prev);
+  if(vc==null||vp==null||vp===0){ slot.innerHTML=''; return; }
+  const dif=(vc-vp)/vp*100;
+  slot.innerHTML=`<div class="mzs-insight-box">📌 <b>${cur.ciclo}</b> tiene ${mzs_metricLbl()} <b>${Math.abs(dif).toFixed(0)}% ${dif>=0?'más alto':'más bajo'}</b> que ${prev.ciclo} (${vp.toFixed(mzs_metricDec())} → ${vc.toFixed(mzs_metricDec())}).</div>`;
+}
+
+/* ===== MODAL (único, reutilizado en 3 contextos) ===== */
+function mzs_openCicloModal(c){
+  document.getElementById('mzs-modal-title').textContent='Detalle por actividad — '+c.ciclo;
+  document.getElementById('mzs-modal-sub').textContent='Base: '+fmtN(c.mzSiembra)+' Mz sembradas'+(c.isPlaceholder?' (placeholder)':'')+(mzsSectorSel?' · '+mzsSectorSel:'');
+  let rows='';
+  c.actsPresent.forEach(a=>{
+    const d=c.byAct[a]; const p=PRESUPUESTOS[a];
+    const ltsMz=c.mzSiembra>0?d.lts/c.mzSiembra:0;
+    const hmMz=(c.mzSiembra>0&&d.hasHm)?(d.hm/c.mzSiembra).toFixed(3):'—';
+    const difLts=p?((ltsMz-p.lts)/p.lts*100):null;
+    rows+=`<tr><td>${a}</td><td>${fmtN(d.lts)}</td><td>${ltsMz.toFixed(2)}</td><td>${p?p.lts.toFixed(2):'-'}</td><td>${difLts!==null?((difLts>=0?'+':'')+difLts.toFixed(0)+'%'):'-'}</td><td>${hmMz}</td></tr>`;
+  });
+  document.getElementById('mzs-modal-body').innerHTML=`<table class="report-table"><thead><tr><th>Actividad</th><th>Lts totales</th><th>Lts/Mz</th><th>Meta</th><th>Dif%</th><th>HM/Mz</th></tr></thead><tbody>${rows}</tbody></table>`;
+  document.getElementById('mzs-modal-overlay').classList.add('open');
+}
+function mzs_openDetailModal(ciclo,act){
+  const c=mzsCycles.find(x=>x.ciclo===ciclo); if(!c) return;
+  const d=c.byAct[act]; const p=PRESUPUESTOS[act];
+  const ltsMz=c.mzSiembra>0?d.lts/c.mzSiembra:0;
+  document.getElementById('mzs-modal-title').textContent=act+' — '+ciclo;
+  document.getElementById('mzs-modal-sub').textContent='Meta: '+(p?p.lts.toFixed(2):'-')+' Lts/Mz · Real: '+ltsMz.toFixed(2)+' Lts/Mz';
+  const months=Object.keys(c.byMonth).map(Number).sort((a,b)=>a-b).filter(m=>c.byMonth[m].byAct[act]);
+  let rows=''; let acc=0;
+  months.forEach(m=>{ acc+=c.byMonth[m].byAct[act]; const cumLtsMz=c.mzSiembra>0?(acc/c.mzSiembra):0; rows+=`<tr><td>${MZS_MESES_LBL[m-1]}</td><td>${fmtN(c.byMonth[m].byAct[act])}</td><td>${cumLtsMz.toFixed(2)}</td></tr>`; });
+  document.getElementById('mzs-modal-body').innerHTML=`<table class="report-table"><thead><tr><th>Mes</th><th>Lts en el mes</th><th>Lts/Mz (acum.)</th></tr></thead><tbody>${rows||'<tr><td colspan="3">Sin desglose mensual</td></tr>'}</tbody></table>`;
+  document.getElementById('mzs-modal-overlay').classList.add('open');
+}
+function mzs_openMonthModal(monthNum){
+  document.getElementById('mzs-modal-title').textContent='Mz acumuladas a '+MZS_MESES_LBL[monthNum-1]+' — por ciclo';
+  document.getElementById('mzs-modal-sub').textContent='Manzanas sembradas que justifican el '+mzs_metricLbl()+' acumulado a esa fecha'+(mzsSectorSel?' · '+mzsSectorSel:'');
+  let rows='';
+  mzsCycles.forEach(c=>{
+    let accMz=0,accNum=0,hasAny=false;
+    for(let m=mzsMesIni;m<=monthNum;m++){
+      const o=c.byMonth[m]; if(!o) continue; hasAny=true;
+      accMz+=o.mzSiembra;
+      accNum+=mzsMetrica==='lts'?o.lts:(o.hasHm?o.hm:0);
+    }
+    if(!hasAny) return;
+    const ratio=c.mzSiembra>0?(accNum/c.mzSiembra):0;
+    rows+=`<tr><td>${c.ciclo}</td><td>${fmtN(accMz,1)}</td><td>${fmtN(accNum,0)}</td><td>${ratio.toFixed(mzs_metricDec())}</td></tr>`;
+  });
+  document.getElementById('mzs-modal-body').innerHTML=`<table class="report-table"><thead><tr><th>Ciclo</th><th>Mz sembrada acum.</th><th>${mzsMetrica==='lts'?'Lts':'HM'} acum.</th><th>${mzs_metricLbl()} acum.</th></tr></thead><tbody>${rows||'<tr><td colspan="4">Sin datos para este mes</td></tr>'}</tbody></table>
+    <div class="chart-desc" style="margin-top:8px">Mz sembrada acumulada = avance real de Siembra reportado hasta ${MZS_MESES_LBL[monthNum-1]}; Mani 2026 usa el ritmo real, no el placeholder final.</div>`;
+  document.getElementById('mzs-modal-overlay').classList.add('open');
+}
+function mzs_closeModal(){ document.getElementById('mzs-modal-overlay').classList.remove('open'); }
 
 init();
 </script>
