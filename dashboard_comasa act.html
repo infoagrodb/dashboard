@@ -746,10 +746,10 @@ function renderResumen(groups){
     const s=g.series, totalMz=s.totalMz,totalLts=s.totalLts,totalHm=s.totalHm;
     const realLts=totalMz>0?totalLts/totalMz:0, realHm=totalMz>0?totalHm/totalMz:0;
     const stLts=statusBadge(realLts,g.ppto.lts,totalLts>0), stHm=statusBadge(realHm,g.ppto.hm,totalHm>0);
-    const dias=s.dates.length, avg=dias>0?totalMz/dias:0;
+    const diasConMz=s.dates.filter(d=>s.byDate[d].mz>0).length, avg=diasConMz>0?totalMz/diasConMz:0;
     if(groups.length>1) kpiHtml+=`<div class="section-title mt-0">Sector: ${g.sector}</div>`;
     kpiHtml+=`<div class="kpi-grid">
-      <div class="kpi-card"><div class="kpi-title">Avance acumulado</div><div class="kpi-value">${totalMz.toLocaleString('en-US',{maximumFractionDigits:1})} Mz</div><div class="kpi-details"><span>${dias} dias con actividad</span></div></div>
+      <div class="kpi-card"><div class="kpi-title">Avance acumulado</div><div class="kpi-value">${totalMz.toLocaleString('en-US',{maximumFractionDigits:1})} Mz</div><div class="kpi-details"><span>${diasConMz} dias con avance</span></div></div>
       <div class="kpi-card"><div class="kpi-title">Litros acumulados</div><div class="kpi-value">${totalLts.toLocaleString('en-US',{maximumFractionDigits:0})} L</div><div class="kpi-details"><span>Total combustible</span></div></div>
       <div class="kpi-card"><div class="kpi-title">Avance promedio / dia</div><div class="kpi-value">${avg.toFixed(2)}</div><div class="kpi-details"><span>Mz / dia</span></div></div>
       <div class="kpi-card ${stLts.cls==='status-bad'?'bad':''}"><div class="kpi-title">Lts/Mz ${g.ppto.lts!==undefined?'— Ppto '+g.ppto.lts.toFixed(2):''}</div><div class="kpi-value">${totalMz>0?realLts.toFixed(2):'-'}</div><div class="kpi-details"><span>${g.ppto.lts!==undefined?('Dif: '+(realLts-g.ppto.lts>=0?'+':'')+(realLts-g.ppto.lts).toFixed(2)):''}</span><span class="kpi-badge ${stLts.cls==='status-bad'?'badge-bad':stLts.cls==='status-na'?'badge-na':'badge-ok'}">${stLts.txt}</span></div></div>
