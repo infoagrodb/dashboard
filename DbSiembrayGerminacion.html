@@ -1065,7 +1065,8 @@ async function cargarDatosDesdeGitHub() {
     const germinacionData = germinacionRes.result || [];
     datosLluviaRaw = lluviaRes.result || lluviaRes || [];
 
-    ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort();
+    // CORRECCIÓN: Ordenar los ciclos de manera descendente (los años más recientes primero)
+    ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
 
     datosMaestrosUnificados = siembraData.map(s => {
       const finca = limpiarDescripcion(s.x_studio_finca);
@@ -1090,7 +1091,6 @@ async function cargarDatosDesdeGitHub() {
       const muestras15 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 15);
       const plantas10 = muestras10.length > 0 ? (muestras10.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras10.length) : 0;
       let plantas15 = muestras15.length > 0 ? (muestras15.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras15.length) : 0;
-      if (plantas15 === 0 && plantas10 > 0 && muestras15.length === 0) plantas15 = plantas10;
 
       const total_semillas = parseFloat(s.x_studio_semilla_total) || ((parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal) || 0) + (parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal) || 0));
       let tipoNorm = (s.x_studio_tipo || '').toLowerCase().includes('re') ? 'Re-siembra' : 'Siembra';
@@ -1124,6 +1124,7 @@ async function cargarDatosDesdeGitHub() {
 }
 
 function filtrarYMostrar() {
+  // 1. Filtrar los datos maestros basándonos puramente en lo seleccionado originalmente
   let filtrados = datosMaestrosUnificados.filter(d => 
     (seleccionesFiltros.compania || []).includes(d.compania) && 
     (seleccionesFiltros.sector || []).includes(d.sector) && 
@@ -1131,18 +1132,34 @@ function filtrarYMostrar() {
     (seleccionesFiltros.finca || []).includes(d.finca) && 
     (seleccionesFiltros.tipo || []).includes(d.tipo)
   );
+
+  // 2. Ejecutar la visibilidad cruzada de los dropdowns en la barra de herramientas
   refrescarVisibilidadCrucesFiltros();
-  generarEncabezadosDinamicos();
-  renderPivot(filtrados);
+
+  // 3. CORRECCIÓN: Ajustar dinámicamente qué ciclos reales se van a pintar en las columnas de la tabla.
+  // Si el usuario tiene seleccionado "Todos", solo pintamos los ciclos que tengan datos vivos tras el cruce.
+  let ciclosActivosParaRender = [];
+  const totalCiclosUniverso = universosUnicos.ciclo || [];
+  
+  if (seleccionesFiltros.ciclo.length === totalCiclosUniverso.length) {
+    // Si están seleccionados todos, solo extraemos los ciclos presentes en el set de datos ya filtrado
+    ciclosActivosParaRender = [...new Set(filtrados.map(d => d.ciclo))].sort().reverse();
+  } else {
+    // Si el usuario marcó ciclos específicos a mano en el dropdown, respetamos estrictamente su selección manual
+    ciclosActivosParaRender = [...seleccionesFiltros.ciclo].sort().reverse();
+  }
+
+  generarEncabezadosDinamicos(ciclosActivosParaRender);
+  renderPivot(filtrados, ciclosActivosParaRender);
 }
 
-function generarEncabezadosDinamicos() {
+function generarEncabezadosDinamicos(ciclosVisibles) {
   const header = document.getElementById('tablaHeader');
   const subCabecerasCount = obtenerColumnasActivasPorCicloCount();
   let tr1 = `<tr><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Finca</th><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Lote de finca</th>`;
   let tr2 = `<tr>`;
 
-  const ciclosVisibles = seleccionesFiltros.ciclo || [];
+  if (ciclosVisibles.length === 0) return;
 
   if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
     ciclosVisibles.forEach(ciclo => {
@@ -1177,13 +1194,12 @@ function construirCeldaHTML(valor, metricaKey, finca, lote, ciclo) {
   return `<td class="text-right interactive-cell" ${estiloColor} data-tipo="${metricaKey}" data-finca="${finca}" data-lote="${lote}" data-ciclo="${ciclo}">${vStr}</td>`;
 }
 
-function renderPivot(data) {
+function renderPivot(data, ciclosVisibles) {
   const tbody = document.getElementById('pivotBody');
   let htmlBuffer = [];
-  const ciclosVisibles = seleccionesFiltros.ciclo || [];
 
   if (ciclosVisibles.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="2" class="loading">No hay ciclos seleccionados en los filtros.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="2" class="loading">No hay ciclos activos o seleccionados para los filtros actuales.</td></tr>`;
     return;
   }
 
@@ -1246,7 +1262,7 @@ function renderPivot(data) {
       obtenerMetricasActivas().forEach(mKey => {
         ciclosVisibles.forEach(ciclo => {
           const cTot = fincaCiclosTotales[ciclo];
-          if (cTot.totalLotes > 0) {
+          if (cTot && cTot.totalLotes > 0) {
             const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
             let valCalculado = mKey==='semillas'? avgS : mKey==='10dds'? avgP10 : mKey==='15dds'? avgP15 : mKey==='g10'? (avgS>0?(avgP10/avgS)*100:0) : (avgS>0?(avgP15/avgS)*100:0);
             if(mKey==='g10' || mKey==='g15') {
@@ -1323,7 +1339,7 @@ function renderPivot(data) {
       obtenerMetricasActivas().forEach(mKey => {
         ciclosVisibles.forEach(ciclo => {
           const cTot = fincaCiclosTotales[ciclo];
-          if (cTot.totalLotes > 0) {
+          if (cTot && cTot.totalLotes > 0) {
             const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
             let valCalculado = mKey==='semillas'? avgS : mKey==='10dds'? avgP10 : mKey==='15dds'? avgP15 : mKey==='g10'? (avgS>0?(avgP10/avgS)*100:0) : (avgS>0?(avgP15/avgS)*100:0);
             if(mKey==='g10' || mKey==='g15') {
