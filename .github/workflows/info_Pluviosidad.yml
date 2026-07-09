@@ -2,8 +2,14 @@ name: Odoo Proxy Pluviosidad
 
 on:
   schedule:
-    - cron: "*/10 * * * *"   # Ejecuta cada 10 minutos
-  workflow_dispatch:          # Permite ejecución manual
+    # Cada 10 minutos entre 07:00 AM y 01:00 PM Nicaragua (13:00-19:00 UTC)
+    - cron: "*/10 13-18 * * *"
+    - cron: "0 19 * * *"       # 01:00 PM Nicaragua exacto
+    # Cada hora entre 01:00 PM y 07:00 PM Nicaragua (19:00-01:00 UTC)
+    - cron: "0 20-23 * * *"   # 02 PM - 05 PM Nicaragua
+    - cron: "0 0,1 * * *"     # 06 PM y 07 PM Nicaragua
+  workflow_dispatch:
+
 
 permissions:
   contents: write   # Permite hacer commit y push
