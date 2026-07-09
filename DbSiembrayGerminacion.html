@@ -1018,7 +1018,8 @@
     </div>
     <div class="modal-body" style="background-color: #ffffff; padding: 24px; position: relative; min-height: 480px; overflow: hidden;">
       <div id="graficoLoading" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-weight: 600; color: var(--text-muted);">Cruzando líneas históricas de pluviosidad...</div>
-      <div style="width:100%; height:430px;">
+      <div id="graficoDebugInfo" style="display:none; font-size:11px; color:#6b7280; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:6px 10px; margin-bottom:10px;"></div>
+      <div style="width:100%; height:400px;">
         <canvas id="chartCorrelacionMaster"></canvas>
       </div>
     </div>
@@ -1265,6 +1266,8 @@ function aplicarFiltroDropdown(llaveFiltro, idDrop, idOpts, idBtnClear) {
   if (btn) btn.style.display = (marcados.length < (universosUnicos[llaveFiltro] || []).length) ? "inline-flex" : "none";
   contenedor.classList.remove('show');
   filtrarYMostrar();
+  // Si cambió el ciclo, resetear caché de lluvia para recargar con el año correcto
+  lluviaYaCargada = false;
   if (datosMaestrosUnificados.length > 0) renderAlertas();
 }
 
@@ -1337,6 +1340,12 @@ function refrescarVisibilidadCrucesFiltros() {
   });
 }
 
+function addDias(fechaStr, dias) {
+  const d = new Date(fechaStr + 'T00:00:00');
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().split('T')[0];
+}
+
 function procesarEstructuraGrafico() {
   let siembrasFiltradas = datosMaestrosUnificados.filter(d => 
     (seleccionesFiltros.compania || []).includes(d.compania) && 
@@ -1346,157 +1355,180 @@ function procesarEstructuraGrafico() {
     (seleccionesFiltros.tipo || []).includes(d.tipo)
   );
 
-  let anosSeleccionados = (seleccionesFiltros.ciclo || []).map(c => {
-    let m = c.match(/\d+/);
-    return m ? m[0] : null;
-  }).filter(Boolean);
+  // Calcular ventana: min(siembra) - 10 días  →  max(germinación ó siembra) + 20 días
+  let fechasSiembra = siembrasFiltradas.map(s => extraerFecha(s.rawSiembra)).filter(Boolean);
+  let fechasGerm = siembrasFiltradas.flatMap(s => (s.rawMuestrasOriginales||[]).map(g => extraerFecha(g))).filter(Boolean);
+  let todasFechas = [...fechasSiembra, ...fechasGerm].sort();
 
-  let lluviaFiltrada = datosLluviaRaw.map(r => {
-    return {
-      fecha: r.x_studio_fecha,
-      finca: limpiarDescripcion(r.x_studio_finca),
-      sector: limpiarDescripcion(r.x_studio_sector_1 || r.x_studio_sector),
-      valor: parseFloat(r.x_studio_cantidad_promedio || r.x_studio_cantidad || r.x_pluviosidad || 0)
-    };
-  }).filter(l => {
-    if (!l.fecha) return false;
-    // Match finca: at least one selected finca is contained in the lluvia finca name or vice versa
-    const fincasSel = seleccionesFiltros.finca || [];
-    const matchFinca = fincasSel.length === 0 || fincasSel.some(f =>
-      normalizeText(l.finca).includes(normalizeText(f)) || normalizeText(f).includes(normalizeText(l.finca))
-    );
-    // Sector match is optional — only filter if lluvia record HAS a sector value
-    const sectorSel = seleccionesFiltros.sector || [];
-    const matchSector = !l.sector || l.sector === 'N/A' || sectorSel.length === 0 || sectorSel.some(s =>
-      normalizeText(l.sector).includes(normalizeText(s)) || normalizeText(s).includes(normalizeText(l.sector))
-    );
-    if (!matchFinca || !matchSector) return false;
+  if (todasFechas.length === 0) return { labels: [], dataLluvia: [], dataSiembra: [], dataGerminacion: [] };
 
-    let fClean = l.fecha.includes(' ') ? l.fecha.split(' ')[0] : l.fecha;
-    let anoLluvia = fClean.split('-')[0];
-    return anosSeleccionados.includes(anoLluvia);
-  });
+  const fechaInicio = addDias(todasFechas[0], -10);
+  const fechaFin    = addDias(todasFechas[todasFechas.length - 1], 20);
 
+  // Años dentro de la ventana (para filtrar lluvia por año)
+  const anosVentana = new Set();
+  for (let d = new Date(fechaInicio + 'T00:00:00'); d <= new Date(fechaFin + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+    anosVentana.add(String(d.getFullYear()));
+  }
+
+  // Mapa día a día dentro de la ventana (incluye días sin datos = 0 lluvia)
   let mapaEjeTemporal = {};
+  for (let d = new Date(fechaInicio + 'T00:00:00'); d <= new Date(fechaFin + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+    const key = d.toISOString().split('T')[0];
+    mapaEjeTemporal[key] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+  }
 
-  lluviaFiltrada.forEach(l => {
-    let f = l.fecha.includes(' ') ? l.fecha.split(' ')[0] : l.fecha;
-    if (!mapaEjeTemporal[f]) mapaEjeTemporal[f] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
-    mapaEjeTemporal[f].lluvia += l.valor;
+  // Lluvia — construir Sets de IDs de finca y sector activos para match exacto por ID
+  // Los registros de lluvia tienen x_studio_finca=[id,'nombre'] y x_studio_sector_1=[id,'nombre']
+  // Las siembras filtradas ya nos dicen exactamente qué finca+sector IDs están activos
+  const fincaIdsActivos  = new Set(siembrasFiltradas.map(s => {
+    const lf = s.rawSiembra?.x_studio_finca;
+    return Array.isArray(lf) ? lf[0] : null;
+  }).filter(Boolean));
+
+  const sectorIdsActivos = new Set(siembrasFiltradas.map(s => {
+    const ls = s.rawSiembra?.x_studio_sector_1;
+    return Array.isArray(ls) ? ls[0] : null;
+  }).filter(Boolean));
+
+  datosLluviaRaw.forEach(r => {
+    const valor = parseFloat(r.x_studio_cantidad_promedio ?? r.x_studio_cantidad ?? r.x_pluviosidad ?? 0) || 0;
+    const fecha = r.x_studio_fecha || '';
+    const f = String(fecha).includes(' ') ? String(fecha).split(' ')[0] : String(fecha);
+    if (!f || f.length < 10 || f < fechaInicio || f > fechaFin) return;
+
+    // Filtro por ID de finca — debe estar entre las fincas de las siembras filtradas
+    const fincaIdLluvia  = Array.isArray(r.x_studio_finca)    ? r.x_studio_finca[0]    : null;
+    const sectorIdLluvia = Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[0] : null;
+
+    if (fincaIdsActivos.size > 0 && fincaIdLluvia && !fincaIdsActivos.has(fincaIdLluvia)) return;
+    if (sectorIdsActivos.size > 0 && sectorIdLluvia && !sectorIdsActivos.has(sectorIdLluvia)) return;
+
+    if (!mapaEjeTemporal[f]) return;
+    mapaEjeTemporal[f].lluvia += valor;
     mapaEjeTemporal[f].countLluvia++;
   });
 
+  // Siembra
   siembrasFiltradas.forEach(s => {
-    let f = extraerFecha(s.rawSiembra);
-    if (!f) return;
-    if (!mapaEjeTemporal[f]) mapaEjeTemporal[f] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+    const f = extraerFecha(s.rawSiembra);
+    if (!f || !mapaEjeTemporal[f]) return;
     mapaEjeTemporal[f].siembra += s.total_semillas;
     mapaEjeTemporal[f].siembraCount++;
   });
 
+  // Germinación
   siembrasFiltradas.forEach(s => {
     (s.rawMuestrasOriginales || []).forEach(g => {
-      let f = extraerFecha(g);
-      if (!f) return;
-      if (!mapaEjeTemporal[f]) mapaEjeTemporal[f] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+      const f = extraerFecha(g);
+      if (!f || !mapaEjeTemporal[f]) return;
       mapaEjeTemporal[f].germinacion += parseFloat(g.x_studio_cant_plantas_x_mtr_lineal || 0);
       mapaEjeTemporal[f].germinacionCount++;
     });
   });
 
-  let fechasOrdenadas = Object.keys(mapaEjeTemporal).sort();
-  let labels = [], dataLluvia = [], dataSiembra = [], dataGerminacion = [];
-
-  fechasOrdenadas.forEach(f => {
-    let o = mapaEjeTemporal[f];
-    let rainAvg = o.countLluvia > 0 ? o.lluvia / o.countLluvia : 0;
-    let siembraAvg = o.siembraCount > 0 ? o.siembra / o.siembraCount : 0;
-    let germAvg = o.germinacionCount > 0 ? o.germinacion / o.germinacionCount : 0;
-
-    if (rainAvg > 0 || siembraAvg > 0 || germAvg > 0) {
-      labels.push(formatFechaEjeX(f));
-      dataLluvia.push(rainAvg);
-      dataSiembra.push(siembraAvg);
-      dataGerminacion.push(germAvg);
-    }
+  const labels = [], dataLluvia = [], dataSiembra = [], dataGerminacion = [];
+  Object.keys(mapaEjeTemporal).sort().forEach(f => {
+    const o = mapaEjeTemporal[f];
+    labels.push(formatFechaEjeX(f));
+    dataLluvia.push(o.countLluvia > 0 ? o.lluvia / o.countLluvia : 0);
+    dataSiembra.push(o.siembraCount > 0 ? o.siembra / o.siembraCount : null);
+    dataGerminacion.push(o.germinacionCount > 0 ? o.germinacion / o.germinacionCount : null);
   });
 
-  return { labels, dataLluvia, dataSiembra, dataGerminacion };
+  return { labels, dataLluvia, dataSiembra, dataGerminacion, fechaInicio, fechaFin };
 }
 
-function abrirModalGrafico() {
+let lluviaYaCargada = false;
+
+async function abrirModalGrafico() {
   const overlay = document.getElementById('popupGraficoOverlay');
   overlay.classList.add('show');
-  document.getElementById('graficoLoading').style.display = 'block';
+  const loadingEl = document.getElementById('graficoLoading');
+  const debugEl   = document.getElementById('graficoDebugInfo');
+  loadingEl.style.display = 'block';
+  loadingEl.textContent   = '🌧️ Cargando datos de pluviosidad...';
+  if (debugEl) debugEl.style.display = 'none';
+  if (chartInstanciaUnica) { chartInstanciaUnica.destroy(); chartInstanciaUnica = null; }
+
+  if (!lluviaYaCargada || datosLluviaRaw.length === 0) {
+    try {
+      // Detectar el año del ciclo activo para filtrar solo los registros relevantes
+      const ciclosActivos = seleccionesFiltros.ciclo || [];
+      const añoActivo = ciclosActivos.map(c => (c.match(/\d{4}/) || [])[0]).filter(Boolean)[0] || new Date().getFullYear();
+      const fechaDesde = `${añoActivo}-01-01`;
+
+      let todos = [], offset = 0;
+      const limit = 500;
+      const MAX_PAGINAS = 10; // tope de seguridad: 10 × 500 = 5,000 registros máx
+      let pagina = 0;
+
+      while (pagina < MAX_PAGINAS) {
+        const url = `${WORKER}/query?base=info&model=x_pluviosidad&limit=${limit}&offset=${offset}&domain=[["x_studio_fecha",">=","${fechaDesde}"]]`;
+        const r = await fetch(url);
+        if (!r.ok) break;
+        const j = await r.json();
+        const batch = Array.isArray(j.result) ? j.result : (Array.isArray(j) ? j : []);
+        if (batch.length === 0) break;
+        todos = todos.concat(batch);
+        loadingEl.textContent = `🌧️ Cargando lluvia ${añoActivo}... ${todos.length} registros`;
+        if (batch.length < limit) break; // última página
+        offset += limit;
+        pagina++;
+      }
+      if (todos.length > 0) { datosLluviaRaw = todos; lluviaYaCargada = true; }
+    } catch(e) { console.warn('[Lluvia lazy]', e); }
+  }
+
+  loadingEl.textContent = '📊 Procesando correlación...';
 
   setTimeout(() => {
     const ctx = document.getElementById('chartCorrelacionMaster').getContext('2d');
-    const datasetFinal = procesarEstructuraGrafico();
+    const ds = procesarEstructuraGrafico();
+    loadingEl.style.display = 'none';
 
-    if (chartInstanciaUnica) chartInstanciaUnica.destroy();
-    document.getElementById('graficoLoading').style.display = 'none';
+    if (debugEl) {
+      const puntosConLluvia = ds.dataLluvia.filter(v => v > 0).length;
+      const totalMM = ds.dataLluvia.reduce((a,b)=>a+b,0);
+      const ventana = ds.fechaInicio && ds.fechaFin
+        ? ` · Ventana: ${formatFechaLegible(ds.fechaInicio)} → ${formatFechaLegible(ds.fechaFin)}`
+        : '';
+      debugEl.innerHTML = `📊 ${datosLluviaRaw.length} reg. lluvia total · ${puntosConLluvia} días con lluvia en filtro · Total ${totalMM.toFixed(1)} mm${ventana}`;
+      debugEl.style.display = '';
+    }
+
+    if (ds.labels.length === 0) {
+      if (debugEl) debugEl.innerHTML = '⚠️ Sin datos para los filtros seleccionados.';
+      return;
+    }
 
     chartInstanciaUnica = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: datasetFinal.labels,
+        labels: ds.labels,
         datasets: [
-          {
-            label: 'Lluvia Día (mm)',
-            data: datasetFinal.dataLluvia,
-            backgroundColor: 'rgba(2, 132, 199, 0.55)',
-            borderColor: '#0284c7',
-            borderWidth: 1,
-            yAxisID: 'yLluvia'
-          },
-          {
-            label: 'Semillas m.l. (Siembra)',
-            data: datasetFinal.dataSiembra,
-            borderColor: '#b35c04',
-            backgroundColor: 'transparent',
-            borderWidth: 3,
-            type: 'line',
-            tension: 0.25,
-            pointRadius: 2,
-            yAxisID: 'yMétricas'
-          },
-          {
-            label: 'Plantas m.l. (Germinación)',
-            data: datasetFinal.dataGerminacion,
-            borderColor: '#0f2a11',
-            backgroundColor: 'transparent',
-            borderWidth: 3,
-            type: 'line',
-            tension: 0.25,
-            pointRadius: 2,
-            yAxisID: 'yMétricas'
-          }
+          { label: 'Lluvia Día (mm)', data: ds.dataLluvia, backgroundColor: 'rgba(2,132,199,0.55)', borderColor: '#0284c7', borderWidth: 1, yAxisID: 'yLluvia' },
+          { label: 'Semillas m.l. (Siembra)', data: ds.dataSiembra, borderColor: '#b35c04', backgroundColor: 'transparent', borderWidth: 3, type: 'line', tension: 0.25, pointRadius: 3, spanGaps: false, yAxisID: 'yMetricas' },
+          { label: 'Plantas m.l. (Germinación)', data: ds.dataGerminacion, borderColor: '#0f2a11', backgroundColor: 'transparent', borderWidth: 3, type: 'line', tension: 0.25, pointRadius: 3, spanGaps: false, yAxisID: 'yMetricas' }
         ]
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
         scales: {
-          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#475569' } },
-          yLluvia: {
-            type: 'linear', position: 'left',
-            title: { display: true, text: 'Pluviosidad Acumulada (mm)', color: '#0284c7', font: { weight: 'bold' } },
-            ticks: { color: '#0284c7' }, grid: { color: '#f1f5f9' }
-          },
-          yMétricas: {
-            type: 'linear', position: 'right',
-            title: { display: true, text: 'Densidad Operativa (Muestras / m.l.)', color: '#b35c04', font: { weight: 'bold' } },
-            ticks: { color: '#b35c04' }, grid: { display: false }
-          }
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#475569', maxRotation: 45 } },
+          yLluvia:  { type: 'linear', position: 'left',  min: 0, title: { display: true, text: 'Lluvia (mm)', color: '#0284c7', font: { weight: 'bold', size: 11 } }, ticks: { color: '#0284c7' }, grid: { color: '#f1f5f9' } },
+          yMetricas:{ type: 'linear', position: 'right', min: 0, title: { display: true, text: 'Densidad (/ m.l.)', color: '#b35c04', font: { weight: 'bold', size: 11 } }, ticks: { color: '#b35c04' }, grid: { display: false } }
         },
         plugins: {
-          legend: { position: 'top', labels: { font: { size: 12, weight: '600' }, boxWidth: 12 } }
+          legend: { position: 'top', labels: { font: { size: 12, weight: '600' }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => ctx.parsed.y === null ? null : `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}${ctx.datasetIndex===0?' mm':' / m.l.'}` } }
         }
       }
     });
-  }, 350);
+  }, 100);
 }
+
 
 function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
 
@@ -2050,15 +2082,14 @@ async function cargarDatosDesdeGitHub() {
   const tbody = document.getElementById('pivotBody');
   tbody.innerHTML = '<tr><td class="loading">Sincronizando orígenes de datos remotos y cruzando dimensiones...</td></tr>';
   try {
-    const [siembraRes, germinacionRes, lluviaRes] = await Promise.all([
+    // Lluvia se carga de forma lazy al abrir el gráfico — no bloquea la carga inicial
+    const [siembraRes, germinacionRes] = await Promise.all([
       fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_siembra", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Siembra.json"),
       fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_germinaciones", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Germinacion.json"),
-      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_pluviosidad", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Pluviosidad.json"),
     ]);
 
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];
-    datosLluviaRaw = lluviaRes.result || lluviaRes || [];
 
     // CORRECCIÓN: Ordenar los ciclos de manera descendente (los años más recientes primero)
     ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
