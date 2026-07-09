@@ -58,6 +58,7 @@
   .header-quick-actions { display: flex; align-items: flex-end; gap: 14px; }
   .header-menu-panel { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
   .btn-menu-mobile, .btn-table-menu-mobile { display: none; }
+  .btn-opciones-pivot { display: inline-flex; background-color: #475569; }
 
   .header-filter-group { display: flex; flex-direction: column; gap: 4px; width: 220px; position: relative; }
   .header-filter-group .label-container { display: flex; justify-content: space-between; align-items: center; height: 16px; }
@@ -150,10 +151,25 @@
 
   .table-toolbar {
     background-color: #ffffff; border: 1px solid var(--border-color); border-bottom: none;
-    border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 8px 16px;
-    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 10px 16px;
+    display: flex; flex-direction: column; flex-shrink: 0; gap: 0;
   }
-  .table-toolbar-left { display: flex; align-items: center; gap: 10px; width: 100%; flex-wrap: wrap; }
+  .table-toolbar-left { display: flex; flex-direction: column; width: 100%; gap: 0; }
+
+  .toolbar-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0;
+  }
+  .toolbar-row + .toolbar-row { border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 4px; }
+  .toolbar-row-metrics { gap: 6px; align-items: center; }
+  .toolbar-group {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding-right: 14px; border-right: 1px solid var(--border-color);
+  }
+  .toolbar-group:last-child { border-right: none; padding-right: 0; }
+  .toolbar-group-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: #9ca3af; white-space: nowrap;
+  }
 
   .inline-column-selector { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
   .inline-column-selector span { font-size: 12px; font-weight: 600; color: #4b5563; margin-right: 2px; }
@@ -364,6 +380,261 @@
     .multiselect-item { padding: 10px 14px; }
     .btn-clear-individual { width: 22px; height: 22px; }
   }
+
+  /* ===== TAB NAVIGATION — CLAYMORPHISM ===== */
+  .tabs-nav {
+    display: flex; gap: 14px; flex-shrink: 0; padding: 16px 0 0;
+    background: transparent; border: none;
+  }
+
+  .tab-btn {
+    flex: 1; border: none; cursor: pointer;
+    border-radius: 20px; padding: 18px 24px;
+    display: flex; align-items: center; justify-content: flex-start; gap: 16px;
+    font-family: inherit; text-align: left;
+    transition: all 0.25s cubic-bezier(0.34, 1.3, 0.64, 1);
+    position: relative; overflow: hidden;
+    /* Clay base — inactive */
+    background: #e8edf5;
+    box-shadow:
+      0 2px 0 #c8cedb,
+      0 4px 10px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.7);
+    transform: translateY(0);
+  }
+
+  .tab-btn:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 5px 0 #c8cedb,
+      0 8px 20px rgba(0,0,0,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+
+  .tab-btn:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 0px 0 #c8cedb,
+      0 2px 6px rgba(0,0,0,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+
+  /* ---- PIVOT tab active ---- */
+  .tab-btn.active#tabBtnPivot {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    box-shadow:
+      0 5px 0 #93c5fd,
+      0 10px 28px rgba(37,99,235,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.85);
+    transform: translateY(-4px);
+  }
+
+  /* ---- ALERTAS tab active ---- */
+  .tab-btn.active#tabBtnAlertas {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    box-shadow:
+      0 5px 0 #fca5a5,
+      0 10px 28px rgba(220,38,38,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.85);
+    transform: translateY(-4px);
+  }
+  .tab-btn.active#tabBtnAlertas.alerta-ok {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    box-shadow:
+      0 5px 0 #86efac,
+      0 10px 28px rgba(22,163,74,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.85);
+  }
+
+  .tab-icon {
+    font-size: 32px; line-height: 1; flex-shrink: 0;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15));
+  }
+
+  .tab-text-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .tab-title {
+    font-size: 15px; font-weight: 800; letter-spacing: -0.3px;
+    color: #374151; line-height: 1.2;
+  }
+  .tab-btn.active#tabBtnPivot .tab-title { color: #1d4ed8; }
+  .tab-btn.active#tabBtnAlertas .tab-title { color: #dc2626; }
+  .tab-subtitle {
+    font-size: 11px; font-weight: 500; color: #9ca3af; line-height: 1.3;
+  }
+  .tab-btn.active .tab-subtitle { opacity: 0.75; }
+
+  .tab-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; font-size: 12px; font-weight: 800;
+    min-width: 26px; height: 26px; padding: 0 7px;
+    margin-left: auto; flex-shrink: 0;
+    background: #ef4444; color: #fff;
+    box-shadow: 0 2px 6px rgba(239,68,68,0.45);
+    animation: pulse-badge 2s infinite;
+  }
+  .tab-badge.ok {
+    background: #22c55e; color: #fff;
+    box-shadow: 0 2px 6px rgba(34,197,94,0.4);
+    animation: none;
+  }
+  .tab-badge.loading {
+    background: #d1d5db; color: #6b7280;
+    box-shadow: none; animation: none; font-size: 10px;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 2px 6px rgba(239,68,68,0.45); }
+    50% { box-shadow: 0 2px 14px rgba(239,68,68,0.75); }
+  }
+
+  .tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .tab-panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  @media (max-width: 768px) {
+    .tabs-nav { gap: 10px; padding: 10px 0 0; }
+    .tab-btn { padding: 12px 14px; gap: 10px; border-radius: 16px; }
+    .tab-icon { font-size: 24px; }
+    .tab-title { font-size: 13px; }
+    .tab-subtitle { display: none; }
+    .tab-badge { min-width: 22px; height: 22px; font-size: 11px; }
+  }
+  @media (max-width: 480px) {
+    .tab-icon { font-size: 20px; }
+    .tab-title { font-size: 12px; }
+    .tab-btn { padding: 10px 12px; gap: 8px; border-radius: 14px; }
+  }
+
+  /* ===== ALERTAS TAB ===== */
+  .alertas-container {
+    background: #fff; border: 1px solid var(--border-color); border-top: none;
+    border-radius: 0 0 12px 12px; flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  .kpi-strip {
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .kpi-card {
+    flex: 1 1 160px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px;
+    cursor: pointer; transition: all 0.18s ease; position: relative; overflow: hidden;
+  }
+  .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--kpi-color, #e5e7eb); border-radius: 12px 12px 0 0; }
+  .kpi-card.danger { --kpi-color: #ef4444; }
+  .kpi-card.warning { --kpi-color: #f59e0b; }
+  .kpi-card.ok { --kpi-color: #22c55e; }
+  .kpi-card.info { --kpi-color: #0284c7; }
+  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
+  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: var(--text-main); }
+  .kpi-value.danger { color: #dc2626; }
+  .kpi-value.warning { color: #d97706; }
+  .kpi-value.ok { color: #16a34a; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); }
+
+  .alerta-section-title {
+    font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border-color);
+  }
+  .alerta-section-title .badge-alert {
+    background: #fee2e2; color: #b91c1c; border-radius: 999px;
+    font-size: 11px; font-weight: 700; padding: 1px 8px;
+  }
+  .alerta-section-title .badge-alert.warning { background: #fef3c7; color: #b45309; }
+
+  .alerta-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); }
+  .alerta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .alerta-table th {
+    background: #f9fafb; padding: 8px 14px; text-align: left; font-size: 11px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #374151;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  .alerta-table tr:last-child td { border-bottom: none; }
+  .alerta-table tr:hover td { background: var(--bg-main); }
+
+  .badge-dds {
+    display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  }
+  .badge-dds.en-rango { background: #fee2e2; color: #b91c1c; }
+  .badge-dds.vencido  { background: #fef3c7; color: #b45309; }
+  .badge-dds.pendiente { background: #f3f4f6; color: #6b7280; }
+
+  .btn-ver-siembra {
+    background: none; border: 1px solid var(--primary); color: var(--primary);
+    border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .btn-ver-siembra:hover { background: var(--primary); color: #fff; }
+
+  .alerta-empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
+  .alerta-empty span { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  /* ===== ALERTAS FILTROS BAR — cascading multiselect ===== */
+  .alertas-filtros-bar {
+    display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+    background: #f9fafb; border: 1px solid var(--border-color);
+    border-radius: 10px; padding: 12px 16px;
+  }
+  .af-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+  .af-label { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .af-ms-wrap { position: relative; }
+  .af-ms-trigger {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #fff; border: 1px solid var(--border-color); border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+    min-width: 130px; user-select: none; white-space: nowrap; overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .af-ms-trigger:hover { border-color: var(--primary); }
+  .af-ms-trigger span:first-child { overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+  .af-arrow { font-size: 8px; color: #9ca3af; margin-left: 6px; flex-shrink: 0; }
+  .af-ms-panel {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
+    background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 200px; max-width: 280px;
+    flex-direction: column; overflow: hidden;
+    animation: dropdownFadeIn 0.15s ease;
+  }
+  .af-ms-panel.open { display: flex; }
+  .af-ms-search { padding: 8px; border-bottom: 1px solid var(--border-color); }
+  .af-ms-search input {
+    width: 100%; padding: 5px 8px; border: 1px solid var(--border-color);
+    border-radius: 5px; font-size: 12px; outline: none; font-family: inherit;
+  }
+  .af-ms-search input:focus { border-color: var(--primary); }
+  .af-ms-items { max-height: 200px; overflow-y: auto; padding: 4px 0; }
+  .af-ms-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    font-size: 12px; cursor: pointer; color: #1e293b;
+  }
+  .af-ms-item:hover { background: var(--primary-light); }
+  .af-ms-item input { accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+  .af-ms-item.disabled { opacity: 0.35; pointer-events: none; }
+  .af-ms-footer {
+    display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border-color);
+  }
+  .af-ms-footer button {
+    flex: 1; padding: 5px 0; font-size: 12px; font-weight: 700; border-radius: 5px;
+    cursor: pointer; border: none; font-family: inherit;
+  }
+  .af-ms-footer button:first-child { background: var(--primary); color: #fff; }
+  .af-ms-footer button:first-child:hover { background: var(--primary-hover); }
+  .af-ms-footer button:last-child { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .af-info { font-size: 11px; color: var(--text-muted); margin-left: auto; align-self: center; }
+  @media (max-width: 768px) {
+    .alertas-filtros-bar { flex-direction: column; align-items: stretch; }
+    .af-group { min-width: unset; }
+    .af-ms-trigger { width: 100%; }
+    .af-ms-panel { min-width: 100%; }
+    .af-info { margin-left: 0; }
+  }
+
+  @media (max-width: 768px) {
+    .tab-btn { font-size: 11px; padding: 9px 10px; gap: 4px; }
+    .kpi-card { flex: 1 1 130px; padding: 12px 14px; }
+    .kpi-value { font-size: 26px; }
+    .alertas-container { padding: 12px; gap: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -397,6 +668,29 @@
 </div>
 
 <div class="container">
+
+  <!-- TAB NAVIGATION — CLAYMORPHISM -->
+  <div class="tabs-nav" id="tabsNav">
+    <button class="tab-btn active" id="tabBtnPivot" onclick="cambiarTab('pivot')">
+      <span class="tab-icon">📊</span>
+      <span class="tab-text-group">
+        <span class="tab-title">Registros Siembra y Germinación</span>
+        <span class="tab-subtitle">Siembra &amp; Germinación por ciclo, finca y lote</span>
+      </span>
+    </button>
+    <button class="tab-btn" id="tabBtnAlertas" onclick="cambiarTab('alertas')">
+      <span class="tab-icon">🚨</span>
+      <span class="tab-text-group">
+        <span class="tab-title">Alertas Germinación</span>
+        <span class="tab-subtitle">Lotes sin recuento en ventana 10 y 15 DDS</span>
+      </span>
+      <span class="tab-badge loading" id="tabBadgeAlertas">...</span>
+    </button>
+  </div>
+
+  <!-- TAB: PIVOT (original) -->
+  <div class="tab-panel active" id="tabPivot">
+
   <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
     <div class="toolbar">
       <div class="filter-group">
@@ -444,26 +738,36 @@
   </div>
 
   <div class="table-toolbar">
-    <button class="btn-toggle-filters btn-table-menu-mobile" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
+    <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
     <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
-      <button class="btn btn-secondary" id="btnToggleGlobal" style="height:28px; padding:0 12px; font-size:12px;" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
-      
-      <div class="pivot-mode-selector">
-        <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo > Recuentos</button>
-        <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos > Ciclos</button>
+
+      <!-- Fila 1: Acciones principales -->
+      <div class="toolbar-row">
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">Vista</span>
+          <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
+          <div class="pivot-mode-selector">
+            <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo → Recuentos</button>
+            <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos → Ciclos</button>
+          </div>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">Herramientas</span>
+          <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
+          <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
+        </div>
       </div>
 
-      <button class="btn" style="background-color: #0284c7; height:28px; padding:0 12px; font-size:12px;" onclick="abrirModalGrafico()">📊 Ver Gráfico Correlación con Lluvia</button>
-      <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Descargar Excel</button>
-      
-      <div class="inline-column-selector" id="desktopColumnSelector">
-        <span>Mostrar Métricas:</span>
+      <!-- Fila 2: Métricas visibles -->
+      <div class="toolbar-row toolbar-row-metrics">
+        <span class="toolbar-group-label">Métricas visibles:</span>
         <label class="col-label-btn"><input type="checkbox" id="col_semillas" checked onchange="actualizarVisibilidadColumnas()"> Semillas m.l.</label>
         <label class="col-label-btn"><input type="checkbox" id="col_10dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 10 DDS</label>
         <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10DDS</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15DDS</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15</label>
       </div>
+
     </div>
   </div>
 
@@ -481,7 +785,188 @@
       </tbody>
     </table>
   </div>
-</div>
+
+  </div><!-- end tab-panel pivot -->
+
+  <!-- TAB: ALERTAS GERMINACIÓN -->
+  <div class="tab-panel" id="tabAlertas">
+    <div class="alertas-container">
+
+      <!-- Filtros de alertas en cascada -->
+      <div class="alertas-filtros-bar" id="alertasFiltrosBar">
+        <div class="af-group">
+          <label class="af-label">📅 CICLO</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCiclo" onclick="toggleAfDropdown('afDropCiclo')">
+              <span id="afTextCiclo">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCiclo">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCiclo')"></div>
+              <div class="af-ms-items" id="afItemsCiclo"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('ciclo')">Aceptar</button>
+                <button onclick="afCerrar('afDropCiclo')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🏢 COMPAÑÍA</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCompania" onclick="toggleAfDropdown('afDropCompania')">
+              <span id="afTextCompania">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCompania">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCompania')"></div>
+              <div class="af-ms-items" id="afItemsCompania"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('compania')">Aceptar</button>
+                <button onclick="afCerrar('afDropCompania')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🗺️ SECTOR</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerSector" onclick="toggleAfDropdown('afDropSector')">
+              <span id="afTextSector">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropSector">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropSector')"></div>
+              <div class="af-ms-items" id="afItemsSector"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('sector')">Aceptar</button>
+                <button onclick="afCerrar('afDropSector')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🌱 FINCA</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerFinca" onclick="toggleAfDropdown('afDropFinca')">
+              <span id="afTextFinca">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropFinca">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropFinca')"></div>
+              <div class="af-ms-items" id="afItemsFinca"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('finca')">Aceptar</button>
+                <button onclick="afCerrar('afDropFinca')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-info">
+          Hoy: <strong id="alertaFechaHoy">-</strong> &nbsp;|&nbsp; 10 DDS = días 10–14 &nbsp;|&nbsp; 15 DDS = día 15+
+        </div>
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-card info" onclick="filtrarTablaAlertas('all')">
+          <div class="kpi-label">Total Lotes Sembrados</div>
+          <div class="kpi-value" id="kpiTotal">-</div>
+          <div class="kpi-sub">En el ciclo seleccionado</div>
+        </div>
+        <div class="kpi-card danger" onclick="filtrarTablaAlertas('10dds')">
+          <div class="kpi-label">⚠️ Sin Recuento 10 DDS</div>
+          <div class="kpi-value danger" id="kpiSin10">-</div>
+          <div class="kpi-sub">Lotes entre 10–14 días desde siembra</div>
+        </div>
+        <div class="kpi-card warning" onclick="filtrarTablaAlertas('15dds')">
+          <div class="kpi-label">⏰ Sin Recuento 15 DDS</div>
+          <div class="kpi-value warning" id="kpiSin15">-</div>
+          <div class="kpi-sub">Lotes con 15+ días desde siembra</div>
+        </div>
+        <div class="kpi-card ok" onclick="filtrarTablaAlertas('completos')">
+          <div class="kpi-label">✅ Lotes Completos</div>
+          <div class="kpi-value ok" id="kpiCompletos">-</div>
+          <div class="kpi-sub">Con ambos recuentos registrados</div>
+        </div>
+      </div>
+
+      <!-- Tabla de alertas 10 DDS -->
+      <div id="seccion10dds">
+        <div class="alerta-section-title">
+          🔴 Lotes SIN Recuento de Germinación — Ventana 10 DDS (días 10 al 14 desde siembra)
+          <span class="badge-alert" id="badge10dds">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Estado</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla10ddsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla de alertas 15 DDS -->
+      <div id="seccion15dds">
+        <div class="alerta-section-title">
+          🟡 Lotes SIN Recuento de Germinación — Ventana 15 DDS (15 días o más desde siembra)
+          <span class="badge-alert warning" id="badge15dds">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Estado</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla15ddsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla de lotes COMPLETOS -->
+      <div id="seccionCompletos" style="display:none;">
+        <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0;">
+          ✅ Lotes con Recuentos de Germinación Completos
+          <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Recuento 10 DDS</th>
+                <th>Recuento 15 DDS</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCompletosBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- end alertas-container -->
+  </div><!-- end tab-panel alertas -->
+
+</div><!-- end container -->
 
 <div class="modal-overlay" id="popupDetalleOverlay" onclick="cerrarModalPopup()">
   <div class="modal-card" onclick="event.stopPropagation()">
@@ -748,6 +1233,7 @@ function aplicarFiltroDropdown(llaveFiltro, idDrop, idOpts, idBtnClear) {
   if (btn) btn.style.display = (marcados.length < (universosUnicos[llaveFiltro] || []).length) ? "inline-flex" : "none";
   contenedor.classList.remove('show');
   filtrarYMostrar();
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
 }
 
 function cancelarFiltroDropdown(idOpts) {
@@ -776,6 +1262,7 @@ function limpiarFiltroIndividual(event, llaveFiltro, idDrop, idOpts, idBtnClear)
   if (btn) btn.style.display = "none";
   if (contenedor) actualizarEstadoSeleccionarTodo(idOpts);
   filtrarYMostrar();
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
 }
 
 function limpiarTodosLosFiltros() {
@@ -792,6 +1279,7 @@ function limpiarTodosLosFiltros() {
     if (btn) btn.style.display = "none";
   });
   filtrarYMostrar();
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
 }
 
 function refrescarVisibilidadCrucesFiltros() {
@@ -835,13 +1323,21 @@ function procesarEstructuraGrafico() {
     return {
       fecha: r.x_studio_fecha,
       finca: limpiarDescripcion(r.x_studio_finca),
-      sector: limpiarDescripcion(r.x_studio_sector_1),
-      valor: parseFloat(r.x_studio_cantidad_promedio || r.x_studio_cantidad || 0)
+      sector: limpiarDescripcion(r.x_studio_sector_1 || r.x_studio_sector),
+      valor: parseFloat(r.x_studio_cantidad_promedio || r.x_studio_cantidad || r.x_pluviosidad || 0)
     };
   }).filter(l => {
     if (!l.fecha) return false;
-    let matchFinca = (seleccionesFiltros.finca || []).includes(l.finca);
-    let matchSector = (seleccionesFiltros.sector || []).includes(l.sector);
+    // Match finca: at least one selected finca is contained in the lluvia finca name or vice versa
+    const fincasSel = seleccionesFiltros.finca || [];
+    const matchFinca = fincasSel.length === 0 || fincasSel.some(f =>
+      normalizeText(l.finca).includes(normalizeText(f)) || normalizeText(f).includes(normalizeText(l.finca))
+    );
+    // Sector match is optional — only filter if lluvia record HAS a sector value
+    const sectorSel = seleccionesFiltros.sector || [];
+    const matchSector = !l.sector || l.sector === 'N/A' || sectorSel.length === 0 || sectorSel.some(s =>
+      normalizeText(l.sector).includes(normalizeText(s)) || normalizeText(s).includes(normalizeText(l.sector))
+    );
     if (!matchFinca || !matchSector) return false;
 
     let fClean = l.fecha.includes(' ') ? l.fecha.split(' ')[0] : l.fecha;
@@ -1041,6 +1537,416 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
 
 function cerrarModalPopup() { document.getElementById('popupDetalleOverlay').classList.remove('show'); }
 
+// ===== TAB MANAGEMENT =====
+let tabActivo = 'pivot';
+function cambiarTab(tab) {
+  tabActivo = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  // Ocultar botones Filtros/Menú cuando estamos en alertas
+  const headerQA = document.querySelector('.header-quick-actions');
+  if (headerQA) headerQA.style.display = tab === 'alertas' ? 'none' : '';
+  if (tab === 'alertas') renderAlertas();
+}
+
+// ===== ALERTAS DE GERMINACIÓN =====
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function formatFechaLegible(fechaStr) {
+  if (!fechaStr) return 'N/A';
+  const p = fechaStr.split('-');
+  if (p.length !== 3) return fechaStr;
+  const d = p[2].padStart(2,'0');
+  const m = MESES_CORTOS[parseInt(p[1],10) - 1] || p[1];
+  return `${d}-${m}-${p[0]}`;
+}
+
+let alertaFiltroActivo = 'all';
+// Filtros propios del tab Alertas (independientes del pivot)
+let alertasFiltros = { ciclo: [], compania: [], sector: [], finca: [] };
+let alertasFiltrosPrevios = { ciclo: [], compania: [], sector: [], finca: [] }; // para cancelar
+let alertasCicloData = { sin10: [], sin15: [], completos: [], todos: [] };
+
+// ===== MULTISELECT CASCADA ALERTAS =====
+const AF_DIMENSIONES = ['ciclo','compania','sector','finca'];
+
+function afGetDatosBase() {
+  return datosMaestrosUnificados;
+}
+
+function afGetValoresDisponibles(dim) {
+  // Valores posibles dado lo seleccionado en las OTRAS dimensiones
+  const otros = AF_DIMENSIONES.filter(d => d !== dim);
+  return [...new Set(afGetDatosBase().filter(item => {
+    return otros.every(d => alertasFiltros[d].length === 0 || alertasFiltros[d].includes(item[d]));
+  }).map(item => item[dim]))].sort();
+}
+
+function afPoblarPanel(dim) {
+  const contenedor = document.getElementById(`afItems${dim.charAt(0).toUpperCase()+dim.slice(1)}`);
+  if (!contenedor) return;
+  const disponibles = afGetValoresDisponibles(dim);
+  const seleccionados = alertasFiltros[dim];
+  // "Todos" item
+  const todosMarcado = seleccionados.length === 0;
+  let html = `<div class="af-ms-item" onclick="afToggleTodos('${dim}')">
+    <input type="checkbox" id="afTodos_${dim}" ${todosMarcado?'checked':''} onchange="afToggleTodos('${dim}')">
+    <span>(Seleccionar todo)</span>
+  </div>`;
+  // Universo completo pero mostrando disponibles vs grises
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  universo.forEach(v => {
+    const checked = seleccionados.length === 0 || seleccionados.includes(v);
+    const disabled = !disponibles.includes(v);
+    html += `<div class="af-ms-item${disabled?' disabled':''}" onclick="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+      <input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${checked?'checked':''} onchange="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+      <span>${v}</span>
+    </div>`;
+  });
+  contenedor.innerHTML = html;
+}
+
+function toggleAfDropdown(panelId) {
+  document.querySelectorAll('.af-ms-panel.open').forEach(p => { if(p.id !== panelId) p.classList.remove('open'); });
+  const panel = document.getElementById(panelId);
+  const dim = panelId.replace('afDrop','').toLowerCase();
+  // Guardar estado previo para cancelar
+  alertasFiltrosPrevios[dim] = [...alertasFiltros[dim]];
+  afPoblarPanel(dim);
+  panel.classList.toggle('open');
+}
+
+function afCerrar(panelId) {
+  const dim = panelId.replace('afDrop','').toLowerCase();
+  // Restaurar selección previa
+  alertasFiltros[dim] = [...alertasFiltrosPrevios[dim]];
+  document.getElementById(panelId).classList.remove('open');
+}
+
+function afToggleTodos(dim) {
+  const cb = document.getElementById(`afTodos_${dim}`);
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child) input`);
+  if (cb.checked) {
+    alertasFiltros[dim] = [];
+    items.forEach(i => i.checked = true);
+  } else {
+    alertasFiltros[dim] = [];
+    items.forEach(i => i.checked = false);
+  }
+  afActualizarTodosCheckbox(dim);
+}
+
+function afToggleItem(event, dim, valor) {
+  event.stopPropagation();
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const checkedVals = Array.from(items).filter(i => i.checked).map(i => i.value);
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  alertasFiltros[dim] = checkedVals.length === universo.length ? [] : checkedVals;
+  afActualizarTodosCheckbox(dim);
+}
+
+function afActualizarTodosCheckbox(dim) {
+  const cb = document.getElementById(`afTodos_${dim}`);
+  if (!cb) return;
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const total = items.length, checked = Array.from(items).filter(i=>i.checked).length;
+  cb.checked = checked === total; cb.indeterminate = checked > 0 && checked < total;
+}
+
+function afFiltrarItems(input, panelId) {
+  const txt = input.value.toLowerCase();
+  const items = document.querySelectorAll(`#${panelId} .af-ms-items .af-ms-item`);
+  items.forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(txt) ? '' : 'none';
+  });
+}
+
+function afAplicar(dim) {
+  // Re-leer checkboxes del panel actual
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const marcados = Array.from(items).filter(i => i.checked).map(i => i.value);
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  alertasFiltros[dim] = marcados.length === universo.length ? [] : marcados;
+  document.getElementById(`afDrop${dim.charAt(0).toUpperCase()+dim.slice(1)}`).classList.remove('open');
+  afActualizarTextos();
+  // Repoblar otros paneles para cascada
+  AF_DIMENSIONES.forEach(d => { if (d !== dim) afPoblarPanel(d); });
+  renderAlertas();
+}
+
+function afActualizarTextos() {
+  AF_DIMENSIONES.forEach(dim => {
+    const span = document.getElementById(`afText${dim.charAt(0).toUpperCase()+dim.slice(1)}`);
+    if (!span) return;
+    const sel = alertasFiltros[dim];
+    span.textContent = sel.length === 0 ? 'Todos' : sel.length === 1 ? sel[0] : `${sel.length} sel.`;
+  });
+}
+
+function inicializarSelectorCicloAlertas() {
+  document.getElementById('alertaFechaHoy').textContent =
+    new Date().toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'numeric' });
+  // Preseleccionar el ciclo más reciente
+  const cicloMasReciente = (universosUnicos.ciclo || [])[0];
+  if (cicloMasReciente) alertasFiltros.ciclo = [cicloMasReciente];
+  afActualizarTextos();
+  // Cerrar paneles al clic fuera
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.af-ms-wrap')) document.querySelectorAll('.af-ms-panel.open').forEach(p => p.classList.remove('open'));
+  }, { once: false });
+}
+
+
+function calcularDDS(fechaSiembraStr) {
+  if (!fechaSiembraStr) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const siembra = new Date(fechaSiembraStr + 'T00:00:00');
+  if (isNaN(siembra)) return null;
+  return Math.floor((hoy - siembra) / (1000 * 60 * 60 * 24));
+}
+
+function tieneRecuento(item, ddsMin, ddsMax) {
+  const muestras = item.rawMuestrasOriginales || [];
+  const fechaSiembra = item.fechaSiembra;
+  return muestras.some(m => {
+    // Método 1: campo DDS directo
+    const ddsRaw = m.x_studio_dds ?? m.x_studio_dias_despues_siembra ?? m.x_studio_dds_1;
+    if (ddsRaw !== undefined && ddsRaw !== null && ddsRaw !== false && ddsRaw !== '') {
+      const dds = parseFloat(ddsRaw);
+      if (!isNaN(dds)) {
+        if (ddsMax === null) return dds >= ddsMin;
+        return dds >= ddsMin && dds <= ddsMax;
+      }
+    }
+    // Método 2: calcular DDS desde fecha de siembra vs fecha de germinación
+    if (fechaSiembra) {
+      const fGerm = extraerFecha(m);
+      if (fGerm) {
+        const dias = Math.floor((new Date(fGerm+'T00:00:00') - new Date(fechaSiembra+'T00:00:00')) / 86400000);
+        if (!isNaN(dias)) {
+          if (ddsMax === null) return dias >= ddsMin;
+          return dias >= ddsMin && dias <= ddsMax;
+        }
+      }
+    }
+    return false;
+  });
+}
+
+function contarGruposUnicos(items) {
+  return new Set(items.map(i => `${i.finca}|||${i.lote}|||${i.fechaSiembra||''}`)).size;
+}
+
+function renderAlertas() {
+  if (datosMaestrosUnificados.length === 0) return;
+
+  // Aplicar todos los filtros propios del tab Alertas en cascada
+  const siembrasFiltradas = datosMaestrosUnificados.filter(d =>
+    (alertasFiltros.ciclo.length    === 0 || alertasFiltros.ciclo.includes(d.ciclo)) &&
+    (alertasFiltros.compania.length === 0 || alertasFiltros.compania.includes(d.compania)) &&
+    (alertasFiltros.sector.length   === 0 || alertasFiltros.sector.includes(d.sector)) &&
+    (alertasFiltros.finca.length    === 0 || alertasFiltros.finca.includes(d.finca))
+  );
+
+  const sin10 = [], sin15 = [], completos = [], todos = [];
+
+  siembrasFiltradas.forEach(item => {
+    const fechaSiembra = extraerFecha(item.rawSiembra);
+    const dds = calcularDDS(fechaSiembra);
+    if (dds === null) return;
+
+    const tiene10 = tieneRecuento(item, 10, 14);
+    const tiene15 = tieneRecuento(item, 15, null);
+
+    const entry = { ...item, fechaSiembra, dds, tiene10, tiene15 };
+    todos.push(entry);
+
+    if (dds >= 10 && dds <= 14 && !tiene10) sin10.push(entry);
+    if (dds >= 15 && !tiene15) sin15.push(entry);
+    if (dds >= 15 && tiene10 && tiene15) completos.push(entry);
+    else if (dds >= 10 && dds <= 14 && tiene10) completos.push(entry);
+  });
+
+  alertasCicloData = { sin10, sin15, completos, todos };
+
+  // KPIs — grupos únicos por Finca+Lote+Fecha para alertas; Total por Finca+Lote único
+  const lotesUnicos = new Set(todos.map(i => `${i.finca}|||${i.lote}`)).size;
+  document.getElementById('kpiTotal').textContent     = lotesUnicos;
+  document.getElementById('kpiSin10').textContent     = contarGruposUnicos(sin10);
+  document.getElementById('kpiSin15').textContent     = contarGruposUnicos(sin15);
+  document.getElementById('kpiCompletos').textContent  = contarGruposUnicos(completos);
+  document.getElementById('badge10dds').textContent   = contarGruposUnicos(sin10);
+  document.getElementById('badge15dds').textContent   = contarGruposUnicos(sin15);
+
+  // Badge del tab
+  const totalAlertas = contarGruposUnicos(sin10) + contarGruposUnicos(sin15);
+  const tabBadge = document.getElementById('tabBadgeAlertas');
+  tabBadge.textContent = totalAlertas > 0 ? totalAlertas : '✓';
+  tabBadge.className = 'tab-badge' + (totalAlertas === 0 ? ' ok' : '');
+  const tabBtnAlertas = document.getElementById('tabBtnAlertas');
+  if (totalAlertas === 0) tabBtnAlertas.classList.add('alerta-ok');
+  else tabBtnAlertas.classList.remove('alerta-ok');
+
+  renderTablaAlerta('tabla10ddsBody', sin10, '10 DDS');
+  renderTablaAlerta('tabla15ddsBody', sin15, '15 DDS');
+  renderTablaCompletosTabla(completos);
+  document.getElementById('badgeCompletos').textContent = contarGruposUnicos(completos);
+
+  document.getElementById('seccion10dds').style.display = sin10.length === 0 ? 'none' : '';
+  document.getElementById('seccion15dds').style.display = sin15.length === 0 ? 'none' : '';
+  document.getElementById('seccionCompletos').style.display = 'none';
+
+  if (sin10.length === 0 && sin15.length === 0) {
+    document.getElementById('seccion10dds').style.display = '';
+    document.getElementById('tabla10ddsBody').innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>🎉</span>¡Excelente! Todos los lotes de los filtros seleccionados tienen sus recuentos de germinación al día.</td></tr>`;
+    document.getElementById('seccion15dds').style.display = 'none';
+  }
+}
+
+function renderTablaAlerta(tbodyId, items, etiqueta) {
+  const tbody = document.getElementById(tbodyId);
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="alerta-empty"><span>✅</span>Sin pendientes para ventana ${etiqueta}</td></tr>`;
+    return;
+  }
+
+  // Agrupar por Finca + Lote + FechaSiembra → promedio de semillas
+  const grupos = {};
+  items.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!grupos[key]) {
+      const s = item.rawSiembra || {};
+      grupos[key] = {
+        finca: item.finca,
+        lote: item.lote,
+        ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra,
+        dds: item.dds,
+        tiene10: item.tiene10,
+        tiene15: item.tiene15,
+        variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
+        sumSemillas: 0,
+        countSemillas: 0
+      };
+    }
+    if (item.total_semillas > 0) {
+      grupos[key].sumSemillas += item.total_semillas;
+      grupos[key].countSemillas++;
+    }
+    // Usar el DDS más alto del grupo (más días = más urgente)
+    if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
+  });
+
+  const filas = Object.values(grupos).sort((a, b) => {
+    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
+    if (a.lote !== b.lote) return a.lote.localeCompare(b.lote);
+    return b.dds - a.dds; // más urgente primero
+  });
+
+  let html = '';
+  filas.forEach(g => {
+    const semillas = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
+    const ddsLabel = g.dds >= 15
+      ? `<span class="badge-dds vencido">${g.dds} días</span>`
+      : `<span class="badge-dds en-rango">${g.dds} días</span>`;
+
+    const fincaEsc = g.finca.replace(/'/g,"\\'");
+    const loteEsc  = g.lote.replace(/'/g,"\\'");
+    const cicloEsc = g.ciclo.replace(/'/g,"\\'");
+
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td>
+      <td>${g.lote}</td>
+      <td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td>${ddsLabel}</td>
+      <td>
+        ${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}
+        ${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}
+      </td>
+      <td>${g.variedad}</td>
+      <td style="text-align:right;">${semillas}</td>
+      <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver Siembra</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderTablaCompletosTabla(items) {
+  const tbody = document.getElementById('tablaCompletosBody');
+  if (!items || items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="alerta-empty"><span>📋</span>No hay lotes con ambos recuentos completos aún en este ciclo.</td></tr>`;
+    return;
+  }
+
+  // Agrupar por Finca + Lote + FechaSiembra
+  const grupos = {};
+  items.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!grupos[key]) {
+      const s = item.rawSiembra || {};
+      grupos[key] = {
+        finca: item.finca, lote: item.lote, ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
+        variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
+        sumSemillas: 0, countSemillas: 0,
+        muestras10: [], muestras15: []
+      };
+    }
+    if (item.total_semillas > 0) { grupos[key].sumSemillas += item.total_semillas; grupos[key].countSemillas++; }
+    (item.rawMuestrasOriginales || []).forEach(m => {
+      const d = parseFloat(m.x_studio_dds);
+      if (d >= 10 && d <= 14) grupos[key].muestras10.push(parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0));
+      else if (d >= 15)       grupos[key].muestras15.push(parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0));
+    });
+  });
+
+  const filas = Object.values(grupos).sort((a,b) => {
+    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
+    return a.lote.localeCompare(b.lote);
+  });
+
+  let html = '';
+  filas.forEach(g => {
+    const semillas = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
+    const avg10 = g.muestras10.length > 0 ? (g.muestras10.reduce((a,c)=>a+c,0)/g.muestras10.length) : null;
+    const avg15 = g.muestras15.length > 0 ? (g.muestras15.reduce((a,c)=>a+c,0)/g.muestras15.length) : null;
+    const sem = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas) : 0;
+    const germ10 = avg10 !== null && sem > 0 ? `(${((avg10/sem)*100).toFixed(1)}%)` : '';
+    const germ15 = avg15 !== null && sem > 0 ? `(${((avg15/sem)*100).toFixed(1)}%)` : '';
+    const p10txt = avg10 !== null ? `${avg10.toFixed(2)} pl/m.l. <span style="color:#6b7280;font-weight:400;">${germ10}</span>` : '-';
+    const p15txt = avg15 !== null ? `${avg15.toFixed(2)} pl/m.l. <span style="color:#6b7280;font-weight:400;">${germ15}</span>` : '-';
+
+    const fincaEsc = g.finca.replace(/'/g,"\\'");
+    const loteEsc  = g.lote.replace(/'/g,"\\'");
+    const cicloEsc = g.ciclo.replace(/'/g,"\\'");
+
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td>
+      <td>${g.lote}</td>
+      <td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td><span class="badge-dds pendiente">${g.dds} días</span></td>
+      <td style="color:#0284c7;font-weight:600;">${p10txt}</td>
+      <td style="color:#2563eb;font-weight:600;">${p15txt}</td>
+      <td>${g.variedad}</td>
+      <td style="text-align:right;">${semillas}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('10dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver 10 DDS</button>
+        <button class="btn-ver-siembra" style="margin-left:4px;" onclick="abrirModalPopupDetalle('15dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver 15 DDS</button>
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function filtrarTablaAlertas(tipo) {
+  alertaFiltroActivo = tipo;
+  document.getElementById('seccion10dds').style.display     = (tipo === 'all' || tipo === '10dds') ? '' : 'none';
+  document.getElementById('seccion15dds').style.display     = (tipo === 'all' || tipo === '15dds') ? '' : 'none';
+  document.getElementById('seccionCompletos').style.display = (tipo === 'all' || tipo === 'completos') ? '' : 'none';
+  if (tabActivo !== 'alertas') cambiarTab('alertas');
+}
+
 const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
 async function fetchLiveOrGitHub(workerUrl, githubUrl) {
@@ -1117,6 +2023,8 @@ async function cargarDatosDesdeGitHub() {
 
     filtrarYMostrar();
     document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
+    inicializarSelectorCicloAlertas();
+    renderAlertas();
   } catch (e) {
     console.error(e);
     tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar archivos desde GitHub.</td></tr>';
