@@ -525,11 +525,13 @@
   .kpi-card.warning { --kpi-color: #f59e0b; }
   .kpi-card.ok { --kpi-color: #22c55e; }
   .kpi-card.info { --kpi-color: #0284c7; }
+  .kpi-card.espera { --kpi-color: #7c3aed; }
   .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
   .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: var(--text-main); }
   .kpi-value.danger { color: #dc2626; }
   .kpi-value.warning { color: #d97706; }
   .kpi-value.ok { color: #16a34a; }
+  .kpi-value.espera { color: #7c3aed; }
   .kpi-sub { font-size: 11px; color: var(--text-muted); }
 
   .alerta-section-title {
@@ -866,9 +868,14 @@
       <!-- KPI Strip -->
       <div class="kpi-strip" id="kpiStrip">
         <div class="kpi-card info" onclick="filtrarTablaAlertas('all')">
-          <div class="kpi-label">Total Lotes Sembrados</div>
+          <div class="kpi-label">📋 Total Lotes Sembrados</div>
           <div class="kpi-value" id="kpiTotal">-</div>
-          <div class="kpi-sub">En el ciclo seleccionado</div>
+          <div class="kpi-sub">En los filtros seleccionados</div>
+        </div>
+        <div class="kpi-card espera" onclick="filtrarTablaAlertas('espera')">
+          <div class="kpi-label">🕐 En Espera de Evaluación</div>
+          <div class="kpi-value espera" id="kpiEspera">-</div>
+          <div class="kpi-sub">Lotes entre 0–9 días desde siembra</div>
         </div>
         <div class="kpi-card danger" onclick="filtrarTablaAlertas('10dds')">
           <div class="kpi-label">⚠️ Sin Recuento 10 DDS</div>
@@ -884,6 +891,31 @@
           <div class="kpi-label">✅ Lotes Completos</div>
           <div class="kpi-value ok" id="kpiCompletos">-</div>
           <div class="kpi-sub">Con ambos recuentos registrados</div>
+        </div>
+      </div>
+
+      <!-- Tabla En Espera 0-9 DDS -->
+      <div id="seccionEspera" style="display:none;">
+        <div class="alerta-section-title" style="color:#7c3aed; border-color:#ddd6fe;">
+          🕐 Lotes en Espera de Evaluación — 0 a 9 DDS (aún no es tiempo de recuento)
+          <span class="badge-alert" id="badgeEspera" style="background:#ede9fe; color:#7c3aed;">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Días para 10 DDS</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaEsperaBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -1749,7 +1781,7 @@ function renderAlertas() {
     (alertasFiltros.finca.length    === 0 || alertasFiltros.finca.includes(d.finca))
   );
 
-  const sin10 = [], sin15 = [], completos = [], todos = [];
+  const sin10 = [], sin15 = [], enEspera = [], completos = [], todos = [];
 
   siembrasFiltradas.forEach(item => {
     const fechaSiembra = extraerFecha(item.rawSiembra);
@@ -1762,22 +1794,25 @@ function renderAlertas() {
     const entry = { ...item, fechaSiembra, dds, tiene10, tiene15 };
     todos.push(entry);
 
-    if (dds >= 10 && dds <= 14 && !tiene10) sin10.push(entry);
-    if (dds >= 15 && !tiene15) sin15.push(entry);
-    if (dds >= 15 && tiene10 && tiene15) completos.push(entry);
-    else if (dds >= 10 && dds <= 14 && tiene10) completos.push(entry);
+    if (dds >= 0 && dds <= 9)                    enEspera.push(entry);
+    if (dds >= 10 && dds <= 14 && !tiene10)       sin10.push(entry);
+    if (dds >= 15 && !tiene15)                    sin15.push(entry);
+    if (dds >= 15 && tiene10 && tiene15)          completos.push(entry);
+    else if (dds >= 10 && dds <= 14 && tiene10)   completos.push(entry);
   });
 
-  alertasCicloData = { sin10, sin15, completos, todos };
+  alertasCicloData = { sin10, sin15, enEspera, completos, todos };
 
   // KPIs — grupos únicos por Finca+Lote+Fecha para alertas; Total por Finca+Lote único
   const lotesUnicos = new Set(todos.map(i => `${i.finca}|||${i.lote}`)).size;
   document.getElementById('kpiTotal').textContent     = lotesUnicos;
+  document.getElementById('kpiEspera').textContent    = contarGruposUnicos(enEspera);
   document.getElementById('kpiSin10').textContent     = contarGruposUnicos(sin10);
   document.getElementById('kpiSin15').textContent     = contarGruposUnicos(sin15);
   document.getElementById('kpiCompletos').textContent  = contarGruposUnicos(completos);
   document.getElementById('badge10dds').textContent   = contarGruposUnicos(sin10);
   document.getElementById('badge15dds').textContent   = contarGruposUnicos(sin15);
+  document.getElementById('badgeEspera').textContent  = contarGruposUnicos(enEspera);
 
   // Badge del tab
   const totalAlertas = contarGruposUnicos(sin10) + contarGruposUnicos(sin15);
@@ -1790,11 +1825,13 @@ function renderAlertas() {
 
   renderTablaAlerta('tabla10ddsBody', sin10, '10 DDS');
   renderTablaAlerta('tabla15ddsBody', sin15, '15 DDS');
+  renderTablaEspera(enEspera);
   renderTablaCompletosTabla(completos);
   document.getElementById('badgeCompletos').textContent = contarGruposUnicos(completos);
 
-  document.getElementById('seccion10dds').style.display = sin10.length === 0 ? 'none' : '';
-  document.getElementById('seccion15dds').style.display = sin15.length === 0 ? 'none' : '';
+  document.getElementById('seccionEspera').style.display   = enEspera.length === 0 ? 'none' : '';
+  document.getElementById('seccion10dds').style.display    = sin10.length === 0 ? 'none' : '';
+  document.getElementById('seccion15dds').style.display    = sin15.length === 0 ? 'none' : '';
   document.getElementById('seccionCompletos').style.display = 'none';
 
   if (sin10.length === 0 && sin15.length === 0) {
@@ -1802,6 +1839,57 @@ function renderAlertas() {
     document.getElementById('tabla10ddsBody').innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>🎉</span>¡Excelente! Todos los lotes de los filtros seleccionados tienen sus recuentos de germinación al día.</td></tr>`;
     document.getElementById('seccion15dds').style.display = 'none';
   }
+}
+
+function renderTablaEspera(items) {
+  const tbody = document.getElementById('tablaEsperaBody');
+  if (!items || items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>✅</span>Sin lotes en espera de evaluación.</td></tr>`;
+    return;
+  }
+
+  // Agrupar por Finca + Lote + FechaSiembra
+  const grupos = {};
+  items.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!grupos[key]) {
+      const s = item.rawSiembra || {};
+      grupos[key] = {
+        finca: item.finca, lote: item.lote, ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
+        variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
+        sumSemillas: 0, countSemillas: 0
+      };
+    }
+    if (item.total_semillas > 0) { grupos[key].sumSemillas += item.total_semillas; grupos[key].countSemillas++; }
+    if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
+  });
+
+  const filas = Object.values(grupos).sort((a, b) => {
+    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
+    if (a.lote !== b.lote) return a.lote.localeCompare(b.lote);
+    return b.dds - a.dds;
+  });
+
+  let html = '';
+  filas.forEach(g => {
+    const semillas = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
+    const diasRestantes = 10 - g.dds;
+    const fincaEsc = g.finca.replace(/'/g,"\\'");
+    const loteEsc  = g.lote.replace(/'/g,"\\'");
+    const cicloEsc = g.ciclo.replace(/'/g,"\\'");
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td>
+      <td>${g.lote}</td>
+      <td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td><span class="badge-dds pendiente">${g.dds} días</span></td>
+      <td><span style="color:#7c3aed; font-weight:700;">en ${diasRestantes} día${diasRestantes!==1?'s':''}</span></td>
+      <td>${g.variedad}</td>
+      <td style="text-align:right;">${semillas}</td>
+      <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver Siembra</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
 }
 
 function renderTablaAlerta(tbodyId, items, etiqueta) {
@@ -1941,8 +2029,9 @@ function renderTablaCompletosTabla(items) {
 
 function filtrarTablaAlertas(tipo) {
   alertaFiltroActivo = tipo;
-  document.getElementById('seccion10dds').style.display     = (tipo === 'all' || tipo === '10dds') ? '' : 'none';
-  document.getElementById('seccion15dds').style.display     = (tipo === 'all' || tipo === '15dds') ? '' : 'none';
+  document.getElementById('seccionEspera').style.display    = (tipo === 'all' || tipo === 'espera')    ? '' : 'none';
+  document.getElementById('seccion10dds').style.display     = (tipo === 'all' || tipo === '10dds')     ? '' : 'none';
+  document.getElementById('seccion15dds').style.display     = (tipo === 'all' || tipo === '15dds')     ? '' : 'none';
   document.getElementById('seccionCompletos').style.display = (tipo === 'all' || tipo === 'completos') ? '' : 'none';
   if (tabActivo !== 'alertas') cambiarTab('alertas');
 }
@@ -1981,20 +2070,36 @@ async function cargarDatosDesdeGitHub() {
       const sectorSiembra = limpiarDescripcion(s.x_studio_sector_1);
       const compania = limpiarDescripcion(s.x_studio_compaia || s.x_studio_company_id);
 
+      // IDs numéricos de Odoo — match primario (más confiable)
+      const loteIdS  = Array.isArray(s.x_studio_lote_de_finca) ? s.x_studio_lote_de_finca[0] : null;
+      const cicloIdS = Array.isArray(s.x_studio_ciclo)         ? s.x_studio_ciclo[0]          : null;
+      const añoCiclo = String(ciclo).match(/\d{4}/)?.[0] || null;
+
+      // Fallback texto normalizado por si los IDs no coinciden
       const cNorm = normalizeText(s.x_studio_ciclo);
       const fNorm = normalizeText(s.x_studio_finca);
       const lNorm = normalizeText(s.x_studio_lote_de_finca);
-      const sNorm = normalizeText(s.x_studio_sector_1);
 
       const muestrasRelacionadas = germinacionData.filter(g => {
-        if (normalizeText(g.x_studio_finca) !== fNorm || normalizeText(g.x_studio_lote_de_la_finca) !== lNorm || normalizeText(g.x_studio_sector) !== sNorm) return false;
-        if (normalizeText(g.x_studio_ciclo) === cNorm) return true;
-        const numAño = cNorm.match(/\d+/);
-        return numAño && g.x_studio_ciclo && String(g.x_studio_ciclo).toLowerCase().includes(numAño[0]);
+        const loteIdG  = Array.isArray(g.x_studio_lote_de_la_finca) ? g.x_studio_lote_de_la_finca[0] : null;
+        const cicloIdG = Array.isArray(g.x_studio_ciclo)            ? g.x_studio_ciclo[0]             : null;
+        // Match primario: ID de lote + año del ciclo
+        if (loteIdS && loteIdG && loteIdS === loteIdG) {
+          if (cicloIdS && cicloIdG && cicloIdS === cicloIdG) return true;
+          if (añoCiclo && String(g.x_studio_ciclo).includes(añoCiclo)) return true;
+        }
+        // Fallback: texto normalizado finca + lote (sin sector que falla)
+        const gFNorm = normalizeText(g.x_studio_finca);
+        const gLNorm = normalizeText(g.x_studio_lote_de_la_finca);
+        if (gFNorm === fNorm && gLNorm === lNorm) {
+          if (normalizeText(g.x_studio_ciclo) === cNorm) return true;
+          if (añoCiclo && String(g.x_studio_ciclo).includes(añoCiclo)) return true;
+        }
+        return false;
       });
 
-      const muestras10 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 10);
-      const muestras15 = muestrasRelacionadas.filter(g => g.x_studio_dds && Math.round(parseFloat(g.x_studio_dds)) === 15);
+      const muestras10 = muestrasRelacionadas.filter(g => { const d = parseFloat(g.x_studio_dds); return !isNaN(d) && d >= 10 && d <= 14; });
+      const muestras15 = muestrasRelacionadas.filter(g => { const d = parseFloat(g.x_studio_dds); return !isNaN(d) && d >= 15; });
       const plantas10 = muestras10.length > 0 ? (muestras10.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras10.length) : 0;
       let plantas15 = muestras15.length > 0 ? (muestras15.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras15.length) : 0;
 
