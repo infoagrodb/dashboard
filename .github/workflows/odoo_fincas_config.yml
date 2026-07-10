@@ -2,7 +2,6 @@ name: Odoo - Fincas Config (Compañía-Lote)
 
 on:
   schedule:
-    # Todos los días a las 06:00 AM Nicaragua (12:00 UTC)
     - cron: "0 12 * * *"
   workflow_dispatch:
 
@@ -19,7 +18,7 @@ jobs:
       - name: Crear carpeta data si no existe
         run: mkdir -p data
 
-      - name: Llamar a Odoo y obtener lotes con compañía, finca y sector
+      - name: Llamar a Odoo y obtener lotes con compañía, finca, sector y productor
         env:
           ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
         run: |
@@ -46,6 +45,7 @@ jobs:
                   "x_studio_finca",
                   "x_studio_compaia",
                   "x_studio_sector",
+                  "x_studio_productor",
                   "x_studio_area_en_mzn_perimetro",
                   "x_studio_area_agricola_en_mzn",
                   "x_studio_estado"
@@ -80,11 +80,8 @@ jobs:
           lotes_raw = raw['result']
           print(f"✅ {len(lotes_raw)} lotes recibidos de Odoo")
 
-          companias_set = set()
-          for l in lotes_raw:
-              c = l.get('x_studio_compaia') or 'Sin compañía'
-              companias_set.add(c)
-
+          # ── Compañías ─────────────────────────────────────────────
+          companias_set = {l.get('x_studio_compaia') or 'Sin compañía' for l in lotes_raw}
           companias_lista = sorted(companias_set)
           compania_id_map = {nombre: idx+1 for idx, nombre in enumerate(companias_lista)}
 
@@ -94,6 +91,7 @@ jobs:
               for i, nombre in enumerate(companias_lista)
           ]
 
+          # ── Fincas ────────────────────────────────────────────────
           fincas_map = {}
           for l in lotes_raw:
               fn = l.get('x_studio_finca') or 'Sin finca'
@@ -103,6 +101,7 @@ jobs:
 
           fincas = [{"nombre": fn, "compania_id": cid} for fn, cid in sorted(fincas_map.items())]
 
+          # ── Lotes completos ───────────────────────────────────────
           lotes = []
           for l in lotes_raw:
               fn = l.get('x_studio_finca') or 'Sin finca'
@@ -114,6 +113,7 @@ jobs:
                   "compania":    c,
                   "compania_id": compania_id_map[c],
                   "sector":      l.get('x_studio_sector') or '',
+                  "productor":   l.get('x_studio_productor') or '',
                   "area_p":      l.get('x_studio_area_en_mzn_perimetro') or 0,
                   "area_a":      l.get('x_studio_area_agricola_en_mzn') or 0,
                   "estado":      l.get('x_studio_estado') or ''
@@ -145,6 +145,6 @@ jobs:
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add data/fincas_config.json
-          git commit -m "🗺️ Actualización automática fincas_config.json (compañía-finca-sector-lote) desde Odoo" || echo "Sin cambios"
+          git commit -m "🗺️ Actualización automática fincas_config.json (compañía-finca-sector-productor-lote) desde Odoo" || echo "Sin cambios"
           git pull --rebase origin main
           git push origin main
