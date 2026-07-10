@@ -1,0 +1,198 @@
+name: Odoo - Fincas Config (Compañía-Lote)
+
+on:
+  schedule:
+    # Todos los días a las 06:00 AM Nicaragua (12:00 UTC)
+    - cron: "0 12 * * *"
+  workflow_dispatch:   # Ejecución manual desde GitHub Actions
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-fincas-config:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Llamar a Odoo y obtener lotes con compañía y finca
+        env:
+          ODOO_PASSWORD: ${{ secrets.ODOO_PASSWORD }}
+        run: |
+          echo "Llamando a Odoo — modelo x_fincas_line_0e624..."
+          curl -s -X POST https://infoagro.odoo.com/jsonrpc/ \
+          -H "Content-Type: application/json" \
+          -d '{
+            "jsonrpc": "2.0",
+            "method": "call",
+            "id": 1,
+            "params": {
+              "service": "object",
+              "method": "execute",
+              "args": [
+                "infoagro",
+                2,
+                "'"$ODOO_PASSWORD"'",
+                "x_fincas_line_0e624",
+                "search_read",
+                [],
+                [
+                  "id",
+                  "x_name",
+                  "x_studio_finca",
+                  "x_studio_compaia",
+                  "x_studio_area_en_mzn_perimetro",
+                  "x_studio_area_agricola_en_mzn",
+                  "x_studio_estado"
+                ],
+                0,
+                500
+              ]
+            }
+          }' > raw_lotes.json
+
+          echo "Verificando contenido..."
+          if [ ! -s raw_lotes.json ]; then
+            echo "❌ Error: raw_lotes.json está vacío."
+            exit 1
+          fi
+          echo "✅ Datos crudos obtenidos:"
+          head -c 300 raw_lotes.json
+
+      - name: Transformar JSON — generar fincas_config.json
+        run: |
+          python3 << 'PYEOF'
+          import json, sys
+          from datetime import datetime, timezone
+
+          with open('raw_lotes.json') as f:
+              raw = json.load(f)
+
+          if 'result' not in raw:
+              print("❌ Error en respuesta Odoo:", raw.get('error', 'Sin detalle'))
+              sys.exit(1)
+
+          lotes_raw = raw['result']
+          print(f"✅ {len(lotes_raw)} lotes recibidos de Odoo")
+
+          # ── Extraer compañías únicas ──────────────────────────────
+          companias_set = set()
+          for l in lotes_raw:
+              c = l.get('x_studio_compaia') or 'Sin compañía'
+              companias_set.add(c)
+
+          companias_lista = sorted(companias_set)
+          compania_id_map = {nombre: idx+1 for idx, nombre in enumerate(companias_lista)}
+
+          COLORES = [
+              "#2D6A8A", "#3A8A5A", "#8A6A2D",
+              "#6A3A8A", "#8A3A5A", "#5A5A5A"
+          ]
+          companias = [
+              {
+                  "id": compania_id_map[nombre],
+                  "nombre": nombre,
+                  "color": COLORES[i % len(COLORES)]
+              }
+              for i, nombre in enumerate(companias_lista)
+          ]
+
+          # ── Extraer fincas únicas con su compañía ─────────────────
+          fincas_map = {}   # nombre_finca → compania_id
+          for l in lotes_raw:
+              fn = l.get('x_studio_finca') or 'Sin finca'
+              c  = l.get('x_studio_compaia') or 'Sin compañía'
+              if fn not in fincas_map:
+                  fincas_map[fn] = compania_id_map[c]
+
+          fincas = [
+              {"nombre": fn, "compania_id": cid}
+              for fn, cid in sorted(fincas_map.items())
+          ]
+
+          # ── Lotes completos ───────────────────────────────────────
+          lotes = []
+          for l in lotes_raw:
+              fn = l.get('x_studio_finca') or 'Sin finca'
+              c  = l.get('x_studio_compaia') or 'Sin compañía'
+              lotes.append({
+                  "id":          l['id'],
+                  "nombre":      l.get('x_name') or '',
+                  "finca":       fn,
+                  "compania":    c,
+                  "compania_id": compania_id_map[c],
+                  "area_p":      l.get('x_studio_area_en_mzn_perimetro') or 0,
+                  "area_a":      l.get('x_studio_area_agricola_en_mzn') or 0,
+                  "estado":      l.get('x_studio_estado') or ''
+              })
+
+          config = {
+              "_meta": {
+                  "generado":    datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC'),
+                  "total_lotes": len(lotes),
+                  "total_fincas": len(fincas),
+                  "companias_encontradas": len(companias)
+              },
+              "companias": companias,
+              "fincas":    fincas,
+              "lotes":     lotes
+          }
+
+          with open('data/fincas_config.json', 'w', encoding='utf-8') as f:
+              json.dump(config, f, ensure_ascii=False, indent=2)
+
+          print(f"✅ fincas_config.json generado")
+          print(f"   Compañías: {len(companias)}")
+          print(f"   Fincas:    {len(fincas)}")
+          print(f"   Lotes:     {len(lotes)}")
+          for c in companias:
+              total = sum(1 for l in lotes if l['compania_id'] == c['id'])
+              print(f"   → {c['nombre']}: {total} lotes")
+          PYEOF
+
+      - name: Verificar archivo generado
+        run: |
+          if [ ! -s data/fincas_config.json ]; then
+            echo "❌ Error: data/fincas_config.json está vacío."
+            exit 1
+          fi
+          echo "✅ Contenido del archivo:"
+          python3 -c "
+          import json
+          with open('data/fincas_config.json') as f:
+              d = json.load(f)
+          print('Generado:', d['_meta']['generado'])
+          print('Compañías:', [c['nombre'] for c in d['companias']])
+          print('Fincas:', d['_meta']['total_fincas'])
+          print('Lotes:', d['_meta']['total_lotes'])
+          "
+
+      - name: Limpiar archivo temporal
+        run: rm -f raw_lotes.json
+
+      - name: Commit y push de fincas_config.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add data/fincas_config.json
+          git commit -m "🗺️ Actualización automática fincas_config.json (compañía-finca-lote) desde Odoo" || echo "Sin cambios"
+          intento=1
+          maximo_intentos=5
+          while [ $intento -le $maximo_intentos ]; do
+            echo "Intento de push #$intento..."
+            if git pull --rebase origin main && git push origin main; then
+              echo "✅ Push exitoso."
+              break
+            fi
+            if [ $intento -eq $maximo_intentos ]; then
+              echo "❌ Se agotaron los intentos de push."
+              exit 1
+            fi
+            espera=$(( (RANDOM % 5) + 3 ))
+            echo "Push rechazado. Esperando ${espera}s..."
+            sleep $espera
+            intento=$((intento + 1))
+          done
