@@ -156,8 +156,13 @@ header{background:var(--t);border-bottom:2px solid var(--c);padding:0 16px;heigh
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 let FINCAS = [], LOTES = [];
 
+// Colores por compañía (índice 1=Comasa, 2=ZP)
+const SC_CIA = {'Division Agricola Comasa':'#2D6A8A','Grupo ZP':'#3A8A5A','Sin compañía':'#4A7C3F'};
+function colorCia(nombreCia) { return SC_CIA[nombreCia] || '#4A7C3F'; }
+
+
 // ── ESTADO ──
-let loteAct=null, geo={}, capas={}, dc=null, cdraw=null, filEst='todas', filBus='';
+let loteAct=null, geo={}, capas={}, dc=null, cdraw=null, filEst='todas', filBus='', filCompania=null;
 
 // ── MAPA ──
 const mapa=L.map('mapa',{zoomControl:false}).setView([12.85,-86.9],10);
@@ -180,7 +185,22 @@ async function odooWrite(id,vals){
 }
 
 // ── SIDEBAR ──
-function color(f){ return SC[f?.s]||SC['Sin sector']; }
+function color(f){ return colorCia(f?.compania||'Sin compañía'); }
+
+// ── ALIAS toast ──────────────────────────────────────────────
+function toast(msg, err=false) { mostrarToast(msg, err); }
+
+// ── Renderizar polígonos ya guardados en Odoo ─────────────────
+function renderPoligonosGuardados() {
+  Object.entries(geo).forEach(([id, geom]) => {
+    const lote = LOTES.find(l => l.id === parseInt(id));
+    if (lote) renderPol(parseInt(id), lote);
+  });
+  try {
+    if (cpol.getLayers().length > 0)
+      mapa.fitBounds(cpol.getBounds(), {padding:[40,40]});
+  } catch(e) {}
+}
 
 function setF(v){
   filEst=v;
@@ -266,8 +286,7 @@ function selL(id,e){
 function resaltar(id){
   Object.entries(capas).forEach(([k,ly])=>{
     const l=LOTES.find(x=>x.id===parseInt(k));
-    const f=FINCAS.find(x=>x.id===l?.fid);
-    const c=SC[f?.s||'Sin sector']||SC['Sin sector'];
+    const c=colorCia(l?.compania||'Sin compañía');
     ly.setStyle({color:c,fillColor:c,fillOpacity:.28,weight:2});
   });
   if(capas[id]) capas[id].setStyle({color:'#7CB87A',fillColor:'#7CB87A',fillOpacity:.5,weight:3});
@@ -330,8 +349,7 @@ function eliminar(){
 }
 
 function renderPol(id,lote){
-  const f=FINCAS.find(x=>x.id===lote.fid);
-  const c=SC[f?.s||'Sin sector']||SC['Sin sector'];
+  const c=colorCia(lote.compania||'Sin compañía');
   const layer=L.geoJSON(geo[id],{style:{color:c,fillColor:c,fillOpacity:.28,weight:2}});
   layer.bindTooltip(`<strong>${lote.n}</strong><br><span style="color:var(--d)">${lote.fn}</span>${lote.ap>0?`<br><span style="color:var(--b)">${lote.ap} mzn</span>`:''}`,{sticky:true,opacity:.95});
   layer.on('click',()=>selL(id));
