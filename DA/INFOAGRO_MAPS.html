@@ -1,0 +1,3122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>INFOAGRO-MAPs</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --bg:         #F2F5F3;
+  --surface:    #FFFFFF;
+  --surface-2:  #EEF2EF;
+  --border:     #DDE5E0;
+  --border-h:   #B8CEBC;
+
+  --tx-1:  #111C15;
+  --tx-2:  #3D5445;
+  --tx-3:  #7A9585;
+
+  --green:       #1A9448;
+  --green-dark:  #126B35;
+  --green-light: #2DB05A;
+  --green-bg:    #E6F5EB;
+  --green-glow:  rgba(26,148,72,.18);
+
+  --amber:    #B86800;
+  --amber-bg: #FEF3DC;
+  --coral:    #CC3333;
+  --coral-bg: #FDECEC;
+
+  --sh-xs: 0 1px 3px rgba(0,0,0,.07);
+  --sh-sm: 0 2px 8px rgba(0,0,0,.09);
+  --sh-md: 0 6px 20px rgba(0,0,0,.11);
+  --sh-lg: 0 16px 40px rgba(0,0,0,.14);
+
+  --r-xs: 7px;
+  --r-sm: 11px;
+  --r-md: 15px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+}
+
+/* RESET */
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx-1);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;height:52px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:1000;box-shadow:var(--sh-xs)}
+.logo{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--tx-1);text-decoration:none}
+.logo-i{width:30px;height:30px;background:linear-gradient(135deg,var(--green-dark),var(--green));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 6px var(--green-glow);flex-shrink:0}
+.ht{font-size:11px;color:var(--tx-3);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hd{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.hr{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0}
+
+/* TABS */
+.modo-tabs{display:flex;gap:3px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:22px;padding:3px;flex-shrink:0}
+.modo-tab{font-size:12px;font-weight:600;padding:5px 14px;border-radius:18px;border:none;cursor:pointer;font-family:'Inter',sans-serif;transition:all .2s;color:var(--tx-3);background:transparent;white-space:nowrap}
+.modo-tab:hover{color:var(--tx-2);background:rgba(0,0,0,.04)}
+.modo-tab.on{background:var(--green);color:#fff;box-shadow:0 2px 8px var(--green-glow)}
+
+/* PILL */
+.pill{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 9px;border-radius:20px;background:var(--green-bg);border:1px solid rgba(26,148,72,.2);color:var(--green-dark);font-weight:600;white-space:nowrap}
+.pill.cargando{background:var(--amber-bg);border-color:rgba(184,104,0,.2);color:var(--amber)}
+.pill.error{background:var(--coral-bg);border-color:rgba(204,51,51,.2);color:var(--coral)}
+
+/* WORKSPACE */
+.workspace{display:flex;flex:1;overflow:hidden;position:relative}
+
+/* SIDEBAR */
+.sidebar{width:280px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:width .28s cubic-bezier(.4,0,.2,1);z-index:800;position:relative;box-shadow:2px 0 10px rgba(0,0,0,.05)}
+.sidebar.collapsed{width:0;border-right:none;box-shadow:none}
+
+/* TOGGLE */
+.sidebar-toggle{
+  position:absolute;
+  top:12px;
+  left:12px;
+  z-index:810;
+  padding:8px 16px;
+  background:linear-gradient(135deg,#1A5FAB,#1E7BC4);
+  border:2px solid rgba(255,255,255,.35);
+  border-radius:10px;
+  cursor:pointer;
+  display:none;
+  align-items:center;gap:7px;
+  box-shadow:0 4px 14px rgba(26,95,171,.5);
+  font-size:13px;font-weight:700;
+  color:#fff;font-family:'Inter',sans-serif;
+  transition:all .2s;
+  white-space:nowrap;
+  letter-spacing:.02em;
+}
+.sidebar-toggle:hover{background:linear-gradient(135deg,#1550A0,#1A6BB0);box-shadow:0 6px 18px rgba(26,95,171,.6);transform:translateY(-1px)}
+.sidebar-toggle span{display:none}
+.sidebar.collapsed~.sidebar-toggle{display:flex}
+
+/* FILTROS — sin overflow hidden, scroll interno */
+.sb-filtros{padding:10px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:6px;overflow-y:visible;flex-shrink:0;position:relative;z-index:850}
+/* INPUTS */
+.sb-input{width:100%;background:var(--surface-2);border:1.5px solid var(--border);border-radius:var(--r-sm);padding:7px 9px 7px 30px;color:var(--tx-1);font-size:12px;font-family:'Inter',sans-serif;outline:none;transition:border-color .15s,box-shadow .15s;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%231A9448' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:8px center}
+.sb-input:focus{border-color:var(--green);box-shadow:0 0 0 3px var(--green-bg)}
+.sb-input::placeholder{color:var(--tx-3)}
+select.sb-input option{background:var(--surface);color:var(--tx-1)}
+select.sb-input{color:var(--tx-1)}
+
+/* COMBO */
+.combo-wrap{display:flex;flex-direction:column;gap:3px}
+.combo-label{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx-3);font-weight:700;padding:0 2px}
+.combo-box{position:relative}
+.combo-trigger{width:100%;background:var(--surface-2);border:1.5px solid var(--border);border-radius:var(--r-xs);padding:6px 24px 6px 9px;color:var(--tx-1);font-size:11px;font-family:'Inter',sans-serif;cursor:pointer;text-align:left;transition:border-color .15s;display:flex;align-items:center;justify-content:space-between;user-select:none}
+.combo-trigger:hover{border-color:var(--border-h)}
+.combo-trigger.open{border-color:var(--green);border-bottom-left-radius:0;border-bottom-right-radius:0}
+.combo-arrow{font-size:9px;color:var(--tx-3);flex-shrink:0;transition:transform .2s}
+.combo-trigger.open .combo-arrow{transform:rotate(180deg)}
+.combo-sel{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx-1);font-weight:500}
+.combo-sel.placeholder{color:var(--tx-3);font-weight:400}
+.combo-badge{background:var(--green);color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:10px;flex-shrink:0;margin-left:4px}
+.combo-dropdown{display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1.5px solid var(--green);border-top:none;border-bottom-left-radius:var(--r-xs);border-bottom-right-radius:var(--r-xs);z-index:1100;max-height:180px;overflow-y:auto;box-shadow:var(--sh-md)}
+.combo-dropdown.open{display:block}
+.combo-dropdown::-webkit-scrollbar{width:3px}
+.combo-dropdown::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.combo-item{display:flex;align-items:center;gap:8px;padding:8px 9px;cursor:pointer;font-size:12px;color:var(--tx-2);transition:background .1s;font-weight:500}
+.combo-item:hover{background:var(--green-bg);color:var(--tx-1)}
+.combo-item.sel{color:var(--tx-1)}
+.combo-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
+.combo-item.sel .combo-check{background:var(--green);border-color:var(--green);color:#fff}
+.combo-item-clear{padding:7px 9px;font-size:11px;color:var(--coral);cursor:pointer;border-top:1px solid var(--border);text-align:center;font-weight:500}
+.combo-item-clear:hover{background:var(--coral-bg)}
+
+/* CHIPS */
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--tx-2);cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;font-weight:500}
+.chip:hover{border-color:var(--border-h);color:var(--tx-1)}
+.chip.on{background:var(--green-bg);border-color:var(--green);color:var(--green-dark);font-weight:600}
+
+/* LISTA */
+.sb-list{flex:1;overflow-y:auto;padding:4px 0}
+.sb-list::-webkit-scrollbar{width:4px}
+.sb-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+.sep{padding:8px 12px 3px;font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--tx-3);font-weight:700;border-top:1px solid var(--border);margin-top:4px;display:flex;align-items:center;gap:5px;cursor:pointer;transition:color .15s}
+.sep:first-child{border-top:none;margin-top:0}
+.sep:hover{color:var(--tx-2)}
+.sep-arrow{font-size:7px;transition:transform .2s}
+.sep-arrow.op{transform:rotate(90deg)}
+
+.fg{margin-bottom:1px}
+.fh{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;transition:background .1s;user-select:none}
+.fh:hover{background:var(--surface-2)}
+.fc{width:12px;height:12px;color:var(--tx-3);transition:transform .2s;flex-shrink:0}
+.fc.op{transform:rotate(90deg)}
+.fd{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fi{flex:1;min-width:0}
+.fn{font-size:12px;font-weight:600;color:var(--tx-1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fm{font-size:10px;color:var(--tx-3);font-family:'JetBrains Mono',monospace;margin-top:1px}
+
+.lc{display:none}.lc.vis{display:block}
+.li{display:flex;align-items:center;gap:6px;padding:6px 12px 6px 26px;cursor:pointer;transition:background .1s;border-left:2px solid transparent}
+.li:hover{background:var(--surface-2)}
+.li.sel{background:var(--green-bg);border-left-color:var(--green)}
+.ld{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ld.ok{background:var(--green)}
+.ld.no{background:var(--border)}
+.ln{font-size:11px;color:var(--tx-2);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.li.sel .ln{color:var(--tx-1);font-weight:600}
+.la{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--tx-3);flex-shrink:0}
+
+.ojo{font-size:13px;background:none;border:none;cursor:pointer;padding:0 2px;opacity:.35;transition:opacity .15s;flex-shrink:0;line-height:1}
+.ojo:hover{opacity:.8}
+.ojo.oculto{opacity:.2;text-decoration:line-through}
+.fg.oculta .lc{display:none!important}
+.fg.oculta .fn{opacity:.35;text-decoration:line-through}
+.fg.oculta .fd{opacity:.3}
+.bm{font-size:10px;padding:3px 8px;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);color:var(--tx-2);cursor:pointer;font-family:'Inter',sans-serif;font-weight:600;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.bm:hover{background:var(--amber-bg);border-color:rgba(184,104,0,.3);color:var(--amber)}
+.bm.ok{border-color:rgba(26,148,72,.3);color:var(--green-dark);background:var(--green-bg)}
+
+/* STATS */
+.sf{padding:10px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.sr{display:flex;gap:6px}
+.st{flex:1;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px;text-align:center}
+.sn{font-size:18px;font-weight:700;color:var(--green-dark);font-family:'JetBrains Mono',monospace}
+.sl{font-size:10px;color:var(--tx-3);margin-top:1px;font-weight:500}
+
+/* MAPA */
+.mw{flex:1;position:relative;display:flex;flex-direction:column}
+#mapa{flex:1}
+
+/* PANELES FLOTANTES */
+.cp{position:absolute;top:12px;right:12px;width:280px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border:1px solid rgba(26,148,72,.15);border-radius:var(--r-lg);padding:16px;z-index:1000;display:none;box-shadow:var(--sh-lg)}
+.cp.vis{display:block}
+
+/* En mobile: panel ocupa todo el ancho, colapsable */
+.cp-toggle-mobile{display:none}
+
+.ct{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--tx-3);text-transform:uppercase;letter-spacing:.14em;margin-bottom:4px}
+.cn{font-size:16px;font-weight:700;color:var(--tx-1);margin-bottom:2px}
+.cf{font-size:11px;color:var(--tx-2);margin-bottom:5px;font-weight:500}
+.cc-ciclo{font-size:11px;padding:3px 9px;border-radius:6px;font-weight:600;margin-bottom:10px;display:inline-block}
+.cg{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:10px}
+.cc{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-xs);padding:8px}
+.ccl{font-size:9px;color:var(--tx-3);text-transform:uppercase;letter-spacing:.08em;font-weight:600}
+.ccv{font-size:15px;font-weight:700;color:var(--green-dark);font-family:'JetBrains Mono',monospace;margin-top:2px}
+.ccu{font-size:9px;color:var(--tx-3)}
+.cdiv{height:1px;background:var(--border);margin:10px 0}
+.ch{font-size:11px;color:var(--amber);line-height:1.6;margin-bottom:10px;font-weight:500}
+.ca2{display:flex;flex-direction:column;gap:5px}
+
+.ba{display:flex;align-items:center;justify-content:center;gap:7px;padding:10px 14px;border-radius:var(--r-sm);border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:'Inter',sans-serif;transition:all .18s}
+.ba.pri{background:var(--green);color:#fff;box-shadow:0 2px 8px var(--green-glow)}
+.ba.pri:hover{background:var(--green-dark);transform:translateY(-1px);box-shadow:0 4px 12px var(--green-glow)}
+.ba.sec{background:var(--surface-2);border:1.5px solid var(--border);color:var(--tx-2)}
+.ba.sec:hover{border-color:var(--coral);color:var(--coral);background:var(--coral-bg)}
+.ba.kmz{background:var(--amber-bg);border:1.5px solid rgba(184,104,0,.25);color:var(--amber);cursor:pointer;justify-content:center}
+.ba.kmz:hover{background:rgba(184,104,0,.15)}
+
+/* CAPAS */
+.capas-panel{position:relative;background:var(--surface-2);border:none;border-bottom:1px solid var(--border);border-radius:0;padding:10px 12px;z-index:auto;min-width:auto;box-shadow:none}
+.capas-titulo{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:var(--tx-3);font-weight:700;margin-bottom:10px}
+.capa-row{display:flex;align-items:center;gap:9px;padding:4px 0;cursor:pointer;user-select:none}
+.capa-row:hover .capa-label{color:var(--tx-1)}
+.capa-toggle{width:32px;height:18px;border-radius:9px;border:1.5px solid var(--border);position:relative;transition:background .2s;flex-shrink:0}
+.capa-toggle.on{background:var(--green);border-color:var(--green-dark)}
+.capa-toggle.off{background:var(--surface-2)}
+.capa-toggle::after{content:'';position:absolute;width:12px;height:12px;border-radius:50%;background:white;top:2px;transition:left .2s;box-shadow:var(--sh-xs)}
+.capa-toggle.on::after{left:16px}
+.capa-toggle.off::after{left:2px}
+.capa-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.capa-label{font-size:11px;color:var(--tx-2);flex:1;font-weight:500}
+.capa-divider{height:1px;background:var(--border);margin:8px 0}
+.btn-print{display:flex;align-items:center;gap:7px;padding:7px 10px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:var(--r-xs);color:var(--tx-2);font-size:11px;font-family:'Inter',sans-serif;cursor:pointer;transition:all .15s;margin-top:8px;width:100%;font-weight:500}
+.btn-print:hover{background:var(--green-bg);border-color:var(--green);color:var(--green-dark)}
+
+/* LEYENDA */
+.ley{position:absolute;bottom:56px;right:10px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid rgba(26,148,72,.15);border-radius:var(--r-md);padding:7px 10px;z-index:820;box-shadow:var(--sh-sm);transition:opacity .2s;max-width:160px}
+.ley-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;gap:8px}
+.ley-body{margin-top:5px}
+/* Selector de polígonos KMZ */
+.kmz-selector{position:fixed;inset:0;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);z-index:3000;display:none;align-items:center;justify-content:center}
+.kmz-selector.vis{display:flex}
+.kmz-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:20px;width:420px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:var(--sh-lg)}
+.kmz-modal h3{font-size:14px;font-weight:700;color:var(--tx-1);margin-bottom:4px}
+.kmz-modal p{font-size:11px;color:var(--tx-3);margin-bottom:12px}
+.kmz-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1.5px solid var(--border);border-radius:var(--r-sm);cursor:pointer;margin-bottom:6px;transition:all .15s}
+.kmz-item:hover{border-color:var(--green);background:var(--green-bg)}
+.kmz-item.sel{border-color:var(--green);background:var(--green-bg)}
+.kmz-item-color{width:10px;height:32px;border-radius:3px;flex-shrink:0}
+.kmz-item-info{flex:1}
+.kmz-item-name{font-size:12px;font-weight:600;color:var(--tx-1)}
+.kmz-item-area{font-size:10px;color:var(--tx-3);font-family:'JetBrains Mono',monospace}
+.kmz-actions{display:flex;gap:8px;margin-top:12px}
+
+/* En modo ciclos, perímetros no reciben clics */
+#mapa.modo-ciclos .leaflet-overlay-pane svg path.leaflet-interactive:not(.ciclo-layer){
+  pointer-events:none !important;
+}
+.lt{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx-3);font-weight:700;margin-bottom:5px}
+.li2{display:flex;align-items:center;gap:7px;font-size:10px;color:var(--tx-2);margin-bottom:3px;font-weight:500}
+.ls{width:16px;height:10px;border-radius:2px;flex-shrink:0}
+
+/* PANEL ACTIVIDADES */
+.act-panel{position:absolute;bottom:12px;right:12px;width:296px;background:rgba(255,255,255,.96);backdrop-filter:blur(16px) saturate(1.4);-webkit-backdrop-filter:blur(16px) saturate(1.4);border:1px solid rgba(26,148,72,.15);border-radius:var(--r-lg);padding:14px;z-index:1000;display:none;box-shadow:var(--sh-lg);max-height:66vh;overflow-y:auto}
+.act-panel.vis{display:block}
+.act-panel::-webkit-scrollbar{width:4px}
+.act-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.act-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.act-title{font-size:13px;font-weight:700;color:var(--tx-1)}
+.act-close{font-size:13px;color:var(--tx-3);cursor:pointer;padding:0 3px;font-weight:600}
+.act-close:hover{color:var(--coral)}
+.act-kpi{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:10px}
+.act-kpi-item{background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-xs);padding:7px;text-align:center}
+.act-kpi-n{font-size:16px;font-weight:700;color:var(--green-dark);font-family:'JetBrains Mono',monospace}
+.act-kpi-l{font-size:9px;color:var(--tx-3);margin-top:1px;font-weight:500}
+.act-divider{height:1px;background:var(--border);margin:8px 0}
+.act-loading{text-align:center;padding:18px;color:var(--tx-3);font-size:12px}
+.act-resumen-row{display:flex;align-items:center;gap:7px;padding:7px 8px;border-radius:var(--r-xs);cursor:pointer;transition:background .1s;border:1.5px solid transparent;margin-bottom:3px}
+.act-resumen-row:hover{background:var(--surface-2);border-color:var(--border)}
+.act-resumen-row.pintada{border-color:var(--green);background:var(--green-bg)}
+.act-check{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
+.act-resumen-row.pintada .act-check{background:var(--green);border-color:var(--green);color:#fff}
+.act-color-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.act-resumen-nombre{flex:1;font-size:11px;color:var(--tx-2);font-weight:600}
+.act-resumen-total{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--green-dark);flex-shrink:0;font-weight:700}
+.act-resumen-det{font-size:10px;padding:2px 7px;border-radius:5px;border:1.5px solid var(--border);color:var(--tx-3);flex-shrink:0;font-weight:500}
+.act-resumen-det:hover{border-color:var(--green);color:var(--green-dark)}
+.cat-sep{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--tx-3);font-weight:700;padding:6px 0 3px;border-top:1px solid var(--border);margin-top:4px}
+.cat-sep:first-child{border-top:none;margin-top:0}
+
+/* MODALES */
+.act-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);backdrop-filter:blur(4px);z-index:2000;display:none;align-items:center;justify-content:center}
+.act-modal-bg.vis{display:flex}
+.act-modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-xl);padding:22px;width:480px;max-width:95vw;max-height:85vh;overflow-y:auto;box-shadow:var(--sh-lg)}
+.act-modal::-webkit-scrollbar{width:4px}
+.act-modal::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.act-modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.act-modal-title{font-size:15px;font-weight:700;color:var(--tx-1)}
+.act-modal-close{font-size:18px;color:var(--tx-3);cursor:pointer;font-weight:300}
+.act-modal-close:hover{color:var(--coral)}
+.act-modal-sub{font-size:12px;color:var(--tx-2);margin-bottom:12px;font-weight:500}
+.act-det-table{width:100%;border-collapse:collapse}
+.act-det-table th{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--tx-3);font-weight:700;padding:6px 8px;border-bottom:2px solid var(--border);text-align:left}
+.act-det-table td{font-size:12px;padding:8px 8px;border-bottom:1px solid var(--surface-2);color:var(--tx-1);font-weight:500}
+.act-det-table tr:hover td{background:var(--surface-2)}
+.act-det-table td:nth-child(2){font-family:'JetBrains Mono',monospace;color:var(--green-dark);font-weight:700}
+.act-det-table td:nth-child(3),.act-det-table td:nth-child(4),.act-det-table td:nth-child(5){color:var(--tx-2);font-size:11px}
+
+/* Print items */
+.print-lote-item{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;transition:background .1s;font-size:12px;color:var(--tx-2);font-weight:500}
+.print-lote-item:hover{background:var(--surface-2)}
+.print-lote-item.sel{background:var(--green-bg);color:var(--tx-1)}
+.print-lote-item .plcheck{width:14px;height:14px;border-radius:3px;border:1.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
+.print-lote-item.sel .plcheck{background:var(--green);border-color:var(--green);color:#fff}
+.print-lote-sep{padding:6px 10px 2px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--tx-3);font-weight:700;border-top:1px solid var(--border);margin-top:2px}
+.print-lote-sep:first-child{border-top:none;margin-top:0}
+
+/* TOAST */
+/* Panel lote minimizado */
+.cp.mini #ctxBody { display:none; }
+.cp.mini { padding-bottom:12px; }
+#ctxMinBtn { transition:all .15s; }
+.cp.mini #ctxMinBtn { content:'▲'; }
+
+/* ── PANEL RECUENTOS ─────────────────────────────── */
+.rec-panel{position:absolute;top:12px;left:12px;width:320px;background:rgba(255,255,255,.97);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--r-lg);z-index:1001;display:none;box-shadow:var(--sh-lg);max-height:85vh;overflow-y:auto;flex-direction:column}
+.rec-panel.vis{display:flex}
+.rec-panel::-webkit-scrollbar{width:3px}
+.rec-panel::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.rec-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0}
+.rec-title{font-size:14px;font-weight:700;color:var(--tx-1);margin-bottom:2px}
+.rec-sub{font-size:11px;color:var(--tx-3);font-weight:500}
+.rec-kpis{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.rec-kpi{flex:1;min-width:70px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--r-sm);padding:7px 9px;text-align:center}
+.rec-kpi-n{font-size:16px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.rec-kpi-l{font-size:9px;color:var(--tx-3);margin-top:2px;font-weight:500;text-transform:uppercase;letter-spacing:.06em}
+.rec-body{padding:10px 14px;flex:1}
+.rec-familia{margin-bottom:14px;border:1px solid var(--border);border-radius:var(--r-sm);overflow:hidden}
+.rec-fam-header{display:flex;align-items:center;justify-content:space-between;padding:8px 11px;background:var(--surface-2);cursor:pointer;user-select:none}
+.rec-fam-titulo{font-size:11px;font-weight:700;color:var(--tx-1)}
+.rec-semaforo{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.rec-fam-stats{display:flex;gap:8px;align-items:center}
+.rec-fam-val{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace}
+.rec-fam-body{padding:8px 11px;display:none}
+.rec-fam-body.vis{display:block}
+/* Gráfico canvas */
+.rec-chart{width:100%;height:80px;margin-bottom:8px}
+/* Tabla */
+.rec-tabla{width:100%;border-collapse:collapse;font-size:10px}
+.rec-tabla th{color:var(--tx-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 5px;border-bottom:1px solid var(--border);text-align:left}
+.rec-tabla td{padding:4px 5px;border-bottom:1px solid var(--surface-2);color:var(--tx-1);vertical-align:top}
+.rec-tabla tr:last-child td{border-bottom:none}
+.rec-obs{font-size:10px;color:var(--tx-3);font-style:italic;margin-top:3px;padding:3px 5px;background:var(--surface-2);border-radius:4px}
+/* Semáforo colores */
+.sem-verde{background:#2DB05A}
+.sem-amarillo{background:#E8A340}
+.sem-rojo{background:#CC3333}
+.sem-gris{background:#C0C8C4}
+
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--tx-1);color:#fff;border-radius:var(--r-md);padding:10px 18px;font-size:13px;z-index:9999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--sh-lg);white-space:nowrap;max-width:90vw;font-weight:500}
+.toast.vis{transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--coral)}
+
+/* PRINT LABEL */
+.print-label{background:rgba(255,255,255,.9);border:1px solid #555;border-radius:4px;padding:2px 6px;font-size:10px;font-weight:600;color:#1a1a1a;white-space:nowrap;box-shadow:var(--sh-xs)}
+
+/* LEAFLET */
+/* Mapa más claro — polígonos más visibles */
+.mapa-satelital { filter: brightness(1.25) saturate(0.85) contrast(0.92); }
+
+.leaflet-tooltip{background:rgba(255,255,255,.95)!important;backdrop-filter:blur(8px)!important;border:1px solid var(--border)!important;color:var(--tx-1)!important;font-family:'Inter',sans-serif;font-size:11px;font-weight:500;border-radius:var(--r-xs)!important;padding:5px 9px!important;box-shadow:var(--sh-sm)!important}
+.leaflet-control-zoom a{background:rgba(255,255,255,.96)!important;border:1px solid var(--border)!important;color:var(--green-dark)!important;font-weight:600}
+.leaflet-control-zoom a:hover{background:var(--green-bg)!important}
+
+/* ══════════════════════════════════════════
+   RESPONSIVE — MOBILE
+══════════════════════════════════════════ */
+@media (max-width:640px){
+  /* Header compacto */
+  header{padding:0 12px;gap:8px;height:48px}
+  .ht,.hd{display:none}
+  .logo span{display:none}
+  .modo-tab{padding:5px 10px;font-size:11px}
+  .pill{display:none}
+
+  /* Sidebar como drawer overlay */
+  .sidebar{
+    position:absolute;top:0;bottom:0;left:0;
+    width:280px !important;
+    box-shadow:4px 0 24px rgba(0,0,0,.15);
+    transform:translateX(0);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+  }
+  .sidebar.collapsed{
+    transform:translateX(-100%);
+    width:280px !important;
+  }
+  .sidebar-toggle{
+    left:auto !important;
+    right:-36px;
+    top:16px;
+    transform:none;
+    width:36px;height:36px;
+    border-radius:0 8px 8px 0;
+    background:var(--green);
+    border-color:var(--green-dark);
+    color:#fff;
+    font-size:12px;
+    box-shadow:var(--sh-sm);
+  }
+  .sidebar.collapsed~.sidebar-toggle{
+    left:12px !important;
+    background:var(--green);
+    border-color:var(--green-dark);
+  }
+
+  /* Panel contexto — bottom sheet en mobile */
+  .cp{
+    top:auto;bottom:0;right:0;left:0;
+    width:100% !important;
+    border-radius:var(--r-xl) var(--r-xl) 0 0;
+    border-bottom:none;
+    padding:20px 16px 24px;
+    max-height:75vh;
+    overflow-y:auto;
+    /* Handle bar */
+    padding-top:28px;
+  }
+  .cp::before{
+    content:'';
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:36px;height:4px;border-radius:2px;
+    background:var(--border);
+  }
+  /* Botón para ocultar/mostrar panel en mobile */
+  .cp-toggle-mobile{
+    display:flex;
+    position:absolute;
+    bottom:calc(100% - 1px);
+    right:16px;
+    background:var(--green);
+    color:#fff;
+    border:none;border-radius:var(--r-sm) var(--r-sm) 0 0;
+    padding:6px 12px 4px;
+    font-size:12px;font-weight:600;
+    font-family:'Inter',sans-serif;
+    cursor:pointer;
+    box-shadow:0 -2px 8px rgba(0,0,0,.1);
+    align-items:center;gap:5px;
+  }
+  .cp.vis .cp-toggle-mobile-label::after{content:'▼ Ocultar'}
+  .cp:not(.vis) .cp-toggle-mobile-label::after{content:'▲ Lote'}
+
+  /* Panel actividades — también bottom sheet */
+  .act-panel{
+    bottom:0;right:0;left:0;
+    width:100% !important;
+    border-radius:var(--r-xl) var(--r-xl) 0 0;
+    border-bottom:none;
+    padding-top:28px;
+    max-height:75vh;
+  }
+  .act-panel::before{
+    content:'';
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:36px;height:4px;border-radius:2px;
+    background:var(--border);
+  }
+
+  /* Capas panel — más compacto */
+  .capas-panel{top:8px;left:8px;padding:10px;min-width:160px}
+  .ley{bottom:auto;top:auto;display:none} /* Ocultar leyenda en mobile */
+
+  /* Modal más ancho */
+  .act-modal{border-radius:var(--r-xl) var(--r-xl) 0 0;margin-top:auto;max-height:90vh}
+  .act-modal-bg{align-items:flex-end}
+}
+
+/* PRINT */
+@media print{
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:white!important}
+  .sidebar,.sidebar-toggle,header,.cp,.act-panel,.act-modal-bg,
+  .capas-panel,.ley,.leaflet-control-zoom,
+  .leaflet-draw-toolbar,.leaflet-control-attribution,
+  .cp-toggle-mobile{display:none!important}
+  .workspace{display:block!important}
+  .mw{width:100vw!important;height:100vh!important}
+  #mapa{width:100%!important;height:calc(100vh - 120px)!important}
+  .leaflet-tile-pane{filter:grayscale(100%) brightness(1.8) contrast(.35)!important}
+  #printHeader{display:block!important}
+}
+#printHeader{display:none;background:white;padding:10px 16px;border-bottom:2px solid var(--green)}
+#printHeader .ph-logo{font-size:18px;font-weight:700;color:var(--green-dark)}
+#printHeader .ph-info{font-size:11px;color:#666;margin-top:2px}
+#printFooter{display:none;background:white;padding:8px 16px;border-top:1px solid #eee;font-size:10px;color:#666;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><div class="logo-i">🌱</div>Infoagro</div>
+  <div class="hd"></div>
+  <span class="ht">INFOAGRO-MAPs</span>
+  <div class="hr">
+    <div class="modo-tabs">
+      <button class="modo-tab on" onclick="setModo('lotes')">🗺 Lotes</button>
+      <button class="modo-tab"    onclick="setModo('ciclos')">🌿 Ciclos</button>
+    </div>
+    <span class="pill cargando" id="pill">⏳ Cargando...</span>
+  </div>
+</header>
+
+<div class="workspace">
+  <div class="sidebar" id="sidebar">
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid var(--border);flex-shrink:0;gap:6px">
+    <div style="display:flex;gap:5px;flex:1">
+      <button id="btnCapas" onclick="toggleCapasPanel()" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--tx-2);font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;flex:1;justify-content:center;transition:all .15s">
+        🗺 Capas
+      </button>
+      <button onclick="abrirImprimir()" style="display:flex;align-items:center;gap:4px;padding:5px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--tx-2);font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;flex:1;justify-content:center;transition:all .15s">
+        🖨 Imprimir
+      </button>
+    </div>
+    <button onclick="toggleSidebar()" style="padding:5px 9px;border:1.5px solid var(--border);border-radius:7px;background:var(--surface-2);color:var(--tx-2);font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif;white-space:nowrap" title="Ocultar panel">
+      ◀
+    </button>
+  </div>
+    <!-- PANEL CAPAS -->
+    <div class="capas-panel" id="capasPanel">
+      <div class="capas-titulo">Capas del mapa</div>
+      <div class="capa-row" onclick="toggleCapa('lotes')">
+        <div class="capa-toggle on" id="togLotes"></div>
+        <div class="capa-dot" style="background:#4A7C3F"></div>
+        <span class="capa-label">Perímetros de lotes</span>
+      </div>
+      <div class="capa-row" onclick="toggleCapa('ciclos')">
+        <div class="capa-toggle on" id="togCiclos"></div>
+        <div class="capa-dot" style="background:#7CB87A"></div>
+        <span class="capa-label">Polígonos de ciclos</span>
+      </div>
+      <div class="capa-row" onclick="toggleCapa('etiquetas')">
+        <div class="capa-toggle on" id="togEtiquetas"></div>
+        <div class="capa-dot" style="background:#C8A96E"></div>
+        <span class="capa-label">Etiquetas de lotes</span>
+      </div>
+      <div class="capa-divider"></div>
+      <button class="btn-print" onclick="abrirImprimir()">🖨️ Imprimir plano</button>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;cursor:pointer;user-select:none" onclick="toggleFiltros()" id="filtrosHeader">
+    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--tx-3)">Filtros</span>
+    <span id="filtrosArrow" style="font-size:10px;color:var(--tx-3)">▲ ocultar</span>
+  </div>
+  <div class="sb-filtros" id="filtrosLotes">
+      <div class="sb-search">
+        <input class="sb-input" id="busq" type="text" placeholder="Buscar finca o lote...">
+      </div>
+      <div class="combo-wrap">
+        <div class="combo-label">Compañía</div>
+        <div class="combo-box" id="cbCia">
+          <div class="combo-trigger" onclick="toggleCombo('cbCia')">
+            <span class="combo-sel placeholder" id="cbCiaSel">Todas</span>
+            <span class="combo-arrow">▼</span>
+          </div>
+          <div class="combo-dropdown" id="cbCiaDD"></div>
+        </div>
+      </div>
+      <div class="combo-wrap">
+        <div class="combo-label">Productor</div>
+        <div class="combo-box" id="cbProd">
+          <div class="combo-trigger" onclick="toggleCombo('cbProd')">
+            <span class="combo-sel placeholder" id="cbProdSel">Todos</span>
+            <span class="combo-arrow">▼</span>
+          </div>
+          <div class="combo-dropdown" id="cbProdDD"></div>
+        </div>
+      </div>
+      <div class="combo-wrap">
+        <div class="combo-label">Sector</div>
+        <div class="combo-box" id="cbSect">
+          <div class="combo-trigger" onclick="toggleCombo('cbSect')">
+            <span class="combo-sel placeholder" id="cbSectSel">Todos</span>
+            <span class="combo-arrow">▼</span>
+          </div>
+          <div class="combo-dropdown" id="cbSectDD"></div>
+        </div>
+      </div>
+      <div class="combo-wrap">
+        <div class="combo-label">Finca</div>
+        <div class="combo-box" id="cbFinca">
+          <div class="combo-trigger" onclick="toggleCombo('cbFinca')">
+            <span class="combo-sel placeholder" id="cbFincaSel">Todas</span>
+            <span class="combo-arrow">▼</span>
+          </div>
+          <div class="combo-dropdown" id="cbFincaDD"></div>
+        </div>
+      </div>
+      <div class="chips">
+        <button class="chip on" data-est="todas"    onclick="setEst('todas')">Todas</button>
+        <button class="chip"    data-est="sinmapa"  onclick="setEst('sinmapa')">Sin mapear</button>
+        <button class="chip"    data-est="mapeadas" onclick="setEst('mapeadas')">Mapeadas</button>
+      </div>
+    </div>
+
+    <!-- FILTROS CICLOS -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;cursor:pointer;user-select:none" onclick="toggleFiltros()" id="filtrosCiclosHeader" style="display:none">
+    <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--tx-3)">Filtros ciclo</span>
+    <span id="filtrosCiclosArrow" style="font-size:10px;color:var(--tx-3)">▲ ocultar</span>
+  </div>
+  <div class="sb-filtros" id="filtrosCiclos" style="display:none">
+      <div class="combo-wrap">
+        <div class="combo-label">Ciclo agrícola</div>
+        <div class="combo-box" id="cbCiclo">
+          <div class="combo-trigger" onclick="toggleCombo('cbCiclo')">
+            <span class="combo-sel placeholder" id="cbCicloSel">Seleccionar ciclo...</span>
+            <span class="combo-arrow">▼</span>
+          </div>
+          <div class="combo-dropdown" id="cbCicloDD"></div>
+        </div>
+      </div>
+      <div class="combo-wrap" id="wrapFincaCiclo" style="display:none">
+        <div class="combo-label">Finca del ciclo</div>
+        <div class="combo-box" id="cbFincaCiclo">
+          <div class="combo-trigger" onclick="toggleCombo('cbFincaCiclo')">
+            <span class="combo-sel placeholder" id="cbFincaCicloSel">Todas las fincas</span>
+            <span class="combo-arrow">▼</span>
+          </div>
+          <div class="combo-dropdown" id="cbFincaCicloDD"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sb-list" id="lista"></div>
+
+    <div class="sf">
+      <div class="sr">
+        <div class="st"><div class="sn" id="stF">—</div><div class="sl">Fincas</div></div>
+        <div class="st"><div class="sn" id="stL">—</div><div class="sl">Lotes</div></div>
+        <div class="st"><div class="sn" id="stM">0</div><div class="sl">Mapeados</div></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" title="Mostrar panel">
+    ▶ Panel
+  </button>
+  <div class="mw">
+    <div id="mapa"></div>
+
+    <div class="cp" id="ctxP">
+    <button class="cp-toggle-mobile" onclick="toggleCtxMobile()">
+      <span class="cp-toggle-mobile-label"></span>
+    </button>
+      <div class="ct" id="ctxTag">Lote seleccionado</div>
+      <div id="ctxBody"><div class="cn" id="ctxN">—</div>
+      <div class="cf" id="ctxF">—</div>
+      <div class="cc-ciclo" id="ctxCicloTag" style="display:none"></div>
+      <div class="cg" style="grid-template-columns:1fr">
+        <div class="cc"><div class="ccl" id="lblAP">Área</div><div class="ccv" id="ctxAP">—</div><div class="ccu">manzanas</div></div>
+      </div>
+      <div class="cdiv"></div>
+      <div class="ch" id="ctxH">Haz clic en <strong>Dibujar</strong> o <strong>Cargar KMZ/KML</strong>.</div>
+      <div class="ca2">
+        <button class="ba pri" id="btnD" onclick="iniciarDibujo()">✏️ Dibujar</button>
+        <button id="btnActividades" onclick="abrirActividadesDesdeCtx()" style="display:none;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:var(--r-sm);border:1.5px solid rgba(26,148,72,.3);background:var(--green-bg);color:var(--green-dark);font-size:12px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;transition:all .18px">
+          📋 Ver actividades
+        </button>
+        <button id="btnRecuentos" onclick="abrirRecuentosDesdeCtx()" style="display:none;align-items:center;justify-content:center;gap:6px;padding:8px 14px;border-radius:var(--r-sm);border:1.5px solid rgba(204,51,51,.3);background:rgba(204,51,51,.06);color:var(--coral);font-size:12px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;transition:all .18s">
+          🔬 Ver recuentos
+        </button>
+        <label class="ba kmz">
+          📂 Cargar KMZ / KML
+          <input type="file" id="fileKMZ" accept=".kmz,.kml" style="display:none" onchange="cargarKMZ(this)">
+        </label>
+        <button class="ba sec" id="btnE" onclick="eliminar()" style="display:none">🗑 Eliminar polígono</button>
+      </div>
+    </div>
+
+
+    <!-- HEADER IMPRESIÓN -->
+    <div id="printHeader">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div class="ph-logo">🌱 Infoagro · División Agrícola Comasa</div>
+          <div class="ph-info" id="phInfo">Plano de lotes</div>
+        </div>
+        <div style="text-align:right;font-size:10px;color:#666">
+          <div id="phFecha"></div>
+          <div id="phCiclo"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ley" id="leyenda">
+      <div class="ley-header" onclick="toggleLeyenda()">
+        <span class="lt" id="leyTitulo" style="margin-bottom:0">Estado lote</span>
+        <span id="leyArrow" style="font-size:9px;color:var(--tx-3)">▼</span>
+      </div>
+      <div class="ley-body" id="leyBody">
+      <div id="leyItems">
+        <div class="li2"><div class="ls" style="background:#4A7C3F;border:1px solid #7CB87A"></div>Mapeado</div>
+        <div class="li2"><div class="ls" style="background:rgba(200,169,110,.2);border:1px dashed #C8A96E"></div>Sin mapear</div>
+        <div class="li2"><div class="ls" style="background:rgba(124,184,122,.5);border:2px solid #7CB87A"></div>Activo</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL ACTIVIDADES -->
+<div class="act-panel" id="actPanel">
+  <div class="act-header">
+    <div class="act-title" id="actTitle">Actividades</div>
+    <span class="act-close" onclick="cerrarActPanel()">✕</span>
+  </div>
+  <div class="act-kpi">
+    <div class="act-kpi-item"><div class="act-kpi-n" id="actKpiTotal">—</div><div class="act-kpi-l">Actividades</div></div>
+    <div class="act-kpi-item"><div class="act-kpi-n" id="actKpiAvance">—</div><div class="act-kpi-l">Mzn ejec.</div></div>
+    <div class="act-kpi-item"><div class="act-kpi-n" id="actKpiUltima">—</div><div class="act-kpi-l">Últ. fecha</div></div>
+  </div>
+  <div class="act-divider"></div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <span style="font-size:9px;color:var(--d)">✓ Clic fila = pintar en mapa · [Ver] = detalle</span>
+    <div style="position:relative">
+      <select id="actFiltProv" onchange="filtrarActPorProv(this.value)"
+        style="background:rgba(255,255,255,.05);border:1px solid var(--pb);border-radius:5px;color:var(--d);font-size:10px;padding:2px 5px;font-family:'Inter',sans-serif;cursor:pointer;outline:none">
+        <option value="">Proveedor: Todos</option>
+      </select>
+    </div>
+  </div>
+  <div id="actLista"><div class="act-loading">Cargando...</div></div>
+</div>
+
+<!-- MODAL DETALLE ACTIVIDAD -->
+<div class="act-modal-bg" id="actModalBg" onclick="cerrarModal(event)">
+  <div class="act-modal">
+    <div class="act-modal-header">
+      <div class="act-modal-title" id="actModalTitle">Detalle</div>
+      <span class="act-modal-close" onclick="cerrarModal()">✕</span>
+    </div>
+    <div class="act-modal-sub" id="actModalSub"></div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:2px;background:var(--surface-2);border-radius:8px;padding:3px;margin-bottom:10px">
+      <button id="tabRegistros" onclick="setModalTab('registros')" style="flex:1;padding:5px;border:none;border-radius:6px;background:var(--green);color:#fff;font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">📋 Registros</button>
+      <button id="tabInsumos"   onclick="setModalTab('insumos')"   style="flex:1;padding:5px;border:none;border-radius:6px;background:transparent;color:var(--tx-2);font-size:11px;font-weight:600;cursor:pointer;font-family:Inter,sans-serif">🧪 Insumos</button>
+    </div>
+    <!-- Panel registros -->
+    <div id="panelRegistros">
+      <div style="margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap" id="actModalFiltros"></div>
+      <table class="act-det-table">
+        <thead><tr><th>Fecha</th><th>Mzn</th><th>OT</th><th>Proveedor</th><th>Turno</th></tr></thead>
+        <tbody id="actModalBody"></tbody>
+      </table>
+      <div style="margin-top:8px;font-size:10px;color:var(--tx-3);text-align:right" id="actModalTotal"></div>
+    </div>
+    <!-- Panel insumos -->
+    <div id="panelInsumos" style="display:none">
+      <div id="insumosLoading" style="text-align:center;padding:16px;color:var(--tx-3);font-size:12px">⏳ Cargando insumos...</div>
+      <table class="act-det-table" id="insumosTable" style="display:none">
+        <thead><tr><th>Insumo</th><th>Cant.</th><th>UM</th><th>Dosis/mz</th><th>Área</th><th>OT</th></tr></thead>
+        <tbody id="insumosBody"></tbody>
+      </table>
+      <div style="margin-top:8px;font-size:10px;color:var(--tx-3);text-align:right" id="insumosTotal"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL IMPRIMIR -->
+<div class="act-modal-bg" id="printModal" onclick="cerrarPrintModal(event)">
+  <div class="act-modal" style="max-width:440px">
+    <div class="act-modal-header">
+      <div class="act-modal-title">🖨️ Generar plano catastral</div>
+      <span class="act-modal-close" onclick="cerrarPrintModal()">✕</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:11px;color:var(--d)">Selecciona el lote a imprimir y completa la información del plano.</div>
+
+      <div>
+        <div class="combo-label" style="margin-bottom:4px">Lotes a imprimir</div>
+        <div style="background:rgba(255,255,255,.05);border:1px solid var(--pb);border-radius:6px;max-height:160px;overflow-y:auto;padding:4px 0" id="printLotesList">
+          <div style="padding:6px 10px;font-size:11px;color:var(--d)">Cargando lotes...</div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:5px">
+          <button onclick="printSelAll()" class="chip" style="font-size:10px">✓ Todos</button>
+          <button onclick="printSelNone()" class="chip" style="font-size:10px">✕ Ninguno</button>
+          <span id="printLoteCount" style="font-size:10px;color:var(--d);margin-left:auto;align-self:center">0 seleccionados</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="combo-label" style="margin-bottom:4px">Propietario / Productor</div>
+          <input id="printPropietario" type="text" class="sb-input" style="width:100%;padding:6px 8px" placeholder="Nombre del productor">
+        </div>
+        <div>
+          <div class="combo-label" style="margin-bottom:4px">Localización</div>
+          <input id="printLocalizacion" type="text" class="sb-input" style="width:100%;padding:6px 8px" placeholder="Municipio, Departamento">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="combo-label" style="margin-bottom:4px">Contenido del plano</div>
+          <input id="printContenido" type="text" class="sb-input" style="width:100%;padding:6px 8px" value="Levantamiento de lote agrícola">
+        </div>
+        <div>
+          <div class="combo-label" style="margin-bottom:4px">Elaborado por</div>
+          <input id="printElaborado" type="text" class="sb-input" style="width:100%;padding:6px 8px" placeholder="Nombre del técnico">
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <div class="combo-label" style="margin-bottom:4px">Incluir en plano</div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--d);cursor:pointer">
+              <input type="checkbox" id="pchVertices" checked style="accent-color:var(--b)"> Vértices (V-1, V-2...)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--d);cursor:pointer">
+              <input type="checkbox" id="pchHatch" checked style="accent-color:var(--b)"> Sombreado diagonal
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--d);cursor:pointer">
+              <input type="checkbox" id="pchRosa" checked style="accent-color:var(--b)"> Rosa de los vientos
+            </label>
+          </div>
+        </div>
+        <div>
+          <div class="combo-label" style="margin-bottom:4px">Orientación</div>
+          <div style="display:flex;gap:5px;margin-bottom:6px">
+            <button class="chip on" id="orientH" onclick="setOrient('landscape')">Horizontal</button>
+            <button class="chip"    id="orientV" onclick="setOrient('portrait')">Vertical</button>
+          </div>
+          <div class="combo-label" style="margin-bottom:4px">Escala</div>
+          <select id="printEscala" class="sb-input" style="width:100%;padding:5px 6px">
+            <option>1:1000</option><option>1:2000</option><option>1:5000</option><option selected>Automática</option>
+          </select>
+        </div>
+      </div>
+
+      <button class="ba pri" onclick="generarPlanoCatastral()" style="margin-top:4px">
+        🖨️ Generar e imprimir plano
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- VENTANA PLANO (oculta, se activa al imprimir) -->
+<div id="planoWindow" style="display:none;position:fixed;inset:0;background:white;z-index:9999;overflow:auto">
+  <div style="position:fixed;top:10px;right:10px;display:flex;gap:8px;z-index:10000">
+    <button onclick="window.print()" style="padding:8px 16px;background:#2D4A1E;color:white;border:none;border-radius:6px;cursor:pointer;font-weight:600">🖨️ Imprimir</button>
+    <button onclick="cerrarPlano()" style="padding:8px 16px;background:#666;color:white;border:none;border-radius:6px;cursor:pointer">✕ Cerrar</button>
+  </div>
+  <canvas id="planoCatastral" style="display:block;margin:0 auto"></canvas>
+</div>
+
+<!-- PANEL RECUENTOS FITOSANITARIOS -->
+<div class="rec-panel" id="recPanel">
+  <div class="rec-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div>
+      <div class="rec-title" id="recTitle">Recuentos fitosanitarios</div>
+      <div class="rec-sub" id="recSub">—</div>
+    </div>
+    <button onclick="cerrarRecPanel()" style="border:none;background:none;font-size:16px;color:var(--tx-3);cursor:pointer;padding:0 2px;line-height:1">✕</button>
+  </div>
+  <div class="rec-kpis" id="recKpis"></div>
+  <div class="rec-body" id="recBody">
+    <div style="text-align:center;padding:20px;color:var(--tx-3);font-size:12px" id="recLoading">⏳ Cargando recuentos...</div>
+  </div>
+</div>
+
+<!-- SELECTOR KMZ MÚLTIPLES POLÍGONOS -->
+<div class="kmz-selector" id="kmzSelector">
+  <div class="kmz-modal">
+    <h3>📂 Seleccionar polígono</h3>
+    <p id="kmzSelectorInfo">El archivo contiene múltiples polígonos. Selecciona el que corresponde al lote.</p>
+    <div id="kmzSelectorList"></div>
+    <div class="kmz-actions">
+      <button onclick="aplicarKmzSeleccionado()" class="ba pri" style="flex:1">✓ Aplicar seleccionado</button>
+      <button onclick="cerrarKmzSelector()" class="ba sec" style="flex:1">✕ Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+
+// Colores por cultivo
+const CULTIVO_COLOR = {
+  'Mani':'#7CB87A', 'Maní':'#7CB87A',
+  'Caña':'#C8A96E', 'Cana':'#C8A96E',
+  'Cacao':'#8B5E3C',
+  'Pasto':'#4A9B6F',
+  'Ganaderia':'#6B8E5E', 'Ganadería':'#6B8E5E',
+  'default':'#5A8A9F'
+};
+const CIA_COLORS = ['#CC3333','#B02020','#E05050','#991F1F','#D44040','#888888'];
+function ciaColor(cid){ return CIA_COLORS[((cid||1)-1)%CIA_COLORS.length]; }
+function cultivoColor(c){ return CULTIVO_COLOR[c]||CULTIVO_COLOR.default; }
+
+// ═══════════════════════════════════════════════════
+// DATOS
+// ═══════════════════════════════════════════════════
+let COMPANIAS=[], FINCAS=[], LOTES=[], CICLOS=[];
+
+// ═══════════════════════════════════════════════════
+// ESTADO
+// ═══════════════════════════════════════════════════
+let modo = 'lotes'; // 'lotes' | 'ciclos'
+let loteAct=null, geo={}, capas={}, dc=null, _cdraw=null;
+const fincasOcultas = new Set(); // fincas cuyo polígono está oculto en el mapa
+let selCias=new Set(), selProds=new Set(), selSects=new Set(), selFincas=new Set(), filEst='todas', filBus='';
+// Estado ciclos
+let cicloActivo=null, fincaCicloFiltro=null;
+let geoCiclo={}, capasCiclo={};  // record_id → geom/layer
+let itemCicloAct=null; // {ciclo, finca_line_id, lote_id, lote_nombre, record_id}
+
+// ═══════════════════════════════════════════════════
+// MAPA
+// ═══════════════════════════════════════════════════
+const mapa = L.map('mapa',{zoomControl:false}).setView([12.85,-86.9],10);
+// Panes para controlar pointer-events independientemente
+mapa.createPane('lotesPane');
+mapa.createPane('ciclosPane');
+mapa.getPane('lotesPane').style.zIndex = 400;
+mapa.getPane('ciclosPane').style.zIndex = 450;
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{attribution:'Esri',maxZoom:21,className:'mapa-satelital'}).addTo(mapa);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:21,opacity:.7}).addTo(mapa);
+L.control.zoom({position:'bottomright'}).addTo(mapa);
+const cpol      = L.featureGroup({pane:'lotesPane'}).addTo(mapa);
+const cpolCiclo = L.featureGroup({pane:'ciclosPane'}).addTo(mapa);
+
+document.addEventListener('click', e => { if(!e.target.closest('.combo-box')) closeAllCombos(); });
+
+// ═══════════════════════════════════════════════════
+// MODO
+// ═══════════════════════════════════════════════════
+function setModo(m) {
+  modo = m;
+  document.querySelectorAll('.modo-tab').forEach((b,i)=>b.classList.toggle('on', (i===0&&m==='lotes')||(i===1&&m==='ciclos')));
+  // Abrir sidebar automáticamente al cambiar de modo
+  const sb = document.getElementById('sidebar');
+  if(sb && sb.classList.contains('collapsed')) {
+    sb.classList.remove('collapsed');
+    setTimeout(()=>mapa.invalidateSize(),310);
+  }
+  const filtLotes  = document.getElementById('filtrosLotes');
+  const filtCiclos = document.getElementById('filtrosCiclos');
+  const hdrLotes   = document.getElementById('filtrosHeader');
+  const hdrCiclos  = document.getElementById('filtrosCiclosHeader');
+  if(filtLotes)  filtLotes.style.display  = m==='lotes'  ? (filtrosVisible?'':'none') : 'none';
+  if(filtCiclos) filtCiclos.style.display = m==='ciclos' ? (filtrosVisible?'':'none') : 'none';
+  if(hdrLotes)   hdrLotes.style.display   = m==='lotes'  ? '' : 'none';
+  if(hdrCiclos)  hdrCiclos.style.display  = m==='ciclos' ? '' : 'none';
+  document.getElementById('ctxP').classList.remove('vis');
+  cerrarActPanel();
+  loteAct=null; itemCicloAct=null;
+
+  // En modo ciclos: deshabilitar clics en capa de lotes para que ciclos reciba los clics
+  if(m==='ciclos') {
+    // Deshabilitar perímetros en modo ciclos via pane
+    document.getElementById('mapa').classList.add('modo-ciclos');
+    mapa.getPane('lotesPane').style.pointerEvents  = 'none';
+    mapa.getPane('ciclosPane').style.pointerEvents = 'auto';
+    renderCiclos(); actualizarLeyendaCiclos();
+  } else {
+    // Habilitar perímetros en modo lotes via pane
+    document.getElementById('mapa').classList.remove('modo-ciclos');
+    mapa.getPane('lotesPane').style.pointerEvents  = 'auto';
+    mapa.getPane('ciclosPane').style.pointerEvents = 'none';
+    renderLotes(); actualizarLeyendaLotes();
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// COMBO helpers
+// ═══════════════════════════════════════════════════
+function toggleCombo(id) {
+  const box=document.getElementById(id), dd=box.querySelector('.combo-dropdown'), tr=box.querySelector('.combo-trigger');
+  const isOpen=dd.classList.contains('open');
+  closeAllCombos();
+  if(!isOpen){ dd.classList.add('open'); tr.classList.add('open'); }
+}
+function closeAllCombos() {
+  document.querySelectorAll('.combo-dropdown').forEach(d=>d.classList.remove('open'));
+  document.querySelectorAll('.combo-trigger').forEach(t=>t.classList.remove('open'));
+}
+function buildCombo(ddId, items, selSet, onToggle, labelFn, single=false) {
+  const dd=document.getElementById(ddId); dd.innerHTML='';
+  if(selSet.size>0&&!single) {
+    const clr=document.createElement('div'); clr.className='combo-item-clear';
+    clr.textContent='✕ Limpiar selección';
+    clr.onclick=e=>{
+      e.stopPropagation();
+      selSet.clear();
+      buildCombo(ddId,items,selSet,onToggle,labelFn,single); // redibuja
+      onToggle();
+    };
+    dd.appendChild(clr);
+  }
+  items.forEach(item=>{
+    const val=item.id!==undefined?item.id:item;
+    const lbl=labelFn?labelFn(item):String(item);
+    const div=document.createElement('div');
+    div.className='combo-item'+(selSet.has(val)?' sel':'');
+    div.innerHTML=`<div class="combo-check">${selSet.has(val)?'✓':''}</div><span>${lbl}</span>`;
+    div.onclick=e=>{
+      e.stopPropagation();
+      if(single){selSet.clear();}
+      if(selSet.has(val)) selSet.delete(val); else selSet.add(val);
+      // Redibujar el propio dropdown para reflejar el cambio visual
+      buildCombo(ddId,items,selSet,onToggle,labelFn,single);
+      // Mantener dropdown abierto
+      document.getElementById(ddId).classList.add('open');
+      onToggle();
+    };
+    dd.appendChild(div);
+  });
+}
+function updateTrigger(selId, selSet, items, labelFn, placeholder) {
+  const el=document.getElementById(selId);
+  if(selSet.size===0){el.textContent=placeholder;el.className='combo-sel placeholder';el.parentElement.querySelector('.combo-badge')?.remove();}
+  else{
+    const labels=[...selSet].map(v=>{const i=items.find(x=>(x.id!==undefined?x.id:x)===v);return i?(labelFn?labelFn(i):String(i)):v;});
+    el.textContent=labels.join(', ');el.className='combo-sel';
+    let b=el.parentElement.querySelector('.combo-badge');
+    if(!b){b=document.createElement('span');b.className='combo-badge';el.parentElement.insertBefore(b,el.nextSibling);}
+    b.textContent=selSet.size;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// FILTROS LOTES (cascada)
+// ═══════════════════════════════════════════════════
+function sectoresDisp(){
+  let l=LOTES;
+  if(selCias.size>0)  l=l.filter(x=>selCias.has(x.compania_id));
+  if(selProds.size>0) l=l.filter(x=>selProds.has(x.compania));
+  // Incluir "Sin sector" si hay lotes sin sector
+  const sects=new Set(l.map(x=>x.sector||'Sin sector'));
+  return[...sects].sort((a,b)=>{if(a==='Sin sector')return 1;if(b==='Sin sector')return -1;return a.localeCompare(b);});
+}
+function productoresDisp(){
+  let l=LOTES;
+  if(selCias.size>0) l=l.filter(x=>selCias.has(x.compania_id));
+  return[...new Set(l.map(x=>x.compania).filter(Boolean))].sort();
+}
+function fincasDisp(){
+  let l=LOTES;
+  if(selCias.size>0)  l=l.filter(x=>selCias.has(x.compania_id));
+  if(selProds.size>0) l=l.filter(x=>selProds.has(x.compania));
+  if(selSects.size>0) l=l.filter(x=>selSects.has(x.sector||'Sin sector'));
+  // Retornar strings directamente para que el combo funcione con Set de strings
+  return[...new Set(l.map(x=>x.finca).filter(Boolean))].sort();
+}
+function onCiaChange(){
+  selProds.clear();selSects.clear();selFincas.clear();
+  // Preseleccionar solo sectores "S..." de la compañía seleccionada
+  // Sin preselección de sector: selSects vacío = mostrar todos
+  refreshAll();
+  renderLotes();
+}
+function onProdChange(){selSects.clear();selFincas.clear();refreshSectFinca();renderLotes();}
+function onSectChange(){
+  selFincas.clear();
+  // Refrescar el propio combo de sectores para actualizar checks
+  buildCombo('cbSectDD',sectoresDisp(),selSects,onSectChange,null);
+  document.getElementById('cbSectDD').classList.add('open');
+  updateTrigger('cbSectSel',selSects,sectoresDisp(),null,'Todos');
+  refreshFinca();
+  renderLotes();
+}
+function onFincaChange(){updateTrigger('cbFincaSel',selFincas,fincasDisp(),null,'Todas');renderLotes();}
+function refreshAll(){
+  buildCombo('cbCiaDD',COMPANIAS,selCias,onCiaChange,c=>c.nombre);
+  buildCombo('cbProdDD',productoresDisp(),selProds,onProdChange,null);
+  buildCombo('cbSectDD',sectoresDisp(),selSects,onSectChange,null);
+  buildCombo('cbFincaDD',fincasDisp(),selFincas,onFincaChange,f=>f.nombre||f);
+  updateTrigger('cbCiaSel',selCias,COMPANIAS,c=>c.nombre,'Todas');
+  updateTrigger('cbProdSel',selProds,productoresDisp(),null,'Todos');
+  updateTrigger('cbSectSel',selSects,sectoresDisp(),null,'Todos');
+  updateTrigger('cbFincaSel',selFincas,fincasDisp(),null,'Todas');
+}
+function refreshSectFinca(){
+  buildCombo('cbSectDD',sectoresDisp(),selSects,onSectChange,null);
+  buildCombo('cbFincaDD',fincasDisp(),selFincas,onFincaChange,f=>f.nombre||f);
+  updateTrigger('cbProdSel',selProds,productoresDisp(),null,'Todos');
+  updateTrigger('cbSectSel',selSects,sectoresDisp(),null,'Todos');
+  updateTrigger('cbFincaSel',selFincas,fincasDisp(),null,'Todas');
+}
+function refreshFinca(){
+  buildCombo('cbFincaDD',fincasDisp(),selFincas,onFincaChange,f=>f.nombre||f);
+  updateTrigger('cbSectSel',selSects,sectoresDisp(),null,'Todos');
+  updateTrigger('cbFincaSel',selFincas,fincasDisp(),null,'Todas');
+}
+function setEst(v){
+  filEst=v;
+  document.querySelectorAll('.chip').forEach(b=>b.classList.toggle('on',b.dataset.est===v));
+  renderLotes();
+}
+document.getElementById('busq').addEventListener('input',e=>{ if(modo==='lotes') renderLotes(e.target.value.trim()); });
+
+// ═══════════════════════════════════════════════════
+// RENDER LOTES
+// ═══════════════════════════════════════════════════
+function renderLotes(bus='') {
+  filBus=bus;
+  const fl=bus.toLowerCase();
+  const cont=document.getElementById('lista'); cont.innerHTML='';
+  const lotesFil=LOTES.filter(l=>{
+    if(selCias.size>0&&!selCias.has(l.compania_id)) return false;
+    if(selProds.size>0&&!selProds.has(l.compania))  return false;
+    if(selSects.size>0&&!selSects.has(l.sector||'Sin sector')) return false;
+    if(selFincas.size>0&&!selFincas.has(l.finca))   return false;
+    if(filEst==='sinmapa'&&geo[l.id])  return false;
+    if(filEst==='mapeadas'&&!geo[l.id]) return false;
+    if(fl&&!l.nombre.toLowerCase().includes(fl)&&!l.finca.toLowerCase().includes(fl)) return false;
+    return true;
+  });
+  const sectMap={};
+  lotesFil.forEach(l=>{
+    const s=l.sector||'Sin sector', f=l.finca||'Sin finca';
+    if(!sectMap[s])sectMap[s]={};
+    if(!sectMap[s][f])sectMap[s][f]=[];
+    sectMap[s][f].push(l);
+  });
+  const sects=Object.keys(sectMap).sort((a,b)=>{if(a==='Sin sector')return 1;if(b==='Sin sector')return -1;return a.localeCompare(b);});
+  if(!sects.length){cont.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--d)">Sin resultados</div>';document.getElementById('stM').textContent=Object.keys(geo).length;return;}
+  sects.forEach(sect=>{
+    const key='s_'+sect.replace(/\s/g,'_');
+    const col=sessionStorage.getItem(key)==='1';
+    const sep=document.createElement('div'); sep.className='sep';
+    sep.innerHTML=`<span class="sep-arrow ${col?'':'op'}">▶</span>${sect}`;
+    const body=document.createElement('div'); body.style.display=col?'none':'';
+    sep.onclick=()=>{const c=body.style.display==='none';body.style.display=c?'':'none';sep.querySelector('.sep-arrow').classList.toggle('op',c);sessionStorage.setItem(key,c?'0':'1');};
+    cont.appendChild(sep); cont.appendChild(body);
+    Object.keys(sectMap[sect]).sort().forEach(finca=>{
+      const lotes=sectMap[sect][finca];
+      const mapeados=lotes.filter(l=>geo[l.id]).length;
+      const color=ciaColor(lotes[0]?.compania_id||1);
+      const ab=fl||lotes.some(l=>loteAct?.id===l.id);
+      const g=document.createElement('div'); g.className='fg';
+      const _oculta = fincasOcultas.has(finca);
+      g.innerHTML=`<div class="fh" onclick="tog(this)">
+        <svg class="fc ${ab?'op':''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        <div class="fd" style="background:${color}${_oculta?';opacity:.3':''}"></div>
+        <div class="fi"><div class="fn" style="${_oculta?'opacity:.4;text-decoration:line-through':''}">${finca}</div><div class="fm">${mapeados}/${lotes.length} mapeados</div></div>
+        <button class="ojo ${_oculta?'oculto':''}" onclick="toggleFincaVis('${finca}',this,event)" title="${_oculta?'Mostrar':'Ocultar'} polígonos">👁</button>
+      </div>
+      <div class="lc ${ab?'vis':''}">
+        ${lotes.map(l=>{const tM=!!geo[l.id];return`<div class="li ${loteAct?.id===l.id?'sel':''}" data-id="${l.id}" onclick="selLote(${l.id})">
+          <div class="ld ${tM?'ok':'no'}"></div>
+          <span class="ln">${l.nombre}</span>
+          <span class="la">${l.area_p>0?l.area_p.toFixed(1)+'mz':''}</span>
+          <button class="bm ${tM?'ok':''}" onclick="selLote(${l.id},event)">${tM?'✓ Ver':'Mapear'}</button>
+        </div>`;}).join('')}
+      </div>`;
+      body.appendChild(g);
+    });
+  });
+  document.getElementById('stM').textContent=Object.keys(geo).length;
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER CICLOS
+// ═══════════════════════════════════════════════════
+function renderCiclos() {
+  const cont=document.getElementById('lista'); cont.innerHTML='';
+  if(!cicloActivo){cont.innerHTML='<div style="padding:20px;text-align:center;font-size:12px;color:var(--d)">Selecciona un ciclo</div>';document.getElementById('stF').textContent='—';document.getElementById('stL').textContent='—';document.getElementById('stM').textContent='—';return;}
+
+  // Filtrar fincas del ciclo
+  let fincas=cicloActivo.fincas;
+  if(fincaCicloFiltro) fincas=fincas.filter(f=>f.finca_id===fincaCicloFiltro);
+
+  // Obtener todos los lotes activos para cada finca
+  const color=cultivoColor(cicloActivo.cultivo);
+  let totalLotes=0, totalMapeados=0;
+
+  fincas.forEach(fc=>{
+    // Lotes activos de esta finca desde LOTES[]
+    const lotesDeEstaFinca=LOTES.filter(l=>l.finca_id===fc.finca_id||l.finca===fc.finca);
+    if(!lotesDeEstaFinca.length) return;
+
+    // Lotes ya mapeados en este ciclo
+    const lotesMapeadosIds=new Set(fc.lotes.map(l=>l.lote_id));
+
+    const sep=document.createElement('div'); sep.className='sep';
+    const key='c_'+fc.id;
+    const col=sessionStorage.getItem(key)==='1';
+    const _oc=fincasOcultas.has(fc.finca);
+    sep.innerHTML=`<span class="sep-arrow ${col?'':'op'}">▶</span>
+      <span style="${_oc?'opacity:.4;text-decoration:line-through':''}">${fc.finca}</span>
+      <button class="ojo ${_oc?'oculto':''}" onclick="toggleFincaVisCiclo('${fc.finca}',this,event)" title="${_oc?'Mostrar':'Ocultar'}" style="margin-left:auto">👁</button>`;
+    const body=document.createElement('div'); body.style.display=col?'none':'';
+    sep.onclick=()=>{const c=body.style.display==='none';body.style.display=c?'':'none';sep.querySelector('.sep-arrow').classList.toggle('op',c);sessionStorage.setItem(key,c?'0':'1');};
+    cont.appendChild(sep); cont.appendChild(body);
+
+    lotesDeEstaFinca.forEach(l=>{
+      const regCiclo=fc.lotes.find(x=>x.lote_id===l.id);
+      const tM=!!regCiclo?.geojson;
+      totalLotes++; if(tM)totalMapeados++;
+      const isSel=itemCicloAct?.finca_line_id===fc.id&&itemCicloAct?.lote_id===l.id;
+      const div=document.createElement('div');
+      div.className='li'+(isSel?' sel':'');
+      div.innerHTML=`<div class="ld ${tM?'ok':'no'}"></div>
+        <span class="ln">${l.nombre}</span>
+        <span class="la">${l.area_p>0?l.area_p.toFixed(1)+'mz':''}</span>
+        <button class="bm ${tM?'ok':''}" onclick="selItemCiclo(${fc.id},${l.id},'${l.nombre}',${regCiclo?.id||'null'},event)">${tM?'✓ Ver':'Mapear'}</button>`;
+      div.onclick=()=>selItemCiclo(fc.id,l.id,l.nombre,regCiclo?.id||null);
+      body.appendChild(div);
+    });
+  });
+
+  document.getElementById('stF').textContent=fincas.length;
+  document.getElementById('stL').textContent=totalLotes;
+  document.getElementById('stM').textContent=totalMapeados;
+  actualizarLeyendaCiclos();
+}
+
+function selItemCiclo(finca_line_id, lote_id, lote_nombre, record_id, e) {
+  if(e)e.stopPropagation();
+  autoCollapseMobile();
+  const finca_obj=cicloActivo.fincas.find(f=>f.id===finca_line_id);
+  const lote_obj=LOTES.find(l=>l.id===lote_id);
+  const regCiclo=finca_obj?.lotes.find(x=>x.lote_id===lote_id);
+
+  itemCicloAct={ciclo:cicloActivo, finca_line_id, lote_id, lote_nombre, record_id: regCiclo?.id||null, finca_nombre: finca_obj?.finca};
+
+  // Reset actividades al cambiar lote
+  actLoteDataActual = null;
+  _insumosCache = null;
+  // Ocultar leyenda al abrir panel
+  const _ley = document.getElementById('leyenda');
+  if(_ley){ _ley.style.opacity='0'; _ley.style.pointerEvents='none'; }
+
+  // Panel contexto
+  const color=cultivoColor(cicloActivo.cultivo);
+  document.getElementById('ctxTag').textContent='Ciclo · '+cicloActivo.nombre;
+  document.getElementById('ctxN').textContent=lote_nombre;
+  document.getElementById('ctxF').textContent='📍 '+(finca_obj?.finca||'');
+  const tag=document.getElementById('ctxCicloTag');
+  tag.textContent=cicloActivo.cultivo||cicloActivo.nombre;
+  tag.style.cssText=`background:${color}22;border:1px solid ${color};color:${color};display:inline-block`;
+  // Mostrar botones de ciclo
+  const btnRec=document.getElementById('btnRecuentos');
+  const btnAct=document.getElementById('btnActividades');
+  if(btnRec) btnRec.style.display='flex';
+  if(btnAct) btnAct.style.display='flex';
+  document.getElementById('ctxAP').textContent=lote_obj?.area_p?.toFixed(2)||'—';
+  // ctxAA removido
+  document.getElementById('lblAP').textContent='Área lote';
+  const tM=!!(regCiclo?.geojson);
+  document.getElementById('btnD').textContent=tM?'✏️ Redibujar ciclo':'✏️ Dibujar ciclo';
+  document.getElementById('btnE').style.display=tM?'flex':'none';
+  document.getElementById('ctxH').innerHTML=tM
+    ?`Área del ciclo: <strong>${(regCiclo?.area_mzn||0).toFixed(2)} mzn</strong>. Puedes redibujarlo.`
+    :'Dibuja el sub-área que ocupa <strong>'+cicloActivo.nombre+'</strong> dentro de este lote.';
+  document.getElementById('ctxP').classList.add('vis');
+
+  // Resaltar polígono de ciclo si existe — primero para que esté en el mapa
+  if(tM&&regCiclo?.geojson){
+    const gj=JSON.parse(regCiclo.geojson);
+    if(capasCiclo[regCiclo.id]) cpolCiclo.removeLayer(capasCiclo[regCiclo.id]);
+    renderPolCiclo(regCiclo.id,gj,cicloActivo.cultivo,lote_nombre,lote_id,finca_obj?.finca_id,cicloActivo.id);
+  }
+
+  // Zoom: preferir ciclo → lote → ninguno
+  try {
+    if(tM && capasCiclo[regCiclo?.id]) {
+      mapa.fitBounds(capasCiclo[regCiclo.id].getBounds(),{padding:[60,60]});
+    } else if(geo[lote_id] && capas[lote_id]) {
+      mapa.fitBounds(capas[lote_id].getBounds(),{padding:[80,80]});
+      resaltarLote(lote_id);
+    }
+  } catch(e){}
+
+  renderCiclos();
+}
+
+// ═══════════════════════════════════════════════════
+// COMBOS CICLOS
+// ═══════════════════════════════════════════════════
+function buildComboCiclos() {
+  const dd=document.getElementById('cbCicloDD'); dd.innerHTML='';
+  // Agrupar por cultivo
+  const byCultivo={};
+  CICLOS.forEach(c=>{const k=c.cultivo||'Sin cultivo';if(!byCultivo[k])byCultivo[k]=[];byCultivo[k].push(c);});
+  Object.keys(byCultivo).sort().forEach(cult=>{
+    const sep=document.createElement('div');
+    sep.style.cssText='padding:4px 9px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--d);border-top:1px solid var(--pb);margin-top:2px';
+    sep.textContent=cult; dd.appendChild(sep);
+    byCultivo[cult].forEach(c=>{
+      const div=document.createElement('div');
+      const color=cultivoColor(c.cultivo);
+      div.className='combo-item'+(cicloActivo?.id===c.id?' sel':'');
+      div.innerHTML=`<div class="combo-check" style="background:${color}33;border-color:${color}">${cicloActivo?.id===c.id?'✓':''}</div>
+        <span>${c.nombre} <small style="color:var(--d)">${c.compania?.replace('Division Agricola ','DA ')||''}</small></span>`;
+      div.onclick=e=>{e.stopPropagation();selCiclo(c.id);};
+      dd.appendChild(div);
+    });
+  });
+}
+
+function selCiclo(id) {
+  cicloActivo=CICLOS.find(c=>c.id===id)||null;
+  fincaCicloFiltro=null;
+  closeAllCombos();
+  const sel=document.getElementById('cbCicloSel');
+  if(cicloActivo){sel.textContent=cicloActivo.nombre;sel.className='combo-sel';}
+  else{sel.textContent='Seleccionar ciclo...';sel.className='combo-sel placeholder';}
+  // Mostrar filtro de finca del ciclo
+  const wf=document.getElementById('wrapFincaCiclo');
+  wf.style.display=cicloActivo?'':'none';
+  if(cicloActivo) buildComboFincaCiclo();
+  renderCiclos();
+  actualizarLeyendaCiclos();
+}
+
+function buildComboFincaCiclo() {
+  if(!cicloActivo) return;
+  const fincas=[{id:null,nombre:'Todas las fincas'},...cicloActivo.fincas.map(f=>({id:f.finca_id,nombre:f.finca}))];
+  const dd=document.getElementById('cbFincaCicloDD'); dd.innerHTML='';
+  fincas.forEach(f=>{
+    const div=document.createElement('div');
+    div.className='combo-item'+(fincaCicloFiltro===f.id?' sel':'');
+    div.innerHTML=`<div class="combo-check">${fincaCicloFiltro===f.id?'✓':''}</div><span>${f.nombre}</span>`;
+    div.onclick=e=>{e.stopPropagation();fincaCicloFiltro=f.id;closeAllCombos();
+      document.getElementById('cbFincaCicloSel').textContent=f.nombre;
+      document.getElementById('cbFincaCicloSel').className=f.id?'combo-sel':'combo-sel placeholder';
+      renderCiclos();};
+    dd.appendChild(div);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// SELECCIÓN LOTE (modo lotes)
+// ═══════════════════════════════════════════════════
+function selLote(id,e) {
+  if(e)e.stopPropagation();
+  loteAct=LOTES.find(l=>l.id===id); if(!loteAct)return;
+  autoCollapseMobile();
+  document.querySelectorAll('.li').forEach(el=>el.classList.remove('sel'));
+  document.querySelectorAll(`[data-id="${id}"]`).forEach(el=>el.classList.add('sel'));
+  const tM=!!geo[id];
+  document.getElementById('ctxTag').textContent='Lote seleccionado';
+  document.getElementById('ctxN').textContent=loteAct.nombre;
+  document.getElementById('ctxF').textContent=`📍 ${loteAct.finca}${loteAct.sector?' · '+loteAct.sector:''}`;
+  document.getElementById('ctxCicloTag').style.display='none';
+  const _btnRec=document.getElementById('btnRecuentos');
+  const _btnAct=document.getElementById('btnActividades');
+  if(_btnRec) _btnRec.style.display='none';
+  if(_btnAct) _btnAct.style.display='none';
+  document.getElementById('ctxAP').textContent=(loteAct.area_p||0).toFixed(2);
+  // ctxAA removido
+  document.getElementById('lblAP').textContent='Área perímetro';
+  document.getElementById('btnD').textContent=tM?'✏️ Redibujar lote':'✏️ Dibujar lote';
+  document.getElementById('btnE').style.display=tM?'flex':'none';
+  document.getElementById('ctxH').innerHTML=tM?'Polígono guardado en Odoo.':'Haz clic en <strong>Dibujar lote</strong> o <strong>Cargar KMZ/KML</strong>.';
+  document.getElementById('ctxP').classList.add('vis');
+  document.getElementById('leyenda').style.opacity='0';
+  document.getElementById('leyenda').style.pointerEvents='none';
+  document.getElementById('leyenda').style.opacity='0';
+  document.getElementById('leyenda').style.pointerEvents='none';
+  if(tM&&capas[id]){mapa.fitBounds(capas[id].getBounds(),{padding:[70,70]});resaltarLote(id);}
+}
+
+function resaltarLote(id) {
+  Object.entries(capas).forEach(([k,ly])=>{const l=LOTES.find(x=>x.id===parseInt(k));const c=ciaColor(l?.compania_id||1);ly.setStyle({color:c,fillColor:c,fillOpacity:.22,weight:2.5});});
+  if(capas[id]){capas[id].setStyle({color:'#FF2222',fillColor:'#FF4444',fillOpacity:.45,weight:3.5});capas[id].bringToFront();}
+}
+function toggleFincaVisCiclo(finca, btn, e) {
+  e.stopPropagation();
+  if(fincasOcultas.has(finca)) {
+    fincasOcultas.delete(finca);
+    btn.classList.remove('oculto');
+    // Mostrar capas ciclo de esta finca
+    Object.entries(capasCiclo).forEach(([id,ly])=>{
+      const meta = ly._cicloMeta;
+      if(meta && meta.finca_nombre===finca && !cpolCiclo.hasLayer(ly)) cpolCiclo.addLayer(ly);
+    });
+    // Mostrar capas lote de esta finca
+    Object.entries(capas).forEach(([id,ly])=>{
+      const l=LOTES.find(x=>x.id===parseInt(id));
+      if(l&&l.finca===finca&&!cpol.hasLayer(ly)) cpol.addLayer(ly);
+    });
+  } else {
+    fincasOcultas.add(finca);
+    btn.classList.add('oculto');
+    // Ocultar capas ciclo
+    Object.entries(capasCiclo).forEach(([id,ly])=>{
+      const meta = ly._cicloMeta;
+      if(meta && meta.finca_nombre===finca && cpolCiclo.hasLayer(ly)) cpolCiclo.removeLayer(ly);
+    });
+    // Ocultar capas lote
+    Object.entries(capas).forEach(([id,ly])=>{
+      const l=LOTES.find(x=>x.id===parseInt(id));
+      if(l&&l.finca===finca&&cpol.hasLayer(ly)) cpol.removeLayer(ly);
+    });
+  }
+  renderCiclos();
+}
+
+function toggleFincaVis(finca, btn, e) {
+  e.stopPropagation();
+  if(fincasOcultas.has(finca)) {
+    fincasOcultas.delete(finca);
+    btn.textContent='👁';
+    btn.classList.remove('oculto');
+    btn.closest('.fg').classList.remove('oculta');
+    // Mostrar capas de esa finca
+    Object.entries(capas).forEach(([id,ly])=>{
+      const l=LOTES.find(x=>x.id===parseInt(id));
+      if(l&&l.finca===finca&&!cpol.hasLayer(ly)) cpol.addLayer(ly);
+    });
+    btn.closest('.fg')?.classList.remove('oculta');
+  } else {
+    fincasOcultas.add(finca);
+    btn.textContent='👁';
+    btn.classList.add('oculto');
+    btn.closest('.fg')?.classList.add('oculta');
+    // Ocultar capas de esa finca del mapa
+    Object.entries(capas).forEach(([id,ly])=>{
+      const l=LOTES.find(x=>x.id===parseInt(id));
+      if(l&&l.finca===finca&&cpol.hasLayer(ly)) cpol.removeLayer(ly);
+    });
+  }
+  renderLotes(filBus);
+}
+
+function tog(h){h.querySelector('.fc').classList.toggle('op');h.nextElementSibling.classList.toggle('vis');}
+
+// ═══════════════════════════════════════════════════
+// DIBUJO
+// ═══════════════════════════════════════════════════
+function iniciarDibujo() {
+  const esLote=modo==='lotes';
+  if(esLote&&!loteAct){toast('Selecciona un lote primero',true);return;}
+  if(!esLote&&!itemCicloAct){
+    toast('Selecciona el lote desde el sidebar primero',true);
+    return;
+  }
+  if(dc){mapa.removeControl(dc);dc=null;}
+  if(_cdraw){mapa.removeLayer(_cdraw);_cdraw=null;}
+  _cdraw=new L.FeatureGroup().addTo(mapa);
+  const nombre=esLote?loteAct.nombre:itemCicloAct.lote_nombre;
+  const fillColor=esLote?'#4A7C3F':cultivoColor(itemCicloAct?.ciclo?.cultivo);
+  dc=new L.Control.Draw({
+    position: 'topright',
+    draw:{polygon:{shapeOptions:{color:'#CC3333',fillColor:fillColor,fillOpacity:.35,weight:2.5},showArea:true,metric:true},
+      polyline:false,rectangle:false,circle:false,circlemarker:false,marker:false},
+    edit:{featureGroup:_cdraw}
+  });
+  mapa.addControl(dc);
+  toast(`✏️ "${nombre}" — clic para puntos, doble-clic para cerrar`);
+  mapa.once(L.Draw.Event.CREATED,onPol);
+}
+
+async function onPol(e) {
+  const geom=e.layer.toGeoJSON().geometry;
+  if(dc){mapa.removeControl(dc);dc=null;}
+  if(_cdraw){mapa.removeLayer(_cdraw);_cdraw=null;}
+  let mzn=0;
+  try{mzn=(turf.area({type:'Feature',geometry:geom})/10000)/0.7;}catch(err){}
+  await aplicarGeometria(geom,mzn,'dibujado');
+}
+
+// ═══════════════════════════════════════════════════
+// APLICAR GEOMETRÍA (lote o ciclo)
+// ═══════════════════════════════════════════════════
+async function aplicarGeometria(geom, mzn, origen) {
+  if(modo==='lotes') {
+    const id=loteAct.id;
+    if(capas[id]) cpol.removeLayer(capas[id]);
+    geo[id]=geom;
+    const ref=LOTES.find(l=>l.id===id);
+    if(ref&&ref.area_p===0) ref.area_p=parseFloat(mzn.toFixed(2));
+    renderPolLote(id,loteAct);
+    mapa.fitBounds(capas[id].getBounds(),{padding:[60,60]});
+    document.getElementById('ctxAP').textContent=mzn.toFixed(2);
+    document.getElementById('btnE').style.display='flex';
+    document.getElementById('btnD').textContent='✏️ Redibujar lote';
+    document.getElementById('ctxH').textContent=`Polígono cargado (${origen}).`;
+    renderLotes(filBus);
+    actualizarEtiquetas();
+    setPill('⏳ Guardando...','cargando');
+    try {
+      const r=await fetch(`${WORKER}/fincas-config/write`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lote_id:id,geojson:JSON.stringify(geom),area_p:parseFloat(mzn.toFixed(2))})});
+      const d=await r.json(); if(!d.ok)throw new Error(d.error||'Error');
+      setPill(`✓ ${FINCAS.length} fincas · ${LOTES.length} lotes`);
+      toast(`✅ "${loteAct.nombre}" guardado — ${mzn.toFixed(2)} mzn`);
+    }catch(err){setPill('⚠ Error','error');toast('⚠️ '+err.message,true);}
+
+  } else {
+    // MODO CICLOS
+    let {finca_line_id,lote_id,lote_nombre,ciclo} = itemCicloAct;
+    const rid=itemCicloAct.record_id;
+    // Si finca_line_id es null, buscarlo en cicloActivo
+    if(!finca_line_id && cicloActivo && lote_id) {
+      for(const fc of cicloActivo.fincas) {
+        if(fc.lotes.some(l=>l.lote_id===lote_id)) { finca_line_id=fc.id; break; }
+        // También intentar por nombre de finca
+        if(fc.finca===itemCicloAct.finca_nombre) { finca_line_id=fc.id; break; }
+      }
+      if(finca_line_id) itemCicloAct.finca_line_id=finca_line_id;
+    }
+    if(!finca_line_id) { toast('No se pudo identificar la finca del ciclo',true); return; }
+    // Render ciclo
+    if(rid&&capasCiclo[rid]) cpolCiclo.removeLayer(capasCiclo[rid]);
+    const tmpId=rid||('tmp_'+Date.now());
+    renderPolCiclo(tmpId,geom,ciclo.cultivo,lote_nombre,lote_id,cicloActivo?.fincas.find(f=>f.id===finca_line_id)?.finca_id,ciclo.id);
+    mapa.fitBounds(capasCiclo[tmpId].getBounds(),{padding:[60,60]});
+    document.getElementById('btnE').style.display='flex';
+    document.getElementById('btnD').textContent='✏️ Redibujar ciclo';
+    document.getElementById('ctxH').innerHTML=`Área del ciclo: <strong>${mzn.toFixed(2)} mzn</strong>.`;
+    setPill('⏳ Guardando...','cargando');
+    try {
+      const r=await fetch(`${WORKER}/ciclos-config/write`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({finca_line_id,lote_id,geojson:JSON.stringify(geom),area_mzn:parseFloat(mzn.toFixed(2)),record_id:rid||undefined})});
+      const d=await r.json(); if(!d.ok)throw new Error(d.error||'Error');
+      // Actualizar record_id en memoria
+      itemCicloAct.record_id=d.id;
+      const fc=cicloActivo.fincas.find(f=>f.id===finca_line_id);
+      if(fc){
+        let reg=fc.lotes.find(x=>x.lote_id===lote_id);
+        if(reg){reg.geojson=JSON.stringify(geom);reg.area_mzn=parseFloat(mzn.toFixed(2));reg.id=d.id;}
+        else fc.lotes.push({id:d.id,lote_id,lote_nombre,geojson:JSON.stringify(geom),area_mzn:parseFloat(mzn.toFixed(2))});
+      }
+      setPill(`✓ Ciclo: ${ciclo.nombre}`);
+      toast(`✅ "${lote_nombre}" en ${ciclo.nombre} — ${mzn.toFixed(2)} mzn`);
+      renderCiclos();
+    }catch(err){setPill('⚠ Error','error');toast('⚠️ '+err.message,true);}
+  }
+}
+
+function eliminar() {
+  if(modo==='lotes'&&loteAct) {
+    const id=loteAct.id;
+    if(capas[id]){cpol.removeLayer(capas[id]);delete capas[id];}
+    delete geo[id];
+    document.getElementById('btnE').style.display='none';
+    document.getElementById('btnD').textContent='✏️ Dibujar lote';
+    document.getElementById('ctxH').innerHTML='Haz clic en <strong>Dibujar lote</strong> o <strong>Cargar KMZ/KML</strong>.';
+    renderLotes(filBus); toast(`🗑 Polígono de "${loteAct.nombre}" eliminado`);
+  } else if(modo==='ciclos'&&itemCicloAct) {
+    const rid=itemCicloAct.record_id;
+    if(rid&&capasCiclo[rid]){cpolCiclo.removeLayer(capasCiclo[rid]);delete capasCiclo[rid];}
+    if(rid) fetch(`${WORKER}/ciclos-config/delete`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({record_id:rid})});
+    document.getElementById('btnE').style.display='none';
+    const fc=cicloActivo?.fincas.find(f=>f.id===itemCicloAct.finca_line_id);
+    if(fc){const i=fc.lotes.findIndex(x=>x.lote_id===itemCicloAct.lote_id);if(i>=0)fc.lotes.splice(i,1);}
+    renderCiclos(); toast(`🗑 Polígono de ciclo eliminado`);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// RENDER POLÍGONOS
+// ═══════════════════════════════════════════════════
+function renderPolLote(id,lote) {
+  const c=ciaColor(lote.compania_id||1);
+  const layer=L.geoJSON(geo[id],{pane:'lotesPane',style:{color:c,fillColor:c,fillOpacity:.22,weight:2.5}});
+  // Tooltip del lote base — solo en modo lotes
+  if(modo==='lotes') {
+    layer.bindTooltip(`<strong>${lote.nombre}</strong><br><span style="color:var(--tx-2)">${lote.finca}${lote.sector?' · '+lote.sector:''}</span>${lote.area_p>0?`<br><span style="color:var(--green)">${lote.area_p} mzn</span>`:''}`,{sticky:true,opacity:.95});
+  }
+  // Solo interactivo en modo lotes
+  const esLoteModo = modo==='lotes';
+  layer.options.interactive = esLoteModo;
+  layer.on('click',()=>{ if(modo==='lotes') selLote(id); });
+  capas[id]=layer;
+  if(!fincasOcultas.has(lote.finca)) cpol.addLayer(layer);
+}
+
+function renderPolCiclo(tmpId,geom,cultivo,nombre,lote_id,finca_id,ciclo_id_param) {
+  const c=cultivoColor(cultivo);
+  const layer=L.geoJSON(geom,{pane:'ciclosPane',style:{color:c,fillColor:c,fillOpacity:.45,weight:2,dashArray:null}});
+  // Guardar metadatos en el layer para el clic
+  layer._cicloMeta = { ciclo_id: ciclo_id_param, finca_id, lote_id, nombre, cultivo };
+  layer.bindTooltip(
+    `<strong>${nombre}</strong><br><span style="color:${c}">${cultivo||''}</span><br><small style="color:var(--d)">👆 Ver actividades</small>`,
+    {sticky:true,opacity:.95}
+  );
+  layer.on('click',()=>{
+    const m   = layer._cicloMeta;
+    const cid = m.ciclo_id || cicloActivo?.id;
+    if(!cid || !m.lote_id) { toast('Selecciona un ciclo primero', true); return; }
+
+    // Buscar el ciclo y la finca correspondiente para sincronizar selItemCiclo
+    const ciclo = CICLOS.find(c=>c.id===cid);
+    if(ciclo && !cicloActivo) { cicloActivo = ciclo; }
+
+    // Buscar el registro ciclo-finca-lote para obtener finca_line_id y record_id
+    let finca_line_id = null, record_id = null;
+    if(cicloActivo) {
+      const fc = cicloActivo.fincas.find(f=>
+      (m.finca_id && f.finca_id===m.finca_id) ||
+      (m.finca_nombre && f.finca===m.finca_nombre) ||
+      f.lotes.some(l=>l.lote_id===m.lote_id)
+    );
+      if(fc) {
+        finca_line_id = fc.id;
+        const reg = fc.lotes.find(l=>l.lote_id===m.lote_id);
+        record_id = reg?.id || null;
+      }
+    }
+
+    // Sincronizar panel de lote (ctxP) con el lote del ciclo
+    if(finca_line_id) {
+      selItemCiclo(finca_line_id, m.lote_id, m.nombre, record_id);
+    } else {
+      // Fallback: buscar por nombre de lote si finca_line_id no encontró
+      let fc2=null, reg2=null;
+      if(cicloActivo) {
+        for(const f of cicloActivo.fincas) {
+          const r=f.lotes.find(l=>l.lote_id===m.lote_id||l.lote_nombre===m.nombre);
+          if(r){fc2=f;reg2=r;break;}
+        }
+      }
+      if(fc2) {
+        selItemCiclo(fc2.id, m.lote_id, m.nombre, reg2?.id||null);
+      } else {
+        // Último fallback: setear itemCicloAct manualmente para que redibujar funcione
+        itemCicloAct = {
+          ciclo: cicloActivo,
+          finca_line_id: null,
+          lote_id: m.lote_id,
+          lote_nombre: m.nombre,
+          record_id: null,
+          finca_nombre: m.finca_nombre
+        };
+        const loteObj = LOTES.find(l=>l.id===m.lote_id);
+        document.getElementById('ctxTag').textContent = 'Ciclo · ' + (cicloActivo?.nombre||'');
+        document.getElementById('ctxN').textContent   = m.nombre;
+        document.getElementById('ctxF').textContent   = '📍 ' + (m.finca_nombre||'');
+        document.getElementById('ctxAP').textContent  = (loteObj?.area_p||0).toFixed(2);
+        // ctxAA removido
+        document.getElementById('ctxP').classList.add('vis');
+        const _ley = document.getElementById('leyenda');
+        if(_ley){ _ley.style.opacity='0'; _ley.style.pointerEvents='none'; }
+      }
+    }
+
+    // Cargar actividades para este lote
+    actLoteDataActual = null;
+    _insumosCache = null;
+    cargarActividades(cid, m.finca_id, m.lote_id, m.nombre);
+  });
+  // Ciclos siempre interactivos
+  layer.options.interactive = true;
+  cpolCiclo.addLayer(layer);
+  capasCiclo[tmpId]=layer;
+}
+
+// Colores por categoría de actividad (según x_actividadesagricolas)
+const CAT_COLORS = {
+  'Preparacion de Suelo': '#C8A96E',  // naranja tierra
+  'Mureo y Siembra':      '#7CB87A',  // verde
+  'Sello':                '#A5D6A7',  // verde claro
+  'Post emergente':       '#81C784',  // verde medio
+  'Fungicidas':           '#E57373',  // rojo
+  'Insecticida':          '#FF8A65',  // naranja
+  'Arranque':             '#FFD54F',  // amarillo
+  'Combina':              '#FFF176',  // amarillo claro
+  'Quema':                '#FF7043',  // rojo naranja
+  'Fertilizacion':        '#64B5F6',  // azul
+  'Riego':                '#4FC3F7',  // azul claro
+  'Otros':                '#B0BEC5',  // gris
+  'default':              '#A8C4A2'   // verde dim
+};
+function catColor(cat){ return CAT_COLORS[cat]||CAT_COLORS.default; }
+
+// Capas de actividades pintadas en el mapa
+const capasAct = {};   // key = `${lote_id}_${actNombre}` → layer
+const actPintadas = new Set();
+let actLoteDataActual = null;
+let actLoteGeomActual = null;
+
+let _actProvFiltro = '';
+function filtrarActPorProv(val) {
+  _actProvFiltro = val;
+  if(!actLoteDataActual) return;
+  renderActLista(actLoteDataActual, _actProvFiltro);
+}
+
+function cerrarActPanel() {
+  document.getElementById('actPanel').classList.remove('vis');
+  mostrarLeyenda();
+}
+
+// ══ PANEL RECUENTOS ══════════════════════════════════
+function abrirActividadesDesdeCtx() {
+  if(!itemCicloAct || !cicloActivo) return;
+  actLoteDataActual = null;
+  _insumosCache = null;
+  cargarActividades(
+    cicloActivo.id,
+    itemCicloAct.finca_line_id ? cicloActivo.fincas.find(f=>f.id===itemCicloAct.finca_line_id)?.finca_id : null,
+    itemCicloAct.lote_id,
+    itemCicloAct.lote_nombre
+  );
+}
+
+function abrirRecuentosDesdeCtx() {
+  if(!itemCicloAct || !cicloActivo) return;
+  cargarRecuentos(cicloActivo.id, itemCicloAct.lote_id, itemCicloAct.lote_nombre, itemCicloAct.finca_nombre);
+}
+
+function cerrarRecPanel() {
+  document.getElementById('recPanel').classList.remove('vis');
+  mostrarLeyenda();
+}
+
+// Umbrales semáforo por familia (ajustables)
+const UMBRALES = {
+  'Poblacionales':         { verde:15, amarillo:20 },   // plantas/m
+  'Plagas':                { verde:5,  amarillo:10 },   // % infestación
+  'Enfermedades':          { verde:5,  amarillo:15 },   // % incidencia
+  'Condiciones fitosanitarias': { verde:10, amarillo:25 },
+  'default':               { verde:10, amarillo:20 },
+};
+
+function semaforo(valor, familia) {
+  const u = UMBRALES[familia] || UMBRALES.default;
+  if(valor <= u.verde)    return 'sem-verde';
+  if(valor <= u.amarillo) return 'sem-amarillo';
+  if(valor > u.amarillo)  return 'sem-rojo';
+  return 'sem-gris';
+}
+
+async function cargarRecuentos(ciclo_id, lote_id, lote_nombre, finca_nombre) {
+  const panel = document.getElementById('recPanel');
+  panel.classList.add('vis');
+  document.getElementById('leyenda').style.opacity='0';
+  document.getElementById('leyenda').style.pointerEvents='none';
+  document.getElementById('recTitle').textContent = lote_nombre + ' · Recuentos';
+  document.getElementById('recSub').textContent   = (finca_nombre||'') + (cicloActivo?' · '+cicloActivo.nombre:'');
+  document.getElementById('recKpis').innerHTML    = '';
+  document.getElementById('recBody').innerHTML    = '<div style="text-align:center;padding:20px;color:var(--tx-3);font-size:12px">⏳ Cargando recuentos...</div>';
+
+  try {
+    const res  = await fetch(`${WORKER}/recuentos-lote?ciclo_id=${ciclo_id}&lote_id=${lote_id}`);
+    const data = await res.json();
+
+    if(!data.familias?.length) {
+      document.getElementById('recBody').innerHTML = '<div style="text-align:center;padding:20px;color:var(--tx-3);font-size:12px">Sin recuentos registrados para este lote en este ciclo</div>';
+      return;
+    }
+
+    // KPIs globales
+    const totalRegs  = data.familias.reduce((s,f)=>s+f.total_registros,0);
+    const ultimaFecha= data.familias.map(f=>f.ultimo_fecha).filter(Boolean).sort().pop();
+    const familiasCnt= data.familias.length;
+    document.getElementById('recKpis').innerHTML = `
+      <div class="rec-kpi"><div class="rec-kpi-n" style="color:var(--green-dark)">${totalRegs}</div><div class="rec-kpi-l">Registros</div></div>
+      <div class="rec-kpi"><div class="rec-kpi-n" style="color:var(--green-dark)">${familiasCnt}</div><div class="rec-kpi-l">Familias</div></div>
+      <div class="rec-kpi"><div class="rec-kpi-n" style="color:var(--tx-2);font-size:12px">${ultimaFecha?fmtFecha(ultimaFecha).slice(0,6):'—'}</div><div class="rec-kpi-l">Últ. fecha</div></div>`;
+
+    // Render por familia
+    let bodyHtml = '';
+    data.familias.forEach((f,fi) => {
+      const sem     = semaforo(f.ultimo_resultado, f.familia);
+      const semColor= sem==='sem-verde'?'#2DB05A':sem==='sem-amarillo'?'#E8A340':'#CC3333';
+      const domId   = 'recFam'+fi;
+
+      bodyHtml += `
+      <div class="rec-familia">
+        <div class="rec-fam-header" onclick="toggleRecFam('${domId}')">
+          <div style="display:flex;align-items:center;gap:7px">
+            <div class="rec-semaforo ${sem}" title="Último: ${f.ultimo_resultado.toFixed(2)}"></div>
+            <span class="rec-fam-titulo">${f.familia}</span>
+            <span style="font-size:9px;color:var(--tx-3)">${f.clasif||''}</span>
+          </div>
+          <div class="rec-fam-stats">
+            <span class="rec-fam-val" style="color:${semColor}">${f.ultimo_resultado.toFixed(1)}</span>
+            <span style="font-size:9px;color:var(--tx-3)">avg:${f.promedio.toFixed(1)}</span>
+            <span style="font-size:9px;color:var(--tx-3)">▼</span>
+          </div>
+        </div>
+        <div class="rec-fam-body" id="${domId}">
+          <canvas id="chart_${domId}" class="rec-chart"></canvas>
+          <table class="rec-tabla">
+            <thead><tr><th>Fecha</th><th>DDS</th><th>Resultado</th><th>%</th><th>Reporte</th></tr></thead>
+            <tbody>
+              ${f.registros.map(r=>`
+                <tr>
+                  <td>${fmtFecha(r.fecha)}</td>
+                  <td style="color:var(--tx-3)">${r.dds}</td>
+                  <td style="font-weight:700;color:${semColor}">${r.resultado.toFixed(2)}</td>
+                  <td style="color:var(--tx-3)">${r.porcent>0?r.porcent.toFixed(1)+'%':'—'}</td>
+                  <td style="color:var(--tx-3)">${r.reporte||'—'}</td>
+                </tr>
+                ${r.observacion?`<tr><td colspan="5"><div class="rec-obs">💬 ${r.observacion}</div></td></tr>`:''}
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>`;
+    });
+
+    document.getElementById('recBody').innerHTML = bodyHtml;
+
+    // Dibujar mini gráficos de tendencia con Canvas
+    data.familias.forEach((f,fi) => {
+      const domId = 'recFam'+fi;
+      const canvas = document.getElementById('chart_'+domId);
+      if(!canvas || !f.registros.length) return;
+      dibujarMiniChart(canvas, f.registros, f.familia);
+    });
+
+  } catch(err) {
+    document.getElementById('recBody').innerHTML = `<div style="text-align:center;padding:16px;color:var(--coral);font-size:12px">Error: ${err.message}</div>`;
+  }
+}
+
+function toggleRecFam(domId) {
+  const b = document.getElementById(domId);
+  if(!b) return;
+  b.classList.toggle('vis');
+  // Dibujar gráfico cuando se expande (lazy)
+  if(b.classList.contains('vis')) {
+    const canvas = document.getElementById('chart_'+domId);
+    if(canvas && !canvas._drawn) {
+      // Redibujar si aún no está pintado
+      canvas._drawn = true;
+    }
+  }
+}
+
+// ── SELECTOR KMZ ──────────────────────────────────────────────
+let _kmzPoligonos = [];
+let _kmzSelIdx    = 0;
+let _kmzFileName  = '';
+let _kmzLayers    = {}; // previews en el mapa
+
+function mostrarKmzSelector(poligonos, fileName) {
+  _kmzPoligonos = poligonos;
+  _kmzSelIdx    = 0;
+  _kmzFileName  = fileName;
+
+  const loteNombre = modo==='lotes' ? loteAct?.nombre : itemCicloAct?.lote_nombre;
+  document.getElementById('kmzSelectorInfo').textContent =
+    `El archivo tiene ${poligonos.length} polígonos. Selecciona el que corresponde a "${loteNombre}".`;
+
+  // Limpiar previews anteriores
+  Object.values(_kmzLayers).forEach(l=>mapa.removeLayer(l));
+  _kmzLayers={};
+
+  // Renderizar lista y previews en el mapa
+  const colors=['#CC3333','#1A9448','#1A7FC4','#E8A340','#9B59B6','#E74C3C'];
+  const list = document.getElementById('kmzSelectorList');
+  list.innerHTML = '';
+
+  poligonos.forEach((p,i)=>{
+    const color = colors[i % colors.length];
+    // Preview en mapa
+    const layer = L.geoJSON(p.geom,{style:{color,fillColor:color,fillOpacity:.25,weight:2.5,dashArray:'5,4'}});
+    layer.addTo(mapa);
+    _kmzLayers[i] = layer;
+
+    // Item en lista
+    const div = document.createElement('div');
+    div.className='kmz-item'+(i===0?' sel':'');
+    div.dataset.idx=i;
+    div.innerHTML=`
+      <div class="kmz-item-color" style="background:${color}"></div>
+      <div class="kmz-item-info">
+        <div class="kmz-item-name">${p.nombre||'Polígono '+(i+1)}</div>
+        <div class="kmz-item-area">${p.areaMzn.toFixed(2)} mzn</div>
+      </div>
+      <div style="font-size:18px">${i===0?'✓':''}</div>`;
+    div.onclick=()=>seleccionarKmzItem(i);
+    list.appendChild(div);
+  });
+
+  // Zoom al primer polígono
+  try{ mapa.fitBounds(_kmzLayers[0].getBounds(),{padding:[60,60]}); }catch(e){}
+  document.getElementById('kmzSelector').classList.add('vis');
+}
+
+function seleccionarKmzItem(idx) {
+  _kmzSelIdx = idx;
+  document.querySelectorAll('.kmz-item').forEach((el,i)=>{
+    el.classList.toggle('sel',i===idx);
+    el.querySelector('div:last-child').textContent = i===idx?'✓':'';
+  });
+  // Zoom al seleccionado
+  try{ mapa.fitBounds(_kmzLayers[idx].getBounds(),{padding:[60,60]}); }catch(e){}
+}
+
+async function aplicarKmzSeleccionado() {
+  const p = _kmzPoligonos[_kmzSelIdx];
+  cerrarKmzSelector();
+  if(p) await aplicarGeometria(p.geom, p.areaMzn, _kmzFileName);
+}
+
+function cerrarKmzSelector() {
+  document.getElementById('kmzSelector').classList.remove('vis');
+  // Quitar previews del mapa
+  Object.values(_kmzLayers).forEach(l=>mapa.removeLayer(l));
+  _kmzLayers={};
+}
+
+function dibujarMiniChart(canvas, registros, familia) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 280;
+  const H = 80;
+  canvas.width  = W;
+  canvas.height = H;
+
+  const vals  = registros.map(r=>r.resultado);
+  const maxV  = Math.max(...vals, 1);
+  const minV  = 0;
+  const pad   = { t:8, r:8, b:20, l:32 };
+  const iW    = W - pad.l - pad.r;
+  const iH    = H - pad.t - pad.b;
+
+  // Fondo
+  ctx.fillStyle = '#F4F6F5';
+  ctx.fillRect(0,0,W,H);
+
+  // Línea de umbral verde
+  const u = UMBRALES[familia] || UMBRALES.default;
+  const yVerde = pad.t + iH - (u.verde/maxV)*iH;
+  ctx.strokeStyle='rgba(45,176,90,.3)'; ctx.lineWidth=1; ctx.setLineDash([3,3]);
+  ctx.beginPath(); ctx.moveTo(pad.l,yVerde); ctx.lineTo(W-pad.r,yVerde); ctx.stroke();
+  const yAmar = pad.t + iH - (u.amarillo/maxV)*iH;
+  ctx.strokeStyle='rgba(232,163,64,.3)';
+  ctx.beginPath(); ctx.moveTo(pad.l,yAmar); ctx.lineTo(W-pad.r,yAmar); ctx.stroke();
+  ctx.setLineDash([]);
+
+  if(vals.length < 2) {
+    // Solo un punto
+    const x = pad.l + iW/2;
+    const y = pad.t + iH - (vals[0]/maxV)*iH;
+    ctx.fillStyle='#CC3333'; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill();
+    return;
+  }
+
+  // Área rellena
+  const points = vals.map((v,i)=>({ x: pad.l + (i/(vals.length-1))*iW, y: pad.t + iH - ((v-minV)/(maxV-minV))*iH }));
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, pad.t+iH);
+  points.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(points[points.length-1].x, pad.t+iH);
+  ctx.closePath();
+  ctx.fillStyle='rgba(204,51,51,.1)'; ctx.fill();
+
+  // Línea
+  ctx.beginPath(); ctx.moveTo(points[0].x,points[0].y);
+  points.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle='#CC3333'; ctx.lineWidth=2; ctx.stroke();
+
+  // Puntos
+  points.forEach((p,i)=>{
+    const sem=semaforo(vals[i],familia);
+    ctx.fillStyle=sem==='sem-verde'?'#2DB05A':sem==='sem-amarillo'?'#E8A340':'#CC3333';
+    ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fill();
+  });
+
+  // Eje fechas (primera y última)
+  ctx.fillStyle=getComputedStyle(document.documentElement).getPropertyValue('--tx-3').trim()||'#7A9585';
+  ctx.font='9px Inter,sans-serif'; ctx.textAlign='left';
+  ctx.fillText(registros[0].fecha?.slice(5)||'', pad.l, H-4);
+  ctx.textAlign='right';
+  ctx.fillText(registros[registros.length-1].fecha?.slice(5)||'', W-pad.r, H-4);
+
+  // Valor máximo eje Y
+  ctx.textAlign='right'; ctx.fillText(maxV.toFixed(0), pad.l-2, pad.t+8);
+}
+
+function toggleLeyenda() {
+  const b = document.getElementById('leyBody');
+  const a = document.getElementById('leyArrow');
+  const vis = b.style.display !== 'none';
+  b.style.display = vis ? 'none' : '';
+  a.textContent = vis ? '▶' : '▼';
+}
+
+function mostrarLeyenda() {
+  const l = document.getElementById('leyenda');
+  if(l){ l.style.opacity='1'; l.style.pointerEvents=''; }
+  // Colapsar el cuerpo de la leyenda para que ocupe menos espacio
+  const b = document.getElementById('leyBody');
+  const a = document.getElementById('leyArrow');
+  if(b){ b.style.display='none'; }
+  if(a){ a.textContent='▶'; }
+}
+function cerrarModal(e) {
+  if(!e || e.target===document.getElementById('actModalBg')) {
+    document.getElementById('actModalBg').classList.remove('vis');
+    _insumosCache = null;
+  }
+}
+
+function fmtFecha(f) {
+  if(!f) return '—';
+  const meses=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  const d=new Date(f+'T00:00:00');
+  return `${String(d.getDate()).padStart(2,'0')}-${meses[d.getMonth()]}-${d.getFullYear()}`;
+}
+
+async function cargarActividades(ciclo_id, finca_id, lote_id, lote_nombre) {
+  lote_id=parseInt(lote_id)||null; finca_id=parseInt(finca_id)||null;
+  const panel=document.getElementById('actPanel');
+  panel.classList.add('vis');
+  document.getElementById('leyenda').style.opacity='0';
+  document.getElementById('leyenda').style.pointerEvents='none';
+  document.getElementById('actTitle').textContent=lote_nombre+' · Actividades';
+  document.getElementById('actLista').innerHTML='<div class="act-loading">⏳ Cargando...</div>';
+  ['actKpiTotal','actKpiAvance','actKpiUltima'].forEach(id=>document.getElementById(id).textContent='—');
+
+  try {
+    let url=`${WORKER}/actividades-ciclo?ciclo_id=${ciclo_id}`;
+    if(finca_id) url+=`&finca_id=${finca_id}`;
+    const res=await fetch(url);
+    const data=await res.json();
+
+    // Verificar que la respuesta sea válida
+    if(data.error) throw new Error(typeof data.error==='string'?data.error:JSON.stringify(data.error));
+    const porLote = data.por_lote || [];
+    let loteData = porLote.find(l=>l.lote_id===lote_id);
+    if(!loteData) loteData = porLote.find(l=>l.lote_nombre===lote_nombre);
+    if(!loteData && porLote.length===1) loteData = porLote[0];
+    if(!loteData && porLote.length>1) {
+      // Mostrar resumen de todos los lotes
+      document.getElementById('actLista').innerHTML='<div class="act-loading" style="color:var(--d)">Lote no encontrado en las actividades del ciclo.<br>Lotes disponibles: '+porLote.map(l=>l.lote_nombre).join(', ')+'</div>';
+      return;
+    }
+
+    if(!loteData||!loteData.actividades?.length) {
+      document.getElementById('actLista').innerHTML='<div class="act-loading" style="color:var(--d)">Sin actividades registradas</div>';
+      ['actKpiTotal','actKpiAvance','actKpiUltima'].forEach(id=>document.getElementById(id).textContent='0');
+      return;
+    }
+
+    actLoteDataActual = loteData;
+    actLoteGeomActual = geo[lote_id] || null;
+
+    // Poblar filtro de proveedores (puede no existir en versión anterior del Worker)
+    const provs = loteData.proveedores ||
+      [...new Set((loteData.actividades||[]).map(a=>a.proveedor).filter(Boolean))].sort();
+    const sel = document.getElementById('actFiltProv');
+    if(sel) {
+      sel.innerHTML = '<option value="">Proveedor: Todos</option>';
+      provs.forEach(p=>{ const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+    }
+    _actProvFiltro = '';
+
+    // Totales
+    const acts0      = loteData.actividades || [];
+    const totalActs  = [...new Set(acts0.map(a=>a.actividad).filter(Boolean))].length;
+    const totalMzn   = loteData.avance_total || 0;
+    const ultimaFech = loteData.ultima_fecha;
+    document.getElementById('actKpiTotal').textContent  = totalActs;
+    document.getElementById('actKpiAvance').textContent = totalMzn.toFixed(1);
+    document.getElementById('actKpiUltima').textContent = ultimaFech?fmtFecha(ultimaFech).slice(0,6):'—';
+
+    renderActLista(loteData, '');
+
+  }catch(err){
+    document.getElementById('actLista').innerHTML=`<div class="act-loading" style="color:var(--pe)">Error: ${err.message}</div>`;
+  }
+}
+
+function renderActLista(loteData, filtProv) {
+  if(!loteData) return;
+  const lote_id = loteData.lote_id;
+  const allActs = loteData.actividades || [];
+  // Filtrar por proveedor si aplica
+  const actsBase = filtProv
+    ? allActs.filter(a=>a.proveedor===filtProv)
+    : allActs;
+
+  // Agrupar por actividad
+  const porAct = {};
+  actsBase.forEach(a=>{
+    const nombre = a.actividad||'Sin nombre';
+    const cat    = a.categoria||'Sin categoría';
+    if(!porAct[nombre]) porAct[nombre]={nombre,cat,total:0};
+    porAct[nombre].total += a.avance_mzn||0;
+  });
+
+  // Agrupar por categoría
+  const byCat={};
+  Object.values(porAct).forEach(a=>{
+    if(!byCat[a.cat]) byCat[a.cat]=[];
+    byCat[a.cat].push(a);
+  });
+
+  const cont=document.getElementById('actLista'); cont.innerHTML='';
+  Object.entries(byCat).sort().forEach(([cat,acts])=>{
+    const c=catColor(cat);
+    const sep=document.createElement('div'); sep.className='cat-sep'; sep.style.color=c; sep.textContent=cat;
+    cont.appendChild(sep);
+    acts.sort((a,b)=>b.total-a.total).forEach(act=>{
+      const key=`${lote_id}_${act.nombre}`;
+      const pintada=actPintadas.has(key);
+      const row=document.createElement('div');
+      row.className='act-resumen-row'+(pintada?' pintada':'');
+      row.innerHTML=`
+        <div class="act-check">${pintada?'✓':''}</div>
+        <div class="act-color-dot" style="background:${c}"></div>
+        <span class="act-resumen-nombre">${act.nombre}</span>
+        <span class="act-resumen-total">${act.total.toFixed(1)}mz</span>
+        <span class="act-resumen-det" onclick="abrirDetalle('${act.nombre}',event)">Ver</span>`;
+      row.onclick=(e)=>{
+        if(e.target.classList.contains('act-resumen-det')) return;
+        toggleActPintada(key,act,lote_id,c,row);
+      };
+      cont.appendChild(row);
+    });
+  });
+}
+
+function toggleActPintada(key,act,lote_id,color,rowEl) {
+  if(actPintadas.has(key)) {
+    actPintadas.delete(key);
+    rowEl.classList.remove('pintada');
+    rowEl.querySelector('.act-check').textContent='';
+    if(capasAct[key]) { cpolCiclo.removeLayer(capasAct[key]); delete capasAct[key]; }
+  } else {
+    actPintadas.add(key);
+    rowEl.classList.add('pintada');
+    rowEl.querySelector('.act-check').textContent='✓';
+    pintarActividad(key, lote_id, color);
+  }
+}
+
+function pintarActividad(key, lote_id, color) {
+  // Usar el polígono del ciclo si existe, sino el del lote
+  let geom = null;
+  // Buscar en capasCiclo el lote activo
+  const rid = itemCicloAct?.record_id;
+  if(rid && capasCiclo[rid]) {
+    geom = capasCiclo[rid].toGeoJSON();
+    if(geom.type==='FeatureCollection') geom=geom.features[0]?.geometry;
+    else if(geom.type==='Feature') geom=geom.geometry;
+  } else if(geo[lote_id]) {
+    geom=geo[lote_id];
+  }
+  if(!geom) return;
+
+  const layer=L.geoJSON(geom,{
+    style:{color,fillColor:color,fillOpacity:.6,weight:3,dashArray:'6,4'}
+  });
+  const actData=actLoteDataActual?.actividades.filter(a=>a.actividad===key.split('_').slice(1).join('_'));
+  const total=(actData||[]).reduce((s,a)=>s+(a.avance_mzn||0),0);
+  layer.bindTooltip(`<strong>${key.split('_').slice(1).join(' ')}</strong><br>${total.toFixed(1)} mzn`,{sticky:true,opacity:.95});
+  cpolCiclo.addLayer(layer);
+  capasAct[key]=layer;
+}
+
+let _actModalNombre='', _actModalFiltProv=null;
+
+// Tab actual del modal
+let _modalTab = 'registros';
+let _insumosCache = null; // cache para no recargar
+
+function setModalTab(tab) {
+  _modalTab = tab;
+  const tabR = document.getElementById('tabRegistros');
+  const tabI = document.getElementById('tabInsumos');
+  const panR = document.getElementById('panelRegistros');
+  const panI = document.getElementById('panelInsumos');
+  if(tabR){ tabR.style.background = tab==='registros' ? 'var(--green)' : 'transparent'; tabR.style.color = tab==='registros' ? '#fff' : 'var(--tx-2)'; }
+  if(tabI){ tabI.style.background = tab==='insumos'   ? 'var(--green)' : 'transparent'; tabI.style.color = tab==='insumos'   ? '#fff' : 'var(--tx-2)'; }
+  if(panR) panR.style.display = tab==='registros' ? '' : 'none';
+  if(panI) panI.style.display = tab==='insumos'   ? '' : 'none';
+  if(tab==='insumos' && !_insumosCache) {
+    const hasCiclo = cicloActivo?.id || itemCicloAct?.ciclo?.id;
+    if(!hasCiclo) {
+      const load = document.getElementById('insumosLoading');
+      if(load) { load.style.display=''; load.textContent='Selecciona un ciclo agrícola primero (pestaña 🌿 Ciclos)'; }
+      const tbl = document.getElementById('insumosTable');
+      if(tbl) tbl.style.display='none';
+    } else {
+      cargarInsumos();
+    }
+  }
+}
+
+async function cargarInsumos() {
+  if(!actLoteDataActual) return;
+  const lote_id   = actLoteDataActual.lote_id;
+  const ciclo_id  = cicloActivo?.id || itemCicloAct?.ciclo?.id || null;
+  const actividad = _actModalNombre || null; // filtrar por actividad actual
+  if(!ciclo_id) {
+    document.getElementById('insumosLoading').textContent = 'Selecciona un ciclo agrícola primero (pestaña 🌿 Ciclos)';
+    return;
+  }
+  document.getElementById('insumosLoading').style.display = '';
+  document.getElementById('insumosTable').style.display   = 'none';
+  try {
+    const res  = await fetch(`${WORKER}/insumos-ciclo?ciclo_id=${ciclo_id}&lote_id=${lote_id}`);
+    const data = await res.json();
+    let loteData = data.por_lote?.find(l=>l.lote_id===lote_id) || data.por_lote?.[0];
+    if(!loteData || !loteData.insumos?.length) {
+      document.getElementById('insumosLoading').textContent = 'Sin insumos registrados para este lote y actividad';
+      return;
+    }
+    // Filtrar por actividad si hay nombre de actividad activo
+    let insumos = loteData.insumos;
+    if(actividad) {
+      insumos = insumos.filter(i => i.actividad === actividad);
+    }
+    if(!insumos.length) {
+      document.getElementById('insumosLoading').textContent = `Sin insumos registrados para "${actividad}"`;
+      return;
+    }
+    _insumosCache = insumos;
+    renderInsumosTable(insumos);
+  } catch(err) {
+    document.getElementById('insumosLoading').textContent = 'Error: ' + err.message;
+  }
+}
+
+function renderInsumosTable(insumos) {
+  document.getElementById('insumosLoading').style.display = 'none';
+  document.getElementById('insumosTable').style.display   = '';
+
+  // Agrupar por categoría
+  const byCat = {};
+  insumos.forEach(i => {
+    const cat = i.categoria || 'Sin categoría';
+    if(!byCat[cat]) byCat[cat] = [];
+    byCat[cat].push(i);
+  });
+
+  let rows = '';
+  let totalCant = 0;
+  Object.entries(byCat).sort().forEach(([cat, items]) => {
+    rows += `<tr><td colspan="6" style="background:var(--surface-2);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--tx-3);font-weight:700;padding:5px 8px">${cat}</td></tr>`;
+    items.forEach(i => {
+      totalCant += i.cantidad || 0;
+      rows += `<tr>
+        <td title="${i.codigo||''}">${i.insumo||'—'}</td>
+        <td>${(i.cantidad||0).toFixed(2)}</td>
+        <td style="color:var(--tx-2)">${i.um||'—'}</td>
+        <td style="color:var(--tx-2)">${i.dosis_x_mzn>0?i.dosis_x_mzn.toFixed(2):'—'}</td>
+        <td style="color:var(--tx-2)">${i.area_aplicada>0?i.area_aplicada.toFixed(1)+' mz':'—'}</td>
+        <td style="color:var(--tx-2)">${i.ot||'—'}</td>
+      </tr>`;
+    });
+  });
+
+  document.getElementById('insumosBody').innerHTML = rows;
+  document.getElementById('insumosTotal').textContent = `Total: ${insumos.length} registros`;
+}
+
+function abrirDetalle(actNombre, e) {
+  if(e) e.stopPropagation();
+  _actModalNombre   = actNombre;
+  _actModalFiltProv = null;
+  _insumosCache     = null;
+  // Abrir modal primero para que el DOM esté visible
+  document.getElementById('actModalBg').classList.add('vis');
+  // Luego renderizar contenido
+  renderModalDetalle();
+  setModalTab('registros');
+}
+
+function renderModalDetalle() {
+  const actNombre = _actModalNombre;
+  let acts = actLoteDataActual?.actividades.filter(a=>a.actividad===actNombre)||[];
+  
+  // Proveedores únicos para filtro
+  const provs = [...new Set(acts.map(a=>a.proveedor).filter(Boolean))].sort();
+  const filtCont = document.getElementById('actModalFiltros');
+  filtCont.innerHTML = '';
+  if(provs.length > 1) {
+    // Chip "Todos"
+    const chip0 = document.createElement('button');
+    chip0.className = 'chip' + (_actModalFiltProv===null?' on':'');
+    chip0.textContent = 'Todos';
+    chip0.onclick = ()=>{ _actModalFiltProv=null; renderModalDetalle(); };
+    filtCont.appendChild(chip0);
+    provs.forEach(p=>{
+      const chip = document.createElement('button');
+      chip.className = 'chip' + (_actModalFiltProv===p?' on':'');
+      chip.textContent = p;
+      chip.onclick = ()=>{ _actModalFiltProv=p; renderModalDetalle(); };
+      filtCont.appendChild(chip);
+    });
+  }
+
+  // Aplicar filtro proveedor
+  if(_actModalFiltProv) acts = acts.filter(a=>a.proveedor===_actModalFiltProv);
+
+  const totalMzn = acts.reduce((s,a)=>s+(a.avance_mzn||0),0);
+  // Contexto: ciclo · finca · lote
+  const ctx = [
+    cicloActivo?.nombre || itemCicloAct?.ciclo?.nombre || '',
+    actLoteDataActual?.finca_nombre || itemCicloAct?.finca_nombre || '',
+    actLoteDataActual?.lote_nombre  || itemCicloAct?.lote_nombre  || '',
+  ].filter(Boolean).join(' › ');
+
+  document.getElementById('actModalTitle').textContent = actNombre;
+  document.getElementById('actModalSub').innerHTML =
+    `<span style="color:var(--b);font-size:10px">${ctx}</span><br>${acts.length} registros · ${totalMzn.toFixed(2)} mzn totales`;
+  document.getElementById('actModalTotal').textContent = `Total: ${totalMzn.toFixed(2)} mzn`;
+
+  document.getElementById('actModalBody').innerHTML = acts
+    .sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))
+    .map(a=>`<tr>
+      <td>${fmtFecha(a.fecha)}</td>
+      <td>${(a.avance_mzn||0).toFixed(2)} mzn</td>
+      <td style="color:var(--d)">${a.ot||'—'}</td>
+      <td style="color:var(--d);font-size:10px">${a.proveedor||'—'}</td>
+      <td style="color:var(--d);font-size:10px">${a.turno||'—'}</td>
+    </tr>`).join('');
+}
+
+function renderPoligonosGuardados() {
+  // Lotes
+  LOTES.forEach(l=>{if(l.geojson){try{geo[l.id]=JSON.parse(l.geojson);}catch(e){}renderPolLote(l.id,l);}});
+  try{if(cpol.getLayers().length>0)mapa.fitBounds(cpol.getBounds(),{padding:[40,40]});}catch(e){}
+  // Actualizar etiquetas
+  actualizarEtiquetas();
+}
+
+function renderPoligonosCiclos() {
+  if(!cicloActivo)return;
+  cicloActivo.fincas.forEach(fc=>{
+    fc.lotes.forEach(l=>{
+      if(l.geojson){try{const g=JSON.parse(l.geojson);const lo=LOTES.find(x=>x.id===l.lote_id);renderPolCiclo(l.id,g,cicloActivo?.cultivo,l.lote_nombre,l.lote_id,lo?.finca_id||fc.finca_id,cicloActivo?.id);}catch(e){}}
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// KMZ / KML
+// ═══════════════════════════════════════════════════
+async function cargarKMZ(input) {
+  const esCiclo=modo==='ciclos';
+  if(!esCiclo&&!loteAct){toast('Selecciona un lote primero',true);return;}
+  if(esCiclo&&!itemCicloAct){toast('Selecciona un lote del ciclo primero',true);return;}
+  const file=input.files[0]; if(!file)return; input.value='';
+  toast(`📂 Leyendo ${file.name}...`);
+  try {
+    let kmlText=file.name.toLowerCase().endsWith('.kmz')?await leerKMZ(file):await file.text();
+    const result=kmlAGeoJSON(kmlText);
+    if(!result){toast('No se encontró polígono en el archivo',true);return;}
+
+    // Si es array → múltiples polígonos → mostrar selector
+    if(Array.isArray(result)) {
+      if(result.length===1) {
+        await aplicarGeometria(result[0].geom, result[0].areaMzn, file.name);
+      } else {
+        mostrarKmzSelector(result, file.name);
+      }
+    } else {
+      // Polígono único
+      let mzn=0; try{mzn=(turf.area({type:'Feature',geometry:result})/10000)/0.7;}catch(e){}
+      await aplicarGeometria(result,mzn,file.name);
+    }
+  }catch(err){console.error(err);toast('Error al leer: '+err.message,true);}
+}
+
+async function leerKMZ(file) {
+  const buffer=await file.arrayBuffer(); const bytes=new Uint8Array(buffer);
+  if(bytes[0]===0x50&&bytes[1]===0x4B) return await extraerKmlDeZip(buffer);
+  return new TextDecoder().decode(bytes);
+}
+async function extraerKmlDeZip(buffer) {
+  const view=new DataView(buffer); const bytes=new Uint8Array(buffer); let offset=0;
+  const dec=new TextDecoder('utf-8');
+  while(offset<bytes.length-4) {
+    if(view.getUint32(offset,true)!==0x04034B50)break;
+    const compMethod=view.getUint16(offset+8,true);
+    const compSize=view.getUint32(offset+18,true);
+    const fnLen=view.getUint16(offset+26,true);
+    const extraLen=view.getUint16(offset+28,true);
+    const filename=dec.decode(bytes.slice(offset+30,offset+30+fnLen));
+    const dataOffset=offset+30+fnLen+extraLen;
+    if(filename.toLowerCase().endsWith('.kml')) {
+      const compData=bytes.slice(dataOffset,dataOffset+compSize);
+      if(compMethod===0) return dec.decode(compData);
+      if(compMethod===8) {
+        const ds=new DecompressionStream('deflate-raw');
+        const writer=ds.writable.getWriter(); const reader=ds.readable.getReader();
+        writer.write(compData); writer.close();
+        const chunks=[]; let done=false;
+        while(!done){const{value,done:d}=await reader.read();if(value)chunks.push(value);done=d;}
+        const total=chunks.reduce((a,c)=>a+c.length,0); const out=new Uint8Array(total); let pos=0;
+        for(const c of chunks){out.set(c,pos);pos+=c.length;} return dec.decode(out);
+      }
+    }
+    offset=dataOffset+compSize;
+  }
+  throw new Error('No se encontró .kml dentro del KMZ');
+}
+function kmlAGeoJSON(kmlText, returnAll=false) {
+  const doc=new DOMParser().parseFromString(kmlText,'application/xml');
+  const polys=doc.getElementsByTagName('Polygon');
+  if(!polys.length) return null;
+
+  if(polys.length===1 && !returnAll) return kmlPolyToGeo(polys[0]);
+
+  // Extraer todos los polígonos con sus nombres (de Placemark padre)
+  const results = [];
+  for(const poly of polys) {
+    const geom = kmlPolyToGeo(poly);
+    if(!geom) continue;
+    // Buscar el Placemark padre para obtener el nombre
+    let nombre = '';
+    let node = poly.parentElement;
+    while(node) {
+      const nameEl = node.querySelector(':scope > name');
+      if(nameEl) { nombre = nameEl.textContent.trim(); break; }
+      node = node.parentElement;
+    }
+    // Calcular área aproximada
+    let areaMzn = 0;
+    try { areaMzn = (turf.area({type:'Feature',geometry:geom})/10000)/0.7; } catch(e){}
+    results.push({ nombre, geom, areaMzn });
+  }
+
+  if(returnAll) return results;
+  // Si hay múltiples, retornar el array para mostrar selector
+  return results;
+}
+function kmlPolyToGeo(poly) {
+  const outer=poly.getElementsByTagName('outerBoundaryIs')[0]; if(!outer)return null;
+  const rings=[parseCoordsKML(outer)]; if(!rings[0])return null;
+  for(const inn of poly.getElementsByTagName('innerBoundaryIs')){const c=parseCoordsKML(inn);if(c)rings.push(c);}
+  return{type:'Polygon',coordinates:rings};
+}
+function parseCoordsKML(el) {
+  const ce=el.getElementsByTagName('coordinates')[0]; if(!ce)return null;
+  const coords=ce.textContent.trim().split(/\s+/).map(c=>{const p=c.split(',').map(Number);return[p[0],p[1]];}).filter(c=>!isNaN(c[0])&&!isNaN(c[1]));
+  if(coords.length<3)return null;
+  const f=coords[0],l=coords[coords.length-1]; if(f[0]!==l[0]||f[1]!==l[1])coords.push(f);
+  return coords;
+}
+
+// ═══════════════════════════════════════════════════
+// LEYENDAS
+// ═══════════════════════════════════════════════════
+function actualizarLeyendaLotes() {
+  document.getElementById('leyTitulo').textContent='Estado lote';
+  document.getElementById('leyItems').innerHTML=`
+    <div class="li2"><div class="ls" style="background:#4A7C3F;border:1px solid #7CB87A"></div>Mapeado</div>
+    <div class="li2"><div class="ls" style="background:rgba(200,169,110,.2);border:1px dashed #C8A96E"></div>Sin mapear</div>
+    <div class="li2"><div class="ls" style="background:rgba(124,184,122,.5);border:2px solid #7CB87A"></div>Activo</div>`;
+}
+function actualizarLeyendaCiclos() {
+  // hint en leyenda
+  const cultivos=[...new Set(CICLOS.map(c=>c.cultivo).filter(Boolean))];
+  document.getElementById('leyTitulo').textContent='Cultivos';
+  document.getElementById('leyItems').innerHTML=
+    cultivos.map(c=>`<div class="li2"><div class="ls" style="background:${cultivoColor(c)}44;border:1px solid ${cultivoColor(c)}"></div>${c}</div>`).join('')+
+    `<div style="margin-top:6px;padding-top:5px;border-top:1px solid var(--pb);font-size:9px;color:var(--d)">
+      👆 Clic en polígono → actividades
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+// UTILIDADES
+// ═══════════════════════════════════════════════════
+function setPill(txt,tipo='ok'){const p=document.getElementById('pill');p.className='pill'+(tipo==='ok'?'':' '+tipo);p.textContent=txt;}
+let _tt; function toast(msg,err=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast vis'+(err?' err':'');clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove('vis'),4500);}
+
+// ═══════════════════════════════════════════════════
+// CARGA INICIAL
+// ═══════════════════════════════════════════════════
+async function cargarDatos() {
+  setPill('⏳ Cargando...','cargando');
+  try {
+    const [r1,r2]=await Promise.all([
+      fetch(`${WORKER}/fincas-config`),
+      fetch(`${WORKER}/ciclos-config`)
+    ]);
+    const [d1,d2]=await Promise.all([r1.json(),r2.json()]);
+
+    COMPANIAS=d1.companias; FINCAS=d1.fincas; LOTES=d1.lotes;
+    CICLOS=d2.ciclos;
+
+    // Sectores: vacío = mostrar todos por defecto (sin preselección)
+    // selSects.clear() ya está vacío por defecto
+
+    refreshAll();
+    renderPoligonosGuardados();
+    renderLotes();
+    buildComboCiclos();
+
+    document.getElementById('stF').textContent=d1._meta.total_fincas;
+    document.getElementById('stL').textContent=d1._meta.total_lotes;
+    document.getElementById('stM').textContent=Object.keys(geo).length;
+    setPill(`✓ ${d1._meta.total_fincas} fincas · ${d1._meta.total_lotes} lotes`);
+    // Inicializar leyenda colapsada
+    const _lb = document.getElementById('leyBody');
+    const _la = document.getElementById('leyArrow');
+    if(_lb){ _lb.style.display='none'; }
+    if(_la){ _la.textContent='▶'; }
+  }catch(err){
+    console.error(err);
+    setPill('⚠ Error al cargar','error');
+    toast('⚠️ No se pudo conectar: '+err.message,true);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+// CAPAS
+// ═══════════════════════════════════════════════════
+const estadoCapas = { lotes: true, ciclos: true, etiquetas: true };
+const capasEtiquetas = L.layerGroup().addTo(mapa);
+
+function toggleCapa(nombre) {
+  estadoCapas[nombre] = !estadoCapas[nombre];
+  const tog = document.getElementById(
+    nombre==='lotes'?'togLotes':nombre==='ciclos'?'togCiclos':'togEtiquetas'
+  );
+  tog.className = 'capa-toggle ' + (estadoCapas[nombre]?'on':'off');
+
+  if(nombre==='lotes') {
+    if(estadoCapas.lotes) mapa.addLayer(cpol);
+    else mapa.removeLayer(cpol);
+  }
+  if(nombre==='ciclos') {
+    if(estadoCapas.ciclos) mapa.addLayer(cpolCiclo);
+    else mapa.removeLayer(cpolCiclo);
+  }
+  if(nombre==='etiquetas') {
+    if(estadoCapas.etiquetas) mapa.addLayer(capasEtiquetas);
+    else mapa.removeLayer(capasEtiquetas);
+  }
+}
+
+function actualizarEtiquetas() {
+  capasEtiquetas.clearLayers();
+  // Etiquetas de lotes mapeados
+  Object.entries(geo).forEach(([id, geom]) => {
+    const lote = LOTES.find(l=>l.id===parseInt(id));
+    if(!lote) return;
+    try {
+      const feat  = { type:'Feature', geometry:geom };
+      const cent  = turf.centroid(feat);
+      const [lng,lat] = cent.geometry.coordinates;
+      const label = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div class="print-label">${lote.nombre}${lote.area_p>0?' · '+lote.area_p.toFixed(1)+'mz':''}</div>`,
+          iconAnchor: [0, 0]
+        }),
+        interactive: false
+      });
+      capasEtiquetas.addLayer(label);
+    } catch(e) {}
+  });
+}
+
+// ═══════════════════════════════════════════════════
+// IMPRESIÓN
+// ═══════════════════════════════════════════════════
+let _printOrient = 'landscape';
+
+function setOrient(v) {
+  _printOrient = v;
+  document.getElementById('orientH').className = 'chip'+(v==='landscape'?' on':'');
+  document.getElementById('orientV').className = 'chip'+(v==='portrait'?' on':'');
+}
+
+const printSeleccionados = new Set();
+
+function abrirImprimir() {
+  printSeleccionados.clear();
+  const cont = document.getElementById('printLotesList');
+  cont.innerHTML = '';
+
+  // Agrupar lotes mapeados por finca
+  const porFinca = {};
+  Object.keys(geo).forEach(id => {
+    const lote = LOTES.find(l=>l.id===parseInt(id));
+    if(!lote) return;
+    if(!porFinca[lote.finca]) porFinca[lote.finca] = [];
+    porFinca[lote.finca].push(lote);
+  });
+
+  if(!Object.keys(porFinca).length) {
+    cont.innerHTML='<div style="padding:10px;font-size:11px;color:var(--d);text-align:center">No hay lotes mapeados</div>';
+    document.getElementById('printModal').classList.add('vis');
+    return;
+  }
+
+  Object.keys(porFinca).sort().forEach(finca => {
+    const sep = document.createElement('div');
+    sep.className = 'print-lote-sep';
+    sep.innerHTML = `📍 ${finca}`;
+    cont.appendChild(sep);
+
+    porFinca[finca].forEach(lote => {
+      // Pre-seleccionar lote activo
+      if(loteAct && lote.id===loteAct.id) printSeleccionados.add(lote.id);
+
+      const row = document.createElement('div');
+      row.className = 'print-lote-item' + (printSeleccionados.has(lote.id)?' sel':'');
+      row.dataset.id = lote.id;
+      row.innerHTML = `
+        <div class="plcheck">${printSeleccionados.has(lote.id)?'✓':''}</div>
+        <span style="flex:1">${lote.nombre}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--d)">${lote.area_p>0?lote.area_p.toFixed(1)+'mz':''}</span>`;
+      row.onclick = () => togglePrintLote(lote.id, row);
+      cont.appendChild(row);
+    });
+  });
+
+  actualizarContPrint();
+  document.getElementById('printModal').classList.add('vis');
+}
+
+function togglePrintLote(id, row) {
+  if(printSeleccionados.has(id)) {
+    printSeleccionados.delete(id);
+    row.classList.remove('sel');
+    row.querySelector('.plcheck').textContent='';
+  } else {
+    printSeleccionados.add(id);
+    row.classList.add('sel');
+    row.querySelector('.plcheck').textContent='✓';
+  }
+  actualizarContPrint();
+}
+
+function printSelAll() {
+  document.querySelectorAll('.print-lote-item').forEach(row => {
+    const id = parseInt(row.dataset.id);
+    printSeleccionados.add(id);
+    row.classList.add('sel');
+    row.querySelector('.plcheck').textContent='✓';
+  });
+  actualizarContPrint();
+}
+
+function printSelNone() {
+  document.querySelectorAll('.print-lote-item').forEach(row => {
+    row.classList.remove('sel');
+    row.querySelector('.plcheck').textContent='';
+  });
+  printSeleccionados.clear();
+  actualizarContPrint();
+}
+
+function actualizarContPrint() {
+  document.getElementById('printLoteCount').textContent = printSeleccionados.size + ' seleccionados';
+}
+
+function cerrarPrintModal(e) {
+  if(!e || e.target===document.getElementById('printModal'))
+    document.getElementById('printModal').classList.remove('vis');
+}
+
+function cerrarPlano() {
+  document.getElementById('planoWindow').style.display='none';
+}
+
+function generarPlanoCatastral() {
+  if(!printSeleccionados.size) { toast('Selecciona al menos un lote', true); return; }
+  const loteIds = [...printSeleccionados];
+  // Para el cuadro de info usar el primer lote seleccionado como referencia
+  const loteId  = loteIds[0];
+  const lote    = LOTES.find(l=>l.id===loteId);
+  const propietario = document.getElementById('printPropietario').value || 'División Agrícola Comasa';
+  const localizacion= document.getElementById('printLocalizacion').value || 'Chinandega, Nicaragua';
+  const contenido   = document.getElementById('printContenido').value;
+  const elaborado   = document.getElementById('printElaborado').value;
+  const conVertices = document.getElementById('pchVertices').checked;
+  const conHatch    = document.getElementById('pchHatch').checked;
+  const conRosa     = document.getElementById('pchRosa').checked;
+  const orient      = _printOrient;
+
+  document.getElementById('printModal').classList.remove('vis');
+
+  // Dimensiones A4
+  const PX = 96; // px/inch
+  const W  = orient==='landscape' ? 1122 : 794;  // A4 a 96dpi
+  const H  = orient==='landscape' ? 794  : 1122;
+  const MARG     = 40;
+  const INFO_W   = 220;
+  const MAP_W    = W - MARG*2 - INFO_W - 10;
+  const MAP_H    = H - MARG*2 - 60; // 60 = header
+  const MAP_X    = MARG;
+  const MAP_Y    = MARG + 50;
+
+  const canvas = document.getElementById('planoCatastral');
+  canvas.width  = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  // Fondo blanco
+  ctx.fillStyle = 'white';
+  ctx.fillRect(0,0,W,H);
+
+  // ── Borde exterior ──────────────────────────────
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth   = 2;
+  ctx.strokeRect(MARG-5, MARG-5, W-MARG*2+10, H-MARG*2+10);
+  ctx.lineWidth = 1;
+  ctx.strokeRect(MARG-8, MARG-8, W-MARG*2+16, H-MARG*2+16);
+
+  // ── Header ──────────────────────────────────────
+  ctx.font = 'bold 16px Arial';
+  ctx.fillStyle = '#000';
+  ctx.fillText(`PRODUCTOR: ${propietario.toUpperCase()}`, MAP_X, MARG+25);
+  ctx.font = '11px Arial';
+  ctx.fillStyle = '#333';
+  const fincaHdr = [...new Set(loteIds.map(id=>LOTES.find(l=>l.id===id)?.finca).filter(Boolean))].join(' / ');
+  const loteHdr  = loteIds.map(id=>LOTES.find(l=>l.id===id)?.nombre).filter(Boolean).join(', ');
+  ctx.fillText(`FINCA: ${fincaHdr.toUpperCase()}   LOTE: ${loteHdr.toUpperCase()}`, MAP_X, MARG+42);
+
+  // ── Área del mapa ────────────────────────────────
+  if(!geo[loteId]) { toast('El lote seleccionado no tiene polígono', true); return; }
+
+  // Calcular bounding box de TODOS los lotes seleccionados
+  const allCoords = [];
+  const extractCoords = (g) => {
+    if(g.type==='Polygon') g.coordinates[0].forEach(c=>allCoords.push(c));
+    else if(g.type==='MultiPolygon') g.coordinates.forEach(p=>p[0].forEach(c=>allCoords.push(c)));
+  };
+  loteIds.forEach(id => { if(geo[id]) extractCoords(geo[id]); });
+
+  const minLng = Math.min(...allCoords.map(c=>c[0]));
+  const maxLng = Math.max(...allCoords.map(c=>c[0]));
+  const minLat = Math.min(...allCoords.map(c=>c[1]));
+  const maxLat = Math.max(...allCoords.map(c=>c[1]));
+
+  const dLng = maxLng - minLng || 0.001;
+  const dLat = maxLat - minLat || 0.001;
+
+  // Función coord → pixel (con margen interno)
+  const PAD = 60;
+  const scaleX = (MAP_W - PAD*2) / dLng;
+  const scaleY = (MAP_H - PAD*2) / dLat;
+  const scale  = Math.min(scaleX, scaleY);
+
+  const toX = lng => MAP_X + PAD + (lng - minLng) * scale;
+  const toY = lat => MAP_Y + PAD + (maxLat - lat) * scale;
+
+  // ── Dibujar TODOS los lotes seleccionados ───────
+  // Dibujar cada lote con su color
+  const loteColors = ['#d4edda','#d4e8f5','#fef9c3','#f5d4d4','#e8d4f5','#d4f0e8'];
+  loteIds.forEach((lid, idx) => {
+    const lgeom = geo[lid];
+    if(!lgeom) return;
+    const loteRef = LOTES.find(l=>l.id===lid);
+    const rings2 = lgeom.type==='Polygon' ? lgeom.coordinates : lgeom.coordinates[0];
+    const ring2  = rings2[0];
+    const fillCol = loteIds.length > 1 ? loteColors[idx % loteColors.length] : 'rgba(220,235,220,0.5)';
+
+    // Relleno
+    ctx.beginPath();
+    ring2.forEach((c,i)=>{ if(i===0)ctx.moveTo(toX(c[0]),toY(c[1]));else ctx.lineTo(toX(c[0]),toY(c[1])); });
+    ctx.closePath();
+    ctx.fillStyle = fillCol; ctx.fill();
+
+    // Hatch
+    if(conHatch) {
+      ctx.save();
+      ctx.beginPath();
+      ring2.forEach((c,i)=>{ if(i===0)ctx.moveTo(toX(c[0]),toY(c[1]));else ctx.lineTo(toX(c[0]),toY(c[1])); });
+      ctx.closePath(); ctx.clip();
+      ctx.strokeStyle='#bbb'; ctx.lineWidth=0.7;
+      const step=12;
+      for(let d=-(MAP_H);d<MAP_W;d+=step){
+        ctx.beginPath(); ctx.moveTo(MAP_X+d,MAP_Y); ctx.lineTo(MAP_X+MAP_W+d,MAP_Y+MAP_H); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Borde
+    ctx.beginPath();
+    ring2.forEach((c,i)=>{ if(i===0)ctx.moveTo(toX(c[0]),toY(c[1]));else ctx.lineTo(toX(c[0]),toY(c[1])); });
+    ctx.closePath();
+    ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.stroke();
+
+    // Vértices — solo número, sin marcas
+    if(conVertices) {
+      ring2.forEach((c,i)=>{
+        if(i===ring2.length-1) return;
+        const x=toX(c[0]),y=toY(c[1]);
+        ctx.font='bold 7px Arial'; ctx.fillStyle='#000';
+        ctx.fillText(`V-${i+1}`,x+2,y-2);
+      });
+    }
+
+    // Etiqueta del lote en el centroide
+    try {
+      const feat2={type:'Feature',geometry:lgeom};
+      const cent2=turf.centroid(feat2);
+      const [lng2,lat2]=cent2.geometry.coordinates;
+      ctx.font='bold 10px Arial'; ctx.fillStyle='#000'; ctx.textAlign='center';
+      ctx.fillText(loteRef?.nombre||'', toX(lng2), toY(lat2)-6);
+      if(loteRef?.area_p>0) {
+        ctx.font='9px Arial'; ctx.fillStyle='#333';
+        ctx.fillText(loteRef.area_p.toFixed(1)+' mzn', toX(lng2), toY(lat2)+8);
+      }
+      ctx.textAlign='left';
+    } catch(e){}
+  });
+
+  // Ref al primer lote para compatibilidad con código posterior
+  const rings = (geo[loteId]?.type==='Polygon' ? geo[loteId].coordinates : geo[loteId]?.coordinates?.[0]) || [[]];
+  const outerRing = rings[0] || [];
+  ctx.beginPath();
+  outerRing.forEach((c,i)=>{
+    if(i===0) ctx.moveTo(toX(c[0]),toY(c[1]));
+    else ctx.lineTo(toX(c[0]),toY(c[1]));
+  });
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(220,235,220,0.5)';
+  ctx.fill();
+
+  // Sombreado diagonal DENTRO del polígono recortado
+  if(conHatch) {
+    ctx.save();
+    ctx.beginPath();
+    outerRing.forEach((c,i)=>{
+      if(i===0) ctx.moveTo(toX(c[0]),toY(c[1]));
+      else ctx.lineTo(toX(c[0]),toY(c[1]));
+    });
+    ctx.closePath();
+    ctx.clip();
+    ctx.strokeStyle = '#bbb';
+    ctx.lineWidth   = 0.7;
+    const step = 12;
+    const x0=toX(minLng)-10, y0=toY(maxLat)-10;
+    const x1=toX(maxLng)+10, y1=toY(minLat)+10;
+    for(let d=-(y1-y0);d<(x1-x0);d+=step){
+      ctx.beginPath();
+      ctx.moveTo(x0+d, y0);
+      ctx.lineTo(x1+d, y1);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Borde del polígono (encima del relleno)
+  ctx.beginPath();
+  outerRing.forEach((c,i)=>{
+    if(i===0) ctx.moveTo(toX(c[0]),toY(c[1]));
+    else ctx.lineTo(toX(c[0]),toY(c[1]));
+  });
+  ctx.closePath();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth   = 2;
+  ctx.stroke();
+
+  // ── Vértices ─────────────────────────────────────
+  if(conVertices) {
+    outerRing.forEach((c,i)=>{
+      if(i===outerRing.length-1) return; // último = primero
+      const x=toX(c[0]), y=toY(c[1]);
+      // Cruz pequeña en el vértice (sin punto relleno)
+      ctx.strokeStyle='#000'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x-3,y); ctx.lineTo(x+3,y); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x,y-3); ctx.lineTo(x,y+3); ctx.stroke();
+      ctx.font='bold 8px Arial';
+      ctx.fillStyle='#000';
+      ctx.fillText(`V-${i+1}`, x+4, y-3);
+    });
+  }
+
+  // ── Área total en el centro ──────────────────────
+  let areaM2 = 0, areaMzn = lote?.area_p || 0, areaHa = 0;
+  try {
+    areaM2  = turf.area({type:'Feature',geometry:geom});
+    areaHa  = areaM2/10000;
+    areaMzn = areaMzn || areaHa/0.7;
+  } catch(e){}
+
+  // Área total de todos los lotes seleccionados
+  let totalM2=0, totalMzn=0, totalHa=0;
+  loteIds.forEach(lid => {
+    if(!geo[lid]) return;
+    try {
+      const am2=turf.area({type:'Feature',geometry:geo[lid]});
+      totalM2  += am2;
+      totalHa  += am2/10000;
+      totalMzn += (LOTES.find(l=>l.id===lid)?.area_p || am2/10000/0.7);
+    } catch(e){}
+  });
+  areaM2=totalM2; areaHa=totalHa; areaMzn=totalMzn;
+
+  // Solo mostrar cuadro central si es un solo lote
+  if(loteIds.length===1) {
+    const cx = MAP_X + MAP_W/2;
+    const cy = MAP_Y + MAP_H*0.75;
+    ctx.save();
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.fillRect(cx-95,cy-38,190,72);
+    ctx.strokeStyle='#000'; ctx.lineWidth=0.7;
+    ctx.strokeRect(cx-95,cy-38,190,72);
+    ctx.fillStyle='#2D4A1E';
+    ctx.fillRect(cx-95,cy-38,190,18);
+    ctx.fillStyle='white'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+    ctx.fillText('ÁREA TOTAL DEL TERRENO', cx, cy-24);
+    ctx.fillStyle='#000'; ctx.font='10px Arial';
+    ctx.fillText(`${totalM2.toFixed(3)} M²`, cx, cy-8);
+    ctx.fillText(`${totalMzn.toFixed(3)} MZ`, cx, cy+8);
+    ctx.fillText(`${totalHa.toFixed(3)} HA`, cx, cy+24);
+    ctx.textAlign='left';
+    ctx.restore();
+  }
+
+  // ── Rosa de los vientos ──────────────────────────
+  if(conRosa) {
+    const rx = MAP_X + MAP_W - 70, ry = MAP_Y + 70, r=40;
+    ctx.save();
+    ctx.translate(rx,ry);
+    ctx.strokeStyle='#000'; ctx.fillStyle='#000';
+    ctx.lineWidth=1.5;
+    // N
+    ctx.beginPath(); ctx.moveTo(0,-r); ctx.lineTo(5,-r+15); ctx.lineTo(0,-r+10); ctx.lineTo(-5,-r+15); ctx.closePath();
+    ctx.fill();
+    ctx.font='bold 13px Arial'; ctx.textAlign='center';
+    ctx.fillText('N', 0, -r-5);
+    // S E W
+    ctx.font='10px Arial';
+    ctx.fillText('S',0,r+12); ctx.fillText('E',r+10,4); ctx.fillText('W',-r-8,4);
+    // Cruz
+    ctx.beginPath(); ctx.moveTo(0,-r); ctx.lineTo(0,r); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-r,0); ctx.lineTo(r,0); ctx.stroke();
+    ctx.restore();
+  }
+
+  // ── Cuadro de información (derecha) ─────────────
+  const IX = MAP_X + MAP_W + 10;
+  const IY = MAP_Y;
+  const IW = INFO_W - 10;
+
+  function infoBox(x,y,w,h,label,value,labelSize=8,valSize=10,bold=false) {
+    // Fondo blanco del box completo
+    ctx.fillStyle='white';
+    ctx.fillRect(x,y,w,h);
+    // Header gris oscuro con etiqueta blanca
+    ctx.fillStyle='#2D4A1E';
+    ctx.fillRect(x,y,w,18);
+    ctx.fillStyle='white';
+    ctx.font=`bold ${labelSize}px Arial`;
+    ctx.textAlign='center';
+    ctx.fillText(label.toUpperCase(), x+w/2, y+12);
+    // Borde del box
+    ctx.strokeStyle='#000'; ctx.lineWidth=0.7;
+    ctx.strokeRect(x,y,w,h);
+    // Valor en negro sobre blanco — bien legible
+    ctx.font=`${bold?'bold ':''}${valSize}px Arial`;
+    ctx.fillStyle='#000';
+    const words=String(value).split(' ');
+    let line='', lineY=y+32, lineH=13;
+    words.forEach(w2=>{
+      const test=line+w2+' ';
+      if(ctx.measureText(test).width>w-8&&line) {
+        ctx.fillText(line.trim(),x+w/2,lineY); line=w2+' '; lineY+=lineH;
+      } else line=test;
+    });
+    if(line.trim()) ctx.fillText(line.trim(),x+w/2,lineY);
+    ctx.textAlign='left';
+    return lineY+lineH+4;
+  }
+
+  // Datos de lotes para cuadro
+  const fincasImpr = [...new Set(loteIds.map(id=>LOTES.find(l=>l.id===id)?.finca).filter(Boolean))].join(', ');
+  const lotesData  = loteIds.map(id=>LOTES.find(l=>l.id===id)).filter(Boolean);
+  const fecha      = new Date().toLocaleDateString('es-NI',{day:'2-digit',month:'2-digit',year:'numeric'});
+
+  let iy = IY;
+
+  // ── Logo ─────────────────────────────────────────
+  ctx.fillStyle='white'; ctx.fillRect(IX,iy,IW,44);
+  ctx.strokeStyle='#000'; ctx.lineWidth=0.7; ctx.strokeRect(IX,iy,IW,44);
+  ctx.fillStyle='#2D4A1E'; ctx.fillRect(IX,iy,IW,44);
+  ctx.font='bold 13px Arial'; ctx.fillStyle='white'; ctx.textAlign='center';
+  ctx.fillText('🌱 INFOAGRO', IX+IW/2, iy+20);
+  ctx.font='9px Arial'; ctx.fillStyle='rgba(255,255,255,.8)';
+  ctx.fillText('División Agrícola Comasa', IX+IW/2, iy+36);
+  ctx.textAlign='left'; iy+=44;
+
+  // ── PRODUCTOR ────────────────────────────────────
+  iy = infoBox(IX,iy,IW,48,'Productor',propietario,8,10,true);
+
+  // ── FINCA / LOTE ─────────────────────────────────
+  iy = infoBox(IX,iy,IW,36,'Finca',fincasImpr,8,10,true);
+
+  // Lotes individuales con su área
+  lotesData.forEach(lt => {
+    const ap = lt.area_p>0 ? lt.area_p.toFixed(2)+' MZ' : '—';
+    ctx.fillStyle='white'; ctx.fillRect(IX,iy,IW,24);
+    ctx.strokeStyle='#000'; ctx.lineWidth=0.5; ctx.strokeRect(IX,iy,IW,24);
+    // línea divisora izquierda color
+    ctx.fillStyle='#4A7C3F'; ctx.fillRect(IX,iy,4,24);
+    ctx.font='9px Arial'; ctx.fillStyle='#000';
+    ctx.fillText(lt.nombre, IX+10, iy+10);
+    ctx.font='bold 9px Arial'; ctx.textAlign='right';
+    ctx.fillText(ap, IX+IW-6, iy+10);
+    ctx.textAlign='left';
+    // Sector si tiene
+    if(lt.sector) { ctx.font='8px Arial'; ctx.fillStyle='#666'; ctx.fillText(lt.sector||'', IX+10, iy+20); }
+    iy+=24;
+  });
+
+  // Suma total de lotes
+  const sumaMzn = lotesData.reduce((s,lt)=>s+(lt.area_p||0),0);
+  ctx.fillStyle='#2D4A1E'; ctx.fillRect(IX,iy,IW,22);
+  ctx.strokeStyle='#000'; ctx.lineWidth=0.7; ctx.strokeRect(IX,iy,IW,22);
+  ctx.font='bold 9px Arial'; ctx.fillStyle='white'; ctx.textAlign='center';
+  ctx.fillText(`TOTAL: ${sumaMzn.toFixed(2)} MZ  /  ${(sumaMzn*0.7).toFixed(2)} HA`, IX+IW/2, iy+14);
+  ctx.textAlign='left'; iy+=22;
+
+  // ── ÁREA DE CATASTRO (detalle M²/MZ/HA) ──────────
+  ctx.fillStyle='white'; ctx.fillRect(IX,iy,IW,72);
+  ctx.strokeStyle='#000'; ctx.lineWidth=0.7; ctx.strokeRect(IX,iy,IW,72);
+  ctx.fillStyle='#2D4A1E'; ctx.fillRect(IX,iy,IW,18);
+  ctx.fillStyle='white'; ctx.font='bold 8px Arial'; ctx.textAlign='center';
+  ctx.fillText('ÁREA DE CATASTRO', IX+IW/2, iy+12);
+  ctx.fillStyle='#555'; ctx.font='7px Arial'; ctx.textAlign='left';
+  ctx.fillText('ÁREA CONSTRUIDA', IX+6, iy+30);
+  ctx.fillStyle='#000'; ctx.font='bold 10px Arial';
+  ctx.fillText(`${totalM2.toFixed(3)} M²`, IX+6, iy+43);
+  ctx.fillText(`${totalMzn.toFixed(3)} MZ`, IX+6, iy+56);
+  ctx.fillText(`${totalHa.toFixed(3)} HA`, IX+6, iy+69);
+  ctx.textAlign='left'; iy+=72;
+
+  // ── ELABORADO / FECHA ────────────────────────────
+  iy = infoBox(IX,iy,IW,36,'Elaborado por',elaborado||'—');
+  iy = infoBox(IX,iy,IW,42,'Fecha',fecha,8,12,true);
+
+  // ── DATUM ─────────────────────────────────────────
+  ctx.fillStyle='white'; ctx.fillRect(IX,iy,IW,28);
+  ctx.strokeStyle='#000'; ctx.lineWidth=0.7; ctx.strokeRect(IX,iy,IW,28);
+  ctx.font='7px Arial'; ctx.fillStyle='#555';
+  ctx.fillText('DATUM: WGS-84 UTM', IX+6, iy+11);
+  ctx.fillText(`Coord: ${minLng.toFixed(5)}°W  /  ${minLat.toFixed(5)}°N`, IX+6, iy+22);
+
+  // ── Mostrar ventana ──────────────────────────────
+  document.getElementById('planoWindow').style.display='block';
+
+  // Print CSS para esta ventana
+  let ps = document.getElementById('planoPrintStyle');
+  if(!ps){ ps=document.createElement('style'); ps.id='planoPrintStyle'; document.head.appendChild(ps); }
+  ps.textContent=`@media print{
+    body>*:not(#planoWindow){display:none!important}
+    #planoWindow{position:fixed;inset:0;z-index:9999}
+    #planoWindow button{display:none!important}
+    @page{size:A4 ${orient};margin:0}
+  }`;
+}
+
+// ── SIDEBAR TOGGLE ───────────────────────────────────
+// Toggle panel de capas
+function toggleCapasPanel() {
+  const p   = document.getElementById('capasPanel');
+  const btn = document.getElementById('btnCapas');
+  const vis = p.style.display !== 'none';
+  p.style.display = vis ? 'none' : '';
+  btn.style.background    = vis ? 'var(--surface-2)' : 'var(--green-bg)';
+  btn.style.borderColor   = vis ? 'var(--border)'    : 'var(--green)';
+  btn.style.color         = vis ? 'var(--tx-2)'      : 'var(--green-dark)';
+}
+
+// Toggle filtros lotes/ciclos
+let filtrosVisible = true;
+function toggleFiltros() {
+  filtrosVisible = !filtrosVisible;
+  const fl  = document.getElementById('filtrosLotes');
+  const fc  = document.getElementById('filtrosCiclos');
+  const fa  = document.getElementById('filtrosArrow');
+  const fab = document.getElementById('filtrosCiclosArrow');
+  if(fl) fl.style.display = filtrosVisible ? '' : 'none';
+  // Ciclos solo si está en modo ciclos
+  if(fc && fc.style.display !== 'none') fc.style.display = filtrosVisible ? '' : 'none';
+  if(fa)  fa.textContent  = filtrosVisible ? '▲ ocultar' : '▼ mostrar';
+  if(fab) fab.textContent = filtrosVisible ? '▲ ocultar' : '▼ mostrar';
+}
+
+function toggleCtxPanel() {
+  const p   = document.getElementById('ctxP');
+  const btn = document.getElementById('ctxMinBtn');
+  p.classList.toggle('mini');
+  btn.textContent = p.classList.contains('mini') ? '▲' : '▼';
+  btn.title = p.classList.contains('mini') ? 'Expandir' : 'Minimizar';
+  if(p.classList.contains('mini')) mostrarLeyenda();
+}
+
+function cerrarPanelCtx() {
+  document.getElementById('ctxP').classList.remove('vis');
+  loteAct = null;
+  itemCicloAct = null;
+  mostrarLeyenda();
+}
+
+function toggleCtxMobile() {
+  const p = document.getElementById('ctxP');
+  p.classList.toggle('vis');
+  setTimeout(()=>mapa.invalidateSize(),300);
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  setTimeout(() => mapa.invalidateSize(), 310);
+}
+
+// En mobile colapsar sidebar automáticamente al seleccionar un lote
+function autoCollapseMobile() {
+  if(window.innerWidth <= 640) {
+    const sb = document.getElementById('sidebar');
+    if(!sb.classList.contains('collapsed')) {
+      sb.classList.add('collapsed');
+      setTimeout(() => mapa.invalidateSize(), 310);
+    }
+  }
+}
+
+cargarDatos();
+</script>
+</body>
+</html>
