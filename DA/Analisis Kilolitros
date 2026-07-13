@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMASA DA · Eficiencia Semilla &amp; Insumos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{
+  --ink:#1e293b; --ink2:#475569; --ink3:#94a3b8;
+  --bg:#eef4f0;
+  --primary:#1b4332; --primary2:#2d6a4f; --secondary:#40916c; --secondary2:#52b788;
+  --accent:#e76f51;
+  --glass-shadow:6px 6px 16px rgba(45,106,79,.14),-4px -4px 12px rgba(255,255,255,.9);
+  --glass-shadow-sm:4px 4px 10px rgba(45,106,79,.12),-3px -3px 8px rgba(255,255,255,.9);
+  --content-w:1700px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;min-width:0}
+html,body{overflow-x:hidden}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:13px}
+header{background:linear-gradient(135deg,#1b4332 0%,#2d6a4f 55%,#40916c 100%);color:#fff;min-height:56px;padding:.6rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:300;box-shadow:0 6px 20px rgba(27,67,50,.3);flex-wrap:wrap;gap:8px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-ico{width:30px;height:30px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.brand-name{font-size:15px;font-weight:700}.brand-sub{font-size:11px;opacity:.75}
+.conn{display:flex;align-items:center;gap:6px;font-size:11px;background:rgba(255,255,255,.15);padding:4px 12px;border-radius:20px;flex-shrink:0}
+.dot{width:8px;height:8px;border-radius:50%;background:#f4a261;flex-shrink:0}.dot.ok{background:#52b788}.dot.err{background:#e76f51}
+.lbar{height:3px;background:linear-gradient(90deg,var(--secondary2),var(--primary2),var(--accent));position:fixed;top:0;left:0;right:0;z-index:400;animation:ld 1.2s ease-in-out infinite;display:none}
+.lbar.show{display:block}
+@keyframes ld{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+.sel-panel{background:linear-gradient(135deg,#f2f7f4,#e8f1ec);padding:.9rem 1.5rem;position:sticky;top:0;z-index:200;box-shadow:0 4px 16px rgba(45,106,79,.12)}
+.sel-inner{max-width:var(--content-w);margin:0 auto}
+.sel-grid{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1.8fr) minmax(0,1.3fr) minmax(0,1fr) auto;gap:12px;align-items:end}
+@media(max-width:900px){.sel-grid{grid-template-columns:1fr}}
+.sel-g{display:flex;flex-direction:column;gap:5px;min-width:0}
+.sel-lbl{font-size:10px;font-weight:700;color:var(--primary2);text-transform:uppercase;letter-spacing:.5px}
+.combo-wrapper{position:relative;min-width:0}
+.combo-trigger{min-height:36px;padding:6px 26px 6px 12px;border-radius:14px;font-size:12px;cursor:pointer;display:flex;align-items:center;flex-wrap:wrap;gap:3px;position:relative;background:linear-gradient(135deg,#fbfdfc,#eef5f1);box-shadow:var(--glass-shadow-sm),inset 1px 1px 2px rgba(255,255,255,.7);border:none;color:var(--ink)}
+.combo-trigger::after{content:'▾';position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--primary2)}
+.combo-placeholder{color:#94a3b8;font-size:12px}
+.combo-dropdown{display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:linear-gradient(135deg,#fbfdfc,#eef5f1);border-radius:14px;box-shadow:var(--glass-shadow);max-height:260px;overflow-y:auto;z-index:500;padding:6px 4px}
+.combo-wrapper.open .combo-dropdown{display:block}
+.combo-item{display:flex;align-items:center;gap:8px;padding:7px 10px;font-size:12px;cursor:pointer;border-radius:8px}
+.combo-item:hover{background:rgba(64,145,108,.1)}
+.combo-item input{width:14px;height:14px;accent-color:var(--secondary);cursor:pointer}
+.combo-item label{cursor:pointer;flex:1}
+.combo-all{font-weight:700;color:var(--primary2);border-bottom:1px solid rgba(45,106,79,.15);margin-bottom:4px;padding-bottom:8px}
+.tag-mini{background:linear-gradient(135deg,#dff3e7,#c8ead9);color:var(--primary);border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700}
+.sel-g select{height:36px;padding:0 10px;border-radius:14px;font-size:12px;cursor:pointer;background:linear-gradient(135deg,#fbfdfc,#eef5f1);border:none;color:var(--ink);box-shadow:var(--glass-shadow-sm);appearance:none;width:100%}
+
+main{padding:1.4rem 1.5rem;max-width:var(--content-w);margin:0 auto}
+.empty{border-radius:20px;padding:3rem;text-align:center;color:var(--ink3);background:linear-gradient(135deg,#fbfdfc,#eef5f1);box-shadow:var(--glass-shadow)}
+.empty .ico{font-size:48px;margin-bottom:1rem}
+.empty h3{font-size:16px;font-weight:700;color:var(--primary2);margin-bottom:6px}
+
+.toggle-wrap{display:flex;justify-content:center;margin-bottom:4px}
+.toggle{background:#fff;border-radius:20px;padding:4px;display:inline-flex;gap:2px;box-shadow:var(--glass-shadow-sm)}
+.toggle button{border:none;background:transparent;font-size:11px;font-weight:700;padding:7px 20px;border-radius:16px;cursor:pointer;color:var(--ink3);font-family:inherit;white-space:nowrap}
+.toggle button.active{background:var(--primary2);color:#fff}
+.toggle.mini button{padding:5px 12px;font-size:10px}
+.toggle-hint{text-align:center;font-size:10px;color:var(--ink3);margin-bottom:1.3rem}
+
+.grid-2{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:1.4rem;margin-bottom:1.4rem;align-items:start}
+@media(max-width:1000px){.grid-2{grid-template-columns:1fr}}
+
+.cc{border-radius:20px;padding:1.1rem;background:linear-gradient(135deg,#ffffff,#f5faf7);box-shadow:var(--glass-shadow);margin-bottom:1.4rem;min-width:0}
+.cc h3{font-size:11px;font-weight:800;color:var(--primary2);margin-bottom:2px;text-transform:uppercase;letter-spacing:.3px}
+.cc p.hint{font-size:10px;color:var(--ink3);margin-bottom:10px}
+.grid-2 .cc{margin-bottom:0}
+.cc-hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+.cc-hdr .titles{min-width:0}
+.cc-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cc-controls select{height:28px;padding:0 8px;border-radius:10px;font-size:10px;border:none;background:#eef5f1;box-shadow:var(--glass-shadow-sm);color:var(--ink)}
+.cc-controls .lbl{font-size:9px;color:var(--ink3);text-transform:uppercase;font-weight:700}
+
+.heat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.heat-card{min-width:0}
+.heat-title{font-size:10px;font-weight:800;color:var(--primary);margin-bottom:6px}
+.heat-table{border-collapse:collapse;font-size:9px;width:100%}
+.heat-table th{font-weight:700;color:var(--ink3);font-size:8px;padding:2px 3px;text-align:center}
+.heat-table td{text-align:center;padding:4px 3px;cursor:pointer;color:var(--ink);border-radius:4px;font-size:8px}
+.heat-table td.heat-finca{text-align:left;cursor:default;color:var(--ink2);font-weight:700;padding-right:6px;white-space:nowrap}
+.heat-table td.heat-empty{color:var(--ink3);cursor:default}
+.heat-legend{display:flex;align-items:center;gap:6px;margin-top:10px;font-size:9px;color:var(--ink2)}
+.heat-legend .bar{width:70px;height:8px;border-radius:4px;background:linear-gradient(90deg,rgba(82,183,136,.6),rgba(231,111,81,.6))}
+
+details.detail-block{border-radius:20px;background:linear-gradient(135deg,#ffffff,#f5faf7);box-shadow:var(--glass-shadow);overflow:hidden}
+details.detail-block summary{cursor:pointer;list-style:none;padding:.9rem 1.2rem;font-size:12px;font-weight:800;color:var(--primary);display:flex;justify-content:space-between;align-items:center}
+details.detail-block summary::-webkit-details-marker{display:none}
+details.detail-block summary::after{content:'▾ Ver detalle';font-size:10px;font-weight:600;color:var(--secondary)}
+details.detail-block[open] summary::after{content:'▴ Ocultar'}
+.matrix-scroll{overflow-x:auto;max-height:480px;overflow-y:auto;padding:0 .3rem .8rem}
+.mt{border-collapse:collapse;font-size:11px;white-space:nowrap;min-width:100%}
+.mt th{padding:5px 10px;font-weight:700;font-size:10px;color:var(--ink2);border-bottom:1px solid rgba(45,106,79,.18);text-align:right;background:rgba(240,248,243,.95);position:sticky;top:0}
+.mt th.left{text-align:left;min-width:190px}
+.mt th.ciclo{background:rgba(64,145,108,.16);color:var(--primary);font-size:11px;font-weight:800;min-width:75px}
+.mt td{padding:5px 10px;border-bottom:1px solid rgba(45,106,79,.08);text-align:right;cursor:pointer}
+.mt td.dim{text-align:left;cursor:default}
+.mt tr.rf td{font-weight:800;background:rgba(64,145,108,.09);color:var(--primary)}
+.mt tr.rc td{background:rgba(240,248,243,.6);color:var(--primary2);font-weight:700}
+.mt tr.rc td.dim{padding-left:18px}
+.mt tr.ra td.dim{padding-left:34px;color:var(--ink2)}
+.mt tr.rt td{font-weight:800;background:linear-gradient(135deg,rgba(82,183,136,.18),rgba(82,183,136,.08));color:var(--primary);border-top:2px solid rgba(82,183,136,.4)}
+.mt tbody tr:hover td:not(.dim){outline:1px solid rgba(64,145,108,.35);outline-offset:-1px}
+.cell-ok{background:rgba(82,183,136,.18)!important;color:#065f46;font-weight:700}
+.cell-bad{background:rgba(231,111,81,.16)!important;color:#a2440f;font-weight:700}
+
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(20,40,30,.5);z-index:900;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal-bg.show{display:flex}
+.modal{width:min(560px,92vw);max-height:80vh;overflow-y:auto;background:linear-gradient(135deg,#ffffff,#f2f8f4);border-radius:20px;box-shadow:0 20px 50px rgba(20,40,30,.3);padding:1.4rem}
+.modal-hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem}
+.modal-hdr h3{font-size:14px;font-weight:800;color:var(--primary)}
+.modal-hdr span{font-size:10px;color:var(--ink3)}
+.modal-x{background:none;border:none;font-size:18px;cursor:pointer;color:var(--ink3);line-height:1}
+.modal table{width:100%;border-collapse:collapse;font-size:11px}
+.modal th{text-align:right;padding:5px 8px;color:var(--ink3);font-size:10px;border-bottom:1px solid rgba(45,106,79,.18)}
+.modal th.left{text-align:left}
+.modal td{padding:5px 8px;text-align:right;border-bottom:1px solid rgba(45,106,79,.08)}
+.modal td.left{text-align:left;color:var(--primary2);font-weight:700}
+.modal-sum{display:flex;gap:16px;margin-bottom:.8rem;flex-wrap:wrap}
+.modal-sum .it{background:rgba(64,145,108,.08);border-radius:10px;padding:6px 12px}
+.modal-sum .it b{display:block;font-size:13px;color:var(--primary)}
+.modal-sum .it span{font-size:9px;color:var(--ink3);text-transform:uppercase}
+
+footer{text-align:center;padding:1.2rem 0 .8rem;font-size:10px;color:var(--ink3);font-weight:600}
+</style>
+</head>
+<body>
+<div class="lbar" id="lbar"></div>
+
+<header>
+  <div class="brand">
+    <div class="brand-ico">🌾</div>
+    <div>
+      <div class="brand-name">COMASA · DA</div>
+      <div class="brand-sub">Eficiencia de Consumo · Semilla &amp; Insumos Agrícolas</div>
+    </div>
+  </div>
+  <div class="conn"><span class="dot" id="dot"></span><span id="ctxt">Iniciando...</span></div>
+</header>
+
+<div class="sel-panel">
+  <div class="sel-inner">
+    <div class="sel-grid">
+      <div class="sel-g">
+        <span class="sel-lbl">Ciclos</span>
+        <div class="combo-wrapper" id="wr-ciclo">
+          <div class="combo-trigger" onclick="tog('wr-ciclo')">
+            <span class="combo-placeholder" id="ph-ciclo">Cargando...</span>
+          </div>
+          <div class="combo-dropdown" id="dd-ciclo"></div>
+        </div>
+      </div>
+      <div class="sel-g">
+        <span class="sel-lbl">Finca / Centro</span>
+        <div class="combo-wrapper" id="wr-centro">
+          <div class="combo-trigger" onclick="tog('wr-centro')">
+            <span class="combo-placeholder" id="ph-centro">Cargando...</span>
+          </div>
+          <div class="combo-dropdown" id="dd-centro"></div>
+        </div>
+      </div>
+      <div class="sel-g">
+        <span class="sel-lbl">Sector</span>
+        <div class="combo-wrapper" id="wr-sector">
+          <div class="combo-trigger" onclick="tog('wr-sector')">
+            <span class="combo-placeholder" id="ph-sector">Cargando...</span>
+          </div>
+          <div class="combo-dropdown" id="dd-sector"></div>
+        </div>
+      </div>
+      <div class="sel-g">
+        <span class="sel-lbl">Cierre</span>
+        <select id="f-cierre" onchange="recomputeAll()">
+          <option value="N" selected>Abierto (N)</option>
+          <option value="S">Cerrado (S)</option>
+          <option value="">Todos</option>
+        </select>
+      </div>
+      <div class="sel-g">
+        <span class="sel-lbl">Métrica</span>
+        <div class="toggle">
+          <button id="btn-kl" onclick="setMetric('kl')">KL</button>
+          <button id="btn-usd" class="active" onclick="setMetric('usd')">U$</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="empty" id="empty">
+    <div class="ico">🌱</div>
+    <h3>Cargando datos de Semilla &amp; Insumos Agrícolas...</h3>
+    <p>Todos los ciclos y fincas se muestran automáticamente.</p>
+  </div>
+
+  <div id="dash" style="display:none">
+
+    <div class="grid-2">
+      <div class="cc">
+        <h3 id="h-ciclo">MANZANAS SEMBRADAS VS EFICIENCIA (—/MZN) POR CICLO</h3>
+        <p class="hint">Barras = manzanas sembradas · Línea = indicador de eficiencia · Clic en una barra para ver el detalle del ciclo</p>
+        <div style="position:relative;height:280px"><canvas id="ch-ciclo"></canvas></div>
+      </div>
+      <div class="cc">
+        <h3 id="h-comp">PESO POR CATEGORÍA / CUENTA</h3>
+        <p class="hint">Participación de Semilla y cada cuenta de Insumos Agrícolas sobre el total</p>
+        <div style="position:relative;height:280px"><canvas id="ch-comp"></canvas></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="cc">
+        <h3 id="h-grupo">RESUMEN POR GRUPO / FAMILIA — (—) ABSOLUTO</h3>
+        <p class="hint">Clic en un valor para ver el desglose por finca (KL, U$ y sus indicadores /Mzn)</p>
+        <div class="matrix-scroll"><table class="mt" id="t-grupo"></table></div>
+      </div>
+      <div class="cc">
+        <h3 id="h-grupo-mzn">RESUMEN POR GRUPO / FAMILIA — (—) / MZN</h3>
+        <p class="hint">Mismo desglose, dividido entre manzanas sembradas de cada ciclo</p>
+        <div class="matrix-scroll"><table class="mt" id="t-grupo-mzn"></table></div>
+      </div>
+    </div>
+
+    <div class="cc">
+      <h3 id="h-heat">EFICIENCIA POR FINCA Y CICLO — POR CATEGORÍA (—/MZN)</h3>
+      <p class="hint">Verde = eficiente · Rojo = alto consumo (escala relativa dentro de cada categoría) · Clic en una celda para ver el detalle</p>
+      <div id="heat-container" class="heat-grid"></div>
+    </div>
+
+    <div class="cc">
+      <div class="cc-hdr">
+        <div class="titles">
+          <h3 id="h-mensual">—/MZN ACUMULADO · COMPARADO MES A MES ENTRE CICLOS</h3>
+          <p class="hint">Clic en un punto para ver el detalle del mes en ese ciclo</p>
+        </div>
+        <div class="cc-controls">
+          <span class="lbl">Desde</span>
+          <select id="mes-desde" onchange="onMonthRangeChange()"></select>
+          <span class="lbl">Hasta</span>
+          <select id="mes-hasta" onchange="onMonthRangeChange()"></select>
+          <div class="toggle mini">
+            <button id="btn-acum" class="active" onclick="setViewMode('acum')">Acumulado</button>
+            <button id="btn-mensual" onclick="setViewMode('mensual')">Mensual</button>
+          </div>
+        </div>
+      </div>
+      <div style="position:relative;height:280px"><canvas id="ch-mensual"></canvas></div>
+    </div>
+
+    <div class="cc">
+      <h3 id="h-finca">— / MZN POR FINCA — TODOS LOS CICLOS</h3>
+      <p class="hint">Comparación entre ciclos por finca — identifica dónde se concentra la ineficiencia</p>
+      <div style="position:relative;height:300px"><canvas id="ch-finca"></canvas></div>
+    </div>
+
+    <div class="cc">
+      <h3 id="h-sector">— / MZN POR SECTOR — TODOS LOS CICLOS</h3>
+      <p class="hint">Comparación entre ciclos agrupada por sector</p>
+      <div style="position:relative;height:280px"><canvas id="ch-sector"></canvas></div>
+    </div>
+
+    <details class="detail-block" style="margin-bottom:1.4rem">
+      <summary id="det-summary">Detalle · Finca → Categoría → Cuenta</summary>
+      <div class="matrix-scroll"><table class="mt" id="t-kl"></table></div>
+    </details>
+
+  </div>
+</main>
+
+<footer>COMASA DA · Sistema de Información · Semilla &amp; Insumos Agrícolas</footer>
+
+<div class="modal-bg" id="modal-bg" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div><h3 id="modal-title">Detalle</h3><span id="modal-sub"></span></div>
+      <button class="modal-x" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.set('plugins.datalabels', { display:false });
+
+const esIntranet = window.location.hostname === '192.168.5.58' ||
+                   window.location.hostname === 'localhost' ||
+                   window.location.hostname.startsWith('192.168.');
+const API = esIntranet ? 'http://192.168.5.58:5000' : 'https://sia.comasa.com.ni/dab';
+const CLASIF_FOCO = ['Semilla','Insumos Agricolas'];
+const CYCLE_COLORS = ['#2d6a4f','#2E6FBA','#e76f51','#8e44ad','#c0392b','#52b788','#0f6e56'];
+const COMP_COLORS = ['#2d6a4f','#2E6FBA','#8e44ad','#e76f51','#52b788','#0f6e56','#c0392b','#94a3b8'];
+const BAR_SOFT = 'rgba(64,145,108,.35)';
+const LINE_STRONG = '#1b4332';
+const MESES_LBL = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const GRUPO_ORDEN = ['Semilla','Fertilizantes','Protectores de Cultivo'];
+
+const SECTOR_MAP_RAW = {
+  1: ['La Laguna','La Pistola','Llano Verde','Montana','Palmira','Palo de Pan','Quinta Maria','Rancho Pando','Roma','San Martin','Santa Isabel','Santa Rosa'],
+  2: ['Las Americas','La Concha','Miramar','San Luis'],
+  4: ['San Blas']
+};
+function norm(s) {
+  return (s||'').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/\bfinca\b/g,'').replace(/\s+/g,' ').trim();
+}
+const SECTOR_LOOKUP = {};
+Object.keys(SECTOR_MAP_RAW).forEach(sec => {
+  SECTOR_MAP_RAW[sec].forEach(f => { SECTOR_LOOKUP[norm(f)] = sec; });
+});
+function sectorOf(finca) {
+  const s = SECTOR_LOOKUP[norm(finca)];
+  return s ? `Sector ${s}` : 'Sin sector asignado';
+}
+
+function classifyGrupo(clasificacion, cuenta) {
+  if (clasificacion === 'Semilla') return { grupo:'Semilla', familia:'Semilla' };
+  const c = (cuenta||'').toLowerCase();
+  if (c.includes('fertilizante')) return { grupo:'Fertilizantes', familia:cuenta||'Fertilizantes' };
+  if (c.includes('fungu')||c.includes('fungi')||c.includes('insecti')||c.includes('herbi')||c.includes('adherente'))
+    return { grupo:'Protectores de Cultivo', familia:cuenta||'Otros' };
+  return { grupo: cuenta||'Otros', familia: cuenta||'Otros' };
+}
+
+let relaciones = [], areaSiembra = [], factRows = [];
+let allCiclos = [], allFincas = [], allSectores = [];
+let selCiclos = new Set(), selFincas = new Set(), selSectores = new Set();
+let charts = {};
+let _detailStore = {};
+let currentMetric = 'usd';
+let viewMode = 'acum';
+let mesDesde = 1, mesHasta = 12;
+
+const N = (n,d=0) => n==null||isNaN(n)?'—':parseFloat(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const U = (n,d=0) => n==null||isNaN(n)||n===0?'—':'$'+N(n,d);
+const KL_FACTOR = um => {
+  if (!um) return 1;
+  switch(um.trim().toUpperCase()) {
+    case 'GLN': return 3.78;
+    case 'QQ': case 'QUINTAL': return 45.454;
+    case 'GR': case 'GRA': return 0.001;
+    case 'LIB': case 'LBR': return 0.45454;
+    default: return 1;
+  }
+};
+const colorOf = ciclo => CYCLE_COLORS[allCiclos.indexOf(ciclo)%CYCLE_COLORS.length] || '#52b788';
+const unitLbl  = () => currentMetric==='kl' ? 'KL' : 'U$';
+const mznKeyOf = () => currentMetric==='kl' ? 'klMzn' : 'usdMzn';
+const fmtLineLbl = v => currentMetric==='kl' ? N(v,1) : U(v,2);
+
+function tog(id) {
+  const el = document.getElementById(id);
+  const op = el.classList.contains('open');
+  document.querySelectorAll('.combo-wrapper').forEach(w=>w.classList.remove('open'));
+  if (!op) el.classList.add('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('.combo-wrapper'))
+    document.querySelectorAll('.combo-wrapper').forEach(w=>w.classList.remove('open'));
+});
+
+function setMetric(m) {
+  currentMetric = m;
+  document.getElementById('btn-kl').classList.toggle('active', m==='kl');
+  document.getElementById('btn-usd').classList.toggle('active', m==='usd');
+  renderAll();
+}
+function setViewMode(m) {
+  viewMode = m;
+  document.getElementById('btn-acum').classList.toggle('active', m==='acum');
+  document.getElementById('btn-mensual').classList.toggle('active', m==='mensual');
+  renderChartMensual();
+}
+function onMonthRangeChange() {
+  mesDesde = parseInt(document.getElementById('mes-desde').value);
+  mesHasta = parseInt(document.getElementById('mes-hasta').value);
+  if (mesHasta < mesDesde) mesHasta = mesDesde;
+  renderChartMensual();
+}
+function buildMonthSelects() {
+  const dSel = document.getElementById('mes-desde');
+  const hSel = document.getElementById('mes-hasta');
+  MESES_LBL.forEach((m,i)=>{
+    dSel.innerHTML += `<option value="${i+1}" ${i+1===mesDesde?'selected':''}>${m}</option>`;
+    hSel.innerHTML += `<option value="${i+1}" ${i+1===mesHasta?'selected':''}>${m}</option>`;
+  });
+}
+
+async function fetchAllPages(url) {
+  let out = [], next = url, guard = 0;
+  while (next && guard < 100) {
+    const res = await fetch(next).then(r=>r.json());
+    out = out.concat(res.value || []);
+    next = res.nextLink || null;
+    guard++;
+  }
+  return out;
+}
+
+async function init() {
+  ld(true); sc(null,'Cargando catálogos...');
+  buildMonthSelects();
+  try {
+    const fClasif = '('+CLASIF_FOCO.map(c=>`Clasificacion eq '${c}'`).join(' or ')+')';
+    const [v1, v2, v3] = await Promise.all([
+      fetchAllPages(`${API}/api/DW_InfoAgro_RelacionCicloFinca?$orderby=Ciclo,Finca&$first=200`),
+      fetchAllPages(`${API}/api/DW_InfoAgro_AreaSiembra?$filter=CategoriaActividad eq 'Siembra'&$first=500`),
+      fetchAllPages(`${API}/api/IS_DW_ActivoBiologicoDA?$filter=${encodeURIComponent(fClasif)}&$first=5000`)
+    ]);
+    relaciones = v1; areaSiembra = v2; factRows = v3;
+
+    allCiclos = [...new Set(relaciones.map(r=>r.Ciclo).filter(Boolean))].filter(c=>/^mani/i.test(c)).sort();
+    const vistos = new Set();
+    allFincas = [];
+    relaciones.forEach(r=>{ if(!vistos.has(r.CentroCC)){vistos.add(r.CentroCC); allFincas.push({centro:r.CentroCC, finca:r.Finca});} });
+
+    selCiclos = new Set(allCiclos);
+    selFincas = new Set(allFincas.map(f=>f.finca));
+    allSectores = [...new Set(allFincas.map(f=>sectorOf(f.finca)))].sort();
+    selSectores = new Set(allSectores);
+
+    buildCicloCombo();
+    buildCentroCombo();
+    buildSectorCombo();
+
+    document.getElementById('empty').style.display='none';
+    document.getElementById('dash').style.display='block';
+    sc(true,`${factRows.length} registros · ${allCiclos.length} ciclos · listo`);
+    recomputeAll();
+  } catch(e) {
+    sc(false,'Error: '+e.message);
+  }
+  ld(false);
+}
+
+function buildCicloCombo() {
+  const dd = document.getElementById('dd-ciclo');
+  dd.innerHTML = `<div class="combo-item combo-all"><input type="checkbox" id="all-ciclo" checked onchange="toggleAll('ciclo',this.checked)"><label for="all-ciclo">Todos</label></div>`;
+  allCiclos.forEach(c => {
+    dd.innerHTML += `<div class="combo-item"><input type="checkbox" value="${c}" id="cc-${c}" checked onchange="onCicloChange()"><label for="cc-${c}">${c}</label></div>`;
+  });
+  refreshPh('ciclo');
+}
+function buildCentroCombo() {
+  const dd = document.getElementById('dd-centro');
+  dd.innerHTML = `<div class="combo-item combo-all"><input type="checkbox" id="all-centro" checked onchange="toggleAll('centro',this.checked)"><label for="all-centro">Todas</label></div>`;
+  allFincas.forEach(f => {
+    dd.innerHTML += `<div class="combo-item"><input type="checkbox" value="${f.finca}" id="cf-${f.centro}" checked onchange="onCentroChange()"><label for="cf-${f.centro}"><strong>${f.centro}</strong> · ${f.finca}</label></div>`;
+  });
+  refreshPh('centro');
+}
+function buildSectorCombo() {
+  const dd = document.getElementById('dd-sector');
+  dd.innerHTML = `<div class="combo-item combo-all"><input type="checkbox" id="all-sector" checked onchange="toggleAll('sector',this.checked)"><label for="all-sector">Todos</label></div>`;
+  allSectores.forEach(s => {
+    dd.innerHTML += `<div class="combo-item"><input type="checkbox" value="${s}" id="cs-${s.replace(/\s+/g,'_')}" checked onchange="onSectorChange()"><label for="cs-${s.replace(/\s+/g,'_')}">${s}</label></div>`;
+  });
+  refreshPh('sector');
+}
+function onSectorChange() {
+  const boxes = [...document.querySelectorAll('#dd-sector input:not(#all-sector)')];
+  selSectores = new Set(boxes.filter(b=>b.checked).map(b=>b.value));
+  document.getElementById('all-sector').checked = selSectores.size===allSectores.length;
+  refreshPh('sector');
+  recomputeAll();
+}
+function toggleAll(kind, checked) {
+  const map = { ciclo:'ciclo', centro:'centro', sector:'sector' };
+  document.querySelectorAll(`#dd-${map[kind]} input[type=checkbox]:not(#all-${kind})`).forEach(cb=>cb.checked=checked);
+  if (kind==='ciclo') onCicloChange(); else if (kind==='centro') onCentroChange(); else onSectorChange();
+}
+function onCicloChange() {
+  const boxes = [...document.querySelectorAll('#dd-ciclo input:not(#all-ciclo)')];
+  selCiclos = new Set(boxes.filter(b=>b.checked).map(b=>b.value));
+  document.getElementById('all-ciclo').checked = selCiclos.size===allCiclos.length;
+  refreshPh('ciclo');
+  recomputeAll();
+}
+function onCentroChange() {
+  const boxes = [...document.querySelectorAll('#dd-centro input:not(#all-centro)')];
+  selFincas = new Set(boxes.filter(b=>b.checked).map(b=>b.value));
+  document.getElementById('all-centro').checked = selFincas.size===allFincas.length;
+  refreshPh('centro');
+  recomputeAll();
+}
+function refreshPh(kind) {
+  const ph = document.getElementById('ph-'+kind);
+  const sel = kind==='ciclo' ? [...selCiclos] : kind==='sector' ? [...selSectores] : [...selFincas];
+  const total = kind==='ciclo' ? allCiclos.length : kind==='sector' ? allSectores.length : allFincas.length;
+  const allLbl = kind==='ciclo' ? 'Todos los ciclos' : kind==='sector' ? 'Todos los sectores' : 'Todas las fincas';
+  if (sel.length===total) ph.innerHTML = `<span class="tag-mini">${allLbl}</span>`;
+  else if (!sel.length) ph.innerHTML = `<span class="combo-placeholder">Ninguno seleccionado</span>`;
+  else ph.innerHTML = sel.map(s=>`<span class="tag-mini">${s}</span>`).join(' ');
+}
+
+let CTX = null;
+
+function recomputeAll() {
+  const cierre = document.getElementById('f-cierre').value;
+  const ciclos = allCiclos.filter(c=>selCiclos.has(c));
+  const fincas = allFincas.filter(f=>selFincas.has(f.finca) && selSectores.has(sectorOf(f.finca))).map(f=>f.finca);
+  const fincasSet = new Set(fincas);
+
+  const rows = factRows.filter(r =>
+    selCiclos.has(r.Ciclo) && fincasSet.has(r.Finca) && (cierre===''||r.Cierre===cierre)
+  );
+
+  const mznByCiclo = {};
+  ciclos.forEach(c => {
+    mznByCiclo[c] = fincas.reduce((s,f)=> s + areaSiembra.filter(a=>a.Ciclo===c&&a.Finca===f).reduce((s2,a)=>s2+(parseFloat(a.AvanceMzn)||0),0), 0);
+  });
+  const mznByCicloFinca = {};
+  ciclos.forEach(c=> fincas.forEach(f=>{
+    mznByCicloFinca[`${c}|${f}`] = areaSiembra.filter(a=>a.Ciclo===c&&a.Finca===f).reduce((s,a)=>s+(parseFloat(a.AvanceMzn)||0),0);
+  }));
+
+  CTX = { ciclos, fincas, rows, mznByCiclo, mznByCicloFinca };
+
+  if (!ciclos.length || !fincas.length || !rows.length) {
+    Object.keys(charts).forEach(id=>{ if(charts[id]){charts[id].destroy();charts[id]=null;} });
+    document.getElementById('t-kl').innerHTML='';
+    return;
+  }
+
+  const totCiclo = {};
+  ciclos.forEach(c => { totCiclo[c] = {kl:0, usd:0}; });
+  rows.forEach(r => {
+    const t = totCiclo[r.Ciclo]; if(!t) return;
+    t.kl  += (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    t.usd += parseFloat(r.Monto_Consumo)||0;
+  });
+  ciclos.forEach(c => {
+    const mzn = mznByCiclo[c]||0;
+    totCiclo[c].klMzn  = mzn>0 ? totCiclo[c].kl/mzn : 0;
+    totCiclo[c].usdMzn = mzn>0 ? totCiclo[c].usd/mzn : 0;
+  });
+
+  const totFC = {};
+  rows.forEach(r => {
+    const key = `${r.Finca}|${r.Ciclo}`;
+    if (!totFC[key]) totFC[key] = {kl:0, usd:0};
+    totFC[key].kl  += (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    totFC[key].usd += parseFloat(r.Monto_Consumo)||0;
+  });
+
+  const tree = {};
+  rows.forEach(r => {
+    const finca = r.Finca; if (!fincas.includes(finca)) return;
+    const cat = r.Clasificacion || 'Sin categoría';
+    const cuenta = r.CuentaContableDescripcion || r.CUENTA_CONTABLE || 'Sin cuenta';
+    const kl = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    const usd = parseFloat(r.Monto_Consumo)||0;
+    tree[finca] = tree[finca]||{};
+    tree[finca][cat] = tree[finca][cat]||{};
+    tree[finca][cat][cuenta] = tree[finca][cat][cuenta]||{};
+    tree[finca][cat][cuenta][r.Ciclo] = tree[finca][cat][cuenta][r.Ciclo] || {kl:0,usd:0,rows:[]};
+    tree[finca][cat][cuenta][r.Ciclo].kl += kl;
+    tree[finca][cat][cuenta][r.Ciclo].usd += usd;
+    tree[finca][cat][cuenta][r.Ciclo].rows.push(r);
+  });
+
+  // Mensual por ciclo (usando campo Fecha)
+  const monthly = {};
+  ciclos.forEach(c => { monthly[c] = Array.from({length:13},()=>({kl:0,usd:0})); });
+  rows.forEach(r => {
+    if (!r.FECHA) return;
+    const d = new Date(r.FECHA);
+    if (isNaN(d)) return;
+    const m = d.getMonth()+1;
+    if (!monthly[r.Ciclo]) return;
+    monthly[r.Ciclo][m].kl  += (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    monthly[r.Ciclo][m].usd += parseFloat(r.Monto_Consumo)||0;
+  });
+
+  // Árbol Grupo->Familia->Ciclo (agregado, todas las fincas seleccionadas)
+  const treeGF = {};
+  rows.forEach(r => {
+    const { grupo, familia } = classifyGrupo(r.Clasificacion, r.CuentaContableDescripcion || r.CUENTA_CONTABLE);
+    const kl = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    const usd = parseFloat(r.Monto_Consumo)||0;
+    treeGF[grupo] = treeGF[grupo]||{};
+    treeGF[grupo][familia] = treeGF[grupo][familia]||{};
+    treeGF[grupo][familia][r.Ciclo] = treeGF[grupo][familia][r.Ciclo] || {kl:0,usd:0};
+    treeGF[grupo][familia][r.Ciclo].kl += kl;
+    treeGF[grupo][familia][r.Ciclo].usd += usd;
+  });
+
+  // Árbol Finca->Grupo->Ciclo (para mapa de calor)
+  const treeFGC = {};
+  rows.forEach(r => {
+    const { grupo } = classifyGrupo(r.Clasificacion, r.CuentaContableDescripcion || r.CUENTA_CONTABLE);
+    const finca = r.Finca;
+    const kl = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    const usd = parseFloat(r.Monto_Consumo)||0;
+    treeFGC[grupo] = treeFGC[grupo]||{};
+    treeFGC[grupo][finca] = treeFGC[grupo][finca]||{};
+    treeFGC[grupo][finca][r.Ciclo] = treeFGC[grupo][finca][r.Ciclo] || {kl:0,usd:0};
+    treeFGC[grupo][finca][r.Ciclo].kl += kl;
+    treeFGC[grupo][finca][r.Ciclo].usd += usd;
+  });
+
+  CTX.totCiclo = totCiclo;
+  CTX.totFC = totFC;
+  CTX.tree = tree;
+  CTX.treeGF = treeGF;
+  CTX.treeFGC = treeFGC;
+  CTX.monthly = monthly;
+
+  renderAll();
+}
+
+function renderAll() {
+  if (!CTX) return;
+  const { ciclos, fincas, rows, totCiclo, totFC, mznByCiclo, mznByCicloFinca, tree } = CTX;
+
+  document.getElementById('h-ciclo').textContent = `MANZANAS SEMBRADAS VS EFICIENCIA (${unitLbl()}/MZN) POR CICLO`;
+  document.getElementById('h-finca').textContent = `${unitLbl()} / MZN POR FINCA — TODOS LOS CICLOS`;
+  document.getElementById('h-sector').textContent = `${unitLbl()} / MZN POR SECTOR — TODOS LOS CICLOS`;
+  document.getElementById('h-grupo').textContent = `RESUMEN POR GRUPO / FAMILIA — (${unitLbl()}) ABSOLUTO`;
+  document.getElementById('h-grupo-mzn').textContent = `RESUMEN POR GRUPO / FAMILIA — (${unitLbl()}) / MZN`;
+  document.getElementById('h-heat').textContent = `EFICIENCIA POR FINCA Y CICLO — POR CATEGORÍA (${unitLbl()}/MZN)`;
+  document.getElementById('det-summary').textContent = `Detalle · Finca → Categoría → Cuenta (${unitLbl()} por ciclo)`;
+
+  renderChartCiclo(ciclos, totCiclo, mznByCiclo);
+  renderChartComp(rows);
+  renderGrupoFamilia(CTX.treeGF, ciclos);
+  renderGrupoFamiliaMzn(CTX.treeGF, ciclos, mznByCiclo);
+  renderHeatmaps(ciclos, fincas, CTX.treeFGC, mznByCicloFinca);
+  renderChartMensual();
+  renderChartFinca(ciclos, fincas, totFC, mznByCicloFinca);
+  renderChartSector(ciclos, fincas, totFC, mznByCicloFinca);
+  renderMatrix(tree, ciclos);
+}
+
+function renderChartCiclo(ciclos, totCiclo, mznByCiclo) {
+  if (charts['ch-ciclo']) charts['ch-ciclo'].destroy();
+  const mznKey = mznKeyOf();
+  charts['ch-ciclo'] = new Chart(document.getElementById('ch-ciclo'), {
+    data: {
+      labels: ciclos,
+      datasets: [
+        {
+          type:'bar', label:'Mzn Sembrada', data: ciclos.map(c=>+(mznByCiclo[c]||0).toFixed(1)),
+          backgroundColor: BAR_SOFT, borderColor:'rgba(64,145,108,.6)', borderWidth:1, borderRadius:5, yAxisID:'y', order:2,
+          datalabels:{ display:false }
+        },
+        {
+          type:'line', label:`${unitLbl()}/Mzn`, data: ciclos.map(c=>+totCiclo[c][mznKey].toFixed(2)),
+          borderColor: LINE_STRONG, backgroundColor: LINE_STRONG, borderWidth:2.5, pointRadius:4, pointHoverRadius:6,
+          pointBackgroundColor:'#fff', pointBorderColor:LINE_STRONG, pointBorderWidth:2, tension:.3, yAxisID:'y1', order:1,
+          datalabels:{ display:true, anchor:'end', align:'top', offset:10, color: LINE_STRONG, font:{size:10,weight:'700'}, formatter:v=>fmtLineLbl(v) }
+        }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, layout:{padding:{top:26}},
+      onClick:(evt,els)=>{ if(els.length){ openCicloDetail(ciclos[els[0].index]); } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{ legend:{position:'bottom', labels:{font:{size:10},boxWidth:10}} },
+      scales:{
+        x:{ ticks:{font:{size:10}}, grid:{display:false} },
+        y:{ position:'left', ticks:{font:{size:10}}, grid:{color:'#eef3f0'}, title:{display:true,text:'Mzn Sembrada',font:{size:9}} },
+        y1:{ position:'right', ticks:{font:{size:10}}, grid:{display:false}, title:{display:true,text:unitLbl()+'/Mzn',font:{size:9}} }
+      }
+    }
+  });
+}
+
+function renderChartComp(rows) {
+  if (charts['ch-comp']) charts['ch-comp'].destroy();
+  const key = currentMetric==='kl' ? 'kl' : 'usd';
+  const semillaTot = { v:0 };
+  const insumoCuentas = {};
+  rows.forEach(r => {
+    const val = key==='kl' ? (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um) : (parseFloat(r.Monto_Consumo)||0);
+    if (r.Clasificacion === 'Semilla') {
+      semillaTot.v += val;
+    } else {
+      const cuenta = r.CuentaContableDescripcion || r.CUENTA_CONTABLE || 'Sin cuenta';
+      insumoCuentas[cuenta] = (insumoCuentas[cuenta]||0) + val;
+    }
+  });
+  let slices = [{label:'Semilla', value:semillaTot.v}];
+  Object.keys(insumoCuentas).forEach(c => slices.push({label:c, value:insumoCuentas[c]}));
+  slices = slices.filter(s=>s.value>0).sort((a,b)=>b.value-a.value);
+  if (slices.length > 7) {
+    const top = slices.slice(0,6);
+    const otros = slices.slice(6).reduce((s,x)=>s+x.value,0);
+    slices = [...top, {label:'Otros insumos', value:otros}];
+  }
+  const total = slices.reduce((s,x)=>s+x.value,0);
+
+  charts['ch-comp'] = new Chart(document.getElementById('ch-comp'), {
+    type:'doughnut',
+    data:{
+      labels: slices.map(s=>s.label),
+      datasets:[{ data: slices.map(s=>+s.value.toFixed(1)), backgroundColor: slices.map((_,i)=>COMP_COLORS[i%COMP_COLORS.length]), borderWidth:2, borderColor:'#fff' }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{position:'bottom', labels:{font:{size:9},boxWidth:9}},
+        datalabels:{ display:true, color:'#fff', font:{size:10,weight:'700'}, formatter:(v)=>{ const pct = total>0?(v/total*100):0; return pct>=6 ? N(pct,0)+'%' : ''; } },
+        tooltip:{ callbacks:{ label: ctx => {
+          const pct = total>0 ? (ctx.parsed/total*100) : 0;
+          return `${ctx.label}: ${currentMetric==='kl'?N(ctx.parsed,0)+' KL':U(ctx.parsed,0)} (${N(pct,1)}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+function renderChartMensual() {
+  if (!CTX || !CTX.monthly) return;
+  const { ciclos, monthly, mznByCiclo } = CTX;
+  document.getElementById('h-mensual').textContent = `${unitLbl()}/MZN ${viewMode==='acum'?'ACUMULADO':'MENSUAL'} · COMPARADO MES A MES ENTRE CICLOS`;
+
+  const months = [];
+  for (let m=mesDesde; m<=mesHasta; m++) months.push(m);
+  const key = currentMetric;
+
+  const datasets = ciclos.map(c => {
+    const mzn = mznByCiclo[c]||0;
+    let acc = 0;
+    const data = months.map(m => {
+      const v = monthly[c][m]?.[key] || 0;
+      if (viewMode==='acum') { acc += v; return mzn>0 ? +(acc/mzn).toFixed(2) : 0; }
+      return mzn>0 ? +(v/mzn).toFixed(2) : 0;
+    });
+    return {
+      label: c, data, borderColor: colorOf(c), backgroundColor: colorOf(c),
+      borderWidth:2.5, pointRadius:4, pointHoverRadius:7, tension:.25, fill:false
+    };
+  });
+
+  if (charts['ch-mensual']) charts['ch-mensual'].destroy();
+  charts['ch-mensual'] = new Chart(document.getElementById('ch-mensual'), {
+    type:'line',
+    data:{ labels: months.map(m=>MESES_LBL[m-1]), datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      onClick:(evt,els)=>{ if(els.length){ const el=els[0]; openMesDetail(ciclos[el.datasetIndex], months[el.index]); } },
+      onHover:(evt,els)=>{ evt.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{ legend:{position:'bottom', labels:{font:{size:10},boxWidth:10}} },
+      scales:{
+        x:{ ticks:{font:{size:10}}, grid:{display:false} },
+        y:{ ticks:{font:{size:10}}, grid:{color:'#eef3f0'}, title:{display:true,text:unitLbl()+'/Mzn '+(viewMode==='acum'?'acumulado':'mensual'),font:{size:9}} }
+      }
+    }
+  });
+}
+
+/* ── Mapas de calor Finca x Ciclo, uno por Grupo ── */
+function heatColor(v, min, max) {
+  if (max<=min) return 'rgba(82,183,136,.3)';
+  const t = Math.max(0, Math.min(1, (v-min)/(max-min)));
+  const r = Math.round(82 + (231-82)*t);
+  const g = Math.round(183 + (111-183)*t);
+  const b = Math.round(136 + (81-136)*t);
+  return `rgba(${r},${g},${b},.4)`;
+}
+
+function renderHeatmaps(ciclos, fincas, treeFGC, mznByCF) {
+  const key = currentMetric;
+  const grupos = [...GRUPO_ORDEN.filter(g=>treeFGC[g]), ...Object.keys(treeFGC).filter(g=>!GRUPO_ORDEN.includes(g))];
+  const fincasOrd = [...fincas].sort();
+
+  let html = '';
+  grupos.forEach(grupo => {
+    const vals = [];
+    fincasOrd.forEach(f => ciclos.forEach(c => {
+      const cell = treeFGC[grupo]?.[f]?.[c];
+      const mzn = mznByCF[`${c}|${f}`]||0;
+      if (cell && mzn>0) vals.push(cell[key]/mzn);
+    }));
+    const min = vals.length ? Math.min(...vals) : 0;
+    const max = vals.length ? Math.max(...vals) : 0;
+
+    let t = `<div class="heat-card"><div class="heat-title">${grupo}</div><table class="heat-table"><thead><tr><th></th>`;
+    ciclos.forEach(c => t += `<th>${c.replace('Mani ','')}</th>`);
+    t += `</tr></thead><tbody>`;
+    fincasOrd.forEach(f => {
+      t += `<tr><td class="heat-finca">${f}</td>`;
+      ciclos.forEach(c => {
+        const cell = treeFGC[grupo]?.[f]?.[c];
+        const mzn = mznByCF[`${c}|${f}`]||0;
+        const val = (cell && mzn>0) ? cell[key]/mzn : null;
+        if (val!=null) {
+          t += `<td style="background:${heatColor(val,min,max)}" onclick="openHeatCell('${grupo.replace(/'/g,"\\'")}','${f.replace(/'/g,"\\'")}','${c}')">${N(val,1)}</td>`;
+        } else {
+          t += `<td class="heat-empty">—</td>`;
+        }
+      });
+      t += `</tr>`;
+    });
+    t += `</tbody></table></div>`;
+    html += t;
+  });
+
+  document.getElementById('heat-container').innerHTML = html || '<p style="font-size:11px;color:var(--ink3)">Sin datos suficientes.</p>';
+}
+
+function openHeatCell(grupo, finca, ciclo) {
+  if (!CTX) return;
+  const rows = CTX.rows.filter(r => r.Finca===finca && r.Ciclo===ciclo &&
+    classifyGrupo(r.Clasificacion, r.CuentaContableDescripcion || r.CUENTA_CONTABLE).grupo===grupo);
+  let kl=0, usd=0;
+  const porFamilia = {};
+  rows.forEach(r => {
+    const { familia } = classifyGrupo(r.Clasificacion, r.CuentaContableDescripcion || r.CUENTA_CONTABLE);
+    const k = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    const u = parseFloat(r.Monto_Consumo)||0;
+    kl += k; usd += u;
+    if (!porFamilia[familia]) porFamilia[familia] = {kl:0,usd:0};
+    porFamilia[familia].kl += k; porFamilia[familia].usd += u;
+  });
+  const mzn = CTX.mznByCicloFinca[`${ciclo}|${finca}`]||0;
+
+  document.getElementById('modal-title').textContent = `${grupo} · ${finca}`;
+  document.getElementById('modal-sub').textContent = `Ciclo ${ciclo}`;
+  let b = `<div class="modal-sum">
+    <div class="it"><b>${N(kl,0)}</b><span>KL total</span></div>
+    <div class="it"><b>${U(usd,0)}</b><span>U$ total</span></div>
+    <div class="it"><b>${mzn>0?N(kl/mzn,2):'—'}</b><span>KL/Mzn</span></div>
+    <div class="it"><b>${mzn>0?U(usd/mzn,3):'—'}</b><span>U$/Mzn</span></div>
+  </div>`;
+  b += `<table><thead><tr><th class="left">Familia</th><th>KL</th><th>U$</th></tr></thead><tbody>`;
+  Object.keys(porFamilia).sort((a,b2)=>porFamilia[b2][currentMetric]-porFamilia[a][currentMetric]).forEach(f => {
+    b += `<tr><td class="left">${f}</td><td>${N(porFamilia[f].kl,0)}</td><td>${U(porFamilia[f].usd,0)}</td></tr>`;
+  });
+  b += `</tbody></table>`;
+  document.getElementById('modal-body').innerHTML = b;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function renderChartFinca(ciclos, fincas, totFC, mznByCF) {
+  if (charts['ch-finca']) charts['ch-finca'].destroy();
+  const key = currentMetric;
+  const datasets = ciclos.map(c => ({
+    label: c,
+    data: fincas.map(f => {
+      const t = totFC[`${f}|${c}`];
+      const mzn = mznByCF[`${c}|${f}`]||0;
+      return t && mzn>0 ? +(t[key]/mzn).toFixed(2) : 0;
+    }),
+    backgroundColor: colorOf(c), borderRadius:4, maxBarThickness:22
+  }));
+  charts['ch-finca'] = new Chart(document.getElementById('ch-finca'), {
+    type:'bar',
+    data:{ labels: fincas, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{font:{size:10},boxWidth:10}} },
+      scales:{
+        x:{ ticks:{font:{size:10}}, grid:{display:false} },
+        y:{ ticks:{font:{size:10}}, grid:{color:'#eef3f0'}, title:{display:true,text:unitLbl()+'/Mzn',font:{size:9}} }
+      }
+    }
+  });
+}
+
+/* ── Tabla Grupo/Familia (agregada) con clic -> detalle por finca ── */
+function renderGrupoFamilia(treeGF, ciclos) {
+  const key = currentMetric;
+  let h = `<thead><tr><th class="left">Grupo / Familia</th>`;
+  ciclos.forEach(c => h += `<th class="ciclo">${c}</th>`);
+  h += `</tr></thead><tbody>`;
+
+  const grupos = [...GRUPO_ORDEN.filter(g=>treeGF[g]), ...Object.keys(treeGF).filter(g=>!GRUPO_ORDEN.includes(g))];
+  const grandTot = ciclos.map(()=>0);
+
+  grupos.forEach(grupo => {
+    const familias = Object.keys(treeGF[grupo]).sort();
+    const gTot = ciclos.map(c => familias.reduce((s,f)=>s+(treeGF[grupo][f][c]?.[key]||0),0));
+    gTot.forEach((v,i)=>grandTot[i]+=v);
+
+    h += `<tr class="rf"><td class="dim">${grupo}</td>`;
+    gTot.forEach((v,ci) => h += `<td onclick="openGrupoDetail('${grupo.replace(/'/g,"\\'")}',null,'${ciclos[ci]}')">${v>0?(key==='kl'?N(v,0):U(v,0)):'—'}</td>`);
+    h += `</tr>`;
+
+    if (familias.length>1 || (familias[0] && familias[0]!==grupo)) {
+      familias.forEach(fam => {
+        h += `<tr class="rc"><td class="dim">${fam}</td>`;
+        ciclos.forEach(c => {
+          const v = treeGF[grupo][fam][c]?.[key] || 0;
+          h += `<td onclick="openGrupoDetail('${grupo.replace(/'/g,"\\'")}','${fam.replace(/'/g,"\\'")}','${c}')">${v>0?(key==='kl'?N(v,0):U(v,0)):'—'}</td>`;
+        });
+        h += `</tr>`;
+      });
+    }
+  });
+
+  h += `<tr class="rt"><td class="dim">Total general</td>`;
+  grandTot.forEach(v => h += `<td><strong>${key==='kl'?N(v,0):U(v,0)}</strong></td>`);
+  h += `</tr></tbody>`;
+  document.getElementById('t-grupo').innerHTML = h;
+}
+
+/* ── Tabla Grupo/Familia dividida entre Mzn Sembrada del ciclo ── */
+function renderGrupoFamiliaMzn(treeGF, ciclos, mznByCiclo) {
+  const key = currentMetric;
+  let h = `<thead><tr><th class="left">Grupo / Familia</th>`;
+  ciclos.forEach(c => h += `<th class="ciclo">${c}</th>`);
+  h += `</tr></thead><tbody>`;
+
+  const grupos = [...GRUPO_ORDEN.filter(g=>treeGF[g]), ...Object.keys(treeGF).filter(g=>!GRUPO_ORDEN.includes(g))];
+  const grandTot = ciclos.map(()=>0);
+
+  grupos.forEach(grupo => {
+    const familias = Object.keys(treeGF[grupo]).sort();
+    const gTot = ciclos.map(c => familias.reduce((s,f)=>s+(treeGF[grupo][f][c]?.[key]||0),0));
+    gTot.forEach((v,i)=>grandTot[i]+=v);
+
+    h += `<tr class="rf"><td class="dim">${grupo}</td>`;
+    gTot.forEach((v,ci) => {
+      const mzn = mznByCiclo[ciclos[ci]]||0;
+      const val = mzn>0 ? v/mzn : 0;
+      h += `<td onclick="openGrupoDetail('${grupo.replace(/'/g,"\\'")}',null,'${ciclos[ci]}')">${val>0?N(val,1):'—'}</td>`;
+    });
+    h += `</tr>`;
+
+    if (familias.length>1 || (familias[0] && familias[0]!==grupo)) {
+      familias.forEach(fam => {
+        h += `<tr class="rc"><td class="dim">${fam}</td>`;
+        ciclos.forEach(c => {
+          const v = treeGF[grupo][fam][c]?.[key] || 0;
+          const mzn = mznByCiclo[c]||0;
+          const val = mzn>0 ? v/mzn : 0;
+          h += `<td onclick="openGrupoDetail('${grupo.replace(/'/g,"\\'")}','${fam.replace(/'/g,"\\'")}','${c}')">${val>0?N(val,1):'—'}</td>`;
+        });
+        h += `</tr>`;
+      });
+    }
+  });
+
+  h += `<tr class="rt"><td class="dim">Total general</td>`;
+  grandTot.forEach((v,ci) => {
+    const mzn = mznByCiclo[ciclos[ci]]||0;
+    h += `<td><strong>${mzn>0?N(v/mzn,1):'—'}</strong></td>`;
+  });
+  h += `</tr></tbody>`;
+  document.getElementById('t-grupo-mzn').innerHTML = h;
+}
+
+function openGrupoDetail(grupo, familia, ciclo) {
+  if (!CTX) return;
+  const rows = CTX.rows.filter(r => {
+    if (r.Ciclo !== ciclo) return false;
+    const cl = classifyGrupo(r.Clasificacion, r.CuentaContableDescripcion || r.CUENTA_CONTABLE);
+    return cl.grupo===grupo && (familia==null || cl.familia===familia);
+  });
+  const byFinca = {};
+  rows.forEach(r => {
+    const kl = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    const usd = parseFloat(r.Monto_Consumo)||0;
+    if (!byFinca[r.Finca]) byFinca[r.Finca] = {kl:0,usd:0};
+    byFinca[r.Finca].kl += kl; byFinca[r.Finca].usd += usd;
+  });
+
+  document.getElementById('modal-title').textContent = familia ? `${grupo} · ${familia}` : grupo;
+  document.getElementById('modal-sub').textContent = `Ciclo ${ciclo} · desglose por finca`;
+  let b = `<table><thead><tr><th class="left">Finca</th><th>KL</th><th>U$</th><th>KL/Mzn</th><th>U$/Mzn</th></tr></thead><tbody>`;
+  Object.keys(byFinca).sort((a,b)=> (currentMetric==='kl'?byFinca[b].kl-byFinca[a].kl:byFinca[b].usd-byFinca[a].usd)).forEach(f => {
+    const v = byFinca[f];
+    const mzn = CTX.mznByCicloFinca[`${ciclo}|${f}`]||0;
+    b += `<tr><td class="left">${f}</td><td>${N(v.kl,0)}</td><td>${U(v.usd,0)}</td><td>${mzn>0?N(v.kl/mzn,1):'—'}</td><td>${mzn>0?U(v.usd/mzn,2):'—'}</td></tr>`;
+  });
+  b += `</tbody></table>`;
+  document.getElementById('modal-body').innerHTML = b;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function renderChartSector(ciclos, fincas, totFC, mznByCF) {
+  if (charts['ch-sector']) charts['ch-sector'].destroy();
+  const key = currentMetric;
+  const sectores = [...new Set(fincas.map(f=>sectorOf(f)))].sort();
+  const datasets = ciclos.map(c => ({
+    label: c,
+    data: sectores.map(sec => {
+      let val=0, mzn=0;
+      fincas.filter(f=>sectorOf(f)===sec).forEach(f => {
+        const t = totFC[`${f}|${c}`];
+        if (t) val += t[key];
+        mzn += mznByCF[`${c}|${f}`]||0;
+      });
+      return mzn>0 ? +(val/mzn).toFixed(2) : 0;
+    }),
+    backgroundColor: colorOf(c), borderRadius:4, maxBarThickness:40
+  }));
+  charts['ch-sector'] = new Chart(document.getElementById('ch-sector'), {
+    type:'bar',
+    data:{ labels: sectores, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{position:'bottom', labels:{font:{size:10},boxWidth:10}} },
+      scales:{
+        x:{ ticks:{font:{size:10}}, grid:{display:false} },
+        y:{ ticks:{font:{size:10}}, grid:{color:'#eef3f0'}, title:{display:true,text:unitLbl()+'/Mzn',font:{size:9}} }
+      }
+    }
+  });
+}
+
+function renderMatrix(tree, ciclos) {
+  const key = currentMetric;
+  _detailStore = {};
+  let h = `<thead><tr><th class="left">Finca / Categoría / Cuenta</th>`;
+  ciclos.forEach(c => h += `<th class="ciclo">${c}</th>`);
+  h += `</tr></thead><tbody>`;
+
+  const grandTot = ciclos.map(()=>0);
+
+  Object.keys(tree).sort().forEach(finca => {
+    const fTot = ciclos.map(c => { let v=0; Object.values(tree[finca]).forEach(cts=>Object.values(cts).forEach(cy=>{v+=cy[c]?.[key]||0;})); return v; });
+    fTot.forEach((v,i)=>grandTot[i]+=v);
+    h += `<tr class="rf"><td class="dim">🚜 ${finca}</td>`;
+    fTot.forEach(v => h += `<td>${v>0?(key==='kl'?N(v,0):U(v,0)):'—'}</td>`);
+    h += `</tr>`;
+
+    Object.keys(tree[finca]).sort().forEach(cat => {
+      const cTot = ciclos.map(c => { let v=0; Object.values(tree[finca][cat]).forEach(cy=>{v+=cy[c]?.[key]||0;}); return v; });
+      h += `<tr class="rc"><td class="dim">${cat}</td>`;
+      cTot.forEach(v => h += `<td>${v>0?(key==='kl'?N(v,0):U(v,0)):'—'}</td>`);
+      h += `</tr>`;
+
+      Object.keys(tree[finca][cat]).sort().forEach(cuenta => {
+        const rowVals = ciclos.map(c => tree[finca][cat][cuenta][c]?.[key] || null);
+        const validVals = rowVals.filter(v=>v!=null && v>0);
+        const min = validVals.length>1 ? Math.min(...validVals) : null;
+        const max = validVals.length>1 ? Math.max(...validVals) : null;
+        h += `<tr class="ra"><td class="dim">${cuenta}</td>`;
+        ciclos.forEach((c,i) => {
+          const cell = tree[finca][cat][cuenta][c];
+          const v = cell?.[key] || 0;
+          if (v>0) {
+            const dkey = `${finca}|${cat}|${cuenta}|${c}`;
+            _detailStore[dkey] = cell;
+            const cls = min!=null ? (v===min?'cell-ok':v===max?'cell-bad':'') : '';
+            h += `<td class="${cls}" onclick="openDetail('${dkey.replace(/'/g,"\\'")}')">${key==='kl'?N(v,0):U(v,0)}</td>`;
+          } else h += `<td>—</td>`;
+        });
+        h += `</tr>`;
+      });
+    });
+  });
+
+  h += `<tr class="rt"><td class="dim">Total general</td>`;
+  grandTot.forEach(v => h += `<td><strong>${key==='kl'?N(v,0):U(v,0)}</strong></td>`);
+  h += `</tr></tbody>`;
+  document.getElementById('t-kl').innerHTML = h;
+}
+
+function openCicloDetail(ciclo) {
+  if (!CTX) return;
+  const rows = CTX.rows.filter(r=>r.Ciclo===ciclo);
+  const semilla = { kl:0, usd:0 };
+  const insumos = {};
+  rows.forEach(r => {
+    const kl = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    const usd = parseFloat(r.Monto_Consumo)||0;
+    if (r.Clasificacion === 'Semilla') { semilla.kl += kl; semilla.usd += usd; }
+    else {
+      const cuenta = r.CuentaContableDescripcion || r.CUENTA_CONTABLE || 'Sin cuenta';
+      if (!insumos[cuenta]) insumos[cuenta] = {kl:0,usd:0};
+      insumos[cuenta].kl += kl; insumos[cuenta].usd += usd;
+    }
+  });
+  let items = [{label:'Semilla', kl:semilla.kl, usd:semilla.usd}];
+  Object.keys(insumos).forEach(c => items.push({label:c, kl:insumos[c].kl, usd:insumos[c].usd}));
+  items = items.filter(i=>i.kl>0||i.usd>0).sort((a,b)=> (currentMetric==='kl'?b.kl-a.kl:b.usd-a.usd));
+
+  const mzn = CTX.mznByCiclo[ciclo]||0;
+  const t = CTX.totCiclo[ciclo];
+
+  document.getElementById('modal-title').textContent = ciclo;
+  document.getElementById('modal-sub').textContent = `${N(mzn,1)} Mzn sembrada`;
+
+  let b = `<div class="modal-sum">
+    <div class="it"><b>${N(t.klMzn,1)}</b><span>KL / Mzn</span></div>
+    <div class="it"><b>${U(t.usdMzn,2)}</b><span>U$ / Mzn</span></div>
+    <div class="it"><b>${N(t.kl,0)}</b><span>KL total</span></div>
+    <div class="it"><b>${U(t.usd,0)}</b><span>U$ total</span></div>
+  </div>`;
+  b += `<table><thead><tr><th class="left">Categoría / Cuenta</th><th>KL</th><th>U$</th></tr></thead><tbody>`;
+  items.forEach(i => {
+    b += `<tr><td class="left">${i.label}</td><td>${N(i.kl,0)}</td><td>${U(i.usd,0)}</td></tr>`;
+  });
+  b += `</tbody></table>`;
+  document.getElementById('modal-body').innerHTML = b;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function openMesDetail(ciclo, mes) {
+  if (!CTX || !CTX.monthly[ciclo]) return;
+  const m = CTX.monthly[ciclo][mes] || {kl:0,usd:0};
+  const mzn = CTX.mznByCiclo[ciclo]||0;
+  const klMzn = mzn>0 ? m.kl/mzn : 0;
+  const usdMzn = mzn>0 ? m.usd/mzn : 0;
+
+  document.getElementById('modal-title').textContent = `${MESES_LBL[mes-1]} · ${ciclo}`;
+  document.getElementById('modal-sub').textContent = 'Valores del mes (no acumulados)';
+  document.getElementById('modal-body').innerHTML = `<div class="modal-sum">
+    <div class="it"><b>${N(m.kl,0)}</b><span>KL del mes</span></div>
+    <div class="it"><b>${U(m.usd,0)}</b><span>U$ del mes</span></div>
+    <div class="it"><b>${N(klMzn,2)}</b><span>KL / Mzn</span></div>
+    <div class="it"><b>${U(usdMzn,3)}</b><span>U$ / Mzn</span></div>
+  </div>`;
+  document.getElementById('modal-bg').classList.add('show');
+}
+
+function openDetail(key) {
+  const cell = _detailStore[key]; if (!cell) return;
+  const [finca,cat,cuenta,ciclo] = key.split('|');
+  document.getElementById('modal-title').textContent = cuenta;
+  document.getElementById('modal-sub').textContent = `${finca} · ${cat} · Ciclo ${ciclo}`;
+  let b = `<table><thead><tr><th class="left">UM</th><th>Cantidad</th><th>KL</th><th>U$</th></tr></thead><tbody>`;
+  cell.rows.forEach(r => {
+    const kl = (parseFloat(r.Cantidad_Consumo)||0)*KL_FACTOR(r.um);
+    b += `<tr><td class="left">${r.um||'—'}</td><td>${N(parseFloat(r.Cantidad_Consumo)||0,1)}</td><td>${N(kl,1)}</td><td>${U(parseFloat(r.Monto_Consumo)||0,0)}</td></tr>`;
+  });
+  b += `<tr><td class="left"><strong>Total</strong></td><td></td><td><strong>${N(cell.kl,1)}</strong></td><td><strong>${U(cell.usd,0)}</strong></td></tr></tbody></table>`;
+  document.getElementById('modal-body').innerHTML = b;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function closeModal(){ document.getElementById('modal-bg').classList.remove('show'); }
+
+function ld(v){document.getElementById('lbar').classList.toggle('show',v);}
+function sc(ok,msg){
+  document.getElementById('dot').className='dot'+(ok===true?' ok':ok===false?' err':'');
+  document.getElementById('ctxt').textContent=msg;
+}
+
+init();
+</script>
+</body>
+</html>
