@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Recuentos de Enfermedades</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-main: #FAFAF8;
+    --text-main: #22302A;
+    --text-muted: #8a9690;
+    --primary: #1B4332;
+    --primary-hover: #2D6A4F;
+    --primary-light: #E4F0E8;
+    --accent-peanut: #C9963B;
+    --accent-peanut-hover: #B3832E;
+    --border-color: #E1E0D8;
+    --card-bg: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 10px rgba(0,0,0,0.12);
+    --ok: #2D6A4F;
+    --warn: #C9963B;
+    --danger: #B3423E;
+  }
+
+  * { box-sizing: border-box; transition: background-color 0.2s, border-color 0.2s; }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; }
+
+  html, body { height: 100%; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg-main); color: var(--text-main); line-height: 1.5;
+  }
+
+  .container { max-width: 1500px; margin: 0 auto; padding: 16px 20px 40px; }
+
+  /* ---------- Estado de carga ---------- */
+  .estado-carga { display:flex; align-items:center; justify-content:center; gap:10px; padding:60px 0; color:var(--text-muted); font-size:13px; }
+  .spinner { width:16px; height:16px; border:2px solid var(--border-color); border-top-color:var(--primary); border-radius:50%; animation:girar .7s linear infinite; }
+  @keyframes girar { to{ transform:rotate(360deg);} }
+
+  /* ---------- Barra de filtros propios (Familia y Recuento — no cubiertos por filtro global) ---------- */
+  .barra-filtros {
+    display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
+    background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px;
+    padding:14px 16px; margin-bottom:16px; box-shadow:var(--shadow-sm);
+  }
+  .filtro-grupo { display:flex; flex-direction:column; gap:4px; min-width:200px; flex:1; position:relative; }
+  .filtro-grupo label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+  .ms-dropdown {
+    padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:#fff;
+    font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; height:36px;
+  }
+  .ms-dropdown:hover { border-color:var(--primary); }
+  .ms-panel {
+    display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--border-color);
+    border-radius:8px; max-height:280px; overflow:hidden; z-index:60; box-shadow:var(--shadow-md); margin-top:4px; flex-direction:column;
+  }
+  .ms-panel.show { display:flex; }
+  .ms-search { padding:8px; border-bottom:1px solid var(--border-color); }
+  .ms-search input { width:100%; padding:6px 9px; border:1px solid var(--border-color); border-radius:6px; font-size:12px; font-family:inherit; }
+  .ms-items { overflow-y:auto; flex:1; padding:4px 0; }
+  .ms-item { display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; cursor:pointer; }
+  .ms-item:hover { background:var(--primary-light); }
+  .ms-item.selectall { border-bottom:1px solid var(--border-color); font-weight:700; }
+  .ms-item input { accent-color:var(--primary); }
+  .ms-footer { display:flex; gap:8px; padding:8px; border-top:1px solid var(--border-color); }
+  .ms-footer button { flex:1; border:none; border-radius:6px; padding:6px; font-size:12px; font-weight:700; cursor:pointer; }
+  .ms-footer .ok { background:var(--primary); color:#fff; }
+  .ms-footer .cancel { background:var(--primary-light); color:var(--text-main); }
+
+  .btn-limpiar { background:var(--card-bg); border:1.5px solid var(--border-color); color:var(--text-main); border-radius:8px; padding:0 14px; height:36px; font-weight:700; font-size:12.5px; cursor:pointer; }
+  .btn-limpiar:hover { border-color:var(--danger); color:var(--danger); }
+
+  .nota-fuentes { font-size:11px; color:var(--text-muted); margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap; }
+  .nota-fuentes b { color:var(--text-main); }
+
+  /* ---------- Grid de tarjetas KPI ---------- */
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; margin-bottom:22px; }
+  .kpi-card {
+    background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:14px 16px;
+    cursor:pointer; box-shadow:var(--shadow-sm); border-left:4px solid var(--border-color); position:relative;
+  }
+  .kpi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
+  .kpi-card.activa { border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-light); }
+  .kpi-card.est-ok { border-left-color:var(--ok); }
+  .kpi-card.est-warn { border-left-color:var(--warn); }
+  .kpi-card.est-danger { border-left-color:var(--danger); }
+  .kpi-familia { font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:3px; }
+  .kpi-nombre { font-size:12.5px; font-weight:700; line-height:1.3; margin-bottom:8px; min-height:32px; }
+  .kpi-valor { font-size:22px; font-weight:800; color:var(--text-main); }
+  .kpi-valor small { font-size:12px; font-weight:600; color:var(--text-muted); }
+  .kpi-badge { position:absolute; top:10px; right:10px; font-size:9px; font-weight:800; padding:2px 6px; border-radius:999px; }
+  .kpi-badge.est-ok { background:#E4F0E8; color:var(--ok); }
+  .kpi-badge.est-warn { background:#FBF0DC; color:var(--warn); }
+  .kpi-badge.est-danger { background:#F9E3E1; color:var(--danger); }
+  .kpi-sub { font-size:10.5px; color:var(--text-muted); margin-top:4px; }
+
+  /* ---------- Panel de detalle (gráfico + tabla) del recuento seleccionado ---------- */
+  .panel-detalle { background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px; box-shadow:var(--shadow-sm); display:none; }
+  .panel-detalle.show { display:block; }
+  .detalle-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
+  .detalle-titulo { font-size:16px; font-weight:800; color:var(--primary); }
+  .detalle-familia { font-size:11px; color:var(--text-muted); margin-top:2px; }
+  .detalle-acciones { display:flex; gap:8px; }
+  .btn-accion { background:var(--primary); color:#fff; border:none; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .btn-accion:hover { background:var(--primary-hover); }
+  .btn-accion.sec { background:var(--card-bg); border:1.5px solid var(--border-color); color:var(--text-main); }
+
+  .chart-wrap { position:relative; height:320px; margin-bottom:18px; }
+
+  table.tabla-detalle { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.tabla-detalle th { background:var(--primary-light); color:var(--primary); font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; padding:8px 10px; text-align:left; position:sticky; top:0; }
+  table.tabla-detalle td { padding:7px 10px; border-bottom:1px solid var(--border-color); }
+  table.tabla-detalle td.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .tabla-scroll { max-height:400px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; }
+
+  .pill-origen { font-size:9px; font-weight:800; padding:2px 6px; border-radius:999px; }
+  .pill-origen.vivo { background:#E4F0E8; color:var(--ok); }
+  .pill-origen.hist { background:#EFEDE6; color:#8a7550; }
+
+  .vacio { text-align:center; padding:40px; color:var(--text-muted); font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="nota-fuentes" id="notaFuentes">Cargando datos…</div>
+
+  <!-- Familia y Recuento son propios de esta sección (no los cubre el filtro global del shell) -->
+  <div class="barra-filtros">
+    <div class="filtro-grupo">
+      <label>Familia de Recuento</label>
+      <div class="ms-dropdown" id="dropFamilia" onclick="toggleMs(event,'familia')">Todas</div>
+      <div class="ms-panel" id="msFamilia"></div>
+    </div>
+    <div class="filtro-grupo">
+      <label>Tipo de Recuento</label>
+      <div class="ms-dropdown" id="dropRecuento" onclick="toggleMs(event,'recuento')">Todos</div>
+      <div class="ms-panel" id="msRecuento"></div>
+    </div>
+    <div class="filtro-grupo" style="max-width:140px;">
+      <label>DDS</label>
+      <div class="ms-dropdown" id="dropDds" onclick="toggleMs(event,'dds')">Todos</div>
+      <div class="ms-panel" id="msDds"></div>
+    </div>
+    <button class="btn-limpiar" onclick="limpiarFiltrosPropios()">🧹 Limpiar</button>
+  </div>
+
+  <div class="estado-carga" id="estadoCarga"><span class="spinner"></span> Cargando recuentos (Odoo + histórico DA + histórico GZP)…</div>
+
+  <div id="contenido" style="display:none;">
+    <div class="kpi-grid" id="kpiGrid"></div>
+    <div class="vacio" id="vacioMsg" style="display:none;">No hay recuentos que coincidan con los filtros seleccionados.</div>
+
+    <div class="panel-detalle" id="panelDetalle">
+      <div class="detalle-header">
+        <div>
+          <div class="detalle-titulo" id="detalleTitulo">—</div>
+          <div class="detalle-familia" id="detalleFamilia">—</div>
+        </div>
+        <div class="detalle-acciones">
+          <button class="btn-accion sec" onclick="cerrarDetalle()">✕ Cerrar</button>
+          <button class="btn-accion" onclick="exportarDetalleExcel()">📥 Exportar Excel</button>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="chartDetalle"></canvas></div>
+      <div class="nota-ventana-dds" id="notaVentanaDds" style="font-size:10.5px;color:var(--text-muted);margin:-10px 0 14px;"></div>
+      <div class="tabla-scroll">
+        <table class="tabla-detalle" id="tablaDetalle">
+          <thead><tr><th>Finca</th><th>Lote</th><th>Sector</th><th>Ciclo</th><th>DDS</th><th>Fecha</th><th style="text-align:right">Resultado</th><th>Observación</th><th>Fuente</th></tr></thead>
+          <tbody id="tablaDetalleBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ===================================================================
+// FUENTES DE DATOS
+// 1) Odoo en vivo (x_recuentos_estado_del_line_715c7) vía Cloudflare Worker
+// 2) Histórico Excel DA  — GitHub JSON (Mani 2012-2024, Division Agricola Comasa)
+// 3) Histórico Excel GZP — GitHub JSON (Mani 2012-2024, Grupo ZP)
+// Las 3 se combinan en un único array RAW con el mismo esquema normalizado,
+// y el filtro de Ciclo del shell las trata como una sola línea temporal continua.
+// ===================================================================
+const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
+const GITHUB_DA  = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/DA/historico_da.json";
+const GITHUB_GZP = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/DA/historico_gzp.json";
+
+// Catálogo de tipos de recuento — id (idrecuento / N° Linea) -> {campo, familiaEsperada}
+// campo: "porcent" (fracción 0-1) o "avg" (promedio/conteo). Extraído directamente de Odoo,
+// no inventado — ver catalogo_tipos_recuento.md.
+const CAMPO_POR_ID = {
+  1:"avg", 2:"avg", 3:"porcent", 4:"porcent", 5:"porcent", 6:"porcent", 7:"avg",
+  8:"porcent", 9:"porcent", 10:"avg", 11:"avg", 12:"avg", 13:"avg", 14:"avg",
+  15:"porcent", 16:"avg", 17:"avg", 18:"avg", 19:"avg", 20:"avg", 21:"avg",
+  22:"avg", 23:"avg", 24:"avg", 25:"porcent", 26:"porcent", 27:"porcent",
+  28:"porcent", 29:"porcent", 30:"porcent", 31:"porcent", 32:"porcent",
+  33:"porcent", 34:"porcent"
+};
+
+let RAW = []; // {fi, lo, se, ci, dds, fa, re, idr, valor, esPorc, co, fuente, fecha, obs, reporte}
+let CARGA_LISTA = false;
+
+// Ventanas oficiales de recuento (tabla Rango→DDS provista). Los DDS reales que llegan
+// desde Odoo son el día exacto de la evaluación (ej. 22, 24, 26...), no la ventana —
+// se redondean a la ventana más cercana para que el gráfico sea legible y comparable
+// entre ciclos, en vez de mostrar una etiqueta distinta por cada día exacto.
+const VENTANAS_DDS = [10,18,28,40,52,64,76,88,100,112,124,136,148,160];
+function ventanaDDS(dds){
+  if(dds===null || dds===undefined) return null;
+  if(dds<=0) return VENTANAS_DDS[0];
+  let masCercana = VENTANAS_DDS[0], menorDist = Math.abs(dds-VENTANAS_DDS[0]);
+  for(const v of VENTANAS_DDS){
+    const dist = Math.abs(dds-v);
+    if(dist < menorDist){ menorDist = dist; masCercana = v; }
+  }
+  return masCercana;
+}
+
+// Extrae el año de un nombre de ciclo tipo "Mani 2025" para poder ordenar
+// descendente (más reciente primero) en vez de alfabético/orden de aparición.
+function anioDeCiclo(nombreCiclo){
+  const m = String(nombreCiclo||'').match(/(\d{4})/);
+  return m ? parseInt(m[1],10) : -1;
+}
+function ordenarCiclosDesc(lista){
+  return [...lista].sort((a,b)=>anioDeCiclo(b)-anioDeCiclo(a));
+}
+
+function normTxt(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+
+// Formato de fecha estándar en toda la sección: 01-Ene-2026
+const MESES_CORTOS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+function formatoFecha(fechaStr){
+  if(!fechaStr) return null;
+  // Acepta "YYYY-MM-DD" (Odoo) — parseo manual para evitar problemas de zona horaria de new Date()
+  const m = String(fechaStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if(!m) return fechaStr; // si no calza el patrón, se muestra tal cual en vez de romper
+  const [, y, mo, d] = m;
+  const mesIdx = parseInt(mo,10)-1;
+  if(mesIdx<0||mesIdx>11) return fechaStr;
+  return `${d}-${MESES_CORTOS[mesIdx]}-${y}`;
+}
+
+// --- Carga Odoo (en vivo) ---
+// Este modelo tiene ~17k registros — más que los que consultan las otras secciones
+// (que hacen una sola llamada sin paginar). Se pagina con offset/limit y un tope de
+// seguridad (MAX_PAGINAS) para evitar bucles infinitos si el Worker no corta solo.
+const MAX_PAGINAS = 40;
+
+// Rango de días (antes y después de la fecha del recuento) dentro del cual se muestran
+// las aplicaciones de fungicida en el modal — el recuento es una evaluación previa que
+// determina qué aplicación corresponde, así que sólo interesa lo cercano a esa fecha,
+// no todo el histórico de aplicaciones del lote/ciclo.
+const RANGO_DIAS_FUNGICIDA = 15;
+
+// Rango de días (antes y después) para mostrar la lluvia alrededor de la fecha del
+// recuento/aplicación — sirve para ver si llovió el mismo día de una aplicación de
+// fungicida (lo que anula su efecto) o cerca de la evaluación.
+const RANGO_DIAS_LLUVIA = 10;
+
+// --- Carga del reporte PADRE (x_recuentos_estado_del) — trae Área evaluada, Población,
+// Estado fenológico y Aplicación, que se muestran en el modal de detalle por punto.
+// Es un modelo chico (467 registros) así que se carga completo de una sola vez.
+async function cargarPadres(){
+  try{
+    const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&limit=1000`);
+    const j = await r.json();
+    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const mapa = {};
+    recs.forEach(r=>{
+      mapa[r.id] = {
+        area: r.x_studio_area_evaluada_mzn ?? null,
+        poblacion: r.x_studio_poblacion_plantas ?? null,
+        estadoFeno: r.x_studio_estado_fenologico || null,
+        aplicacion: Array.isArray(r.x_studio_aplicacion) ? r.x_studio_aplicacion[1] : (r.x_studio_aplicacion || null)
+      };
+    });
+    return mapa;
+  }catch(e){ console.error('Error cargando reportes padre:', e); return {}; }
+}
+
+async function cargarOdoo(){
+  const out = [];
+  const padres = await cargarPadres();
+  try{
+    let pagina = 0, totalEsperado = null;
+    while(pagina < MAX_PAGINAS){
+      const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del_line_715c7&limit=1000&offset=${pagina*1000}`);
+      const j = await r.json();
+      let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+      if(j && typeof j.total === 'number') totalEsperado = j.total;
+      if(!recs.length) break;
+      recs.forEach(r=>{
+        // Descartar registros basura sin Ciclo/Finca asignados en Odoo (existen ~1360
+        // así en el modelo — campos many2one vacíos que llegan como `false`, no null).
+        if(!r.x_studio_ciclo || !r.x_studio_finca) return;
+        const idr = r.x_studio_idrecuento;
+        const campo = CAMPO_POR_ID[idr] || (r.x_studio_resultado_porcent ? 'porcent' : 'avg');
+        const valor = campo==='porcent' ? (r.x_studio_resultado_porcent||0) : (r.x_studio_resultado_avg||0);
+        const idPadre = Array.isArray(r.x_recuentos_estado_del_id) ? r.x_recuentos_estado_del_id[0] : null;
+        const datosPadre = idPadre !== null ? padres[idPadre] : null;
+        out.push({
+          fi: Array.isArray(r.x_studio_finca)?r.x_studio_finca[1]:r.x_studio_finca,
+          lo: Array.isArray(r.x_studio_lote_de_la_finca)?r.x_studio_lote_de_la_finca[1]:r.x_studio_lote_de_la_finca,
+          se: Array.isArray(r.x_studio_sector)?r.x_studio_sector[1]:r.x_studio_sector,
+          ci: Array.isArray(r.x_studio_ciclo)?r.x_studio_ciclo[1]:r.x_studio_ciclo,
+          co: Array.isArray(r.x_studio_compaia)?r.x_studio_compaia[1]:r.x_studio_compaia,
+          dds: r.x_studio_dds,
+          fa: r.x_studio_familia_del_recuento,
+          re: Array.isArray(r.x_studio_recuento)?r.x_studio_recuento[1]:r.x_studio_recuento,
+          idr: idr,
+          valor: valor,
+          esPorc: campo==='porcent',
+          fuente: 'vivo',
+          fecha: r.x_studio_fecha || null,
+          obs: r.x_studio_observacion || null,
+          reporte: r.x_studio_reporte || null,
+          area: datosPadre?.area ?? null,
+          poblacion: datosPadre?.poblacion ?? null,
+          estadoFeno: datosPadre?.estadoFeno ?? null,
+          aplicacion: datosPadre?.aplicacion ?? null
+        });
+      });
+      pagina++;
+      // Si el Worker no soporta offset/limit y siempre devuelve el mismo bloque completo
+      // (< 1000 registros por página nunca ocurriría con paginación real), cortar para
+      // no repetir el mismo conjunto una y otra vez hasta MAX_PAGINAS.
+      if(recs.length < 1000) break;
+      if(totalEsperado !== null && out.length >= totalEsperado) break;
+    }
+    if(pagina >= MAX_PAGINAS) console.warn('cargarOdoo: se alcanzó MAX_PAGINAS, puede haber registros sin traer.');
+    console.info(`Odoo (en vivo) cargado: ${out.length} registros en ${pagina} página(s).`);
+    return out;
+  }catch(e){ console.error('Error cargando Odoo:', e); return out; }
+}
+
+// --- Carga histórico (formato compacto indexado) ---
+async function cargarHistorico(url, fuenteLabel){
+  try{
+    const r = await fetch(url);
+    const d = await r.json();
+    const out = [];
+    d.filas.forEach(f=>{
+      const [fiI, loI, faI, reI, ciI, dds, po, pr, coI, seI, idr] = f;
+      const esPorc = po !== null && po !== undefined;
+      out.push({
+        fi: d.fincas[fiI], lo: d.lotes[loI], se: d.sectores[seI], ci: d.ciclos[ciI], co: d.companias[coI],
+        dds: dds, fa: d.familias[faI], re: d.recuentos[reI], idr: idr,
+        valor: esPorc ? po : (pr||0),
+        esPorc: esPorc,
+        fuente: fuenteLabel
+      });
+    });
+    return out;
+  }catch(e){ console.error('Error cargando histórico', url, e); return []; }
+}
+
+// --- Carga de aplicaciones de fungicidas (x_orden_campo_line_662d7) ---
+// Mismo modelo que ya usa GANTT para Insumos — se reutiliza el mapeo de campos ya
+// validado ahí (x_studio_keyfincainsumo=finca, x_studio_lote_agricola=lote, etc.).
+// Se filtra sólo a actividades cuyo nombre contiene "Fungicida" (Fungicida I, II...).
+let FUNGICIDAS_POR_CLAVE = {}; // "finca|lote|ciclo" -> [{producto, dosis, um, fecha, actividad}]
+function claveFungicida(finca, lote, ciclo){
+  return `${normTxt(finca)}|${normTxt(lote)}|${normTxt(ciclo)}`;
+}
+
+// Devuelve un array de {fecha, mm, diasDist} para los ±rango días alrededor de fechaCentral,
+// consultando la lluvia registrada para esa Finca (se aplica a todos sus lotes por igual,
+// ya que x_pluviosidad no se lleva por lote/sector individual).
+function lluviaCercaDe(finca, fechaCentralStr, rango){
+  if(!finca || !fechaCentralStr) return [];
+  const fechaCentral = new Date(fechaCentralStr+'T00:00:00');
+  const dias = [];
+  for(let d = -rango; d <= rango; d++){
+    const fecha = new Date(fechaCentral);
+    fecha.setDate(fecha.getDate() + d);
+    const fechaStr = fecha.toISOString().slice(0,10);
+    const mm = LLUVIA_POR_FINCA_FECHA[claveLluvia(finca, fechaStr)];
+    if(mm !== undefined) dias.push({ fecha: fechaStr, mm, diasDist: d });
+  }
+  return dias;
+}
+async function cargarFungicidas(){
+  try{
+    const r = await fetch(`${WORKER}/query?base=info&model=x_orden_campo_line_662d7`);
+    const j = await r.json();
+    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const mapa = {};
+    let total = 0;
+    recs.forEach(r=>{
+      const actividad = Array.isArray(r.x_studio_actividad_realizada) ? r.x_studio_actividad_realizada[1] : r.x_studio_actividad_realizada;
+      if(!actividad || !normTxt(actividad).includes('fungicida')) return;
+      const finca = Array.isArray(r.x_studio_keyfincainsumo) ? r.x_studio_keyfincainsumo[1] : r.x_studio_keyfincainsumo;
+      const lote = Array.isArray(r.x_studio_lote_agricola) ? r.x_studio_lote_agricola[1] : r.x_studio_lote_agricola;
+      const ciclo = Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : r.x_studio_ciclo;
+      if(!finca || !lote || !ciclo) return;
+      const clave = claveFungicida(finca, lote, ciclo);
+      if(!mapa[clave]) mapa[clave] = [];
+      mapa[clave].push({
+        actividad,
+        producto: Array.isArray(r.x_studio_insumo_utilizado) ? r.x_studio_insumo_utilizado[1] : (r.x_studio_insumo_utilizado||'—'),
+        dosis: r.x_studio_dosis_x_mzn ?? null,
+        cantidad: r.x_studio_cantidad_gastada ?? null,
+        area: r.x_studio_area_mzn_aplicada ?? null,
+        um: r.x_studio_um || '',
+        fecha: r.x_studio_fecha || null
+      });
+      total++;
+    });
+    console.info(`Aplicaciones de fungicida cargadas: ${total} registros agrupados en ${Object.keys(mapa).length} combinaciones finca/lote/ciclo.`);
+    return mapa;
+  }catch(e){ console.error('Error cargando fungicidas:', e); return {}; }
+}
+
+// --- Carga de pluviosidad (x_pluviosidad) ---
+// Se registra por Finca (no por lote/sector individual), así que aplica a todos los
+// lotes de esa finca por igual. Si el mismo día hay varios registros de sector para
+// la misma finca, se promedian (es el mismo criterio que ya usa la sección Pluviosidad).
+let LLUVIA_POR_FINCA_FECHA = {}; // "finca|YYYY-MM-DD" -> {mm, muestras}
+function claveLluvia(finca, fecha){ return `${normTxt(finca)}|${fecha}`; }
+async function cargarPluviosidad(){
+  try{
+    const r = await fetch(`${WORKER}/query?base=info&model=x_pluviosidad`);
+    const j = await r.json();
+    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const acumulado = {}; // clave -> {suma, n}
+    recs.forEach(r=>{
+      const finca = Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : r.x_studio_finca;
+      const fecha = r.x_studio_fecha;
+      const mm = r.x_studio_cantidad_promedio;
+      if(!finca || !fecha || mm===null || mm===undefined) return;
+      const clave = claveLluvia(finca, fecha);
+      if(!acumulado[clave]) acumulado[clave] = {suma:0, n:0};
+      acumulado[clave].suma += mm;
+      acumulado[clave].n += 1;
+    });
+    const mapa = {};
+    Object.keys(acumulado).forEach(k=>{ mapa[k] = +(acumulado[k].suma/acumulado[k].n).toFixed(1); });
+    console.info(`Pluviosidad cargada: ${recs.length} registros, ${Object.keys(mapa).length} combinaciones finca/fecha.`);
+    return mapa;
+  }catch(e){ console.error('Error cargando pluviosidad:', e); return {}; }
+}
+
+async function cargarTodo(){
+  const [vivo, histDA, histGZP, fungicidas, lluvia] = await Promise.all([
+    cargarOdoo(),
+    cargarHistorico(GITHUB_DA, 'hist'),
+    cargarHistorico(GITHUB_GZP, 'hist'),
+    cargarFungicidas(),
+    cargarPluviosidad()
+  ]);
+  RAW = [...vivo, ...histDA, ...histGZP];
+  FUNGICIDAS_POR_CLAVE = fungicidas;
+  LLUVIA_POR_FINCA_FECHA = lluvia;
+  CARGA_LISTA = true;
+
+  document.getElementById('estadoCarga').style.display = 'none';
+  document.getElementById('contenido').style.display = '';
+  document.getElementById('notaFuentes').innerHTML =
+    `<span><b>${vivo.length.toLocaleString()}</b> registros en vivo (Odoo)</span>` +
+    `<span><b>${(histDA.length+histGZP.length).toLocaleString()}</b> registros históricos (Excel 2012-2024)</span>` +
+    `<span><b>${RAW.length.toLocaleString()}</b> total combinado</span>`;
+
+  construirFiltrosPropios();
+  render();
+  enviarUniversoAlShell();
+  if(FILTRO_GLOBAL_PENDIENTE){ const f=FILTRO_GLOBAL_PENDIENTE; FILTRO_GLOBAL_PENDIENTE=null; aplicarFiltroGlobal(f); }
+}
+
+// ===================================================================
+// FILTROS PROPIOS (Familia, Recuento, DDS) — multiselect en cascada,
+// mismo patrón visual que el resto de INFOAGRO BI
+// ===================================================================
+let seleccionPropia = { familia: [], recuento: [], dds: [] }; // vacío = todos
+let filtroGlobalActivo = { compania: [], sector: [], ciclo: [], finca: [] }; // viene del shell
+
+function universoPropio(){
+  let base = RAW;
+  base = base.filter(r => !filtroGlobalActivo.compania.length || filtroGlobalActivo.compania.includes(r.co));
+  base = base.filter(r => !filtroGlobalActivo.sector.length   || filtroGlobalActivo.sector.includes(r.se));
+  base = base.filter(r => !filtroGlobalActivo.ciclo.length    || filtroGlobalActivo.ciclo.includes(r.ci));
+  base = base.filter(r => !filtroGlobalActivo.finca.length    || filtroGlobalActivo.finca.includes(r.fi));
+
+  const familias = [...new Set(base.map(r=>r.fa).filter(Boolean))].sort();
+  const baseFam = base.filter(r => !seleccionPropia.familia.length || seleccionPropia.familia.includes(r.fa));
+  const recuentos = [...new Set(baseFam.map(r=>r.re).filter(Boolean))].sort();
+  const dds = [...new Set(base.map(r=>r.dds).filter(Boolean))].sort((a,b)=>a-b);
+  return { familias, recuentos, dds };
+}
+
+function construirFiltrosPropios(){
+  const uni = universoPropio();
+  ['familia','recuento','dds'].forEach(clave=>{
+    const universo = clave==='familia'?uni.familias:clave==='recuento'?uni.recuentos:uni.dds;
+    const panel = document.getElementById('ms'+cap(clave));
+    let itemsHtml = universo.map(v=>{
+      const marcado = !seleccionPropia[clave].length || seleccionPropia[clave].includes(v);
+      return `<div class="ms-item" data-val="${v}" data-texto="${normTxt(v)}">
+        <input type="checkbox" value="${v}" ${marcado?'checked':''} onchange="actualizarSelectAllPropio('${clave}')">
+        <span>${v}</span>
+      </div>`;
+    }).join('');
+    panel.onclick = (ev) => ev.stopPropagation(); // evita que clics dentro del panel lo cierren (ver listener global)
+    panel.innerHTML = `
+      <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="buscarMsPropio('${clave}', this.value)"></div>
+      <div class="ms-item selectall">
+        <input type="checkbox" class="selectall-cb" checked onchange="toggleTodoPropio('${clave}', this.checked)">
+        <span>(Seleccionar todo)</span>
+      </div>
+      <div class="ms-items">${itemsHtml}</div>
+      <div class="ms-footer">
+        <button class="cancel" onclick="cerrarMsPropio('${clave}')">Cancelar</button>
+        <button class="ok" onclick="aplicarMsPropio('${clave}')">Aceptar</button>
+      </div>`;
+    actualizarTextoDropPropio(clave, universo.length);
+  });
+}
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+window.toggleMs = function(ev, clave){
+  ev.stopPropagation();
+  const panel = document.getElementById('ms'+cap(clave));
+  const abierto = panel.classList.contains('show');
+  document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show'));
+  if(!abierto) panel.classList.add('show');
+};
+document.addEventListener('click', ()=>document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show')));
+
+window.actualizarSelectAllPropio = function(clave){
+  const panel = document.getElementById('ms'+cap(clave));
+  const selCb = panel.querySelector('.selectall-cb');
+  const visibles = Array.from(panel.querySelectorAll('.ms-items .ms-item')).filter(el=>el.style.display!=='none');
+  const cbs = visibles.map(el=>el.querySelector('input[type=checkbox]'));
+  const marcados = cbs.filter(cb=>cb.checked).length;
+  if(!cbs.length){ selCb.checked=false; selCb.indeterminate=false; return; }
+  selCb.checked = marcados===cbs.length;
+  selCb.indeterminate = marcados>0 && marcados<cbs.length;
+};
+window.toggleTodoPropio = function(clave, marcar){
+  const panel = document.getElementById('ms'+cap(clave));
+  panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+    if(el.style.display==='none') return;
+    const cb = el.querySelector('input[type=checkbox]'); if(cb) cb.checked = marcar;
+  });
+  actualizarSelectAllPropio(clave);
+};
+window.buscarMsPropio = function(clave, texto){
+  const panel = document.getElementById('ms'+cap(clave));
+  const t = normTxt(texto);
+  panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+    el.style.display = (!t || (el.getAttribute('data-texto')||'').includes(t)) ? 'flex' : 'none';
+  });
+  actualizarSelectAllPropio(clave);
+};
+window.aplicarMsPropio = function(clave){
+  const panel = document.getElementById('ms'+cap(clave));
+  const marcados = Array.from(panel.querySelectorAll('.ms-items input[type=checkbox]:checked')).map(cb=>cb.value);
+  const universoActual = universoPropio()[clave==='familia'?'familias':clave==='recuento'?'recuentos':'dds'];
+  seleccionPropia[clave] = (marcados.length && marcados.length < universoActual.length) ? marcados : [];
+  panel.classList.remove('show');
+  if(clave==='familia') construirFiltrosPropios(); // recalcular cascada de Recuento
+  else actualizarTextoDropPropio(clave, universoActual.length);
+  render();
+};
+window.cerrarMsPropio = function(clave){ document.getElementById('ms'+cap(clave)).classList.remove('show'); construirFiltrosPropios(); };
+
+function actualizarTextoDropPropio(clave, totalUniverso){
+  const el = document.getElementById('drop'+cap(clave));
+  const sel = seleccionPropia[clave];
+  if(!totalUniverso){ el.textContent='—'; return; }
+  if(!sel.length) el.textContent = clave==='dds' ? 'Todos' : 'Todas';
+  else if(sel.length===1) el.textContent = sel[0];
+  else el.textContent = sel.length+' sel.';
+}
+
+function limpiarFiltrosPropios(){
+  seleccionPropia = { familia: [], recuento: [], dds: [] };
+  construirFiltrosPropios();
+  render();
+}
+
+// ===================================================================
+// RENDER: tarjetas KPI por tipo de recuento
+// ===================================================================
+let recuentoSeleccionado = null; // idr del recuento activo en el panel de detalle
+
+function datosFiltrados(){
+  let d = RAW;
+  d = d.filter(r => !filtroGlobalActivo.compania.length || filtroGlobalActivo.compania.includes(r.co));
+  d = d.filter(r => !filtroGlobalActivo.sector.length   || filtroGlobalActivo.sector.includes(r.se));
+  d = d.filter(r => !filtroGlobalActivo.ciclo.length    || filtroGlobalActivo.ciclo.includes(r.ci));
+  d = d.filter(r => !filtroGlobalActivo.finca.length    || filtroGlobalActivo.finca.includes(r.fi));
+  d = d.filter(r => !seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa));
+  d = d.filter(r => !seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re));
+  d = d.filter(r => !seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds));
+  return d;
+}
+
+// Umbrales PROVISIONALES por terciles de los propios datos filtrados (verde/ámbar/rojo).
+// Pendiente de reemplazar por umbrales agronómicos reales por tipo de recuento cuando
+// se definan — ver nota en el chat. Regla genérica: valores más altos = más alerta,
+// salvo para "Promedio de X por planta" (desarrollo/población), donde más alto = mejor.
+const FAMILIAS_MEJOR_ALTO = new Set(['Poblacionales','Desarrollo fenologico']);
+function calcularEstado(valores, valorActual, familia){
+  if(!valores.length) return 'ok';
+  const ordenados = [...valores].sort((a,b)=>a-b);
+  const p33 = ordenados[Math.floor(ordenados.length*0.33)];
+  const p66 = ordenados[Math.floor(ordenados.length*0.66)];
+  const peorEsAlto = !FAMILIAS_MEJOR_ALTO.has(familia);
+  if(peorEsAlto){
+    if(valorActual >= p66) return 'danger';
+    if(valorActual >= p33) return 'warn';
+    return 'ok';
+  } else {
+    if(valorActual <= p33) return 'danger';
+    if(valorActual <= p66) return 'warn';
+    return 'ok';
+  }
+}
+
+function render(){
+  const datos = datosFiltrados();
+  const grid = document.getElementById('kpiGrid');
+  const vacioMsg = document.getElementById('vacioMsg');
+
+  if(!datos.length){
+    grid.innerHTML=''; vacioMsg.style.display='block';
+    cerrarDetalle();
+    return;
+  }
+  vacioMsg.style.display='none';
+
+  // Agrupar por (idr o nombre de recuento, cuando idr es nulo en legado)
+  const grupos = {};
+  datos.forEach(r=>{
+    const clave = r.idr ? ('id'+r.idr) : ('nom'+normTxt(r.re));
+    if(!grupos[clave]) grupos[clave] = { familia:r.fa, nombre:r.re, esPorc:r.esPorc, valores:[], idr:r.idr };
+    grupos[clave].valores.push(r.valor);
+  });
+
+  const ordenGrupos = Object.values(grupos).sort((a,b)=>(a.idr||999)-(b.idr||999));
+
+  grid.innerHTML = ordenGrupos.map(g=>{
+    const n = g.valores.length;
+    const promedio = g.valores.reduce((a,b)=>a+b,0)/n;
+    const estado = calcularEstado(g.valores, promedio, g.familia);
+    const valorTxt = g.esPorc ? (promedio*100).toFixed(1)+'%' : promedio.toFixed(1);
+    const claveActiva = g.idr ? ('id'+g.idr) : ('nom'+normTxt(g.nombre));
+    const activa = recuentoSeleccionado === claveActiva;
+    return `<div class="kpi-card est-${estado} ${activa?'activa':''}" onclick="abrirDetalle('${claveActiva.replace(/'/g,"\\'")}')">
+      <span class="kpi-badge est-${estado}">${estado==='danger'?'ALERTA':estado==='warn'?'ATENCIÓN':'OK'}</span>
+      <div class="kpi-familia">${g.familia||'—'}</div>
+      <div class="kpi-nombre">${g.nombre}</div>
+      <div class="kpi-valor">${valorTxt}</div>
+      <div class="kpi-sub">${n.toLocaleString()} registro${n!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+
+  if(recuentoSeleccionado){
+    const sigueExistiendo = ordenGrupos.some(g => (g.idr?('id'+g.idr):('nom'+normTxt(g.nombre))) === recuentoSeleccionado);
+    if(sigueExistiendo) renderDetalle();
+    else cerrarDetalle();
+  }
+}
+
+let chartDetalleInstancia = null;
+
+// Modal fijo (no tooltip flotante) para el detalle de un punto del gráfico — se abre con
+// clic en el punto y sólo se cierra con el botón "Cerrar", para dar tiempo de leer
+// observaciones largas y los campos del reporte padre sin que se cierre solo al mover
+// el mouse (que era el problema del tooltip por hover anterior).
+function abrirModalPunto(cicloLabel, ventana, registros){
+  let overlay = document.getElementById('overlayModalPunto');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'overlayModalPunto';
+    overlay.style.cssText = `
+      position:fixed; inset:0; background:rgba(27,67,50,.35); z-index:300;
+      display:flex; align-items:center; justify-content:center; padding:20px;`;
+    overlay.innerHTML = `<div id="modalPunto" style="
+      background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.25);
+      max-width:720px; width:100%; max-height:82vh; display:flex; flex-direction:column; overflow:hidden;">
+      <div id="modalPuntoHeader" style="padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;"></div>
+      <div id="modalPuntoBody" style="padding:16px 20px; overflow-y:auto;"></div>
+    </div>`;
+    document.body.appendChild(overlay);
+    // Cerrar solo al hacer clic explícito en el overlay (fuera del modal) o en el botón — nunca por hover/mousemove
+    overlay.addEventListener('click', (ev)=>{ if(ev.target===overlay) cerrarModalPunto(); });
+  }
+
+  document.getElementById('modalPuntoHeader').innerHTML = `
+    <div>
+      <div style="font-weight:800;color:var(--primary);font-size:15px;">${cicloLabel} · DDS ${ventana} <span style="font-weight:600;color:var(--text-muted);font-size:11.5px;">(ventana de recuento)</span></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${registros.length} registro${registros.length!==1?'s':''} en este punto</div>
+    </div>
+    <button onclick="cerrarModalPunto()" style="background:var(--primary-light); border:none; color:var(--primary); font-weight:700; border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12.5px; flex-shrink:0;">✕ Cerrar</button>
+  `;
+
+  const body = document.getElementById('modalPuntoBody');
+  if(!registros.length){
+    body.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-muted)">Sin registros individuales.</div>`;
+  } else {
+    body.innerHTML = registros.map(r=>{
+      const val = r.esPorc ? (r.valor*100).toFixed(1)+'%' : r.valor.toFixed(1);
+      const fechaTxt = formatoFecha(r.fecha) || (r.fuente==='hist' ? 'Histórico' : '—');
+      const obsHtml = r.obs ? `<div style="margin-top:6px;font-size:12px;color:var(--text-main);background:var(--bg-main);border-radius:8px;padding:8px 10px;line-height:1.5;">📝 ${r.obs}</div>` : '';
+
+      // Campos del reporte padre (x_recuentos_estado_del) — sólo disponibles para registros en vivo
+      const camposPadre = [];
+      if(r.area !== null && r.area !== undefined) camposPadre.push(`<b>Área evaluada:</b> ${r.area} mz`);
+      if(r.poblacion !== null && r.poblacion !== undefined) camposPadre.push(`<b>Población:</b> ${r.poblacion} plantas`);
+      if(r.estadoFeno) camposPadre.push(`<b>Estado fenológico:</b> ${r.estadoFeno}`);
+      if(r.aplicacion) camposPadre.push(`<b>Aplicación:</b> ${r.aplicacion}`);
+      const padreHtml = camposPadre.length
+        ? `<div style="margin-top:6px;font-size:11px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:4px 14px;">${camposPadre.map(c=>`<span>${c}</span>`).join('')}</div>`
+        : '';
+
+      // Aplicaciones de fungicida en esa Finca/Lote/Ciclo, acotadas a un rango de
+      // fechas cercano a la fecha del recuento (el recuento es una evaluación PREVIA
+      // que determina qué aplicación toca — ej. "Aplicación: Fungicida IV" — así que
+      // mostrar el histórico completo del lote era ruido; interesa lo que ocurre
+      // alrededor de esa fecha, no todo el ciclo).
+      const clave = claveFungicida(r.fi, r.lo, r.ci);
+      const todasAplicaciones = FUNGICIDAS_POR_CLAVE[clave] || [];
+      const fechaRecuento = r.fecha ? new Date(r.fecha+'T00:00:00') : null;
+
+      let aplicacionesCercanas = todasAplicaciones;
+      if(fechaRecuento){
+        aplicacionesCercanas = todasAplicaciones
+          .map(a=>{
+            if(!a.fecha) return {...a, diasDist: null};
+            const fechaAp = new Date(a.fecha+'T00:00:00');
+            const dias = Math.round((fechaAp - fechaRecuento) / 86400000);
+            return {...a, diasDist: dias};
+          })
+          .filter(a => a.diasDist === null || Math.abs(a.diasDist) <= RANGO_DIAS_FUNGICIDA)
+          .sort((a,b) => Math.abs(a.diasDist ?? 9999) - Math.abs(b.diasDist ?? 9999));
+      }
+
+      const fungicidaHtml = aplicacionesCercanas.length ? `
+        <div style="margin-top:8px;background:#F2F5F0;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--primary);margin-bottom:6px;">
+            🧪 Aplicaciones de fungicida cerca de esta evaluación (±${RANGO_DIAS_FUNGICIDA} días)
+          </div>
+          <table style="border-collapse:collapse;width:100%;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border-color);">
+                <th style="text-align:left;padding:3px 6px 3px 0;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">Actividad</th>
+                <th style="text-align:left;padding:3px 6px;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">Producto</th>
+                <th style="text-align:right;padding:3px 6px;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">Cantidad</th>
+                <th style="text-align:right;padding:3px 6px;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">Área</th>
+                <th style="text-align:right;padding:3px 6px;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">Dosis/mz</th>
+                <th style="text-align:left;padding:3px 6px;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">Fecha</th>
+                <th style="text-align:right;padding:3px 0 3px 6px;font-size:9.5px;text-transform:uppercase;color:var(--text-muted);">🌧️ Ese día</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${aplicacionesCercanas.map(a=>{
+                const dosisTxt = (a.dosis!==null && a.dosis!==undefined) ? `${(+a.dosis).toFixed(2)} ${a.um||''}` : '—';
+                const cantidadTxt = (a.cantidad!==null && a.cantidad!==undefined) ? `${(+a.cantidad).toFixed(2)} ${a.um||''}` : '—';
+                const areaTxt = (a.area!==null && a.area!==undefined) ? `${(+a.area).toFixed(1)} mz` : '—';
+                const fechaAp = formatoFecha(a.fecha) || '—';
+                // Resaltar si la actividad coincide con la Aplicación indicada en el reporte padre
+                // (ej. recuento dice "Fungicida IV" -> esta fila también es "Fungicida IV")
+                const coincide = r.aplicacion && normTxt(a.actividad) === normTxt(r.aplicacion);
+                const badgeDias = a.diasDist===null ? '' :
+                  a.diasDist===0 ? ' <span style="color:var(--primary);font-weight:700;">(mismo día)</span>' :
+                  a.diasDist>0 ? ` <span style="color:var(--text-muted);">(+${a.diasDist}d)</span>` :
+                  ` <span style="color:var(--text-muted);">(${a.diasDist}d)</span>`;
+                // Lluvia registrada en la FINCA el mismo día exacto de esta aplicación —
+                // si llovió, la aplicación puede haberse lavado y no hizo efecto.
+                const mmEseDia = a.fecha ? LLUVIA_POR_FINCA_FECHA[claveLluvia(r.fi, a.fecha)] : undefined;
+                const lluviaTxt = mmEseDia === undefined ? '—'
+                  : mmEseDia > 0 ? `<span style="color:#B3423E;font-weight:800;">☔ ${mmEseDia}mm</span>`
+                  : `<span style="color:var(--text-muted);">☀️ 0mm</span>`;
+                return `<tr style="border-bottom:1px solid #E5E8E2;${coincide?'background:#E4F0E8;':''}">
+                  <td style="padding:4px 6px 4px 0;font-weight:${coincide?800:600};">${a.actividad}${coincide?' ✓':''}</td>
+                  <td style="padding:4px 6px;color:var(--text-main);">${a.producto}</td>
+                  <td style="padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">${cantidadTxt}</td>
+                  <td style="padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;">${areaTxt}</td>
+                  <td style="padding:4px 6px;text-align:right;font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap;">${dosisTxt}</td>
+                  <td style="padding:4px 6px;white-space:nowrap;color:var(--text-muted);">${fechaAp}${badgeDias}</td>
+                  <td style="padding:4px 0 4px 6px;text-align:right;white-space:nowrap;">${lluviaTxt}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          ${todasAplicaciones.length > aplicacionesCercanas.length
+            ? `<div style="font-size:10px;color:var(--text-muted);margin-top:6px;">${todasAplicaciones.length - aplicacionesCercanas.length} aplicación(es) más fuera del rango de ±${RANGO_DIAS_FUNGICIDA} días (no se muestran).</div>`
+            : ''}
+        </div>` : (todasAplicaciones.length ? `
+        <div style="margin-top:8px;font-size:10.5px;color:var(--text-muted);">
+          Hay ${todasAplicaciones.length} aplicación(es) de fungicida en este lote/ciclo, pero ninguna dentro de ±${RANGO_DIAS_FUNGICIDA} días de esta evaluación.
+        </div>` : '');
+
+      // Franja de lluvia en la FINCA alrededor de la fecha del recuento (±10 días) —
+      // se aplica a todos los lotes de esa finca por igual (x_pluviosidad no se lleva
+      // por lote/sector). Sólo se muestra si hay al menos un día con dato.
+      const diasLluvia = lluviaCercaDe(r.fi, r.fecha, RANGO_DIAS_LLUVIA);
+      const lluviaHtml = diasLluvia.length ? `
+        <div style="margin-top:8px;background:#EAF3FA;border-radius:8px;padding:8px 10px;">
+          <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#2F6690;margin-bottom:6px;">
+            🌧️ Pluviosidad en ${r.fi||'la finca'} (±${RANGO_DIAS_LLUVIA} días de esta evaluación)
+          </div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            ${diasLluvia.map(d=>{
+              const esHoy = d.diasDist===0;
+              const intensidad = d.mm<=0 ? '#fff' : d.mm<5 ? '#BFE0F2' : d.mm<20 ? '#6FB6E0' : '#2F6690';
+              const colorTexto = d.mm>=20 ? '#fff' : '#22302A';
+              return `<div title="${formatoFecha(d.fecha)}: ${d.mm}mm" style="
+                width:34px; text-align:center; padding:4px 2px; border-radius:6px;
+                background:${intensidad}; color:${colorTexto}; font-size:9px; line-height:1.3;
+                border:${esHoy?'2px solid var(--primary)':'1px solid #D7E5EE'};">
+                <div style="font-weight:700;">${d.diasDist===0?'HOY':(d.diasDist>0?'+':'')+d.diasDist}</div>
+                <div>${d.mm}mm</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : '';
+
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--border-color);">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;">
+          <div>
+            <span style="font-weight:800;font-size:13.5px;">${r.fi||'—'}</span>
+            <span style="color:var(--text-muted);font-size:12.5px;"> · ${r.lo||'—'}</span>
+          </div>
+          <div style="font-weight:800;color:var(--primary);font-size:15px;">${val}</div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">
+          DDS real ${r.dds ?? '—'} · ${fechaTxt} · <span class="pill-origen ${r.fuente==='vivo'?'vivo':'hist'}" style="margin-left:2px;">${r.fuente==='vivo'?'En vivo':'Histórico'}</span>
+        </div>
+        ${padreHtml}
+        ${obsHtml}
+        ${lluviaHtml}
+        ${fungicidaHtml}
+      </div>`;
+    }).join('');
+  }
+
+  overlay.style.display = 'flex';
+}
+window.cerrarModalPunto = function(){
+  const overlay = document.getElementById('overlayModalPunto');
+  if(overlay) overlay.style.display = 'none';
+};
+
+window.abrirDetalle = function(clave){
+  recuentoSeleccionado = clave;
+  renderDetalle();
+  document.getElementById('panelDetalle').scrollIntoView({behavior:'smooth', block:'nearest'});
+};
+window.cerrarDetalle = function(){
+  recuentoSeleccionado = null;
+  document.getElementById('panelDetalle').classList.remove('show');
+  cerrarModalPunto();
+  render();
+};
+
+function renderDetalle(){
+  const datos = datosFiltrados().filter(r=>{
+    const clave = r.idr ? ('id'+r.idr) : ('nom'+normTxt(r.re));
+    return clave === recuentoSeleccionado;
+  });
+  if(!datos.length){ cerrarDetalle(); return; }
+
+  const panel = document.getElementById('panelDetalle');
+  panel.classList.add('show');
+  document.getElementById('detalleTitulo').textContent = datos[0].re;
+  document.getElementById('detalleFamilia').textContent = datos[0].fa || '—';
+
+  // Gráfico: tendencia por VENTANA de DDS (no el día exacto), una línea por Ciclo.
+  // Cada punto guarda el detalle de los registros reales que cayeron en esa ventana,
+  // para mostrarlos en el tooltip (Finca, Lote, DDS real, Fecha, Observación).
+  const esPorc = datos[0].esPorc;
+  const ciclos = ordenarCiclosDesc([...new Set(datos.map(d=>d.ci))]);
+  const ventanasUsadas = [...new Set(datos.map(d=>ventanaDDS(d.dds)))].filter(v=>v!==null).sort((a,b)=>a-b);
+  const colores = ['#1B4332','#C9963B','#2D6A4F','#B3423E','#8a7550','#5C6B63','#4A90A4','#9B5DE5'];
+
+  // detallePorPunto[cicloIdx][ventanaIdx] = array de registros reales agrupados ahí
+  const detallePorPunto = ciclos.map(()=>ventanasUsadas.map(()=>[]));
+
+  const datasets = ciclos.map((c,ci)=>{
+    const serieDatos = ventanasUsadas.map((vent,vi)=>{
+      const puntos = datos.filter(d=>d.ci===c && ventanaDDS(d.dds)===vent);
+      detallePorPunto[ci][vi] = puntos;
+      if(!puntos.length) return null;
+      const prom = puntos.reduce((a,b)=>a+b.valor,0)/puntos.length;
+      return esPorc ? +(prom*100).toFixed(2) : +prom.toFixed(2);
+    });
+    return { label:c, data:serieDatos, borderColor:colores[ci%colores.length], backgroundColor:colores[ci%colores.length], tension:.3, spanGaps:true };
+  });
+
+  const ctx = document.getElementById('chartDetalle').getContext('2d');
+  if(chartDetalleInstancia) chartDetalleInstancia.destroy();
+  chartDetalleInstancia = new Chart(ctx, {
+    type:'line',
+    data:{ labels: ventanasUsadas.map(v=>'DDS '+v), datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      onClick: (ev, elementos) => {
+        if(!elementos.length) return;
+        const el = elementos[0];
+        const cicloLabel = datasets[el.datasetIndex].label;
+        const ventana = ventanasUsadas[el.index];
+        const registros = detallePorPunto[el.datasetIndex][el.index] || [];
+        abrirModalPunto(cicloLabel, ventana, registros);
+      },
+      onHover: (ev, elementos) => { ev.native.target.style.cursor = elementos.length ? 'pointer' : 'default'; },
+      plugins:{
+        legend:{ position:'bottom', labels:{ boxWidth:10, font:{size:10} } },
+        tooltip:{
+          // Tooltip nativo liviano sólo con el valor (hover); el detalle completo por
+          // finca/lote/observación se abre con CLIC en un modal fijo (abrirModalPunto),
+          // que no se cierra hasta que el usuario presiona "Cerrar".
+          callbacks:{
+            title: (items)=> items.length ? `${items[0].dataset.label} · DDS ${ventanasUsadas[items[0].dataIndex]}` : '',
+            label: (item)=> `Promedio: ${item.formattedValue}${esPorc?'%':''} — clic para ver detalle`
+          }
+        }
+      },
+      scales:{ y:{ beginAtZero:true, title:{display:true,text: esPorc?'%':'Promedio'} } }
+    }
+  });
+
+  document.getElementById('notaVentanaDds').textContent =
+    'DDS = ventana estándar de recuento (10, 18, 28, 40… 160). Cada punto agrupa los registros cuyo DDS real cae en esa ventana; haz clic en un punto para ver el detalle completo por finca/lote (el detalle permanece abierto hasta que lo cierres).';
+
+  // Tabla de detalle (limitada a 500 filas visibles por rendimiento; export trae todo)
+  const tbody = document.getElementById('tablaDetalleBody');
+  const filas = datos.slice(0, 500).map(d=>{
+    const val = d.esPorc ? (d.valor*100).toFixed(2)+'%' : d.valor.toFixed(2);
+    const fechaTxt = formatoFecha(d.fecha) || '—';
+    return `<tr>
+      <td>${d.fi||''}</td><td>${d.lo||''}</td><td>${d.se||''}</td><td>${d.ci||''}</td>
+      <td>${d.dds||''}</td><td>${fechaTxt}</td><td class="num">${val}</td>
+      <td>${d.obs||''}</td>
+      <td><span class="pill-origen ${d.fuente==='vivo'?'vivo':'hist'}">${d.fuente==='vivo'?'En vivo':'Histórico'}</span></td>
+    </tr>`;
+  }).join('');
+  tbody.innerHTML = filas || '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Sin datos</td></tr>';
+}
+
+function exportarDetalleExcel(){
+  if(!recuentoSeleccionado) return;
+  const datos = datosFiltrados().filter(r=>{
+    const clave = r.idr ? ('id'+r.idr) : ('nom'+normTxt(r.re));
+    return clave === recuentoSeleccionado;
+  });
+  const filas = datos.map(d=>({
+    Finca:d.fi, Lote:d.lo, Sector:d.se, Ciclo:d.ci, DDS:d.dds,
+    "Ventana DDS": ventanaDDS(d.dds),
+    Fecha: formatoFecha(d.fecha) || '',
+    Resultado: d.esPorc ? +(d.valor*100).toFixed(2) : +d.valor.toFixed(2),
+    Unidad: d.esPorc ? '%' : 'promedio',
+    "Área evaluada (mz)": d.area ?? '',
+    "Población (plantas)": d.poblacion ?? '',
+    "Estado fenológico": d.estadoFeno || '',
+    "Aplicación": d.aplicacion || '',
+    Observacion: d.obs || '',
+    Compania:d.co, Fuente: d.fuente==='vivo'?'En vivo (Odoo)':'Histórico (Excel)'
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Recuento');
+  const nombreArchivo = (datos[0]?.re||'recuento').replace(/[^a-z0-9 ]/gi,'').trim().replace(/\s+/g,'_');
+  XLSX.writeFile(wb, `Recuentos_${nombreArchivo}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ===================================================================
+// ADAPTADOR DE FILTRO GLOBAL — INFOAGRO BI
+// Traduce {compania, sector, ciclo, finca} del shell. Nota: aquí Ciclo mezcla
+// histórico (2012-2024) y en vivo (2025+) sin distinción — tal como se acordó.
+// ===================================================================
+let FILTRO_GLOBAL_PENDIENTE = null;
+
+function aplicarFiltroGlobal(filtros){
+  if(!CARGA_LISTA){ FILTRO_GLOBAL_PENDIENTE = filtros; return; }
+  filtros = filtros || {};
+  ['compania','sector','ciclo','finca'].forEach(k=>{
+    if(filtros[k] !== undefined) filtroGlobalActivo[k] = filtros[k] || [];
+  });
+  construirFiltrosPropios();
+  render();
+}
+
+function enviarUniversoAlShell(){
+  if(!RAW.length) return;
+  window.parent.postMessage({
+    type: 'INFOAGRO_UNIVERSO_RESPUESTA',
+    universo: {
+      compania: [...new Set(RAW.map(r=>r.co))].filter(Boolean).sort(),
+      sector:   [...new Set(RAW.map(r=>r.se))].filter(Boolean).sort(),
+      ciclo:    ordenarCiclosDesc([...new Set(RAW.map(r=>r.ci))].filter(Boolean)),
+      finca:    [...new Set(RAW.map(r=>r.fi))].filter(Boolean).sort()
+    }
+  }, '*');
+}
+
+window.addEventListener('message', function(ev){
+  if(!ev.data) return;
+  if(ev.data.type === 'INFOAGRO_FILTROS_UPDATE') aplicarFiltroGlobal(ev.data.filtros);
+  if(ev.data.type === 'INFOAGRO_SOLICITAR_UNIVERSO') enviarUniversoAlShell();
+});
+
+cargarTodo();
+</script>
+</body>
+</html>

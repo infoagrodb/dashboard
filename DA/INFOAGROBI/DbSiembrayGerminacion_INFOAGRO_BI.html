@@ -1,0 +1,2500 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Matriz Pivot Germinación Agrícola - Maní Premium</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root {
+    --bg-main: #FAFAF8;
+    --text-main: #22302A;
+    --text-muted: #8a9690;
+    --primary: #1B4332;
+    --primary-hover: #2D6A4F;
+    --primary-light: #E4F0E8;
+    --accent-peanut: #C9963B;
+    --accent-peanut-hover: #B3832E;
+    --border-color: #E1E0D8;
+    --card-bg: #ffffff;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 4px 10px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s; }
+
+  /* Barra de Scroll Estilizada */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #e5e7eb; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 10px; border: 2px solid #e5e7eb; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--primary-hover); }
+
+  html, body { height: 100%; height: 100dvh; margin: 0; padding: 0; overflow: hidden; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-main);
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header-wrapper {
+    position: sticky; top: 0; z-index: 100;
+    background: #1B4332;
+    padding: 10px 0 14px; box-shadow: 0 4px 14px rgba(27,67,50,0.16); width: 100%;
+  }
+
+  header {
+    max-width: 1400px; margin: 0 auto; color: #ffffff; padding: 10px 24px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+  }
+
+  .header-title-area h1 { margin: 0 0 2px 0; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; }
+  .header-title-area p { margin: 0; font-size: 13px; color: #1f2937; }
+  .header-action-area { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .header-quick-actions { display: flex; align-items: flex-end; gap: 14px; }
+  .header-menu-panel { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+  .btn-menu-mobile, .btn-table-menu-mobile { display: none; }
+  .btn-opciones-pivot { display: inline-flex; background-color: #475569; }
+
+  .header-filter-group { display: flex; flex-direction: column; gap: 4px; width: 220px; position: relative; }
+  .header-filter-group .label-container { display: flex; justify-content: space-between; align-items: center; height: 16px; }
+  .header-filter-group label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .header-filter-group .multiselect-dropdown {
+    background-color: rgba(255, 255, 255, 0.9); color: #1B4332; border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 6px 12px; border-radius: 6px; height: 34px; font-weight: 600;
+  }
+  .header-filter-group .multiselect-dropdown:hover { border-color: #ffffff; background-color: #ffffff; transform: translateY(-1px); }
+
+  .btn-toggle-filters {
+    background-color: #C9963B; border: none; color: #2A1F0A; font-weight: 700;
+    height: 34px; font-size: 13px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+    display: inline-flex; align-items: center; transition: all 0.15s ease;
+  }
+  .btn-toggle-filters:hover { background-color: #D9A94B; transform: translateY(-1px); }
+
+  .container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 24px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  /* Panel de Filtros Desplegable */
+  .toolbar-wrapper { 
+    max-height: 250px; overflow: visible; opacity: 1; margin-bottom: 16px; flex-shrink: 0;
+    transition: max-height 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1), margin-bottom 0.4s ease, opacity 0.3s ease;
+  }
+  .toolbar-wrapper.collapsed { max-height: 0; margin-bottom: 0; opacity: 0; overflow: hidden; pointer-events: none; }
+
+  .toolbar {
+    background-color: var(--card-bg); padding: 16px 20px; border-radius: 12px; border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm); display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;
+  }
+
+  .filter-group { flex: 1 1 160px; display: flex; flex-direction: column; gap: 4px; position: relative; }
+  .label-container { display: flex; justify-content: space-between; align-items: center; width: 100%; height: 16px; }
+  .filter-group label { font-size: 12px; font-weight: 600; color: #374151; }
+
+  .btn-clear-individual {
+    background: none; border: none; padding: 0; cursor: pointer; display: none; align-items: center; justify-content: center; width: 16px; height: 16px; color: #6b7280;
+  }
+  .btn-clear-individual:hover { transform: scale(1.2); color: #ef4444; }
+  .header-filter-group .btn-clear-individual { color: rgba(255,255,255,0.75); }
+  .btn-clear-individual svg { width: 15px; height: 15px; fill: currentColor; }
+
+  .multiselect-dropdown {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px;
+    font-size: 13px; background-color: white; cursor: pointer; user-select: none;
+    display: flex; justify-content: space-between; align-items: center; height: 34px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .multiselect-dropdown:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(37,99,235,0.12); }
+  .multiselect-dropdown::after { content: "▼"; font-size: 8px; color: var(--text-muted); margin-left: 6px; }
+
+  .multiselect-options {
+    display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background-color: white;
+    border: 1px solid var(--border-color); border-radius: 8px; max-height: 300px; overflow: hidden;
+    z-index: 110; box-shadow: var(--shadow-md); margin-top: 6px;
+    animation: dropdownFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .multiselect-options.show { display: flex; }
+
+  @keyframes dropdownFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .ms-search-wrap { padding: 8px 10px; border-bottom: 1px solid var(--border-color); flex-shrink: 0; }
+  .ms-search-input {
+    width: 100%; padding: 6px 10px; border: 1px solid var(--border-color); border-radius: 6px;
+    font-size: 12px; outline: none; font-family: inherit;
+  }
+  .ms-search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
+
+  .ms-items-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 4px 0; }
+
+  .ms-selectall { border-bottom: 1px solid var(--border-color); font-weight: 700; flex-shrink: 0; }
+
+  .ms-empty { display: none; padding: 16px 14px; text-align: center; font-size: 12px; color: var(--text-muted); }
+
+  .multiselect-footer { display: flex; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--border-color); flex-shrink: 0; }
+  .ms-btn-ok, .ms-btn-cancel {
+    flex: 1; padding: 6px 0; font-size: 12px; font-weight: 700; border-radius: 6px; cursor: pointer;
+    border: none; text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .ms-btn-ok { background-color: var(--primary); color: white; }
+  .ms-btn-ok:hover { background-color: var(--primary-hover); }
+  .ms-btn-cancel { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .ms-btn-cancel:hover { background-color: #e2e8f0; }
+
+  .multiselect-item { padding: 7px 14px; display: flex; align-items: center; gap: 10px; font-size: 13px; cursor: pointer; color: #1e293b; }
+  .multiselect-item:hover { background-color: var(--primary-light); }
+  .multiselect-item input[type="checkbox"] { accent-color: var(--primary); cursor: pointer; }
+  .multiselect-item input[type="checkbox"]:indeterminate { accent-color: var(--accent-peanut); }
+
+  .table-toolbar {
+    background-color: #ffffff; border: 1px solid var(--border-color); border-bottom: none;
+    border-top-left-radius: 12px; border-top-right-radius: 12px; padding: 10px 16px;
+    display: flex; flex-direction: column; flex-shrink: 0; gap: 0;
+  }
+  .table-toolbar-left { display: flex; flex-direction: column; width: 100%; gap: 0; }
+
+  .toolbar-row {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0;
+  }
+  .toolbar-row + .toolbar-row { border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 4px; }
+  .toolbar-row-metrics { gap: 6px; align-items: center; }
+  .toolbar-group {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding-right: 14px; border-right: 1px solid var(--border-color);
+  }
+  .toolbar-group:last-child { border-right: none; padding-right: 0; }
+  .toolbar-group-label {
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.5px; color: #9ca3af; white-space: nowrap;
+  }
+
+  .inline-column-selector { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow: hidden; }
+  .inline-column-selector span { font-size: 12px; font-weight: 600; color: #4b5563; margin-right: 2px; }
+
+  .col-label-btn {
+    display: inline-flex; align-items: center; gap: 6px; background-color: #ffffff; border: 1px solid var(--border-color);
+    padding: 3px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; cursor: pointer; user-select: none;
+  }
+  .col-label-btn:hover { background-color: var(--bg-main); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+  .col-label-btn input[type="checkbox"] { accent-color: var(--primary); margin: 0; }
+
+  .pivot-mode-selector {
+    display: inline-flex; background-color: #fff; border: 1px solid var(--border-color); padding: 2px; border-radius: 999px; overflow: hidden;
+  }
+  .pivot-mode-btn {
+    background: none; border: none; font-size: 12px; font-weight: 600; color: #4b5563; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+  }
+  .pivot-mode-btn.active { background-color: var(--primary); color: white; font-weight: 600; }
+
+  .btn-excel {
+    background-color: #1B4332; color: white; border: none; font-size: 13px; font-weight: 600; padding: 6px 14px; height: 34px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;
+  }
+  .btn-excel:hover { background-color: #2D6A4F; }
+
+  .table-container { background-color: var(--card-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid var(--border-color); overflow: auto; flex: 1; box-shadow: var(--shadow-sm); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; white-space: nowrap; }
+
+  #tablaHeader th {
+    position: sticky; top: 0; z-index: 30; background-color: #f9fafb; color: #111827;
+    font-weight: 700; padding: 10px 14px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.3px;
+    border-right: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+  }
+  #tablaHeader tr:nth-child(2) th { top: 41px; z-index: 25; }
+
+  #tablaHeader tr:first-child th:first-child { position: sticky; left: 0; top: 0; z-index: 55; background-color: #f9fafb !important; min-width: 160px; max-width: 160px; }
+  #tablaHeader tr:first-child th:nth-child(2) { position: sticky; left: 160px; top: 0; z-index: 55; background-color: #f9fafb !important; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1); border-right: 2px solid var(--border-color); }
+
+  .freeze-col-1 { position: sticky; left: 0; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; }
+  .freeze-col-2 { position: sticky; left: 160px; z-index: 15; background-color: inherit; min-width: 160px; max-width: 160px; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1); border-right: 2px solid var(--border-color) !important; }
+
+  .row-finca-header td:first-child { position: sticky; left: 0; z-index: 22; background-color: #fef3c7 !important; }
+  .row-finca-header td:nth-child(2) { position: sticky; left: 160px; z-index: 22; background-color: #fef3c7 !important; box-shadow: 4px 0 8px -2px rgba(15, 23, 42, 0.1); border-right: 2px solid var(--border-color) !important; }
+
+  td { padding: 8px 14px; border-right: 1px solid var(--border-color); border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  table th:first-child, table td:first-child { border-left: 1px solid var(--border-color); }
+
+  .interactive-cell { cursor: pointer; position: relative; transition: all 0.2s ease; }
+  .interactive-cell:hover { background-color: var(--primary-light) !important; color: var(--primary); font-weight: 600; }
+
+  .row-finca-header { background-color: #fef3c7; font-weight: 700; cursor: pointer; user-select: none; }
+  .row-finca-header:hover { background-color: #fde68a; }
+  .toggle-icon { display: inline-block; margin-right: 8px; color: var(--primary); transition: transform 0.2s ease; }
+
+  .row-lote { background-color: #ffffff; animation: fadeInUp 0.35s cubic-bezier(0.4, 0, 0.2, 1) both; }
+  .row-lote:hover { background-color: var(--bg-main); }
+  .row-total-finca { background-color: #f3f4f6; font-weight: 700; border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color); }
+
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .hidden-row { display: none !important; }
+
+  table.oculta-col-lote thead tr:first-child th:nth-child(2),
+  table.oculta-col-lote tbody tr td:nth-child(2) { display: none !important; }
+
+  .badge-pct { display: inline-block; padding: 2px 8px; border-radius: 999px; font-weight: 600; font-size: 11px; background-color: #e5e7eb; color: #111827; min-width: 55px; text-align: center; }
+  .badge-pct.low { background-color: #fee2e2; color: #b91c1c; }
+
+  .btn { background-color: #111827; color: #f9fafb; border: none; padding: 6px 14px; font-size: 13px; font-weight: 600; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; height: 34px; transition: all 0.15s ease; }
+  .btn:hover { background-color: #000000; }
+  .btn-secondary { background-color: #e5e7eb; color: #111827; }
+  .btn-secondary:hover { background-color: #d1d5db; }
+  .btn-clear-filters { background-color: #ffffff; color: #475569; border: 1px solid #cbd5e1; }
+  .btn-clear-filters:hover { background-color: #f1f5f9; color: #0f172a; }
+
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .text-left { text-align: left; }
+  .loading { padding: 40px; text-align: center; color: var(--text-main); font-weight: 600; }
+
+  /* Pop-ups Originales En Bruto */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 500; align-items: center; justify-content: center;
+    transition: opacity 0.2s ease;
+  }
+  .modal-overlay.show { display: flex; }
+  
+  .modal-card {
+    background-color: white; border-radius: 16px; width: 560px; max-width: 92%;
+    box-shadow: var(--shadow-md); display: flex; flex-direction: column; overflow: hidden;
+    transform: scale(0.96); opacity: 0; transition: all 0.2s cubic-bezier(0.34, 1.2, 0.64, 1);
+  }
+  .modal-overlay.show .modal-card { transform: scale(1); opacity: 1; }
+  .modal-header { background-color: var(--primary); color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .modal-header h3 { margin: 0; font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .modal-close { background: none; border: none; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; }
+  .modal-close:hover { color: #fca5a5; }
+  .modal-body { padding: 20px; max-height: 450px; overflow-y: auto; background-color: #ffffff; }
+  
+  .popup-data-grid { display: flex; flex-direction: column; gap: 14px; }
+  .popup-item { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+  .popup-item:last-child { border-bottom: none; }
+  .popup-label { font-weight: 600; color: #475569; }
+  .popup-value { font-weight: 600; color: var(--text-main); text-align: right; }
+  .popup-multi-block { border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; overflow: hidden; }
+  .popup-block-title { background-color: #f1f5f9; color: #334155; font-size: 12px; font-weight: 700; padding: 6px 12px; border-bottom: 1px solid var(--border-color); }
+
+  /* ===== TABLET (<=1100px): la selección de columnas pasa a envolver en vez de ocultarse ===== */
+  @media (max-width: 1100px) {
+    .inline-column-selector { flex-wrap: wrap; overflow: visible; }
+    .table-toolbar-left { row-gap: 8px; }
+  }
+
+  /* ===== TABLET / MÓVIL GRANDE (<=768px) ===== */
+  @media (max-width: 768px) {
+    /* --- Banner/header más delgado --- */
+    .header-wrapper { padding: 8px 0 10px; }
+    header { flex-direction: column; text-align: center; align-items: stretch; padding: 8px 14px; gap: 10px; }
+    .header-title-area h1 { font-size: 16px; margin-bottom: 0; }
+    .header-title-area p { font-size: 10.5px; opacity: 0.85; }
+    .header-action-area { flex-direction: column; align-items: stretch; gap: 0; }
+
+    /* --- Fila delgada: Filtros + Menú lado a lado --- */
+    .header-quick-actions { display: flex; gap: 8px; width: 100%; }
+    .header-quick-actions .btn-toggle-filters { flex: 1 1 0; justify-content: center; height: 36px; font-size: 12.5px; }
+    .btn-menu-mobile { display: inline-flex; background-color: rgba(17,24,39,0.85); }
+    .btn-menu-mobile:hover, .btn-menu-mobile.active-menu { background-color: #111827; }
+
+    /* --- Panel de menú (Compañía + Actualizar) como popup desplegable --- */
+    .header-menu-panel {
+      flex-direction: column; align-items: stretch; gap: 10px;
+      max-height: 400px; overflow: hidden; opacity: 1; margin-top: 10px;
+      background-color: rgba(255,255,255,0.5); border-radius: 10px; padding: 10px;
+      transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease, padding 0.3s ease;
+    }
+    .header-menu-panel.collapsed { max-height: 0; opacity: 0; margin-top: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
+    .header-filter-group { width: 100%; }
+
+    .toolbar { flex-direction: column; align-items: stretch; }
+    .toolbar .filter-group { flex: 0 0 auto; }
+    .toolbar-wrapper { max-height: none; }
+    .toolbar-wrapper:not(.collapsed) { max-height: 1400px; }
+    .btn-clear-filters { width: 100%; justify-content: center; }
+
+    /* --- Barra de opciones de tabla: se colapsa detrás de un botón tipo menú --- */
+    .table-toolbar { flex-direction: column; align-items: stretch; padding: 8px 10px; }
+    .btn-table-menu-mobile { display: flex; width: 100%; justify-content: center; height: 36px; font-size: 12.5px; background-color: #475569; }
+    .btn-table-menu-mobile:hover, .btn-table-menu-mobile.active-menu { background-color: #334155; }
+    .table-toolbar-left {
+      flex-direction: column; align-items: stretch; width: 100%; gap: 8px;
+      max-height: 600px; overflow: hidden; opacity: 1; margin-top: 10px;
+      transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
+    }
+    .table-toolbar-left.collapsed { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
+    .table-toolbar-left > .btn,
+    .table-toolbar-left > .btn-excel,
+    .table-toolbar-left > .pivot-mode-selector { width: 100%; justify-content: center; text-align: center; }
+    .pivot-mode-selector { flex-wrap: wrap; }
+    .pivot-mode-btn { flex: 1 1 auto; padding: 7px 10px; }
+    .inline-column-selector { flex-direction: column; align-items: flex-start; width: 100%; gap: 8px; }
+    .inline-column-selector .col-label-btn { width: 100%; }
+    .col-label-btn { min-height: 34px; padding: 6px 12px; }
+    .modal-card { width: 94%; }
+    .modal-body { max-height: 65vh; }
+    .container { padding: 10px; }
+
+    /* Tabla: columnas congeladas más angostas para dejar espacio a los datos */
+    #tablaHeader tr:first-child th:first-child,
+    .freeze-col-1 { min-width: 118px !important; max-width: 118px !important; }
+    #tablaHeader tr:first-child th:nth-child(2),
+    .freeze-col-2,
+    .row-finca-header td:nth-child(2) { left: 118px !important; min-width: 118px !important; max-width: 118px !important; }
+    table { font-size: 12px; }
+    #tablaHeader th { padding: 8px 10px; font-size: 10px; }
+    td { padding: 7px 10px; }
+    .badge-pct { min-width: 46px; font-size: 10px; padding: 2px 6px; }
+
+    /* Modal de gráfico: se adapta a pantallas angostas */
+    #popupGraficoOverlay .modal-card { width: 96%; }
+    #popupGraficoOverlay .modal-body { min-height: 0 !important; padding: 14px !important; }
+    #popupGraficoOverlay .modal-body > div[style*="height:430px"] { height: 280px !important; }
+    #popupGraficoOverlay h3 { font-size: 14px; }
+  }
+
+  /* ===== MÓVIL PEQUEÑO (<=480px) ===== */
+  @media (max-width: 480px) {
+    .header-title-area h1 { font-size: 15px; }
+    .header-title-area p { font-size: 9.5px; }
+    .table-toolbar-left { gap: 8px; }
+    .table-toolbar-left > .btn,
+    .table-toolbar-left > .btn-excel { font-size: 12px; padding: 0 10px; }
+    #tablaHeader tr:first-child th:first-child,
+    .freeze-col-1 { min-width: 96px !important; max-width: 96px !important; }
+    #tablaHeader tr:first-child th:nth-child(2),
+    .freeze-col-2,
+    .row-finca-header td:nth-child(2) { left: 96px !important; min-width: 96px !important; max-width: 96px !important; }
+    table { font-size: 11px; }
+    #tablaHeader th { padding: 7px 8px; font-size: 9px; }
+    td { padding: 6px 8px; }
+    .modal-card { width: 96%; border-radius: 12px; }
+    .popup-item { flex-direction: column; gap: 2px; }
+    .popup-value { text-align: left; }
+  }
+
+  /* Objetivos táctiles más cómodos en pantallas táctiles */
+  @media (hover: none) and (pointer: coarse) {
+    .multiselect-dropdown, .col-label-btn, .btn, .btn-excel, .btn-toggle-filters, .pivot-mode-btn { min-height: 38px; }
+    .multiselect-item { padding: 10px 14px; }
+    .btn-clear-individual { width: 22px; height: 22px; }
+  }
+
+  /* ===== TAB NAVIGATION — CLAYMORPHISM ===== */
+  .tabs-nav {
+    display: flex; gap: 14px; flex-shrink: 0; padding: 16px 0 0;
+    background: transparent; border: none;
+  }
+
+  .tab-btn {
+    flex: 1; border: none; cursor: pointer;
+    border-radius: 20px; padding: 18px 24px;
+    display: flex; align-items: center; justify-content: flex-start; gap: 16px;
+    font-family: inherit; text-align: left;
+    transition: all 0.25s cubic-bezier(0.34, 1.3, 0.64, 1);
+    position: relative; overflow: hidden;
+    /* Clay base — inactive */
+    background: #e8edf5;
+    box-shadow:
+      0 2px 0 #c8cedb,
+      0 4px 10px rgba(0,0,0,0.08),
+      inset 0 1px 0 rgba(255,255,255,0.7);
+    transform: translateY(0);
+  }
+
+  .tab-btn:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 5px 0 #c8cedb,
+      0 8px 20px rgba(0,0,0,0.12),
+      inset 0 1px 0 rgba(255,255,255,0.8);
+  }
+
+  .tab-btn:active {
+    transform: translateY(2px);
+    box-shadow:
+      0 0px 0 #c8cedb,
+      0 2px 6px rgba(0,0,0,0.1),
+      inset 0 1px 0 rgba(255,255,255,0.5);
+  }
+
+  /* ---- PIVOT tab active ---- */
+  .tab-btn.active#tabBtnPivot {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    box-shadow:
+      0 5px 0 #93c5fd,
+      0 10px 28px rgba(37,99,235,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.85);
+    transform: translateY(-4px);
+  }
+
+  /* ---- ALERTAS tab active ---- */
+  .tab-btn.active#tabBtnAlertas {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    box-shadow:
+      0 5px 0 #fca5a5,
+      0 10px 28px rgba(220,38,38,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.85);
+    transform: translateY(-4px);
+  }
+  .tab-btn.active#tabBtnAlertas.alerta-ok {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    box-shadow:
+      0 5px 0 #86efac,
+      0 10px 28px rgba(22,163,74,0.22),
+      inset 0 1px 0 rgba(255,255,255,0.85);
+  }
+
+  .tab-icon {
+    font-size: 32px; line-height: 1; flex-shrink: 0;
+    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15));
+  }
+
+  .tab-text-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .tab-title {
+    font-size: 15px; font-weight: 800; letter-spacing: -0.3px;
+    color: #374151; line-height: 1.2;
+  }
+  .tab-btn.active#tabBtnPivot .tab-title { color: #1d4ed8; }
+  .tab-btn.active#tabBtnAlertas .tab-title { color: #dc2626; }
+  .tab-subtitle {
+    font-size: 11px; font-weight: 500; color: #9ca3af; line-height: 1.3;
+  }
+  .tab-btn.active .tab-subtitle { opacity: 0.75; }
+
+  .tab-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 999px; font-size: 12px; font-weight: 800;
+    min-width: 26px; height: 26px; padding: 0 7px;
+    margin-left: auto; flex-shrink: 0;
+    background: #ef4444; color: #fff;
+    box-shadow: 0 2px 6px rgba(239,68,68,0.45);
+    animation: pulse-badge 2s infinite;
+  }
+  .tab-badge.ok {
+    background: #22c55e; color: #fff;
+    box-shadow: 0 2px 6px rgba(34,197,94,0.4);
+    animation: none;
+  }
+  .tab-badge.loading {
+    background: #d1d5db; color: #6b7280;
+    box-shadow: none; animation: none; font-size: 10px;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 2px 6px rgba(239,68,68,0.45); }
+    50% { box-shadow: 0 2px 14px rgba(239,68,68,0.75); }
+  }
+
+  .tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+  .tab-panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+  @media (max-width: 768px) {
+    .tabs-nav { gap: 10px; padding: 10px 0 0; }
+    .tab-btn { padding: 12px 14px; gap: 10px; border-radius: 16px; }
+    .tab-icon { font-size: 24px; }
+    .tab-title { font-size: 13px; }
+    .tab-subtitle { display: none; }
+    .tab-badge { min-width: 22px; height: 22px; font-size: 11px; }
+  }
+  @media (max-width: 480px) {
+    .tab-icon { font-size: 20px; }
+    .tab-title { font-size: 12px; }
+    .tab-btn { padding: 10px 12px; gap: 8px; border-radius: 14px; }
+  }
+
+  /* ===== ALERTAS TAB ===== */
+  .alertas-container {
+    background: #fff; border: 1px solid var(--border-color); border-top: none;
+    border-radius: 0 0 12px 12px; flex: 1; overflow-y: auto; padding: 20px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  .kpi-strip {
+    display: flex; gap: 14px; flex-wrap: wrap;
+  }
+  .kpi-card {
+    flex: 1 1 160px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px;
+    padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px;
+    cursor: pointer; transition: all 0.18s ease; position: relative; overflow: hidden;
+  }
+  .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--kpi-color, #e5e7eb); border-radius: 12px 12px 0 0; }
+  .kpi-card.danger { --kpi-color: #ef4444; }
+  .kpi-card.warning { --kpi-color: #f59e0b; }
+  .kpi-card.ok { --kpi-color: #22c55e; }
+  .kpi-card.info { --kpi-color: #0284c7; }
+  .kpi-card.espera { --kpi-color: #7c3aed; }
+  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
+  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: var(--text-main); }
+  .kpi-value.danger { color: #dc2626; }
+  .kpi-value.warning { color: #d97706; }
+  .kpi-value.ok { color: #16a34a; }
+  .kpi-value.espera { color: #7c3aed; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); }
+
+  .alerta-section-title {
+    font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px;
+    padding-bottom: 8px; border-bottom: 2px solid var(--border-color);
+  }
+  .alerta-section-title .badge-alert {
+    background: #fee2e2; color: #b91c1c; border-radius: 999px;
+    font-size: 11px; font-weight: 700; padding: 1px 8px;
+  }
+  .alerta-section-title .badge-alert.warning { background: #fef3c7; color: #b45309; }
+
+  .alerta-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); }
+  .alerta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .alerta-table th {
+    background: #f9fafb; padding: 8px 14px; text-align: left; font-size: 11px;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #374151;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+  .alerta-table tr:last-child td { border-bottom: none; }
+  .alerta-table tr:hover td { background: var(--bg-main); }
+
+  .badge-dds {
+    display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  }
+  .badge-dds.en-rango { background: #fee2e2; color: #b91c1c; }
+  .badge-dds.vencido  { background: #fef3c7; color: #b45309; }
+  .badge-dds.pendiente { background: #f3f4f6; color: #6b7280; }
+
+  .btn-ver-siembra {
+    background: none; border: 1px solid var(--primary); color: var(--primary);
+    border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
+  }
+  .btn-ver-siembra:hover { background: var(--primary); color: #fff; }
+
+  .alerta-empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
+  .alerta-empty span { font-size: 32px; display: block; margin-bottom: 8px; }
+
+  /* ===== ALERTAS FILTROS BAR — cascading multiselect ===== */
+  .alertas-filtros-bar {
+    display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
+    background: #f9fafb; border: 1px solid var(--border-color);
+    border-radius: 10px; padding: 12px 16px;
+  }
+  .af-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
+  .af-label { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .af-ms-wrap { position: relative; }
+  .af-ms-trigger {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #fff; border: 1px solid var(--border-color); border-radius: 6px;
+    padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
+    min-width: 130px; user-select: none; white-space: nowrap; overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .af-ms-trigger:hover { border-color: var(--primary); }
+  .af-ms-trigger span:first-child { overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
+  .af-arrow { font-size: 8px; color: #9ca3af; margin-left: 6px; flex-shrink: 0; }
+  .af-ms-panel {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
+    background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 200px; max-width: 280px;
+    flex-direction: column; overflow: hidden;
+    animation: dropdownFadeIn 0.15s ease;
+  }
+  .af-ms-panel.open { display: flex; }
+  .af-ms-search { padding: 8px; border-bottom: 1px solid var(--border-color); }
+  .af-ms-search input {
+    width: 100%; padding: 5px 8px; border: 1px solid var(--border-color);
+    border-radius: 5px; font-size: 12px; outline: none; font-family: inherit;
+  }
+  .af-ms-search input:focus { border-color: var(--primary); }
+  .af-ms-items { max-height: 200px; overflow-y: auto; padding: 4px 0; }
+  .af-ms-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
+    font-size: 12px; cursor: pointer; color: #1e293b;
+  }
+  .af-ms-item:hover { background: var(--primary-light); }
+  .af-ms-item input { accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
+  .af-ms-item.disabled { opacity: 0.35; pointer-events: none; }
+  .af-ms-footer {
+    display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border-color);
+  }
+  .af-ms-footer button {
+    flex: 1; padding: 5px 0; font-size: 12px; font-weight: 700; border-radius: 5px;
+    cursor: pointer; border: none; font-family: inherit;
+  }
+  .af-ms-footer button:first-child { background: var(--primary); color: #fff; }
+  .af-ms-footer button:first-child:hover { background: var(--primary-hover); }
+  .af-ms-footer button:last-child { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .af-info { font-size: 11px; color: var(--text-muted); margin-left: auto; align-self: center; }
+  @media (max-width: 768px) {
+    .alertas-filtros-bar { flex-direction: column; align-items: stretch; }
+    .af-group { min-width: unset; }
+    .af-ms-trigger { width: 100%; }
+    .af-ms-panel { min-width: 100%; }
+    .af-info { margin-left: 0; }
+  }
+
+  @media (max-width: 768px) {
+    .tab-btn { font-size: 11px; padding: 9px 10px; gap: 4px; }
+    .kpi-card { flex: 1 1 130px; padding: 12px 14px; }
+    .kpi-value { font-size: 26px; }
+    .alertas-container { padding: 12px; gap: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Barra verde con Compañía/Actualizar ocultada: Compañía la controla el filtro global del
+     shell, y Actualizar quedará centralizado en un botón general que refresque todos los
+     orígenes de datos de INFOAGRO BI a la vez. Se mantiene en el DOM porque el JS interno
+     (poblarOpcionesFijasHTML, universosUnicos.compania, aplicarFiltroGlobal, etc.) sigue
+     referenciando estos IDs. -->
+<div class="header-wrapper" style="display:none;">
+  <header>
+    <div class="header-action-area" style="margin-left:auto;">
+      <div class="header-filter-group">
+        <div class="label-container">
+          <label>Compañía</label>
+          <button class="btn-clear-individual" id="btn_clear_compania" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'compania', 'dropCompania', 'optsCompania', 'btn_clear_compania')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
+        <div class="multiselect-options" id="optsCompania"></div>
+      </div>
+      <button class="btn" onclick="cargarDatosDesdeGitHub()">🔄 Actualizar</button>
+    </div>
+  </header>
+</div>
+
+<div class="container">
+
+  <!-- TAB NAVIGATION — CLAYMORPHISM -->
+  <div class="tabs-nav" id="tabsNav">
+    <button class="tab-btn active" id="tabBtnPivot" onclick="cambiarTab('pivot')">
+      <span class="tab-icon">📊</span>
+      <span class="tab-text-group">
+        <span class="tab-title">Registros Siembra y Germinación</span>
+        <span class="tab-subtitle">Siembra &amp; Germinación por ciclo, finca y lote</span>
+      </span>
+    </button>
+    <button class="tab-btn" id="tabBtnAlertas" onclick="cambiarTab('alertas')">
+      <span class="tab-icon">🚨</span>
+      <span class="tab-text-group">
+        <span class="tab-title">Alertas Germinación</span>
+        <span class="tab-subtitle">Lotes sin recuento en ventana 10 y 15 DDS</span>
+      </span>
+      <span class="tab-badge loading" id="tabBadgeAlertas">...</span>
+    </button>
+  </div>
+
+  <!-- TAB: PIVOT (original) -->
+  <div class="tab-panel active" id="tabPivot">
+
+  <!-- Todo este panel queda oculto: Sector/Ciclo/Finca ya los controla el filtro global del
+       shell, y Tipo Recuento + Limpiar Todo se ocultan a pedido para despejar la pantalla.
+       Se mantiene en el DOM porque el JS interno (universosUnicos, seleccionesFiltros,
+       aplicarFiltroGlobal, limpiarTodosLosFiltros) sigue usando estos IDs. -->
+  <div class="toolbar-wrapper" id="panelFiltrosWrapper" style="display:none;">
+    <div class="toolbar">
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Sector</label>
+          <button class="btn-clear-individual" id="btn_clear_sector" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'sector', 'dropSector', 'optsSector', 'btn_clear_sector')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
+        <div class="multiselect-options" id="optsSector"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Ciclo</label>
+          <button class="btn-clear-individual" id="btn_clear_ciclo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
+        <div class="multiselect-options" id="optsCiclo"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Finca</label>
+          <button class="btn-clear-individual" id="btn_clear_finca" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
+        <div class="multiselect-options" id="optsFinca"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Tipo Recuento</label>
+          <button class="btn-clear-individual" id="btn_clear_tipo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
+        <div class="multiselect-options" id="optsTipo"></div>
+      </div>
+      <button class="btn btn-clear-filters" onclick="limpiarTodosLosFiltros()">🧹 Limpiar Todo</button>
+    </div>
+  </div>
+
+  <div class="table-toolbar">
+    <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
+    <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
+
+      <!-- Fila 1: Acciones principales -->
+      <div class="toolbar-row">
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">Vista</span>
+          <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
+          <div class="pivot-mode-selector">
+            <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo → Recuentos</button>
+            <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos → Ciclos</button>
+          </div>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">Herramientas</span>
+          <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
+          <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
+        </div>
+      </div>
+
+      <!-- Fila 2: Métricas visibles -->
+      <div class="toolbar-row toolbar-row-metrics">
+        <span class="toolbar-group-label">Métricas visibles:</span>
+        <label class="col-label-btn"><input type="checkbox" id="col_semillas" checked onchange="actualizarVisibilidadColumnas()"> Semillas m.l.</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_10dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 10 DDS</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15</label>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="tablaGerminacionMaster">
+      <thead id="tablaHeader">
+        <tr>
+          <th class="loading">Estructurando dimensiones matriciales...</th>
+        </tr>
+      </thead>
+      <tbody id="pivotBody">
+        <tr>
+          <td class="loading">Sincronizando orígenes de datos remotos...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  </div><!-- end tab-panel pivot -->
+
+  <!-- TAB: ALERTAS GERMINACIÓN -->
+  <div class="tab-panel" id="tabAlertas">
+    <div class="alertas-container">
+
+      <!-- Filtros de alertas en cascada — ahora los controla el panel de Filtros globales
+           del shell INFOAGRO BI. Se mantienen en el DOM (ocultos) porque afPoblarPanel/
+           renderAlertas siguen usando estos IDs internamente. -->
+      <div class="alertas-filtros-bar" id="alertasFiltrosBar" style="display:none;">
+        <div class="af-group">
+          <label class="af-label">📅 CICLO</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCiclo" onclick="toggleAfDropdown('afDropCiclo')">
+              <span id="afTextCiclo">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCiclo">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCiclo')"></div>
+              <div class="af-ms-items" id="afItemsCiclo"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('ciclo')">Aceptar</button>
+                <button onclick="afCerrar('afDropCiclo')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🏢 COMPAÑÍA</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCompania" onclick="toggleAfDropdown('afDropCompania')">
+              <span id="afTextCompania">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCompania">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCompania')"></div>
+              <div class="af-ms-items" id="afItemsCompania"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('compania')">Aceptar</button>
+                <button onclick="afCerrar('afDropCompania')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🗺️ SECTOR</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerSector" onclick="toggleAfDropdown('afDropSector')">
+              <span id="afTextSector">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropSector">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropSector')"></div>
+              <div class="af-ms-items" id="afItemsSector"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('sector')">Aceptar</button>
+                <button onclick="afCerrar('afDropSector')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🌱 FINCA</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerFinca" onclick="toggleAfDropdown('afDropFinca')">
+              <span id="afTextFinca">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropFinca">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropFinca')"></div>
+              <div class="af-ms-items" id="afItemsFinca"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('finca')">Aceptar</button>
+                <button onclick="afCerrar('afDropFinca')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Leyenda informativa (no es filtro), se mantiene visible -->
+      <div class="af-info" style="padding:8px 0;">
+        Hoy: <strong id="alertaFechaHoy">-</strong> &nbsp;|&nbsp; 10 DDS = días 10–14 &nbsp;|&nbsp; 15 DDS = día 15+
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-card info" onclick="filtrarTablaAlertas('all')">
+          <div class="kpi-label">📋 Total Lotes Sembrados</div>
+          <div class="kpi-value" id="kpiTotal">-</div>
+          <div class="kpi-sub">En los filtros seleccionados</div>
+        </div>
+        <div class="kpi-card espera" onclick="filtrarTablaAlertas('espera')">
+          <div class="kpi-label">🕐 En Espera de Evaluación</div>
+          <div class="kpi-value espera" id="kpiEspera">-</div>
+          <div class="kpi-sub">Lotes entre 0–9 días desde siembra</div>
+        </div>
+        <div class="kpi-card danger" onclick="filtrarTablaAlertas('10dds')">
+          <div class="kpi-label">⚠️ Sin Recuento 10 DDS</div>
+          <div class="kpi-value danger" id="kpiSin10">-</div>
+          <div class="kpi-sub">Lotes entre 10–14 días desde siembra</div>
+        </div>
+        <div class="kpi-card warning" onclick="filtrarTablaAlertas('15dds')">
+          <div class="kpi-label">⏰ Sin Recuento 15 DDS</div>
+          <div class="kpi-value warning" id="kpiSin15">-</div>
+          <div class="kpi-sub">Lotes con 15+ días desde siembra</div>
+        </div>
+        <div class="kpi-card ok" onclick="filtrarTablaAlertas('completos')">
+          <div class="kpi-label">✅ Lotes Completos</div>
+          <div class="kpi-value ok" id="kpiCompletos">-</div>
+          <div class="kpi-sub">Con ambos recuentos registrados</div>
+        </div>
+      </div>
+
+      <!-- Tabla En Espera 0-9 DDS -->
+      <div id="seccionEspera" style="display:none;">
+        <div class="alerta-section-title" style="color:#7c3aed; border-color:#ddd6fe;">
+          🕐 Lotes en Espera de Evaluación — 0 a 9 DDS (aún no es tiempo de recuento)
+          <span class="badge-alert" id="badgeEspera" style="background:#ede9fe; color:#7c3aed;">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Días para 10 DDS</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaEsperaBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla de alertas 10 DDS -->
+      <div id="seccion10dds">
+        <div class="alerta-section-title">
+          🔴 Lotes SIN Recuento de Germinación — Ventana 10 DDS (días 10 al 14 desde siembra)
+          <span class="badge-alert" id="badge10dds">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Estado</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla10ddsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla de alertas 15 DDS -->
+      <div id="seccion15dds">
+        <div class="alerta-section-title">
+          🟡 Lotes SIN Recuento de Germinación — Ventana 15 DDS (15 días o más desde siembra)
+          <span class="badge-alert warning" id="badge15dds">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Estado</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tabla15ddsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tabla de lotes COMPLETOS -->
+      <div id="seccionCompletos" style="display:none;">
+        <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0;">
+          ✅ Lotes con Recuentos de Germinación Completos
+          <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table">
+            <thead>
+              <tr>
+                <th>Finca</th>
+                <th>Lote</th>
+                <th>Fecha Siembra</th>
+                <th>DDS Hoy</th>
+                <th>Recuento 10 DDS</th>
+                <th>Recuento 15 DDS</th>
+                <th>Variedad</th>
+                <th>Semillas m.l.</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCompletosBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- end alertas-container -->
+  </div><!-- end tab-panel alertas -->
+
+</div><!-- end container -->
+
+<div class="modal-overlay" id="popupDetalleOverlay" onclick="cerrarModalPopup()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h3 id="popupTitle">Detalle Operativo</h3>
+      <button class="modal-close" onclick="cerrarModalPopup()">&times;</button>
+    </div>
+    <div class="modal-body" id="popupBodyContent"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="popupGraficoOverlay" onclick="cerrarModalGrafico()">
+  <div class="modal-card" style="width: 1060px; max-width: 95%;" onclick="event.stopPropagation()">
+    <div class="modal-header" style="background-color: var(--accent-peanut);">
+      <h3>📊 Análisis de Correlación Híbrida: Lluvia vs Campañas Operativas</h3>
+      <button class="modal-close" onclick="cerrarModalGrafico()">&times;</button>
+    </div>
+    <div class="modal-body" style="background-color: #ffffff; padding: 24px; position: relative; min-height: 480px; overflow: hidden;">
+      <div id="graficoLoading" style="position: absolute; top:50%; left:50%; transform:translate(-50%, -50%); font-weight: 600; color: var(--text-muted);">Cruzando líneas históricas de pluviosidad...</div>
+      <div id="graficoDebugInfo" style="display:none; font-size:11px; color:#6b7280; background:#f9fafb; border:1px solid #e5e7eb; border-radius:6px; padding:6px 10px; margin-bottom:10px;"></div>
+      <div style="width:100%; height:400px;">
+        <canvas id="chartCorrelacionMaster"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let datosMaestrosUnificados = []; 
+let datosLluviaRaw = [];
+let universosUnicos = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
+let seleccionesFiltros = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
+
+const METRICAS_LLAVES = ['semillas', '10dds', '15dds', 'g10', 'g15'];
+const METRICAS_NOMBRES = {
+  'semillas': 'Semillas m.l.',
+  '10dds': 'Plantas 10 DDS',
+  '15dds': 'Plantas 15 DDS',
+  'g10': '% Germ 10DDS',
+  'g15': '% Germ 15DDS'
+};
+
+let CURRENT_PIVOT_MODE = 'ciclo_recuento'; 
+let chartInstanciaUnica = null;
+let estadoFincasColapso = {}; 
+let estadoGlobalColapsado = false; 
+let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: true, g15: true };
+
+function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
+function toggleHeaderMenu() {
+  document.getElementById('headerMenuPanel').classList.toggle('collapsed');
+  document.getElementById('btnToggleHeaderMenu').classList.toggle('active-menu');
+}
+function toggleTableMenu() {
+  document.getElementById('tableToolbarLeft').classList.toggle('collapsed');
+  document.getElementById('btnToggleTableMenu').classList.toggle('active-menu');
+}
+
+document.getElementById('pivotBody').addEventListener('click', function(e) {
+  const cell = e.target.closest('.interactive-cell');
+  if (!cell) return;
+  const tipoColumna = cell.getAttribute('data-tipo');
+  const finca = cell.getAttribute('data-finca');
+  const lote = cell.getAttribute('data-lote');
+  const ciclo = cell.getAttribute('data-ciclo');
+  if (tipoColumna && finca && lote && ciclo) {
+    abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo);
+  }
+});
+
+window.onclick = function(event) {
+  if (!event.target.matches('.multiselect-dropdown') && !event.target.closest('.multiselect-options')) {
+    document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
+  }
+}
+
+function cambiarModoPivot(modo) {
+  if (CURRENT_PIVOT_MODE === modo) return;
+  CURRENT_PIVOT_MODE = modo;
+  document.getElementById('mode_ciclo_recuento').classList.toggle('active', modo === 'ciclo_recuento');
+  document.getElementById('mode_recuento_ciclo').classList.toggle('active', modo === 'recuento_ciclo');
+  filtrarYMostrar();
+}
+
+const MAPA_OPTS_LLAVE = { optsCompania: 'compania', optsSector: 'sector', optsCiclo: 'ciclo', optsFinca: 'finca', optsTipo: 'tipo' };
+
+function toggleDropdown(event, idOpts) {
+  event.stopPropagation();
+  const optionsDiv = document.getElementById(idOpts);
+  const estaAbierto = optionsDiv.classList.contains('show');
+  document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
+  if (!estaAbierto) {
+    sincronizarCheckboxesConSeleccion(idOpts);
+    optionsDiv.classList.add('show');
+    const searchInput = optionsDiv.querySelector('.ms-search-input');
+    if (searchInput) {
+      searchInput.value = '';
+      filtrarBusquedaMultiselect(searchInput, idOpts);
+      setTimeout(() => searchInput.focus(), 0);
+    }
+  }
+}
+
+function sincronizarCheckboxesConSeleccion(idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const llaveFiltro = MAPA_OPTS_LLAVE[idOpts];
+  const seleccionActual = seleccionesFiltros[llaveFiltro] || [];
+  contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => {
+    cb.checked = seleccionActual.includes(cb.value);
+  });
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function toggleFincaRows(fincaNombre) {
+  estadoFincasColapso[fincaNombre] = !estadoFincasColapso[fincaNombre];
+  filtrarYMostrar(); 
+}
+
+function alternarColapsoGlobal() {
+  estadoGlobalColapsado = !estadoGlobalColapsado;
+  document.getElementById('btnToggleGlobal').textContent = estadoGlobalColapsado ? '📂 Expandir Fincas' : '📁 Colapsar Fincas';
+  Object.keys(estadoFincasColapso).forEach(finca => { estadoFincasColapso[finca] = estadoGlobalColapsado; });
+  document.getElementById('tablaGerminacionMaster').classList.toggle('oculta-col-lote', estadoGlobalColapsado);
+  filtrarYMostrar();
+}
+
+function actualizarVisibilidadColumnas() {
+  visibilidadColumnas.semillas = document.getElementById('col_semillas').checked;
+  visibilidadColumnas['10dds'] = document.getElementById('col_10dds').checked;
+  visibilidadColumnas['15dds'] = document.getElementById('col_15dds').checked;
+  visibilidadColumnas.g10 = document.getElementById('col_g10').checked;
+  visibilidadColumnas.g15 = document.getElementById('col_g15').checked;
+  filtrarYMostrar();
+}
+
+function obtenerMetricasActivas() {
+  return METRICAS_LLAVES.filter(v => visibilidadColumnas[v]);
+}
+
+function obtenerColumnasActivasPorCicloCount() {
+  return obtenerMetricasActivas().length;
+}
+
+function normalizeTextId(text) { return normalizeText(text).replace(/[^a-z0-9]/g, ""); }
+
+function limpiarDescripcion(valor) {
+  if (!valor) return 'N/A';
+  if (Array.isArray(valor)) return valor.length > 1 ? String(valor[1]).trim() : String(valor[0]).trim();
+  let str = String(valor).trim();
+  if (str.startsWith('[')) str = str.replace(/^\[?\d+\]?\s*[-_]?\s*/, '');
+  return str || 'N/A';
+}
+
+function normalizeText(text) {
+  return limpiarDescripcion(text).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+}
+
+function extraerFecha(r) {
+  if (!r) return null;
+  let f = r.x_studio_fecha || r.x_studio_fecha_siembra || r.x_studio_fecha_de_siembra || r.date || r.create_date;
+  if (!f) return null;
+  if (Array.isArray(f)) f = f[1];
+  f = String(f).trim();
+  if (f.includes(' ')) f = f.split(' ')[0];
+  return f.match(/^\d{4}-\d{2}-\d{2}/) ? f : null;
+}
+
+function formatFechaEjeX(fechaStr) {
+  if (!fechaStr) return '';
+  const p = fechaStr.split('-');
+  return p.length === 3 ? `${p[2]}/${p[1]}/${p[0].substring(2)}` : fechaStr;
+}
+
+function inicializarEstructuraFiltrosDOM() {
+  poblarOpcionesFijasHTML('optsCompania', 'compania', 'dropCompania', 'btn_clear_compania');
+  poblarOpcionesFijasHTML('optsSector', 'sector', 'dropSector', 'btn_clear_sector');
+  poblarOpcionesFijasHTML('optsCiclo', 'ciclo', 'dropCiclo', 'btn_clear_ciclo');
+  poblarOpcionesFijasHTML('optsFinca', 'finca', 'dropFinca', 'btn_clear_finca');
+  poblarOpcionesFijasHTML('optsTipo', 'tipo', 'dropTipo', 'btn_clear_tipo');
+}
+
+function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  let universo = universosUnicos[llaveFiltro] || [];
+  let itemsHtml = '';
+  universo.forEach(item => {
+    itemsHtml += `<div class="multiselect-item" id="item_${llaveFiltro}_${normalizeTextId(item)}" data-texto="${normalizeText(item)}" onclick="event.stopPropagation();">
+              <input type="checkbox" value="${item}" checked onchange="manejarCambioCheckbox('${llaveFiltro}', '${idOpts}')">
+              <span class="text-span">${item}</span>
+            </div>`;
+  });
+  contenedor.innerHTML = `
+    <div class="ms-search-wrap">
+      <input type="text" class="ms-search-input" placeholder="Buscar..." oninput="filtrarBusquedaMultiselect(this, '${idOpts}')" onclick="event.stopPropagation();">
+    </div>
+    <div class="multiselect-item ms-selectall" onclick="event.stopPropagation();">
+      <input type="checkbox" class="ms-selectall-checkbox" checked onchange="toggleSeleccionarTodoVisible('${idOpts}', this.checked)">
+      <span>(Seleccionar todo)</span>
+    </div>
+    <div class="ms-items-scroll">${itemsHtml}</div>
+    <div class="ms-empty">Sin resultados</div>
+    <div class="multiselect-footer">
+      <button type="button" class="ms-btn-ok" onclick="event.stopPropagation(); aplicarFiltroDropdown('${llaveFiltro}', '${idDrop}', '${idOpts}', '${idBtnClear}')">Aceptar</button>
+      <button type="button" class="ms-btn-cancel" onclick="event.stopPropagation(); cancelarFiltroDropdown('${idOpts}')">Cancelar</button>
+    </div>`;
+}
+
+function manejarCambioCheckbox(llaveFiltro, idOpts) {
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function actualizarEstadoSeleccionarTodo(idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const selectAllCb = contenedor.querySelector('.ms-selectall-checkbox');
+  if (!selectAllCb) return;
+  const visibles = Array.from(contenedor.querySelectorAll('.ms-items-scroll .multiselect-item')).filter(el => el.style.display !== 'none');
+  const checkboxesVisibles = visibles.map(el => el.querySelector('input[type="checkbox"]'));
+  const totalVisibles = checkboxesVisibles.length;
+  const marcadosVisibles = checkboxesVisibles.filter(cb => cb.checked).length;
+  if (totalVisibles === 0) { selectAllCb.checked = false; selectAllCb.indeterminate = false; return; }
+  selectAllCb.checked = marcadosVisibles === totalVisibles;
+  selectAllCb.indeterminate = marcadosVisibles > 0 && marcadosVisibles < totalVisibles;
+}
+
+function toggleSeleccionarTodoVisible(idOpts, marcarTodo) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  contenedor.querySelectorAll('.ms-items-scroll .multiselect-item').forEach(el => {
+    if (el.style.display === 'none') return;
+    const cb = el.querySelector('input[type="checkbox"]');
+    if (cb) cb.checked = marcarTodo;
+  });
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function filtrarBusquedaMultiselect(inputEl, idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const valorCrudo = (inputEl && inputEl.value) ? String(inputEl.value).trim() : '';
+  const texto = valorCrudo ? normalizeText(valorCrudo) : '';
+  const items = contenedor.querySelectorAll('.ms-items-scroll .multiselect-item');
+  let visiblesCount = 0;
+  items.forEach(el => {
+    const cruceDisponible = el.getAttribute('data-cruce') !== 'oculto';
+    const coincideTexto = !texto || (el.getAttribute('data-texto') || '').includes(texto);
+    const mostrar = cruceDisponible && coincideTexto;
+    el.style.display = mostrar ? 'flex' : 'none';
+    if (mostrar) visiblesCount++;
+  });
+  const empty = contenedor.querySelector('.ms-empty');
+  if (empty) empty.style.display = visiblesCount === 0 ? 'block' : 'none';
+  actualizarEstadoSeleccionarTodo(idOpts);
+}
+
+function aplicarFiltroDropdown(llaveFiltro, idDrop, idOpts, idBtnClear) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  const marcados = Array.from(contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]:checked')).map(cb => cb.value);
+  seleccionesFiltros[llaveFiltro] = marcados;
+  actualizarTextoDropdown(idDrop, marcados.length, (universosUnicos[llaveFiltro] || []).length, marcados);
+  const btn = document.getElementById(idBtnClear);
+  if (btn) btn.style.display = (marcados.length < (universosUnicos[llaveFiltro] || []).length) ? "inline-flex" : "none";
+  contenedor.classList.remove('show');
+  filtrarYMostrar();
+  // Si cambió el ciclo, resetear caché de lluvia para recargar con el año correcto
+  lluviaYaCargada = false;
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
+}
+
+function cancelarFiltroDropdown(idOpts) {
+  const contenedor = document.getElementById(idOpts);
+  if (!contenedor) return;
+  contenedor.classList.remove('show');
+  sincronizarCheckboxesConSeleccion(idOpts);
+}
+
+function actualizarTextoDropdown(idDrop, marcadosCount, totalCount, listaMarcados) {
+  const drop = document.getElementById(idDrop);
+  if (!drop) return;
+  if (marcadosCount === totalCount && totalCount > 0) drop.textContent = "Todos";
+  else if (marcadosCount === 0) drop.textContent = "Ninguno";
+  else if (marcadosCount === 1) drop.textContent = listaMarcados[0];
+  else drop.textContent = `${marcadosCount} sel.`;
+}
+
+function limpiarFiltroIndividual(event, llaveFiltro, idDrop, idOpts, idBtnClear) {
+  if(event) event.stopPropagation();
+  const contenedor = document.getElementById(idOpts);
+  if(contenedor) contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = true);
+  seleccionesFiltros[llaveFiltro] = [...(universosUnicos[llaveFiltro] || [])];
+  actualizarTextoDropdown(idDrop, universosUnicos[llaveFiltro].length, universosUnicos[llaveFiltro].length, universosUnicos[llaveFiltro]);
+  const btn = document.getElementById(idBtnClear);
+  if (btn) btn.style.display = "none";
+  if (contenedor) actualizarEstadoSeleccionarTodo(idOpts);
+  filtrarYMostrar();
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
+}
+
+function limpiarTodosLosFiltros() {
+  Object.keys(seleccionesFiltros).forEach(llave => {
+    seleccionesFiltros[llave] = [...(universosUnicos[llave] || [])];
+    let cap = llave.charAt(0).toUpperCase() + llave.slice(1);
+    const cont = document.getElementById('opts' + cap);
+    if(cont) {
+      cont.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = true);
+      actualizarEstadoSeleccionarTodo('opts' + cap);
+    }
+    actualizarTextoDropdown('drop' + cap, universosUnicos[llave].length, universosUnicos[llave].length, universosUnicos[llave]);
+    const btn = document.getElementById('btn_clear_' + llave);
+    if (btn) btn.style.display = "none";
+  });
+  filtrarYMostrar();
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
+}
+
+function refrescarVisibilidadCrucesFiltros() {
+  Object.keys(universosUnicos).forEach(llaveObjetivo => {
+    let dataCruzada = datosMaestrosUnificados.filter(d => {
+      return (llaveObjetivo === 'compania' || (seleccionesFiltros.compania || []).includes(d.compania)) &&
+             (llaveObjetivo === 'sector'   || (seleccionesFiltros.sector || []).includes(d.sector)) &&
+             (llaveObjetivo === 'ciclo'    || (seleccionesFiltros.ciclo || []).includes(d.ciclo)) &&
+             (llaveObjetivo === 'finca'    || (seleccionesFiltros.finca || []).includes(d.finca)) &&
+             (llaveObjetivo === 'tipo'     || (seleccionesFiltros.tipo || []).includes(d.tipo));
+    });
+    let existentesEnCruce = [...new Set(dataCruzada.map(d => d[llaveObjetivo]))];
+    let idOptsObjetivo = 'opts' + llaveObjetivo.charAt(0).toUpperCase() + llaveObjetivo.slice(1);
+    (universosUnicos[llaveObjetivo] || []).forEach(item => {
+      const itemElement = document.getElementById(`item_${llaveObjetivo}_${normalizeTextId(item)}`);
+      if(itemElement) itemElement.setAttribute('data-cruce', existentesEnCruce.includes(item) ? 'visible' : 'oculto');
+    });
+    const contenedorObjetivo = document.getElementById(idOptsObjetivo);
+    if (contenedorObjetivo) {
+      const searchInput = contenedorObjetivo.querySelector('.ms-search-input');
+      filtrarBusquedaMultiselect(searchInput, idOptsObjetivo);
+    }
+  });
+}
+
+function addDias(fechaStr, dias) {
+  const d = new Date(fechaStr + 'T00:00:00');
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().split('T')[0];
+}
+
+function procesarEstructuraGrafico() {
+  let siembrasFiltradas = datosMaestrosUnificados.filter(d => 
+    (seleccionesFiltros.compania || []).includes(d.compania) && 
+    (seleccionesFiltros.sector || []).includes(d.sector) && 
+    (seleccionesFiltros.ciclo || []).includes(d.ciclo) && 
+    (seleccionesFiltros.finca || []).includes(d.finca) && 
+    (seleccionesFiltros.tipo || []).includes(d.tipo)
+  );
+
+  // Calcular ventana: min(siembra) - 10 días  →  max(germinación ó siembra) + 20 días
+  let fechasSiembra = siembrasFiltradas.map(s => extraerFecha(s.rawSiembra)).filter(Boolean);
+  let fechasGerm = siembrasFiltradas.flatMap(s => (s.rawMuestrasOriginales||[]).map(g => extraerFecha(g))).filter(Boolean);
+  let todasFechas = [...fechasSiembra, ...fechasGerm].sort();
+
+  if (todasFechas.length === 0) return { labels: [], dataLluvia: [], dataSiembra: [], dataGerminacion: [] };
+
+  const fechaInicio = addDias(todasFechas[0], -10);
+  const fechaFin    = addDias(todasFechas[todasFechas.length - 1], 20);
+
+  // Años dentro de la ventana (para filtrar lluvia por año)
+  const anosVentana = new Set();
+  for (let d = new Date(fechaInicio + 'T00:00:00'); d <= new Date(fechaFin + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+    anosVentana.add(String(d.getFullYear()));
+  }
+
+  // Mapa día a día dentro de la ventana (incluye días sin datos = 0 lluvia)
+  let mapaEjeTemporal = {};
+  for (let d = new Date(fechaInicio + 'T00:00:00'); d <= new Date(fechaFin + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
+    const key = d.toISOString().split('T')[0];
+    mapaEjeTemporal[key] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
+  }
+
+  // Lluvia — construir Sets de IDs de finca y sector activos para match exacto por ID
+  // Los registros de lluvia tienen x_studio_finca=[id,'nombre'] y x_studio_sector_1=[id,'nombre']
+  // Las siembras filtradas ya nos dicen exactamente qué finca+sector IDs están activos
+  const fincaIdsActivos  = new Set(siembrasFiltradas.map(s => {
+    const lf = s.rawSiembra?.x_studio_finca;
+    return Array.isArray(lf) ? lf[0] : null;
+  }).filter(Boolean));
+
+  const sectorIdsActivos = new Set(siembrasFiltradas.map(s => {
+    const ls = s.rawSiembra?.x_studio_sector_1;
+    return Array.isArray(ls) ? ls[0] : null;
+  }).filter(Boolean));
+
+  datosLluviaRaw.forEach(r => {
+    const valor = parseFloat(r.x_studio_cantidad_promedio ?? r.x_studio_cantidad ?? r.x_pluviosidad ?? 0) || 0;
+    const fecha = r.x_studio_fecha || '';
+    const f = String(fecha).includes(' ') ? String(fecha).split(' ')[0] : String(fecha);
+    if (!f || f.length < 10 || f < fechaInicio || f > fechaFin) return;
+
+    // Filtro por ID de finca — debe estar entre las fincas de las siembras filtradas
+    const fincaIdLluvia  = Array.isArray(r.x_studio_finca)    ? r.x_studio_finca[0]    : null;
+    const sectorIdLluvia = Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[0] : null;
+
+    if (fincaIdsActivos.size > 0 && fincaIdLluvia && !fincaIdsActivos.has(fincaIdLluvia)) return;
+    if (sectorIdsActivos.size > 0 && sectorIdLluvia && !sectorIdsActivos.has(sectorIdLluvia)) return;
+
+    if (!mapaEjeTemporal[f]) return;
+    mapaEjeTemporal[f].lluvia += valor;
+    mapaEjeTemporal[f].countLluvia++;
+  });
+
+  // Siembra
+  siembrasFiltradas.forEach(s => {
+    const f = extraerFecha(s.rawSiembra);
+    if (!f || !mapaEjeTemporal[f]) return;
+    mapaEjeTemporal[f].siembra += s.total_semillas;
+    mapaEjeTemporal[f].siembraCount++;
+  });
+
+  // Germinación
+  siembrasFiltradas.forEach(s => {
+    (s.rawMuestrasOriginales || []).forEach(g => {
+      const f = extraerFecha(g);
+      if (!f || !mapaEjeTemporal[f]) return;
+      mapaEjeTemporal[f].germinacion += parseFloat(g.x_studio_cant_plantas_x_mtr_lineal || 0);
+      mapaEjeTemporal[f].germinacionCount++;
+    });
+  });
+
+  const labels = [], dataLluvia = [], dataSiembra = [], dataGerminacion = [];
+  Object.keys(mapaEjeTemporal).sort().forEach(f => {
+    const o = mapaEjeTemporal[f];
+    labels.push(formatFechaEjeX(f));
+    dataLluvia.push(o.countLluvia > 0 ? o.lluvia / o.countLluvia : 0);
+    dataSiembra.push(o.siembraCount > 0 ? o.siembra / o.siembraCount : null);
+    dataGerminacion.push(o.germinacionCount > 0 ? o.germinacion / o.germinacionCount : null);
+  });
+
+  return { labels, dataLluvia, dataSiembra, dataGerminacion, fechaInicio, fechaFin };
+}
+
+let lluviaYaCargada = false;
+
+async function abrirModalGrafico() {
+  const overlay = document.getElementById('popupGraficoOverlay');
+  overlay.classList.add('show');
+  const loadingEl = document.getElementById('graficoLoading');
+  const debugEl   = document.getElementById('graficoDebugInfo');
+  loadingEl.style.display = 'block';
+  loadingEl.textContent   = '🌧️ Cargando datos de pluviosidad...';
+  if (debugEl) debugEl.style.display = 'none';
+  if (chartInstanciaUnica) { chartInstanciaUnica.destroy(); chartInstanciaUnica = null; }
+
+  if (!lluviaYaCargada || datosLluviaRaw.length === 0) {
+    try {
+      // Detectar el año del ciclo activo para filtrar solo los registros relevantes
+      const ciclosActivos = seleccionesFiltros.ciclo || [];
+      const añoActivo = ciclosActivos.map(c => (c.match(/\d{4}/) || [])[0]).filter(Boolean)[0] || new Date().getFullYear();
+      const fechaDesde = `${añoActivo}-01-01`;
+
+      let todos = [], offset = 0;
+      const limit = 500;
+      const MAX_PAGINAS = 10; // tope de seguridad: 10 × 500 = 5,000 registros máx
+      let pagina = 0;
+
+      while (pagina < MAX_PAGINAS) {
+        const url = `${WORKER}/query?base=info&model=x_pluviosidad&limit=${limit}&offset=${offset}&domain=[["x_studio_fecha",">=","${fechaDesde}"]]`;
+        const r = await fetch(url);
+        if (!r.ok) break;
+        const j = await r.json();
+        const batch = Array.isArray(j.result) ? j.result : (Array.isArray(j) ? j : []);
+        if (batch.length === 0) break;
+        todos = todos.concat(batch);
+        loadingEl.textContent = `🌧️ Cargando lluvia ${añoActivo}... ${todos.length} registros`;
+        if (batch.length < limit) break; // última página
+        offset += limit;
+        pagina++;
+      }
+      if (todos.length > 0) { datosLluviaRaw = todos; lluviaYaCargada = true; }
+    } catch(e) { console.warn('[Lluvia lazy]', e); }
+  }
+
+  loadingEl.textContent = '📊 Procesando correlación...';
+
+  setTimeout(() => {
+    const ctx = document.getElementById('chartCorrelacionMaster').getContext('2d');
+    const ds = procesarEstructuraGrafico();
+    loadingEl.style.display = 'none';
+
+    if (debugEl) {
+      const puntosConLluvia = ds.dataLluvia.filter(v => v > 0).length;
+      const totalMM = ds.dataLluvia.reduce((a,b)=>a+b,0);
+      const ventana = ds.fechaInicio && ds.fechaFin
+        ? ` · Ventana: ${formatFechaLegible(ds.fechaInicio)} → ${formatFechaLegible(ds.fechaFin)}`
+        : '';
+      debugEl.innerHTML = `📊 ${datosLluviaRaw.length} reg. lluvia total · ${puntosConLluvia} días con lluvia en filtro · Total ${totalMM.toFixed(1)} mm${ventana}`;
+      debugEl.style.display = '';
+    }
+
+    if (ds.labels.length === 0) {
+      if (debugEl) debugEl.innerHTML = '⚠️ Sin datos para los filtros seleccionados.';
+      return;
+    }
+
+    chartInstanciaUnica = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: ds.labels,
+        datasets: [
+          { label: 'Lluvia Día (mm)', data: ds.dataLluvia, backgroundColor: 'rgba(2,132,199,0.55)', borderColor: '#0284c7', borderWidth: 1, yAxisID: 'yLluvia' },
+          { label: 'Semillas m.l. (Siembra)', data: ds.dataSiembra, borderColor: '#b35c04', backgroundColor: 'transparent', borderWidth: 3, type: 'line', tension: 0.25, pointRadius: 3, spanGaps: false, yAxisID: 'yMetricas' },
+          { label: 'Plantas m.l. (Germinación)', data: ds.dataGerminacion, borderColor: '#0f2a11', backgroundColor: 'transparent', borderWidth: 3, type: 'line', tension: 0.25, pointRadius: 3, spanGaps: false, yAxisID: 'yMetricas' }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#475569', maxRotation: 45 } },
+          yLluvia:  { type: 'linear', position: 'left',  min: 0, title: { display: true, text: 'Lluvia (mm)', color: '#0284c7', font: { weight: 'bold', size: 11 } }, ticks: { color: '#0284c7' }, grid: { color: '#f1f5f9' } },
+          yMetricas:{ type: 'linear', position: 'right', min: 0, title: { display: true, text: 'Densidad (/ m.l.)', color: '#b35c04', font: { weight: 'bold', size: 11 } }, ticks: { color: '#b35c04' }, grid: { display: false } }
+        },
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 12, weight: '600' }, boxWidth: 12 } },
+          tooltip: { callbacks: { label: ctx => ctx.parsed.y === null ? null : `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}${ctx.datasetIndex===0?' mm':' / m.l.'}` } }
+        }
+      }
+    });
+  }, 100);
+}
+
+
+function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
+
+function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
+  const overlay = document.getElementById('popupDetalleOverlay');
+  const title = document.getElementById('popupTitle');
+  const body = document.getElementById('popupBodyContent');
+  const itemsCelda = datosMaestrosUnificados.filter(d => d.finca === finca && d.lote === lote && d.ciclo === ciclo);
+  if (itemsCelda.length === 0) return;
+  
+  let html = `<div class="popup-data-grid">`;
+  if (tipoColumna === 'semillas') {
+    title.textContent = `Detalle de Siembra - Lote: ${lote}`;
+    itemsCelda.forEach((item, idx) => {
+      const s = item.rawSiembra || {};
+      const enteras = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal || 0);
+      const quebradas = parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal || 0);
+      const totalSem = item.total_semillas || (enteras + quebradas);
+      const pctEnteras = totalSem > 0 ? (enteras / totalSem) * 100 : 0;
+      const idReporte = s.name || s.x_name || ('#' + (idx + 1));
+      html += `
+        <div class="popup-multi-block">
+          <div class="popup-block-title">Reporte de Siembra: ${idReporte}</div>
+          <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${idReporte}</span></div>
+          <div class="popup-item"><span class="popup-label">Fecha Reporte:</span><span class="popup-value">${extraerFecha(s) || 'N/A'}</span></div>
+          <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
+          <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
+          <div class="popup-item"><span class="popup-label">Lote:</span><span class="popup-value">${item.lote}</span></div>
+          <div class="popup-item"><span class="popup-label">Variedad:</span><span class="popup-value">${limpiarDescripcion(s.x_studio_variedad)}</span></div>
+          <div class="popup-item"><span class="popup-label">Semillas Enteras:</span><span class="popup-value">${enteras.toFixed(2)}</span></div>
+          <div class="popup-item"><span class="popup-label">Semillas Quebradas:</span><span class="popup-value">${quebradas.toFixed(2)}</span></div>
+          <div class="popup-item"><span class="popup-label">% de Enteras:</span><span class="popup-value">${pctEnteras.toFixed(2)}%</span></div>
+          <div class="popup-item" style="background-color:#fff3cd;"><span class="popup-label">Total de Semillas m.l.:</span><span class="popup-value" style="color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</span></div>
+        </div>`;
+    });
+  } else {
+    const ddsObjetivo = tipoColumna.includes('10') ? 10 : 15;
+    title.textContent = `Muestras Germinación (${ddsObjetivo} DDS)`;
+    let reportesProcesados = new Set();
+
+    itemsCelda.forEach((item) => {
+      const muestrasFiltradas = (item.rawMuestrasOriginales || []).filter(m => Math.round(parseFloat(m.x_studio_dds)) === ddsObjetivo);
+      muestrasFiltradas.forEach((m) => {
+        const idReporte = m.x_name || m.name || 'N/A';
+        if (reportesProcesados.has(idReporte)) return;
+        reportesProcesados.add(idReporte);
+        const obs = m.x_studio_observaciones || m.x_studio_observacion || m.comment || m.note || m.description || 'N/A';
+        html += `
+          <div class="popup-multi-block">
+            <div class="popup-block-title">Reporte Germinación: ${idReporte}</div>
+            <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${idReporte}</span></div>
+            <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
+            <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
+            <div class="popup-item"><span class="popup-label">Lote:</span><span class="popup-value">${item.lote}</span></div>
+            <div class="popup-item"><span class="popup-label">Fecha Muestreo:</span><span class="popup-value">${extraerFecha(m) || 'N/A'}</span></div>
+            <div class="popup-item"><span class="popup-label">DDS Registrado:</span><span class="popup-value">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</span></div>
+            <div class="popup-item"><span class="popup-label">Plantas / m.l.:</span><span class="popup-value" style="color:#0284c7; font-weight:700;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</span></div>
+            <div class="popup-item" style="flex-direction: column; align-items: flex-start; gap: 4px; background-color: #f8fafc;">
+              <span class="popup-label">Observación:</span>
+              <span class="popup-value" style="text-align: left; font-weight: normal; font-style: italic; color: #475569; width: 100%; white-space: normal;">${obs}</span>
+            </div>
+          </div>`;
+      });
+    });
+    if (reportesProcesados.size === 0) html += `<div class="popup-item"><span style="color:var(--text-muted); font-style:italic;">No existen registros en Odoo para ${ddsObjetivo} DDS.</span></div>`;
+  }
+  body.innerHTML = html + `</div>`;
+  overlay.classList.add('show');
+}
+
+function cerrarModalPopup() { document.getElementById('popupDetalleOverlay').classList.remove('show'); }
+
+// ===== TAB MANAGEMENT =====
+let tabActivo = 'pivot';
+function cambiarTab(tab) {
+  tabActivo = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+  // Ocultar botones Filtros/Menú cuando estamos en alertas
+  const headerQA = document.querySelector('.header-quick-actions');
+  if (headerQA) headerQA.style.display = tab === 'alertas' ? 'none' : '';
+  if (tab === 'alertas') renderAlertas();
+}
+
+// ===== ALERTAS DE GERMINACIÓN =====
+const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+function formatFechaLegible(fechaStr) {
+  if (!fechaStr) return 'N/A';
+  const p = fechaStr.split('-');
+  if (p.length !== 3) return fechaStr;
+  const d = p[2].padStart(2,'0');
+  const m = MESES_CORTOS[parseInt(p[1],10) - 1] || p[1];
+  return `${d}-${m}-${p[0]}`;
+}
+
+let alertaFiltroActivo = 'all';
+// Filtros propios del tab Alertas (independientes del pivot)
+let alertasFiltros = { ciclo: [], compania: [], sector: [], finca: [] };
+let alertasFiltrosPrevios = { ciclo: [], compania: [], sector: [], finca: [] }; // para cancelar
+let alertasCicloData = { sin10: [], sin15: [], completos: [], todos: [] };
+
+// ===== MULTISELECT CASCADA ALERTAS =====
+const AF_DIMENSIONES = ['ciclo','compania','sector','finca'];
+
+function afGetDatosBase() {
+  return datosMaestrosUnificados;
+}
+
+function afGetValoresDisponibles(dim) {
+  // Valores posibles dado lo seleccionado en las OTRAS dimensiones
+  const otros = AF_DIMENSIONES.filter(d => d !== dim);
+  return [...new Set(afGetDatosBase().filter(item => {
+    return otros.every(d => alertasFiltros[d].length === 0 || alertasFiltros[d].includes(item[d]));
+  }).map(item => item[dim]))].sort();
+}
+
+function afPoblarPanel(dim) {
+  const contenedor = document.getElementById(`afItems${dim.charAt(0).toUpperCase()+dim.slice(1)}`);
+  if (!contenedor) return;
+  const disponibles = afGetValoresDisponibles(dim);
+  const seleccionados = alertasFiltros[dim];
+  // "Todos" item
+  const todosMarcado = seleccionados.length === 0;
+  let html = `<div class="af-ms-item" onclick="afToggleTodos('${dim}')">
+    <input type="checkbox" id="afTodos_${dim}" ${todosMarcado?'checked':''} onchange="afToggleTodos('${dim}')">
+    <span>(Seleccionar todo)</span>
+  </div>`;
+  // Universo completo pero mostrando disponibles vs grises
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  universo.forEach(v => {
+    const checked = seleccionados.length === 0 || seleccionados.includes(v);
+    const disabled = !disponibles.includes(v);
+    html += `<div class="af-ms-item${disabled?' disabled':''}" onclick="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+      <input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${checked?'checked':''} onchange="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+      <span>${v}</span>
+    </div>`;
+  });
+  contenedor.innerHTML = html;
+}
+
+function toggleAfDropdown(panelId) {
+  document.querySelectorAll('.af-ms-panel.open').forEach(p => { if(p.id !== panelId) p.classList.remove('open'); });
+  const panel = document.getElementById(panelId);
+  const dim = panelId.replace('afDrop','').toLowerCase();
+  // Guardar estado previo para cancelar
+  alertasFiltrosPrevios[dim] = [...alertasFiltros[dim]];
+  afPoblarPanel(dim);
+  panel.classList.toggle('open');
+}
+
+function afCerrar(panelId) {
+  const dim = panelId.replace('afDrop','').toLowerCase();
+  // Restaurar selección previa
+  alertasFiltros[dim] = [...alertasFiltrosPrevios[dim]];
+  document.getElementById(panelId).classList.remove('open');
+}
+
+function afToggleTodos(dim) {
+  const cb = document.getElementById(`afTodos_${dim}`);
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child) input`);
+  if (cb.checked) {
+    alertasFiltros[dim] = [];
+    items.forEach(i => i.checked = true);
+  } else {
+    alertasFiltros[dim] = [];
+    items.forEach(i => i.checked = false);
+  }
+  afActualizarTodosCheckbox(dim);
+}
+
+function afToggleItem(event, dim, valor) {
+  event.stopPropagation();
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const checkedVals = Array.from(items).filter(i => i.checked).map(i => i.value);
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  alertasFiltros[dim] = checkedVals.length === universo.length ? [] : checkedVals;
+  afActualizarTodosCheckbox(dim);
+}
+
+function afActualizarTodosCheckbox(dim) {
+  const cb = document.getElementById(`afTodos_${dim}`);
+  if (!cb) return;
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const total = items.length, checked = Array.from(items).filter(i=>i.checked).length;
+  cb.checked = checked === total; cb.indeterminate = checked > 0 && checked < total;
+}
+
+function afFiltrarItems(input, panelId) {
+  const txt = input.value.toLowerCase();
+  const items = document.querySelectorAll(`#${panelId} .af-ms-items .af-ms-item`);
+  items.forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(txt) ? '' : 'none';
+  });
+}
+
+function afAplicar(dim) {
+  // Re-leer checkboxes del panel actual
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const marcados = Array.from(items).filter(i => i.checked).map(i => i.value);
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  alertasFiltros[dim] = marcados.length === universo.length ? [] : marcados;
+  document.getElementById(`afDrop${dim.charAt(0).toUpperCase()+dim.slice(1)}`).classList.remove('open');
+  afActualizarTextos();
+  // Repoblar otros paneles para cascada
+  AF_DIMENSIONES.forEach(d => { if (d !== dim) afPoblarPanel(d); });
+  renderAlertas();
+}
+
+function afActualizarTextos() {
+  AF_DIMENSIONES.forEach(dim => {
+    const span = document.getElementById(`afText${dim.charAt(0).toUpperCase()+dim.slice(1)}`);
+    if (!span) return;
+    const sel = alertasFiltros[dim];
+    span.textContent = sel.length === 0 ? 'Todos' : sel.length === 1 ? sel[0] : `${sel.length} sel.`;
+  });
+}
+
+function inicializarSelectorCicloAlertas() {
+  document.getElementById('alertaFechaHoy').textContent =
+    new Date().toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'numeric' });
+  // Preseleccionar el ciclo más reciente
+  const cicloMasReciente = (universosUnicos.ciclo || [])[0];
+  if (cicloMasReciente) alertasFiltros.ciclo = [cicloMasReciente];
+  afActualizarTextos();
+  // Cerrar paneles al clic fuera
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.af-ms-wrap')) document.querySelectorAll('.af-ms-panel.open').forEach(p => p.classList.remove('open'));
+  }, { once: false });
+}
+
+
+function calcularDDS(fechaSiembraStr) {
+  if (!fechaSiembraStr) return null;
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const siembra = new Date(fechaSiembraStr + 'T00:00:00');
+  if (isNaN(siembra)) return null;
+  return Math.floor((hoy - siembra) / (1000 * 60 * 60 * 24));
+}
+
+function tieneRecuento(item, ddsMin, ddsMax) {
+  const muestras = item.rawMuestrasOriginales || [];
+  const fechaSiembra = item.fechaSiembra;
+  return muestras.some(m => {
+    // Método 1: campo DDS directo
+    const ddsRaw = m.x_studio_dds ?? m.x_studio_dias_despues_siembra ?? m.x_studio_dds_1;
+    if (ddsRaw !== undefined && ddsRaw !== null && ddsRaw !== false && ddsRaw !== '') {
+      const dds = parseFloat(ddsRaw);
+      if (!isNaN(dds)) {
+        if (ddsMax === null) return dds >= ddsMin;
+        return dds >= ddsMin && dds <= ddsMax;
+      }
+    }
+    // Método 2: calcular DDS desde fecha de siembra vs fecha de germinación
+    if (fechaSiembra) {
+      const fGerm = extraerFecha(m);
+      if (fGerm) {
+        const dias = Math.floor((new Date(fGerm+'T00:00:00') - new Date(fechaSiembra+'T00:00:00')) / 86400000);
+        if (!isNaN(dias)) {
+          if (ddsMax === null) return dias >= ddsMin;
+          return dias >= ddsMin && dias <= ddsMax;
+        }
+      }
+    }
+    return false;
+  });
+}
+
+function contarGruposUnicos(items) {
+  return new Set(items.map(i => `${i.finca}|||${i.lote}|||${i.fechaSiembra||''}`)).size;
+}
+
+function renderAlertas() {
+  if (datosMaestrosUnificados.length === 0) return;
+
+  // Aplicar todos los filtros propios del tab Alertas en cascada
+  const siembrasFiltradas = datosMaestrosUnificados.filter(d =>
+    (alertasFiltros.ciclo.length    === 0 || alertasFiltros.ciclo.includes(d.ciclo)) &&
+    (alertasFiltros.compania.length === 0 || alertasFiltros.compania.includes(d.compania)) &&
+    (alertasFiltros.sector.length   === 0 || alertasFiltros.sector.includes(d.sector)) &&
+    (alertasFiltros.finca.length    === 0 || alertasFiltros.finca.includes(d.finca))
+  );
+
+  const sin10 = [], sin15 = [], enEspera = [], completos = [], todos = [];
+
+  siembrasFiltradas.forEach(item => {
+    const fechaSiembra = extraerFecha(item.rawSiembra);
+    const dds = calcularDDS(fechaSiembra);
+    if (dds === null) return;
+
+    const tiene10 = tieneRecuento(item, 10, 14);
+    const tiene15 = tieneRecuento(item, 15, null);
+
+    const entry = { ...item, fechaSiembra, dds, tiene10, tiene15 };
+    todos.push(entry);
+
+    if (dds >= 0 && dds <= 9)                    enEspera.push(entry);
+    if (dds >= 10 && dds <= 14 && !tiene10)       sin10.push(entry);
+    if (dds >= 15 && !tiene15)                    sin15.push(entry);
+    if (dds >= 15 && tiene10 && tiene15)          completos.push(entry);
+    else if (dds >= 10 && dds <= 14 && tiene10)   completos.push(entry);
+  });
+
+  alertasCicloData = { sin10, sin15, enEspera, completos, todos };
+
+  // KPIs — grupos únicos por Finca+Lote+Fecha para alertas; Total por Finca+Lote único
+  const lotesUnicos = new Set(todos.map(i => `${i.finca}|||${i.lote}`)).size;
+  document.getElementById('kpiTotal').textContent     = lotesUnicos;
+  document.getElementById('kpiEspera').textContent    = contarGruposUnicos(enEspera);
+  document.getElementById('kpiSin10').textContent     = contarGruposUnicos(sin10);
+  document.getElementById('kpiSin15').textContent     = contarGruposUnicos(sin15);
+  document.getElementById('kpiCompletos').textContent  = contarGruposUnicos(completos);
+  document.getElementById('badge10dds').textContent   = contarGruposUnicos(sin10);
+  document.getElementById('badge15dds').textContent   = contarGruposUnicos(sin15);
+  document.getElementById('badgeEspera').textContent  = contarGruposUnicos(enEspera);
+
+  // Badge del tab
+  const totalAlertas = contarGruposUnicos(sin10) + contarGruposUnicos(sin15);
+  const tabBadge = document.getElementById('tabBadgeAlertas');
+  tabBadge.textContent = totalAlertas > 0 ? totalAlertas : '✓';
+  tabBadge.className = 'tab-badge' + (totalAlertas === 0 ? ' ok' : '');
+  const tabBtnAlertas = document.getElementById('tabBtnAlertas');
+  if (totalAlertas === 0) tabBtnAlertas.classList.add('alerta-ok');
+  else tabBtnAlertas.classList.remove('alerta-ok');
+
+  renderTablaAlerta('tabla10ddsBody', sin10, '10 DDS');
+  renderTablaAlerta('tabla15ddsBody', sin15, '15 DDS');
+  renderTablaEspera(enEspera);
+  renderTablaCompletosTabla(completos);
+  document.getElementById('badgeCompletos').textContent = contarGruposUnicos(completos);
+
+  document.getElementById('seccionEspera').style.display   = enEspera.length === 0 ? 'none' : '';
+  document.getElementById('seccion10dds').style.display    = sin10.length === 0 ? 'none' : '';
+  document.getElementById('seccion15dds').style.display    = sin15.length === 0 ? 'none' : '';
+  document.getElementById('seccionCompletos').style.display = 'none';
+
+  if (sin10.length === 0 && sin15.length === 0) {
+    document.getElementById('seccion10dds').style.display = '';
+    document.getElementById('tabla10ddsBody').innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>🎉</span>¡Excelente! Todos los lotes de los filtros seleccionados tienen sus recuentos de germinación al día.</td></tr>`;
+    document.getElementById('seccion15dds').style.display = 'none';
+  }
+}
+
+function renderTablaEspera(items) {
+  const tbody = document.getElementById('tablaEsperaBody');
+  if (!items || items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>✅</span>Sin lotes en espera de evaluación.</td></tr>`;
+    return;
+  }
+
+  // Agrupar por Finca + Lote + FechaSiembra
+  const grupos = {};
+  items.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!grupos[key]) {
+      const s = item.rawSiembra || {};
+      grupos[key] = {
+        finca: item.finca, lote: item.lote, ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
+        variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
+        sumSemillas: 0, countSemillas: 0
+      };
+    }
+    if (item.total_semillas > 0) { grupos[key].sumSemillas += item.total_semillas; grupos[key].countSemillas++; }
+    if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
+  });
+
+  const filas = Object.values(grupos).sort((a, b) => {
+    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
+    if (a.lote !== b.lote) return a.lote.localeCompare(b.lote);
+    return b.dds - a.dds;
+  });
+
+  let html = '';
+  filas.forEach(g => {
+    const semillas = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
+    const diasRestantes = 10 - g.dds;
+    const fincaEsc = g.finca.replace(/'/g,"\\'");
+    const loteEsc  = g.lote.replace(/'/g,"\\'");
+    const cicloEsc = g.ciclo.replace(/'/g,"\\'");
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td>
+      <td>${g.lote}</td>
+      <td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td><span class="badge-dds pendiente">${g.dds} días</span></td>
+      <td><span style="color:#7c3aed; font-weight:700;">en ${diasRestantes} día${diasRestantes!==1?'s':''}</span></td>
+      <td>${g.variedad}</td>
+      <td style="text-align:right;">${semillas}</td>
+      <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver Siembra</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderTablaAlerta(tbodyId, items, etiqueta) {
+  const tbody = document.getElementById(tbodyId);
+  if (items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="alerta-empty"><span>✅</span>Sin pendientes para ventana ${etiqueta}</td></tr>`;
+    return;
+  }
+
+  // Agrupar por Finca + Lote + FechaSiembra → promedio de semillas
+  const grupos = {};
+  items.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!grupos[key]) {
+      const s = item.rawSiembra || {};
+      grupos[key] = {
+        finca: item.finca,
+        lote: item.lote,
+        ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra,
+        dds: item.dds,
+        tiene10: item.tiene10,
+        tiene15: item.tiene15,
+        variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
+        sumSemillas: 0,
+        countSemillas: 0
+      };
+    }
+    if (item.total_semillas > 0) {
+      grupos[key].sumSemillas += item.total_semillas;
+      grupos[key].countSemillas++;
+    }
+    // Usar el DDS más alto del grupo (más días = más urgente)
+    if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
+  });
+
+  const filas = Object.values(grupos).sort((a, b) => {
+    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
+    if (a.lote !== b.lote) return a.lote.localeCompare(b.lote);
+    return b.dds - a.dds; // más urgente primero
+  });
+
+  let html = '';
+  filas.forEach(g => {
+    const semillas = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
+    const ddsLabel = g.dds >= 15
+      ? `<span class="badge-dds vencido">${g.dds} días</span>`
+      : `<span class="badge-dds en-rango">${g.dds} días</span>`;
+
+    const fincaEsc = g.finca.replace(/'/g,"\\'");
+    const loteEsc  = g.lote.replace(/'/g,"\\'");
+    const cicloEsc = g.ciclo.replace(/'/g,"\\'");
+
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td>
+      <td>${g.lote}</td>
+      <td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td>${ddsLabel}</td>
+      <td>
+        ${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}
+        ${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}
+      </td>
+      <td>${g.variedad}</td>
+      <td style="text-align:right;">${semillas}</td>
+      <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver Siembra</button></td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function renderTablaCompletosTabla(items) {
+  const tbody = document.getElementById('tablaCompletosBody');
+  if (!items || items.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" class="alerta-empty"><span>📋</span>No hay lotes con ambos recuentos completos aún en este ciclo.</td></tr>`;
+    return;
+  }
+
+  // Agrupar por Finca + Lote + FechaSiembra
+  const grupos = {};
+  items.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!grupos[key]) {
+      const s = item.rawSiembra || {};
+      grupos[key] = {
+        finca: item.finca, lote: item.lote, ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
+        variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
+        sumSemillas: 0, countSemillas: 0,
+        muestras10: [], muestras15: []
+      };
+    }
+    if (item.total_semillas > 0) { grupos[key].sumSemillas += item.total_semillas; grupos[key].countSemillas++; }
+    (item.rawMuestrasOriginales || []).forEach(m => {
+      const d = parseFloat(m.x_studio_dds);
+      if (d >= 10 && d <= 14) grupos[key].muestras10.push(parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0));
+      else if (d >= 15)       grupos[key].muestras15.push(parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0));
+    });
+  });
+
+  const filas = Object.values(grupos).sort((a,b) => {
+    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
+    return a.lote.localeCompare(b.lote);
+  });
+
+  let html = '';
+  filas.forEach(g => {
+    const semillas = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
+    const avg10 = g.muestras10.length > 0 ? (g.muestras10.reduce((a,c)=>a+c,0)/g.muestras10.length) : null;
+    const avg15 = g.muestras15.length > 0 ? (g.muestras15.reduce((a,c)=>a+c,0)/g.muestras15.length) : null;
+    const sem = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas) : 0;
+    const germ10 = avg10 !== null && sem > 0 ? `(${((avg10/sem)*100).toFixed(1)}%)` : '';
+    const germ15 = avg15 !== null && sem > 0 ? `(${((avg15/sem)*100).toFixed(1)}%)` : '';
+    const p10txt = avg10 !== null ? `${avg10.toFixed(2)} pl/m.l. <span style="color:#6b7280;font-weight:400;">${germ10}</span>` : '-';
+    const p15txt = avg15 !== null ? `${avg15.toFixed(2)} pl/m.l. <span style="color:#6b7280;font-weight:400;">${germ15}</span>` : '-';
+
+    const fincaEsc = g.finca.replace(/'/g,"\\'");
+    const loteEsc  = g.lote.replace(/'/g,"\\'");
+    const cicloEsc = g.ciclo.replace(/'/g,"\\'");
+
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td>
+      <td>${g.lote}</td>
+      <td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td><span class="badge-dds pendiente">${g.dds} días</span></td>
+      <td style="color:#0284c7;font-weight:600;">${p10txt}</td>
+      <td style="color:#2563eb;font-weight:600;">${p15txt}</td>
+      <td>${g.variedad}</td>
+      <td style="text-align:right;">${semillas}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('10dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver 10 DDS</button>
+        <button class="btn-ver-siembra" style="margin-left:4px;" onclick="abrirModalPopupDetalle('15dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">Ver 15 DDS</button>
+      </td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+}
+
+function filtrarTablaAlertas(tipo) {
+  alertaFiltroActivo = tipo;
+  document.getElementById('seccionEspera').style.display    = (tipo === 'all' || tipo === 'espera')    ? '' : 'none';
+  document.getElementById('seccion10dds').style.display     = (tipo === 'all' || tipo === '10dds')     ? '' : 'none';
+  document.getElementById('seccion15dds').style.display     = (tipo === 'all' || tipo === '15dds')     ? '' : 'none';
+  document.getElementById('seccionCompletos').style.display = (tipo === 'all' || tipo === 'completos') ? '' : 'none';
+  if (tabActivo !== 'alertas') cambiarTab('alertas');
+}
+
+const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
+
+async function fetchLiveOrGitHub(workerUrl, githubUrl) {
+  try {
+    const r = await fetch(workerUrl);
+    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+  } catch(e) {}
+  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+}
+
+async function cargarDatosDesdeGitHub() {
+  const tbody = document.getElementById('pivotBody');
+  tbody.innerHTML = '<tr><td class="loading">Sincronizando orígenes de datos remotos y cruzando dimensiones...</td></tr>';
+  try {
+    // Lluvia se carga de forma lazy al abrir el gráfico — no bloquea la carga inicial
+    const [siembraRes, germinacionRes] = await Promise.all([
+      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_siembra", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Siembra.json"),
+      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_germinaciones", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Germinacion.json"),
+    ]);
+
+    const siembraData = siembraRes.result || [];
+    const germinacionData = germinacionRes.result || [];
+
+    // CORRECCIÓN: Ordenar los ciclos de manera descendente (los años más recientes primero)
+    ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
+
+    datosMaestrosUnificados = siembraData.map(s => {
+      const finca = limpiarDescripcion(s.x_studio_finca);
+      const lote = limpiarDescripcion(s.x_studio_lote_de_finca);
+      const ciclo = limpiarDescripcion(s.x_studio_ciclo);
+      const sectorSiembra = limpiarDescripcion(s.x_studio_sector_1);
+      const compania = limpiarDescripcion(s.x_studio_compaia || s.x_studio_company_id);
+
+      // IDs numéricos de Odoo — match primario (más confiable)
+      const loteIdS  = Array.isArray(s.x_studio_lote_de_finca) ? s.x_studio_lote_de_finca[0] : null;
+      const cicloIdS = Array.isArray(s.x_studio_ciclo)         ? s.x_studio_ciclo[0]          : null;
+      const añoCiclo = String(ciclo).match(/\d{4}/)?.[0] || null;
+
+      // Fallback texto normalizado por si los IDs no coinciden
+      const cNorm = normalizeText(s.x_studio_ciclo);
+      const fNorm = normalizeText(s.x_studio_finca);
+      const lNorm = normalizeText(s.x_studio_lote_de_finca);
+
+      const muestrasRelacionadas = germinacionData.filter(g => {
+        const loteIdG  = Array.isArray(g.x_studio_lote_de_la_finca) ? g.x_studio_lote_de_la_finca[0] : null;
+        const cicloIdG = Array.isArray(g.x_studio_ciclo)            ? g.x_studio_ciclo[0]             : null;
+        // Match primario: ID de lote + año del ciclo
+        if (loteIdS && loteIdG && loteIdS === loteIdG) {
+          if (cicloIdS && cicloIdG && cicloIdS === cicloIdG) return true;
+          if (añoCiclo && String(g.x_studio_ciclo).includes(añoCiclo)) return true;
+        }
+        // Fallback: texto normalizado finca + lote (sin sector que falla)
+        const gFNorm = normalizeText(g.x_studio_finca);
+        const gLNorm = normalizeText(g.x_studio_lote_de_la_finca);
+        if (gFNorm === fNorm && gLNorm === lNorm) {
+          if (normalizeText(g.x_studio_ciclo) === cNorm) return true;
+          if (añoCiclo && String(g.x_studio_ciclo).includes(añoCiclo)) return true;
+        }
+        return false;
+      });
+
+      const muestras10 = muestrasRelacionadas.filter(g => { const d = parseFloat(g.x_studio_dds); return !isNaN(d) && d >= 10 && d <= 14; });
+      const muestras15 = muestrasRelacionadas.filter(g => { const d = parseFloat(g.x_studio_dds); return !isNaN(d) && d >= 15; });
+      const plantas10 = muestras10.length > 0 ? (muestras10.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras10.length) : 0;
+      let plantas15 = muestras15.length > 0 ? (muestras15.reduce((acc, curr) => acc + (parseFloat(curr.x_studio_cant_plantas_x_mtr_lineal) || 0), 0) / muestras15.length) : 0;
+
+      const total_semillas = parseFloat(s.x_studio_semilla_total) || ((parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal) || 0) + (parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal) || 0));
+      let tipoNorm = (s.x_studio_tipo || '').toLowerCase().includes('re') ? 'Re-siembra' : 'Siembra';
+      if (estadoFincasColapso[finca] === undefined) estadoFincasColapso[finca] = false;
+
+      return { finca, lote, sector: sectorSiembra, ciclo, compania, tipo: tipoNorm, total_semillas, plantas_10dds: plantas10, plantas_15dds: plantas15, rawSiembra: s, rawMuestrasOriginales: muestrasRelacionadas };
+    }).filter(d => d.ciclo && d.ciclo !== 'N/A' && d.ciclo !== 'false');
+
+    universosUnicos.compania = [...new Set(datosMaestrosUnificados.map(d => d.compania))].sort();
+    universosUnicos.sector   = [...new Set(datosMaestrosUnificados.map(d => d.sector))].sort();
+    universosUnicos.ciclo    = [...ciclosDetectados];
+    universosUnicos.finca    = [...new Set(datosMaestrosUnificados.map(d => d.finca))].sort();
+    universosUnicos.tipo     = [...new Set(datosMaestrosUnificados.map(d => d.tipo))].sort();
+
+    Object.keys(seleccionesFiltros).forEach(key => { seleccionesFiltros[key] = [...(universosUnicos[key] || [])]; });
+    
+    inicializarEstructuraFiltrosDOM();
+
+    actualizarTextoDropdown('dropCompania', universosUnicos.compania.length, universosUnicos.compania.length, universosUnicos.compania);
+    actualizarTextoDropdown('dropSector', universosUnicos.sector.length, universosUnicos.sector.length, universosUnicos.sector);
+    actualizarTextoDropdown('dropCiclo', universosUnicos.ciclo.length, universosUnicos.ciclo.length, universosUnicos.ciclo);
+    actualizarTextoDropdown('dropFinca', universosUnicos.finca.length, universosUnicos.finca.length, universosUnicos.finca);
+    actualizarTextoDropdown('dropTipo', universosUnicos.tipo.length, universosUnicos.tipo.length, universosUnicos.tipo);
+
+    filtrarYMostrar();
+    if(FILTRO_GLOBAL_PENDIENTE) { const f = FILTRO_GLOBAL_PENDIENTE; FILTRO_GLOBAL_PENDIENTE = null; aplicarFiltroGlobal(f); }
+    document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
+    inicializarSelectorCicloAlertas();
+    renderAlertas();
+  } catch (e) {
+    console.error(e);
+    tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar archivos desde GitHub.</td></tr>';
+  }
+}
+
+function filtrarYMostrar() {
+  // 1. Filtrar los datos maestros basándonos puramente en lo seleccionado originalmente
+  let filtrados = datosMaestrosUnificados.filter(d => 
+    (seleccionesFiltros.compania || []).includes(d.compania) && 
+    (seleccionesFiltros.sector || []).includes(d.sector) && 
+    (seleccionesFiltros.ciclo || []).includes(d.ciclo) && 
+    (seleccionesFiltros.finca || []).includes(d.finca) && 
+    (seleccionesFiltros.tipo || []).includes(d.tipo)
+  );
+
+  // 2. Ejecutar la visibilidad cruzada de los dropdowns en la barra de herramientas
+  refrescarVisibilidadCrucesFiltros();
+
+  // 3. CORRECCIÓN: Ajustar dinámicamente qué ciclos reales se van a pintar en las columnas de la tabla.
+  // Si el usuario tiene seleccionado "Todos", solo pintamos los ciclos que tengan datos vivos tras el cruce.
+  let ciclosActivosParaRender = [];
+  const totalCiclosUniverso = universosUnicos.ciclo || [];
+  
+  if (seleccionesFiltros.ciclo.length === totalCiclosUniverso.length) {
+    // Si están seleccionados todos, solo extraemos los ciclos presentes en el set de datos ya filtrado
+    ciclosActivosParaRender = [...new Set(filtrados.map(d => d.ciclo))].sort().reverse();
+  } else {
+    // Si el usuario marcó ciclos específicos a mano en el dropdown, respetamos estrictamente su selección manual
+    ciclosActivosParaRender = [...seleccionesFiltros.ciclo].sort().reverse();
+  }
+
+  generarEncabezadosDinamicos(ciclosActivosParaRender);
+  renderPivot(filtrados, ciclosActivosParaRender);
+}
+
+function generarEncabezadosDinamicos(ciclosVisibles) {
+  const header = document.getElementById('tablaHeader');
+  const subCabecerasCount = obtenerColumnasActivasPorCicloCount();
+  let tr1 = `<tr><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Finca</th><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Lote de finca</th>`;
+  let tr2 = `<tr>`;
+
+  if (ciclosVisibles.length === 0) return;
+
+  if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
+    ciclosVisibles.forEach(ciclo => {
+      let activeCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+      if (activeCount > 0) {
+        tr1 += `<th colspan="${activeCount}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light);">Ciclo: ${ciclo}</th>`;
+        if(visibilidadColumnas.semillas) tr2 += `<th style="border-right: 1px solid var(--border-color);">Semillas m.l.</th>`;
+        if(visibilidadColumnas['10dds']) tr2 += `<th style="color: #0284c7; border-right: 1px solid var(--border-color);">Plantas 10 DDS</th>`;
+        if(visibilidadColumnas['15dds']) tr2 += `<th style="color: var(--primary); border-right: 1px solid var(--border-color);">Plantas 15 DDS</th>`;
+        if(visibilidadColumnas.g10)      tr2 += `<th style="border-right: 1px solid var(--border-color);">% Germ 10DDS</th>`;
+        if(visibilidadColumnas.g15)      tr2 += `<th style="border-right: 1px solid var(--border-color);">% Germ 15DDS</th>`;
+      }
+    });
+  } else {
+    obtenerMetricasActivas().forEach(metricaKey => {
+      tr1 += `<th colspan="${ciclosVisibles.length}" style="border-right: 1px solid var(--border-color); background-color: var(--primary-light); color: var(--accent-peanut);">${METRICAS_NOMBRES[metricaKey]}</th>`;
+      ciclosVisibles.forEach(ciclo => {
+        let colorSub = metricaKey.includes('10') ? 'color:#0284c7;' : metricaKey.includes('15') ? 'color:var(--primary);' : '';
+        tr2 += `<th style="border-right: 1px solid var(--border-color); font-size:11px; ${colorSub}">${ciclo.replace('Mani ','')}</th>`;
+      });
+    });
+  }
+  header.innerHTML = tr1 + "</tr>" + tr2 + "</tr>";
+}
+
+function construirCeldaHTML(valor, metricaKey, finca, lote, ciclo) {
+  const vStr = valor.toFixed(2);
+  if (metricaKey === 'g10' || metricaKey === 'g15') {
+    return `<td class="text-center interactive-cell" data-tipo="${metricaKey === 'g10'?'10dds':'15dds'}" data-finca="${finca}" data-lote="${lote}" data-ciclo="${ciclo}"><span class="badge-pct ${valor < 55 ? 'low' : ''}">${vStr}%</span></td>`;
+  }
+  let estiloColor = metricaKey === '10dds' ? 'style="color: #0284c7;"' : metricaKey === '15dds' ? 'style="color: var(--primary); font-weight:600;"' : '';
+  return `<td class="text-right interactive-cell" ${estiloColor} data-tipo="${metricaKey}" data-finca="${finca}" data-lote="${lote}" data-ciclo="${ciclo}">${vStr}</td>`;
+}
+
+function renderPivot(data, ciclosVisibles) {
+  const tbody = document.getElementById('pivotBody');
+  let htmlBuffer = [];
+
+  if (ciclosVisibles.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="2" class="loading">No hay ciclos activos o seleccionados para los filtros actuales.</td></tr>`;
+    return;
+  }
+
+  const matrizPivot = {};
+  data.forEach(reg => {
+    if (!matrizPivot[reg.finca]) matrizPivot[reg.finca] = { lotes: {} };
+    if (!matrizPivot[reg.finca].lotes[reg.lote]) matrizPivot[reg.finca].lotes[reg.lote] = {};
+    if (!matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo]) matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo] = [];
+    matrizPivot[reg.finca].lotes[reg.lote][reg.ciclo].push(reg);
+  });
+
+  const fincasExistentes = Object.keys(matrizPivot).sort();
+  if (fincasExistentes.length === 0) {
+    let totalCols = 2 + (ciclosVisibles.length * obtenerColumnasActivasPorCicloCount());
+    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="loading">No hay registros que coincidan con los filtros.</td></tr>`;
+    return;
+  }
+
+  fincasExistentes.forEach((fincaName, fincaIdx) => {
+    const fincaObj = matrizPivot[fincaName];
+    const esColapsado = estadoFincasColapso[fincaName];
+    const hiddenClass = esColapsado ? 'hidden-row' : '';
+
+    const fincaCiclosTotales = {};
+    ciclosVisibles.forEach(c => { fincaCiclosTotales[c] = { sumS: 0, sumP10: 0, sumP15: 0, totalLotes: 0 }; });
+
+    Object.keys(fincaObj.lotes).forEach(loteKey => {
+      ciclosVisibles.forEach(ciclo => {
+        const regs = fincaObj.lotes[loteKey][ciclo] || [];
+        if (regs.length > 0) {
+          fincaCiclosTotales[ciclo].sumS += regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
+          fincaCiclosTotales[ciclo].sumP10 += regs.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / regs.length;
+          fincaCiclosTotales[ciclo].sumP15 += regs.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / regs.length;
+          fincaCiclosTotales[ciclo].totalLotes++;
+        }
+      });
+    });
+
+    let fincaHeaderHtml = `<tr class="row-finca-header" onclick="toggleFincaRows('${fincaName}')">`;
+    fincaHeaderHtml += `<td><span class="toggle-icon">${esColapsado ? '📁' : '📂'}</span> Finca: ${fincaName}</td>`;
+    fincaHeaderHtml += `<td style="font-style: italic; color: #4a3b32; text-align: left;">${esColapsado ? 'Promedio Finca' : 'Lotes'}</td>`;
+
+    if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
+      ciclosVisibles.forEach(ciclo => {
+        const cTot = fincaCiclosTotales[ciclo];
+        if (esColapsado && cTot && cTot.totalLotes > 0) {
+          const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
+          const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0, tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+          if(visibilidadColumnas.semillas) fincaHeaderHtml += `<td class="text-right">${avgS.toFixed(2)}</td>`;
+          if(visibilidadColumnas['10dds']) fincaHeaderHtml += `<td class="text-right" style="color: #0284c7; font-weight:700;">${avgP10.toFixed(2)}</td>`;
+          if(visibilidadColumnas['15dds']) fincaHeaderHtml += `<td class="text-right" style="color: var(--primary); font-weight:700;">${avgP15.toFixed(2)}</td>`;
+          if(visibilidadColumnas.g10)      fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${tg10 < 55 ? 'low' : ''}">${tg10.toFixed(2)}%</span></td>`;
+          if(visibilidadColumnas.g15)      fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${tg15 < 55 ? 'low' : ''}">${tg15.toFixed(2)}%</span></td>`;
+        } else {
+          let currentMetricasCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+          for (let i = 0; i < currentMetricasCount; i++) fincaHeaderHtml += `<td>-</td>`;
+        }
+      });
+    } else {
+      obtenerMetricasActivas().forEach(mKey => {
+        ciclosVisibles.forEach(ciclo => {
+          const cTot = fincaCiclosTotales[ciclo];
+          if (cTot && cTot.totalLotes > 0) {
+            const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
+            let valCalculado = mKey==='semillas'? avgS : mKey==='10dds'? avgP10 : mKey==='15dds'? avgP15 : mKey==='g10'? (avgS>0?(avgP10/avgS)*100:0) : (avgS>0?(avgP15/avgS)*100:0);
+            if(mKey==='g10' || mKey==='g15') {
+              fincaHeaderHtml += `<td class="text-center"><span class="badge-pct ${valCalculado < 55 ? 'low' : ''}">${valCalculado.toFixed(2)}%</span></td>`;
+            } else {
+              fincaHeaderHtml += `<td class="text-right">${valCalculado.toFixed(2)}</td>`;
+            }
+          } else {
+            fincaHeaderHtml += `<td>-</td>`;
+          }
+        });
+      });
+    }
+    htmlBuffer.push(fincaHeaderHtml + "</tr>");
+
+    Object.keys(fincaObj.lotes).sort().forEach((loteKey, lIdx) => {
+      const staggerDelay = ((fincaIdx * 3) + lIdx) * 14;
+      let filaHtml = `<tr class="row-lote ${hiddenClass}" style="animation-delay: ${staggerDelay}ms;"><td class="freeze-col-1" style="color: var(--text-muted); text-align: left;">${fincaName}</td><td class="freeze-col-2" style="font-weight: 600; text-align: left;">${loteKey}</td>`;
+      
+      if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
+        ciclosVisibles.forEach(ciclo => {
+          const regs = fincaObj.lotes[loteKey][ciclo] || [];
+          if (regs.length > 0) {
+            const avgS = regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
+            const avgP10 = regs.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / regs.length;
+            const avgP15 = regs.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / regs.length;
+            if(visibilidadColumnas.semillas) filaHtml += construirCeldaHTML(avgS, 'semillas', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas['10dds']) filaHtml += construirCeldaHTML(avgP10, '10dds', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas['15dds']) filaHtml += construirCeldaHTML(avgP15, '15dds', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas.g10)      filaHtml += construirCeldaHTML(avgS > 0 ? (avgP10 / avgS) * 100 : 0, 'g10', fincaName, loteKey, ciclo);
+            if(visibilidadColumnas.g15)      filaHtml += construirCeldaHTML(avgS > 0 ? (avgP15 / avgS) * 100 : 0, 'g15', fincaName, loteKey, ciclo);
+          } else {
+            let activeCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+            for (let i = 0; i < activeCount; i++) filaHtml += `<td style="color: #cbd5e1;">-</td>`;
+          }
+        });
+      } else {
+        obtenerMetricasActivas().forEach(mKey => {
+          ciclosVisibles.forEach(ciclo => {
+            const regs = fincaObj.lotes[loteKey][ciclo] || [];
+            if (regs.length > 0) {
+              const avgS = regs.reduce((acc, curr) => acc + curr.total_semillas, 0) / regs.length;
+              const avgP10 = regs.reduce((acc, curr) => acc + curr.plantas_10dds, 0) / regs.length;
+              const avgP15 = regs.reduce((acc, curr) => acc + curr.plantas_15dds, 0) / regs.length;
+              let v = mKey==='semillas'? avgS : mKey==='10dds'? avgP10 : mKey==='15dds'? avgP15 : mKey==='g10'? (avgS>0?(avgP10/avgS)*100:0) : (avgS>0?(avgP15/avgS)*100:0);
+              filaHtml += construirCeldaHTML(v, mKey, fincaName, loteKey, ciclo);
+            } else {
+              filaHtml += `<td style="color: #cbd5e1;">-</td>`;
+            }
+          });
+        });
+      }
+      htmlBuffer.push(filaHtml + "</tr>");
+    });
+
+    let subtotalHtml = `<tr class="row-total-finca ${hiddenClass}"><td class="freeze-col-1" style="text-align: left;">Total Promedios ${fincaName}</td><td class="freeze-col-2" style="font-weight: 600; text-align: left;">-</td>`;
+    if (CURRENT_PIVOT_MODE === 'ciclo_recuento') {
+      ciclosVisibles.forEach(ciclo => {
+        const cTot = fincaCiclosTotales[ciclo];
+        if (cTot && cTot.totalLotes > 0) {
+          const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
+          const tg10 = avgS > 0 ? (avgP10 / avgS) * 100 : 0, tg15 = avgS > 0 ? (avgP15 / avgS) * 100 : 0;
+          if(visibilidadColumnas.semillas) subtotalHtml += `<td class="text-right">${avgS.toFixed(2)}</td>`;
+          if(visibilidadColumnas['10dds']) subtotalHtml += `<td class="text-right" style="color: #0284c7;">${avgP10.toFixed(2)}</td>`;
+          if(visibilidadColumnas['15dds']) subtotalHtml += `<td class="text-right" style="color: var(--primary);">${avgP15.toFixed(2)}</td>`;
+          if(visibilidadColumnas.g10)      subtotalHtml += `<td class="text-center"><span class="badge-pct ${tg10 < 55 ? 'low' : ''}">${tg10.toFixed(2)}%</span></td>`;
+          if(visibilidadColumnas.g15)      subtotalHtml += `<td class="text-center"><span class="badge-pct ${tg15 < 55 ? 'low' : ''}">${tg15.toFixed(2)}%</span></td>`;
+        } else {
+          let activeCount = METRICAS_LLAVES.filter(v => visibilidadColumnas[v]).length;
+          for (let i = 0; i < activeCount; i++) subtotalHtml += `<td style="color: #cbd5e1;">-</td>`;
+        }
+      });
+    } else {
+      obtenerMetricasActivas().forEach(mKey => {
+        ciclosVisibles.forEach(ciclo => {
+          const cTot = fincaCiclosTotales[ciclo];
+          if (cTot && cTot.totalLotes > 0) {
+            const avgS = cTot.sumS / cTot.totalLotes, avgP10 = cTot.sumP10 / cTot.totalLotes, avgP15 = cTot.sumP15 / cTot.totalLotes;
+            let valCalculado = mKey==='semillas'? avgS : mKey==='10dds'? avgP10 : mKey==='15dds'? avgP15 : mKey==='g10'? (avgS>0?(avgP10/avgS)*100:0) : (avgS>0?(avgP15/avgS)*100:0);
+            if(mKey==='g10' || mKey==='g15') {
+              subtotalHtml += `<td class="text-center"><span class="badge-pct ${valCalculado < 55 ? 'low' : ''}">${valCalculado.toFixed(2)}%</span></td>`;
+            } else {
+              subtotalHtml += `<td class="text-right">${valCalculado.toFixed(2)}</td>`;
+            }
+          } else {
+            subtotalHtml += `<td style="color: #cbd5e1;">-</td>`;
+          }
+        });
+      });
+    }
+    htmlBuffer.push(subtotalHtml + "</tr>");
+  });
+  tbody.innerHTML = htmlBuffer.join('');
+}
+
+function exportarTablaAExcel() {
+  const table = document.getElementById("tablaGerminacionMaster");
+  const clonedTable = table.cloneNode(true);
+  clonedTable.querySelectorAll('.toggle-icon').forEach(el => el.remove());
+  const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Germinación Maní", raw: true });
+  XLSX.writeFile(wb, `Reporte_Pivot_Fijo_Mani_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+}
+
+// ===================================================================
+// ADAPTADOR DE FILTRO GLOBAL — INFOAGRO BI
+// Traduce {compania, sector, ciclo, finca} del shell a seleccionesFiltros,
+// sincroniza los checkboxes ya construidos por poblarOpcionesFijasHTML
+// y dispara el mismo flujo que usaría el usuario al aceptar un filtro.
+// ===================================================================
+let FILTRO_GLOBAL_PENDIENTE = null;
+
+function aplicarFiltroGlobal(filtros){
+  if(!datosMaestrosUnificados.length){ FILTRO_GLOBAL_PENDIENTE = filtros; return; }
+  filtros = filtros || {};
+
+  ['compania','sector','ciclo','finca'].forEach(llave => {
+    if(!filtros[llave]) return; // esta sección no envió esa clave, no tocar
+    const universo = universosUnicos[llave] || [];
+    // Intersección: sólo se aplican valores que realmente existen en el universo de esta sección
+    const seleccionValida = filtros[llave].length
+      ? universo.filter(v => filtros[llave].includes(v))
+      : [...universo]; // filtro global vacío = "todos" en esta sección también
+
+    seleccionesFiltros[llave] = seleccionValida.length ? seleccionValida : [...universo];
+
+    // Sincronizar checkboxes en el DOM para que el panel de filtros propio quede consistente
+    const cap = llave.charAt(0).toUpperCase() + llave.slice(1);
+    const idOpts = 'opts' + cap, idDrop = 'drop' + cap, idBtnClear = 'btn_clear_' + llave;
+    const contenedor = document.getElementById(idOpts);
+    if(contenedor){
+      contenedor.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => {
+        cb.checked = seleccionesFiltros[llave].includes(cb.value);
+      });
+      actualizarEstadoSeleccionarTodo(idOpts);
+    }
+    actualizarTextoDropdown(idDrop, seleccionesFiltros[llave].length, universo.length, seleccionesFiltros[llave]);
+    const btnClear = document.getElementById(idBtnClear);
+    if(btnClear) btnClear.style.display = (seleccionesFiltros[llave].length < universo.length) ? "inline-flex" : "none";
+
+    // --- Tab "Alertas Germinación" tiene su PROPIO sistema de filtros (alertasFiltros),
+    // separado de seleccionesFiltros. Aquí en alertasFiltros el array vacío [] significa
+    // "todos" (al revés que seleccionesFiltros, donde el universo completo significa "todos"). ---
+    if(AF_DIMENSIONES.includes(llave)){
+      alertasFiltros[llave] = (seleccionValida.length && seleccionValida.length < universo.length)
+        ? seleccionValida
+        : []; // selección completa o vacía = "todos" en el modelo de alertasFiltros
+    }
+  });
+
+  // Repoblar los paneles de filtro del tab de Alertas para que reflejen la nueva selección y cascada
+  AF_DIMENSIONES.forEach(d => afPoblarPanel(d));
+  afActualizarTextos();
+
+  filtrarYMostrar();
+  lluviaYaCargada = false;
+  if (datosMaestrosUnificados.length > 0) renderAlertas();
+}
+
+function enviarUniversoAlShell(){
+  if(!datosMaestrosUnificados.length) return;
+  window.parent.postMessage({
+    type: 'INFOAGRO_UNIVERSO_RESPUESTA',
+    universo: {
+      compania: universosUnicos.compania || [],
+      sector: universosUnicos.sector || [],
+      ciclo: universosUnicos.ciclo || [],
+      finca: universosUnicos.finca || []
+    }
+  }, '*');
+}
+
+window.addEventListener('message', function(ev){
+  if(!ev.data) return;
+  if(ev.data.type === 'INFOAGRO_FILTROS_UPDATE'){
+    aplicarFiltroGlobal(ev.data.filtros);
+  }
+  if(ev.data.type === 'INFOAGRO_SOLICITAR_UNIVERSO'){
+    enviarUniversoAlShell();
+  }
+});
+
+cargarDatosDesdeGitHub().then(function(){
+  enviarUniversoAlShell();
+});
+</script>
+</body>
+</html>

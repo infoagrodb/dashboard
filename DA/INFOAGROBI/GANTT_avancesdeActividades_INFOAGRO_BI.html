@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>INFOAGRO · Monitoreo Cruzado de Avances</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-organic: #f4f7f5;
+      --text-main: #1e293b;
+      --text-muted: #64748b;
+      
+      --grad-header: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+      --grad-verde: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%);
+      --grad-naranja: linear-gradient(135deg, #e76f51 0%, #f4a261 100%);
+      --grad-soft-bg: linear-gradient(180deg, #ffffff 0%, #f8faf9 100%);
+
+      --shadow-sm: 0 4px 20px -2px rgba(45, 106, 79, 0.05);
+      --shadow-md: 0 10px 30px -5px rgba(27, 67, 50, 0.08);
+      --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden; 
+      background-color: var(--bg-organic);
+      color: var(--text-main);
+      font-family: 'Inter', sans-serif;
+      font-size: 12px;
+    }
+
+    body {
+      padding: 10px 15px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dashboard-container {
+      max-width: 100%;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0; 
+    }
+
+    /* HEADER */
+    .page-hdr-container {
+      background: var(--grad-header);
+      border-radius: 12px 6px 12px 6px;
+      padding: 8px 16px;
+      color: #ffffff;
+      box-shadow: 0 4px 15px -5px rgba(27, 67, 50, 0.2);
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .hdr-title { font-size: 15px; font-weight: 700; letter-spacing: -0.02em; display: inline-flex; align-items: center; gap: 6px; }
+    .hdr-sub { font-size: 11px; color: #b7e4c7; font-weight: 400; margin-left: 10px; display: inline-block; }
+
+    .hdr-controls-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .hdr-compaia-box {
+      display: flex;
+      align-items: center;
+      background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%);
+      border-radius: 6px;
+      padding: 0 6px 0 10px;
+      height: 30px;
+      border: 1px solid #74c69d;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .hdr-compaia-icon { font-size: 12px; margin-right: 6px; }
+    .hdr-select-compaia {
+      background-color: transparent !important;
+      border: none !important;
+      color: #ffffff !important;
+      font-weight: 600;
+      font-size: 11px;
+      height: 100%;
+      padding: 0 24px 0 0;
+      cursor: pointer;
+      min-width: 190px;
+      box-shadow: none !important;
+    }
+    .hdr-select-compaia option {
+      background-color: #ffffff !important;
+      color: var(--text-main) !important;
+      font-weight: 500;
+    }
+
+    .btn-toggle-ribbon {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: white;
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 28px;
+    }
+    .btn-toggle-ribbon:hover { background: rgba(255, 255, 255, 0.25); }
+
+    .btn-organic-action.clear-all {
+      background: var(--grad-naranja);
+      display: none;
+      height: 28px;
+      animation: fadeInBtn 0.2s ease-in-out forwards;
+    }
+    @keyframes fadeInBtn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* CINTA DE FILTROS COLAPSABLE */
+    .filters-inline-container {
+      background: var(--grad-soft-bg);
+      border-radius: 10px;
+      box-shadow: var(--shadow-sm);
+      padding: 6px 14px;
+      margin-bottom: 8px;
+      border: 1px solid rgba(82, 183, 136, 0.15);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 12px;
+      align-items: center;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      max-height: 220px;
+      opacity: 1;
+      overflow: visible;
+      flex-shrink: 0;
+    }
+    
+    .filters-inline-container.collapsed {
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-bottom: 0;
+      opacity: 0;
+      border-color: transparent;
+      overflow: hidden;
+    }
+
+    .filter-item-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1 1 160px;
+      min-width: 150px;
+      position: relative;
+    }
+
+    .fg-label {
+      font-size: 11px;
+      color: var(--text-main);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .multiselect-btn {
+      background-color: #ffffff;
+      border: 1px solid rgba(163, 177, 198, 0.4);
+      border-radius: 6px 3px 6px 3px;
+      color: var(--text-main);
+      font-size: 11px;
+      height: 28px;
+      padding: 0 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      width: 100%;
+      user-select: none;
+    }
+    .multiselect-btn::after { content: '▼'; font-size: 7px; color: var(--text-muted); margin-left: 4px; }
+
+    .multiselect-dropdown {
+      position: absolute;
+      top: 105%;
+      left: 0;
+      width: 100%;
+      background: #ffffff;
+      border: 1px solid rgba(82, 183, 136, 0.2);
+      border-radius: 6px;
+      box-shadow: var(--shadow-lg);
+      max-height: 240px;
+      overflow-y: auto;
+      z-index: 1000;
+      padding: 4px;
+      display: none;
+    }
+    .multiselect-dropdown.show { display: block; }
+
+    .multiselect-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+    }
+    .multiselect-option:hover { background-color: rgba(82, 183, 136, 0.1); }
+
+    .form-control, .form-select-native {
+      background-color: #ffffff !important;
+      border: 1px solid rgba(163, 177, 198, 0.4) !important;
+      border-radius: 6px 3px 6px 3px !important;
+      color: var(--text-main) !important;
+      font-size: 11px;
+      height: 28px;
+      padding: 0 6px;
+    }
+
+    .btn-reset-individual {
+      background: none; border: none; font-size: 12px; cursor: pointer;
+      padding: 0 2px; display: inline-flex; align-items: center;
+      justify-content: center; width: 18px; height: 18px; border-radius: 4px;
+      transition: all 0.15s ease;
+    }
+    .btn-reset-individual.inactive { color: #cbd5e1; pointer-events: none; }
+    .btn-reset-individual.active { color: #ef4444; background: rgba(239, 68, 68, 0.08); }
+    .btn-reset-individual.active:hover { background: rgba(239, 68, 68, 0.18); transform: scale(1.1); }
+
+    .btn-organic-action {
+      border: none; height: 28px; border-radius: 6px 3px 6px 3px;
+      font-weight: 600; font-size: 11px; padding: 0 10px;
+      display: inline-flex; align-items: center; gap: 4px; color: white; transition: all 0.2s ease;
+    }
+    .btn-organic-action.excel { background: var(--grad-verde); }
+    .btn-organic-action:hover { transform: translateY(-1px); color: white; }
+
+    /* TABS DE ORIGEN DE DATOS */
+    .tabs-switch-container {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .tab-switch-btn {
+      background: #ffffff;
+      border: 1px solid rgba(82, 183, 136, 0.25);
+      color: var(--text-muted);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 7px 14px;
+      border-radius: 8px 3px 8px 3px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+    }
+    .tab-switch-btn:hover { color: #1b4332; border-color: #52b788; }
+    .tab-switch-btn.active {
+      background: var(--grad-verde);
+      color: #ffffff;
+      border-color: transparent;
+      box-shadow: var(--shadow-md);
+    }
+    .tab-panel { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+
+    /* ARBOL JERARQUICO — MATRIZ DE INSUMOS */
+    table.pivot-insumos th.col-tree-sticky,
+    table.pivot-insumos td.col-tree-sticky {
+      position: sticky;
+      z-index: 15;
+      text-align: left !important;
+      border-right: 1px solid rgba(82, 183, 136, 0.15) !important;
+      background: #ffffff;
+    }
+    table.pivot-insumos th.col-tree-sticky.c1, table.pivot-insumos td.col-tree-sticky.c1 { left: 0px; min-width: 100px; max-width: 100px; }
+    table.pivot-insumos th.col-tree-sticky.c2, table.pivot-insumos td.col-tree-sticky.c2 { left: 100px; min-width: 150px; max-width: 150px; }
+    table.pivot-insumos th.col-tree-sticky.c3, table.pivot-insumos td.col-tree-sticky.c3 { left: 250px; min-width: 260px; max-width: 260px; border-right: 2px solid rgba(82, 183, 136, 0.2) !important; }
+    table.pivot-insumos th.col-tree-sticky.c4, table.pivot-insumos td.col-tree-sticky.c4 { left: 510px; min-width: 75px; max-width: 75px; text-align: center !important; border-right: 2px solid rgba(82, 183, 136, 0.2) !important; }
+    table.pivot-insumos thead tr.main-hdr-row th.col-tree-sticky { z-index: 36; background: #1b4332 !important; color: #ffffff !important; }
+
+    .tree-row-ciclo td.col-tree-sticky.c1 { background: #1b4332; color: #ffffff; font-weight: 700; }
+    .tree-row-ciclo td { background: #edf7f2; }
+    .tree-row-categoria td.col-tree-sticky.c2 { background: #eaf3ee; color: #1b4332; font-weight: 700; }
+    .tree-row-categoria td { background: #f8faf9; }
+    .tree-row-leaf td.col-tree-sticky.c3 { font-weight: 500; }
+    .tree-row-subtotal td.col-tree-sticky.c3 { font-weight: 700; color: #1b4332; }
+    .tree-row-subtotal td { background: #eaf6ee; border-top: 2px solid rgba(82, 183, 136, 0.35); font-weight: 700; }
+    .tree-row-spacer td { height: 14px; background: #ffffff !important; border: none !important; }
+    .tree-row-fin td { background: #1b4332 !important; color: #ffffff; font-weight: 700; text-align: center !important; }
+
+    /* Coloreado por tipo de métrica (Cantidad / Área / Dosis) */
+    .pivot-insumos .col-m-area { background: rgba(183, 228, 199, 0.32); }
+    .pivot-insumos .col-m-dosis { background: rgba(244, 189, 189, 0.32); }
+
+    .pivot-insumos thead th.finca-group-hdr {
+      background: #ffffff !important; color: #1b4332 !important;
+      font-weight: 700; text-align: center !important;
+      border-left: 3px solid #1b4332 !important;
+      border-right: 1px solid #e2e8f0 !important;
+    }
+    .pivot-insumos thead tr.sub-hdr-row th.col-m-cant { background: #ece7da !important; color: #4a4a4a !important; border-left: 3px solid #1b4332 !important; }
+    .pivot-insumos thead tr.sub-hdr-row th.col-m-area { background: #c3e6cf !important; color: #1b4332 !important; }
+    .pivot-insumos thead tr.sub-hdr-row th.col-m-dosis { background: #f2c6c6 !important; color: #7a2020 !important; border-right: 1px solid #e2e8f0 !important; }
+    .pivot-insumos thead th.col-total-cant { background: #f3c9a0 !important; color: #5c3111 !important; border-left: 3px solid #1b4332 !important; }
+    .pivot-insumos thead th.col-total-area { background: #c3e6cf !important; color: #1b4332 !important; }
+    .pivot-insumos thead th.col-total-dosis { background: #f2c6c6 !important; color: #7a2020 !important; }
+    .pivot-insumos tbody .col-total-cant { background: rgba(232, 137, 74, 0.20) !important; font-weight: 700; }
+    .pivot-insumos tbody .col-total-area { background: rgba(45, 134, 89, 0.20) !important; font-weight: 700; }
+    .pivot-insumos tbody .col-total-dosis { background: rgba(178, 58, 58, 0.20) !important; font-weight: 700; }
+    .pivot-insumos tbody td.col-m-cant { border-left: 2px solid rgba(27, 67, 50, 0.18); }
+    .th-sub { font-weight: 500; opacity: 0.85; font-size: 10px; }
+
+    /* El toggle de métricas ahora regenera la tabla completa (ver renderMatrixIns) en vez de ocultar vía CSS,
+       para evitar desalineación entre encabezados agrupados (colspan) y columnas de datos. */
+
+    .metric-toggle-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 600; color: var(--text-main);
+      background: #ffffff; border: 1px solid rgba(163, 177, 198, 0.4);
+      border-radius: 6px 3px 6px 3px; padding: 3px 8px; height: 26px;
+      cursor: pointer; user-select: none;
+    }
+    .metric-toggle-chip input { cursor: pointer; }
+
+    /* Tabla centrada y responsiva */
+    .matrix-centered { max-width: 1700px; margin: 0 auto; width: 100%; }
+
+    .tree-toggle { cursor: pointer; user-select: none; display: inline-block; }
+    .tree-toggle:hover { opacity: 0.75; }
+    .tree-indent-0 { padding-left: 10px; }
+    .tree-indent-1 { padding-left: 26px; }
+    .tree-indent-2 { padding-left: 42px; }
+
+    /* TOOLBAR EXCLUSIVO */
+    .table-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+
+    #pivotGroupingOrder {
+      width: 240px;
+      font-weight: 600;
+      border-color: #2d6a4f !important;
+      color: #1b4332 !important;
+    }
+
+    /* AREA DE TABLA RE-ESTRUCTURADA CON CONTROL DE SCROLL EXCLUSIVO */
+    .table-responsive-organic {
+      overflow: auto; 
+      flex: 1;
+      min-height: 0;
+      border-radius: 12px;
+      padding: 1px;
+      background: #ffffff;
+      border: 1px solid rgba(82, 183, 136, 0.12);
+      box-shadow: var(--shadow-md);
+    }
+
+    table.pivot-gantt {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 11px;
+    }
+    
+    /* CONTROL LOGICO DE ENCABEZADOS FIJOS SIN ALTURAS RIGIDAS EN TR */
+    table.pivot-gantt thead th {
+      text-align: center;
+      border-right: 1px solid #e2e8f0;
+      position: sticky;
+      z-index: 10;
+      padding: 8px 10px;
+      vertical-align: middle;
+      /* Corrección de envoltura para que actividades largas no se corten */
+      white-space: normal !important; 
+      word-wrap: break-word;
+    }
+
+    /* Nivel 1: Fincas u Operaciones Maestras */
+    table.pivot-gantt thead tr.main-hdr-row th {
+      top: 0px;
+      background: #1b4332 !important; 
+      color: #ffffff !important;       
+      font-weight: 700;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    /* Nivel 2: Sub-ítems/Actividades (Se quita altura estricta y se da ancho mínimo seguro) */
+    table.pivot-gantt thead tr.sub-hdr-row th {
+      top: 33px; /* Re-ajustado dinámicamente según espacio de padding */
+      background: #f1f5f9 !important; 
+      color: #334155 !important;       
+      font-weight: 600;
+      border-bottom: 1px solid #cbd5e1;
+      min-width: 120px; /* Ancho mínimo para que quepa "Fungicida VIII" sin problemas */
+    }
+
+    /* Nivel 3: Totales de la columna */
+    table.pivot-gantt thead tr.total-hdr-row th {
+      top: 61px;
+      background: #edf7f2 !important; 
+      color: #1b4332 !important;
+      font-weight: 800;
+      border-bottom: 2px solid rgba(82, 183, 136, 0.3);
+    }
+    
+    /* COLUMNA STICKY DE FECHAS */
+    table.pivot-gantt th.col-fecha-sticky, 
+    table.pivot-gantt td.col-fecha-sticky {
+      position: sticky;
+      left: 0;
+      z-index: 15;
+      font-weight: 700;
+      text-align: center;
+      border-right: 2px solid rgba(82, 183, 136, 0.2) !important;
+      width: 95px;
+      min-width: 95px;
+    }
+    
+    table.pivot-gantt td.col-fecha-sticky {
+      background: #f8faf9 !important;
+    }
+
+    /* Z-Index superior en las intersecciones izquierdas fijas */
+    table.pivot-gantt thead tr.main-hdr-row th.col-fecha-sticky { z-index: 35; top: 0px; background: #1b4332 !important; color: #ffffff !important; }
+    table.pivot-gantt thead tr.sub-hdr-row th.col-fecha-sticky { z-index: 35; top: 33px; background: #f1f5f9 !important; color: #334155 !important; }
+    table.pivot-gantt thead tr.total-hdr-row th.col-fecha-sticky { z-index: 35; top: 61px; background: #edf7f2 !important; color: #1b4332 !important; }
+
+    table.pivot-gantt tbody td {
+      padding: 5px 6px;
+      border-bottom: 1px solid #f1f5f9;
+      border-right: 1px solid #f1f5f9;
+      text-align: center;
+    }
+    table.pivot-gantt tbody tr:nth-child(even) { background-color: #f8faf9; }
+
+    .cell-interactive { cursor: pointer; display: inline-block; width: 100%; }
+    
+    .mzn-badge-container {
+      background: rgba(82, 183, 136, 0.12);
+      color: #1b4332;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 700;
+      display: inline-block;
+      font-size: 11px;
+    }
+    tr:hover td { background-color: #eaeaea !important; }
+
+    #global-gantt-tooltip {
+      position: fixed; display: none; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(4px);
+      color: #ffffff; padding: 10px 12px; border-radius: 8px; box-shadow: var(--shadow-lg);
+      width: 320px; z-index: 999999; pointer-events: none; text-align: left;
+    }
+    .popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; }
+    .popup-block { margin-bottom: 6px; }
+    .popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 1px 0; }
+    .popup-item .p-label { color: #cbd5e1; }
+    .popup-item .p-val { font-weight: 600; color: #38bdf8; }
+
+    .loading-spinner { display: flex; align-items: center; justify-content: center; padding: 30px; }
+    .spinner-blob { width: 12px; height: 12px; background-color: #2d6a4f; border-radius: 50%; animation: morphBlob 1.4s infinite ease-in-out alternate; }
+    @keyframes morphBlob { 0% { transform: scale(0.8); } 100% { transform: scale(1.2); } }
+
+    /* MODAL DE DETALLE — CONSUMO DE INSUMOS */
+    .modal-overlay-ins {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(2px);
+      z-index: 999998;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay-ins.show { display: flex; }
+    .modal-box-ins {
+      background: #ffffff;
+      border-radius: 12px 4px 12px 4px;
+      width: min(820px, 92vw);
+      max-height: 82vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+    }
+    .modal-hdr-ins {
+      background: var(--grad-header);
+      color: #ffffff;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-shrink: 0;
+    }
+    .modal-title-ins { font-size: 14px; font-weight: 700; }
+    .modal-subtitle-ins { font-size: 11px; color: #b7e4c7; margin-top: 2px; }
+    .modal-close-ins {
+      background: rgba(255, 255, 255, 0.15);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      color: #ffffff;
+      width: 24px; height: 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      flex-shrink: 0;
+    }
+    .modal-close-ins:hover { background: rgba(255, 255, 255, 0.3); }
+    .modal-body-ins { overflow: auto; flex: 1; min-height: 0; }
+    .modal-table-ins { width: 100%; border-collapse: collapse; font-size: 11px; }
+    .modal-table-ins th {
+      position: sticky; top: 0;
+      background: #1b4332; color: #ffffff;
+      padding: 8px 10px; text-align: left;
+      font-weight: 700; white-space: nowrap;
+    }
+    .modal-table-ins td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
+    .modal-table-ins tbody tr:nth-child(even) td { background: #f8faf9; }
+    .modal-footer-ins {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 10px 16px; border-top: 1px solid #f1f5f9; flex-shrink: 0;
+    }
+  </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+
+  <div class="page-hdr-container d-flex align-items-center justify-content-end">
+    <div class="hdr-controls-wrapper">
+      <button class="btn-toggle-ribbon" onclick="toggleFilterRibbon()" id="btnToggleRibbon">
+        📐 Ocultar Filtros
+      </button>
+
+      <button class="btn-organic-action clear-all" id="btnGlobalClear" onclick="resetAllFilters()">
+        ↺ Limpiar Filtros
+      </button>
+
+      <div class="hdr-compaia-box">
+        <span class="hdr-compaia-icon">🏢</span>
+        <select id="filterHeaderCompaia" class="form-select hdr-select-compaia" onchange="onHeaderCompaiaChange()">
+          </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs-switch-container" id="tabsSwitch">
+    <button class="tab-switch-btn active" id="tabBtnActividades" onclick="switchTab('actividades')">📊 Avance de Actividades</button>
+    <button class="tab-switch-btn" id="tabBtnInsumos" onclick="switchTab('insumos')">🧪 Consumo de Insumos</button>
+  </div>
+
+  <div class="tab-panel" id="tabPanelActividades">
+
+  <div class="filters-inline-container" id="filterRibbon" onclick="closeDropdownsEvent(event)">
+    
+    <div class="filter-item-wrap" style="min-width: 125px; flex: 0.8;">
+      <div class="fg-label">Período:</div>
+      <select id="filterFechaTipo" class="form-select-native form-control w-100" onchange="toggleFechaInputs()">
+        <option value="all">Histórico</option>
+        <option value="este_mes" selected>Este Mes</option>
+        <option value="mes_pasado">Mes Pasado</option>
+        <option value="ano_curso">Año Curso</option>
+        <option value="personalizada">Rango...</option>
+      </select>
+    </div>
+
+    <div id="customDateInputs" style="display: none; width: 190px;">
+      <div class="d-flex gap-1 align-items-center" style="height: 28px;">
+        <input type="date" id="filterFechaDesde" class="form-control" onchange="onCustomDateChange()">
+        <span class="text-muted">al</span>
+        <input type="date" id="filterFechaHasta" class="form-control" onchange="onCustomDateChange()">
+      </div>
+    </div>
+
+    <!-- Sector ahora lo controla el panel de Filtros globales del shell INFOAGRO BI.
+         Se mantiene en el DOM (oculto) porque SELECCIONES/buildCascadingFilters siguen
+         usando este ID internamente. -->
+    <div class="filter-item-wrap" style="display:none;">
+      <div class="fg-label">Sector:</div>
+      <div class="multiselect-btn" id="btnSector" onclick="toggleDropdown(event, 'dropSector')">Todos</div>
+      <div class="multiselect-dropdown" id="dropSector"></div>
+      <button class="btn-reset-individual inactive" id="resetSector" onclick="resetSingleFilter('Sector')"> </button>
+    </div>
+
+    <div class="filter-item-wrap">
+      <div class="fg-label">Proveedor:</div>
+      <div class="multiselect-btn" id="btnProveedor" onclick="toggleDropdown(event, 'dropProveedor')">Todos</div>
+      <div class="multiselect-dropdown" id="dropProveedor"></div>
+      <button class="btn-reset-individual inactive" id="resetProveedor" onclick="resetSingleFilter('Proveedor')"> </button>
+    </div>
+
+    <!-- Ciclo y Finca ahora los controla el panel de Filtros globales del shell INFOAGRO BI.
+         Se mantienen en el DOM (ocultos) porque SELECCIONES/buildCascadingFilters siguen
+         usando estos IDs internamente. -->
+    <div class="filter-item-wrap" style="display:none;">
+      <div class="fg-label">Ciclo:</div>
+      <div class="multiselect-btn" id="btnCiclo" onclick="toggleDropdown(event, 'dropCiclo')">Todos</div>
+      <div class="multiselect-dropdown" id="dropCiclo"></div>
+      <button class="btn-reset-individual inactive" id="resetCiclo" onclick="resetSingleFilter('Ciclo')"> </button>
+    </div>
+
+    <div class="filter-item-wrap" style="display:none;">
+      <div class="fg-label">Finca:</div>
+      <div class="multiselect-btn" id="btnFinca" onclick="toggleDropdown(event, 'dropFinca')">Todas</div>
+      <div class="multiselect-dropdown" id="dropFinca"></div>
+      <button class="btn-reset-individual inactive" id="resetFinca" onclick="resetSingleFilter('Finca')"> </button>
+    </div>
+
+    <div class="filter-item-wrap">
+      <div class="fg-label">Actividad:</div>
+      <div class="multiselect-btn" id="btnActividad" onclick="toggleDropdown(event, 'dropActividad')">Todas</div>
+      <div class="multiselect-dropdown" id="dropActividad"></div>
+      <button class="btn-reset-individual inactive" id="resetActividad" onclick="resetSingleFilter('Actividad')"> </button>
+    </div>
+
+  </div>
+
+  <div class="table-toolbar">
+    <div class="d-flex align-items-center gap-2">
+      <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">Estructura de Datos Analizada:</span>
+      <select id="pivotGroupingOrder" class="form-select-native form-control" onchange="renderMatrix()">
+        <option value="finca_actividad">Finca  ➔  Actividad Realizada</option>
+        <option value="actividad_finca">Actividad Realizada  ➔  Finca</option>
+      </select>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div class="text-muted" style="font-size: 11px;" id="recordCounter">Procesando matriz...</div>
+      <button class="btn-organic-action excel" onclick="exportPivotToExcel()">⬇︎ Exportar Tabla Excel</button>
+    </div>
+  </div>
+
+  <div class="table-responsive-organic" id="matrixContainer">
+    <div class="loading-box text-center py-4">
+      <div class="loading-spinner"><div class="spinner-blob"></div></div>
+    </div>
+  </div>
+
+  </div>
+  <!-- /tabPanelActividades -->
+
+  <div class="tab-panel" id="tabPanelInsumos" style="display:none;">
+
+  <div class="filters-inline-container" id="filterRibbonIns" onclick="closeDropdownsEvent(event)">
+
+    <div class="filter-item-wrap" style="min-width: 125px; flex: 0.8;">
+      <div class="fg-label">Período:</div>
+      <select id="filterFechaTipoIns" class="form-select-native form-control w-100" onchange="toggleFechaInputsIns()">
+        <option value="all">Histórico</option>
+        <option value="este_mes" selected>Este Mes</option>
+        <option value="mes_pasado">Mes Pasado</option>
+        <option value="ano_curso">Año Curso</option>
+        <option value="personalizada">Rango...</option>
+      </select>
+    </div>
+
+    <div id="customDateInputsIns" style="display: none; width: 190px;">
+      <div class="d-flex gap-1 align-items-center" style="height: 28px;">
+        <input type="date" id="filterFechaDesdeIns" class="form-control" onchange="onCustomDateChangeIns()">
+        <span class="text-muted">al</span>
+        <input type="date" id="filterFechaHastaIns" class="form-control" onchange="onCustomDateChangeIns()">
+      </div>
+    </div>
+
+    <!-- Sector ahora lo controla el panel de Filtros globales del shell INFOAGRO BI.
+         Se mantiene en el DOM (oculto) porque SELECCIONES_INS/buildCascadingFiltersIns
+         siguen usando este ID internamente. -->
+    <div class="filter-item-wrap" style="display:none;">
+      <div class="fg-label">Sector:</div>
+      <div class="multiselect-btn" id="btnSectorIns" onclick="toggleDropdown(event, 'dropSectorIns')">Todos</div>
+      <div class="multiselect-dropdown" id="dropSectorIns"></div>
+      <button class="btn-reset-individual inactive" id="resetSectorIns" onclick="resetSingleFilterIns('sector')"> </button>
+    </div>
+
+    <div class="filter-item-wrap">
+      <div class="fg-label">Categoría Insumo:</div>
+      <div class="multiselect-btn" id="btnCategoriaIns" onclick="toggleDropdown(event, 'dropCategoriaIns')">Todas</div>
+      <div class="multiselect-dropdown" id="dropCategoriaIns"></div>
+      <button class="btn-reset-individual inactive" id="resetCategoriaIns" onclick="resetSingleFilterIns('categoria')"> </button>
+    </div>
+
+    <!-- Ciclo y Finca ahora los controla el panel de Filtros globales del shell INFOAGRO BI.
+         Se mantienen en el DOM (ocultos) porque SELECCIONES_INS/buildCascadingFiltersIns siguen
+         usando estos IDs internamente. -->
+    <div class="filter-item-wrap" style="display:none;">
+      <div class="fg-label">Ciclo:</div>
+      <div class="multiselect-btn" id="btnCicloIns" onclick="toggleDropdown(event, 'dropCicloIns')">Todos</div>
+      <div class="multiselect-dropdown" id="dropCicloIns"></div>
+      <button class="btn-reset-individual inactive" id="resetCicloIns" onclick="resetSingleFilterIns('ciclo')"> </button>
+    </div>
+
+    <div class="filter-item-wrap" style="display:none;">
+      <div class="fg-label">Finca:</div>
+      <div class="multiselect-btn" id="btnFincaIns" onclick="toggleDropdown(event, 'dropFincaIns')">Todas</div>
+      <div class="multiselect-dropdown" id="dropFincaIns"></div>
+      <button class="btn-reset-individual inactive" id="resetFincaIns" onclick="resetSingleFilterIns('finca')"> </button>
+    </div>
+
+    <div class="filter-item-wrap">
+      <div class="fg-label">Lote:</div>
+      <div class="multiselect-btn" id="btnLoteIns" onclick="toggleDropdown(event, 'dropLoteIns')">Todos</div>
+      <div class="multiselect-dropdown" id="dropLoteIns"></div>
+      <button class="btn-reset-individual inactive" id="resetLoteIns" onclick="resetSingleFilterIns('lote')"> </button>
+    </div>
+
+    <div class="filter-item-wrap">
+      <div class="fg-label">Producto:</div>
+      <div class="multiselect-btn" id="btnProductoIns" onclick="toggleDropdown(event, 'dropProductoIns')">Todos</div>
+      <div class="multiselect-dropdown" id="dropProductoIns"></div>
+      <button class="btn-reset-individual inactive" id="resetProductoIns" onclick="resetSingleFilterIns('producto')"> </button>
+    </div>
+
+  </div>
+
+  <div class="table-toolbar">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">Vista de Árbol:</span>
+      <button class="btn-organic-action" style="background: var(--grad-verde);" onclick="setTreeStateIns(true)">⊞ Expandir Todo</button>
+      <button class="btn-organic-action" style="background: var(--grad-naranja);" onclick="setTreeStateIns(false)">⊟ Colapsar Todo</button>
+      <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; margin-left: 8px;">Métricas:</span>
+      <label class="metric-toggle-chip"><input type="checkbox" checked onchange="toggleMetricIns('cant', this.checked)"> Cant. Gastada</label>
+      <label class="metric-toggle-chip"><input type="checkbox" checked onchange="toggleMetricIns('area', this.checked)"> Área Mzn</label>
+      <label class="metric-toggle-chip"><input type="checkbox" checked onchange="toggleMetricIns('dosis', this.checked)"> Dosis x Mzn</label>
+    </div>
+    <div class="d-flex align-items-center gap-3">
+      <div class="text-muted" style="font-size: 11px;" id="recordCounterIns">Procesando matriz...</div>
+      <button class="btn-organic-action excel" onclick="exportPivotToExcelIns()">⬇︎ Exportar Tabla Excel</button>
+    </div>
+  </div>
+
+  <div class="table-responsive-organic matrix-centered" id="matrixContainerIns">
+    <div class="loading-box text-center py-4">
+      <div class="loading-spinner"><div class="spinner-blob"></div></div>
+    </div>
+  </div>
+
+  </div>
+  <!-- /tabPanelInsumos -->
+
+</div>
+
+<div id="global-gantt-tooltip"></div>
+
+<div class="modal-overlay-ins" id="insumoModalOverlay" onclick="if(event.target === this) hideDetailModalIns()">
+  <div class="modal-box-ins">
+    <div class="modal-hdr-ins">
+      <div>
+        <div class="modal-title-ins" id="insumoModalTitle">Desglose de Consumo</div>
+        <div class="modal-subtitle-ins" id="insumoModalSubtitle"></div>
+      </div>
+      <button class="modal-close-ins" onclick="hideDetailModalIns()">✕</button>
+    </div>
+    <div class="modal-body-ins">
+      <table class="modal-table-ins" id="insumoModalTable"></table>
+    </div>
+    <div class="modal-footer-ins">
+      <span class="text-muted" id="insumoModalCount" style="font-size: 11px;"></span>
+      <button class="btn-organic-action excel" onclick="exportDetailToExcelIns()">⬇︎ Exportar Detalle a Excel</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+  let DB_RAW = [];
+  let TOOLTIP_REGISTRY = {};
+  let SELECCIONES = { proveedor: [], sector: [], ciclo: [], finca: [], actividad: [] };
+  let COMPAIA_SELECCIONADA = "Division Agricola Comasa"; 
+  const MESES_ABR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  // ===== ESTADO TAB "CONSUMO DE INSUMOS" =====
+  let DB_INSUMOS = [];
+  let TOOLTIP_REGISTRY_INS = {};
+  let SELECCIONES_INS = { sector: [], categoria: [], ciclo: [], finca: [], lote: [], producto: [] };
+  let COLLAPSED_CICLOS_INS = new Set();
+  let COLLAPSED_CATS_INS = new Set();
+  let LAST_TREE_KEYS_INS = { ciclos: [], cats: [] };
+
+  function escHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function switchTab(tab) {
+    const isAct = tab === 'actividades';
+    document.getElementById('tabPanelActividades').style.display = isAct ? 'flex' : 'none';
+    document.getElementById('tabPanelInsumos').style.display = isAct ? 'none' : 'flex';
+    document.getElementById('tabBtnActividades').classList.toggle('active', isAct);
+    document.getElementById('tabBtnInsumos').classList.toggle('active', !isAct);
+  }
+
+  function toggleFilterRibbon() {
+    const ribbon = document.getElementById("filterRibbon");
+    const btn = document.getElementById("btnToggleRibbon");
+    
+    if (ribbon.classList.contains("collapsed")) {
+      ribbon.classList.remove("collapsed");
+      btn.innerHTML = "📐 Ocultar Filtros";
+    } else {
+      closeAllDropdowns();
+      ribbon.classList.add("collapsed");
+      btn.innerHTML = "🔍 Mostrar Filtros";
+    }
+  }
+
+  function formatToCustomDate(dateStr) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    const yearShort = parts[0].substring(2); 
+    const monthIdx = parseInt(parts[1], 10) - 1;
+    return `${parts[2].padStart(2, "0")}-${MESES_ABR[monthIdx] || parts[1]}-${yearShort}`;
+  }
+
+  const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
+  const GITHUB_FALLBACK = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_AvancesActividades.json";
+
+  // GitHub primero (estable, sync programado) — Worker como respaldo en vivo si el JSON de GitHub falla
+  async function fetchGithubPrimero(githubUrl, workerUrl) {
+    try {
+      const r = await fetch(githubUrl + "?cache=" + Date.now());
+      if (r.ok) return await r.json();
+    } catch(e) {}
+    const r2 = await fetch(workerUrl);
+    return r2.json();
+  }
+
+  // Se conserva por compatibilidad — ya no se usa como ruta principal
+  async function fetchConFallback(workerUrl, githubUrl) {
+    return fetchGithubPrimero(githubUrl, workerUrl);
+  }
+
+  async function loadData() {
+    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_b660b";
+    try {
+      const json = await fetchGithubPrimero(GITHUB_FALLBACK, workerUrl);
+      
+      let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+      if(!records.length && json.records) records = json.records;
+
+      DB_RAW = records.map(r => {
+        const ordenArr = Array.isArray(r.x_orden_campo_id) ? r.x_orden_campo_id : [0, "—"];
+        return {
+          id: r.id,
+          orden: ordenArr[1] || "—",
+          compaia: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[1] : (r.x_studio_compaia || "Sin Compañía"),
+          proveedor: Array.isArray(r.x_studio_proveedor_del_servicio) ? r.x_studio_proveedor_del_servicio[1] : (r.x_studio_proveedor_del_servicio || "Sin Proveedor"),
+          sector: Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[1] : (r.x_studio_sector_1 || "Sin Sector"),
+          ciclo: Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : (r.x_studio_ciclo || "Sin Ciclo"),
+          finca: Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : (r.x_studio_finca || "Sin Finca"),
+          lote_agricola: Array.isArray(r.x_studio_lote_agricola) ? r.x_studio_lote_agricola[1] : (r.x_studio_lote_agricola || "Sin Lote"),
+          actividad: Array.isArray(r.x_studio_activiadad_realizada) ? r.x_studio_activiadad_realizada[1] : (r.x_studio_activiadad_realizada || "Sin Actividad"),
+          avance: Number(r.x_studio_avance_mzn || 0),
+          fecha: r.x_studio_fecha || "" 
+        };
+      }).filter(r => r.fecha !== "");
+
+      buildHeaderCompaiaOptions();
+      buildCascadingFilters();
+      renderMatrix();
+    } catch (e) {
+      document.getElementById("matrixContainer").innerHTML = `<div class="alert alert-danger text-center m-2">⚠️ Error de comunicación de datos.</div>`;
+    }
+  }
+
+  // ===== TERCER ORIGEN: COMBUSTIBLE =====
+  // Modelo: x_despacho_de_combusti_line_59f76 · Cantidad: x_studio_cantidad_ltrs (Litros)
+  // El Área Mzn no vive en este modelo — se busca por Ciclo+Finca+Actividad en el modelo de Avance (DB_RAW)
+  let DB_COMBUSTIBLE = [];
+  let AREA_INDEX = {};
+  const GITHUB_FALLBACK_COMB = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Combustible_Despachos.json";
+
+  function buildAreaIndex() {
+    AREA_INDEX = {};
+    DB_RAW.forEach(r => {
+      const key = `${r.compaia}|||${r.ciclo}|||${r.finca}|||${r.actividad}`;
+      AREA_INDEX[key] = (AREA_INDEX[key] || 0) + r.avance;
+    });
+  }
+
+  let COMBUSTIBLE_LOAD_ERROR = false;
+
+  async function loadDataCombustible(esReintento) {
+    const workerUrl = WORKER + "/query?base=info&model=x_despacho_de_combusti_line_59f76";
+    try {
+      const json = await fetchGithubPrimero(GITHUB_FALLBACK_COMB, workerUrl);
+      let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+      if(!records.length && json.records) records = json.records;
+
+      DB_COMBUSTIBLE = records.map(r => ({
+        id: r.id,
+        reporte: r.x_studio_reporte || "—",
+        compaia: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[1] : (r.x_studio_compaia || "Sin Compañía"),
+        sector: Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[1] : (r.x_studio_sector_1 || "Sin Sector"),
+        ciclo: Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : (r.x_studio_ciclo || "Sin Ciclo"),
+        finca: Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : (r.x_studio_finca || "Sin Finca"),
+        actividad: Array.isArray(r.x_studio_actividad) ? r.x_studio_actividad[1] : (r.x_studio_actividad || "Sin Actividad"),
+        cantidad: Number(r.x_studio_cantidad_ltrs || 0),
+        fecha: r.x_studio_fecha || ""
+      })).filter(r => r.fecha !== "");
+      COMBUSTIBLE_LOAD_ERROR = false;
+    } catch(e) {
+      if(!esReintento) {
+        await new Promise(res => setTimeout(res, 1200));
+        return loadDataCombustible(true);
+      }
+      console.error("Fallo cargando Combustible (x_despacho_de_combusti_line_59f76):", e);
+      DB_COMBUSTIBLE = [];
+      COMBUSTIBLE_LOAD_ERROR = true;
+    }
+  }
+
+  let INSUMOS_LOAD_ERROR = false;
+  const GITHUB_FALLBACK_INS = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Insumos_Consumo.json";
+
+  async function loadDataInsumos(esReintento) {
+    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_662d7";
+    try {
+      const json = await fetchGithubPrimero(GITHUB_FALLBACK_INS, workerUrl);
+
+      let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
+      if(!records.length && json.records) records = json.records;
+
+      DB_INSUMOS = records.map(r => {
+        const ordenArr = Array.isArray(r.x_orden_campo_id) ? r.x_orden_campo_id : [0, "—"];
+        const cantidadVal = Number(r.x_studio_cantidad_gastada || 0);
+        const areaVal = Number(r.x_studio_area_mzn_aplicada || 0);
+        // El export de GitHub no trae x_studio_dosis_x_mzn — se calcula Cantidad/Área como respaldo
+        const dosisVal = (r.x_studio_dosis_x_mzn != null) ? Number(r.x_studio_dosis_x_mzn) : (areaVal > 0 ? cantidadVal / areaVal : 0);
+        return {
+          id: r.id,
+          orden: ordenArr[1] || "—",
+          compaia: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[1] : (r.x_studio_compaia || "Sin Compañía"),
+          sector: Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[1] : (r.x_studio_sector_1 || "Sin Sector"),
+          ciclo: Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : (r.x_studio_ciclo || "Sin Ciclo"),
+          finca: Array.isArray(r.x_studio_keyfincainsumo) ? r.x_studio_keyfincainsumo[1] : (r.x_studio_keyfincainsumo || "Sin Finca"),
+          lote: Array.isArray(r.x_studio_lote_agricola) ? r.x_studio_lote_agricola[1] : (r.x_studio_lote_agricola || "Sin Lote"),
+          producto: Array.isArray(r.x_studio_insumo_utilizado) ? r.x_studio_insumo_utilizado[1] : (r.x_studio_insumo_utilizado || "Sin Producto"),
+          categoria: r.x_studio_categoria_insumo || "Sin Categoría",
+          actividad: Array.isArray(r.x_studio_actividad_realizada) ? r.x_studio_actividad_realizada[1] : (r.x_studio_actividad_realizada || "Sin Actividad"),
+          um: r.x_studio_um || "",
+          cantidad: cantidadVal,
+          area: areaVal,
+          dosis: dosisVal,
+          fecha: r.x_studio_fecha || ""
+        };
+      }).filter(r => r.fecha !== "");
+
+      INSUMOS_LOAD_ERROR = false;
+      buildHeaderCompaiaOptions();
+      buildCascadingFiltersIns();
+      renderMatrixIns();
+    } catch (e) {
+      if(!esReintento) {
+        // Reintento único automático — cubre fallos transitorios de red/worker
+        await new Promise(res => setTimeout(res, 1200));
+        return loadDataInsumos(true);
+      }
+      console.error("Fallo cargando Insumos (x_orden_campo_line_662d7):", e);
+      INSUMOS_LOAD_ERROR = true;
+      renderMatrixIns();
+    }
+  }
+
+  function buildHeaderCompaiaOptions() {
+    const select = document.getElementById("filterHeaderCompaia");
+    const compañiasUnicas = [...new Set([...DB_RAW.map(r => r.compaia), ...DB_INSUMOS.map(r => r.compaia)])].filter(Boolean).sort();
+    
+    select.innerHTML = "";
+    compañiasUnicas.forEach(comp => {
+      const option = document.createElement("option");
+      option.value = comp;
+      option.textContent = comp;
+      if (comp === COMPAIA_SELECCIONADA) option.selected = true;
+      select.appendChild(option);
+    });
+
+    if (select.selectedIndex === -1 && select.options.length > 0) {
+      select.options[0].selected = true;
+      COMPAIA_SELECCIONADA = select.value;
+    }
+  }
+
+  function onHeaderCompaiaChange() {
+    COMPAIA_SELECCIONADA = document.getElementById("filterHeaderCompaia").value;
+    buildCascadingFilters();
+    renderMatrix();
+    checkGlobalClearVisibility();
+    buildCascadingFiltersIns();
+    renderMatrixIns();
+  }
+
+  function getOptionsFor(prop) {
+    const fFechaTipo = document.getElementById("filterFechaTipo").value;
+    const hoy = new Date();
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth();
+
+    const dataFiltered = DB_RAW.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+
+      if(fFechaTipo !== "all" && r.fecha) {
+        const parts = r.fecha.split("-");
+        if(parts.length === 3) {
+          const rYear = parseInt(parts[0], 10);
+          const rMonth = parseInt(parts[1], 10) - 1; 
+          if(fFechaTipo === "este_mes") {
+            if(rYear !== curYear || rMonth !== curMonth) return false;
+          } else if(fFechaTipo === "mes_pasado") {
+            let targetMonth = curMonth - 1; let targetYear = curYear;
+            if(targetMonth < 0) { targetMonth = 11; targetYear--; }
+            if(rYear !== targetYear || rMonth !== targetMonth) return false;
+          } else if(fFechaTipo === "ano_curso") {
+            if(rYear !== curYear) return false;
+          } else if(fFechaTipo === "personalizada") {
+            const desde = document.getElementById("filterFechaDesde").value;
+            const hasta = document.getElementById("filterFechaHasta").value;
+            if(desde && r.fecha < desde) return false;
+            if(hasta && r.fecha > hasta) return false;
+          }
+        }
+      }
+
+      for (let targetFilterKey in SELECCIONES) {
+        if (targetFilterKey !== prop && SELECCIONES[targetFilterKey].length > 0 && !SELECCIONES[targetFilterKey].includes(r[targetFilterKey])) {
+          return false;
+        }
+      }
+      return true;
+    });
+    return [...new Set(dataFiltered.map(r => r[prop]))].filter(Boolean).sort();
+  }
+
+  function buildCascadingFilters() {
+    updateDropdownUI("dropProveedor", "btnProveedor", "proveedor");
+    updateDropdownUI("dropSector", "btnSector", "sector");
+    updateDropdownUI("dropCiclo", "btnCiclo", "ciclo");
+    updateDropdownUI("dropFinca", "btnFinca", "finca");
+    updateDropdownUI("dropActividad", "btnActividad", "actividad");
+  }
+
+  function updateDropdownUI(idDrop, idBtn, prop) {
+    const dropdown = document.getElementById(idDrop);
+    const btn = document.getElementById(idBtn);
+    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
+    const validOptions = getOptionsFor(prop);
+    const prevChecked = SELECCIONES[prop];
+
+    dropdown.innerHTML = "";
+    validOptions.forEach(val => {
+      const isChecked = prevChecked.includes(val);
+      const item = document.createElement("div");
+      item.className = "multiselect-option";
+      item.innerHTML = `<input type="checkbox" data-prop="${prop}" value="${val}" ${isChecked ? 'checked' : ''}> <span style="margin-left:4px;">${val}</span>`;
+      
+      item.addEventListener("click", (e) => {
+        if(e.target.tagName !== "INPUT") {
+          const cb = item.querySelector("input");
+          cb.checked = !cb.checked;
+          handleCheckboxChange(cb, idBtn, prop);
+        }
+      });
+      
+      item.querySelector("input").addEventListener("change", (e) => {
+        handleCheckboxChange(e.target, idBtn, prop);
+      });
+      dropdown.appendChild(item);
+    });
+
+    updateButtonLabels(btn, resetBtn, prevChecked, prop);
+  }
+
+  function updateButtonLabels(btn, resetBtn, checkedList, prop) {
+    if (checkedList.length === 0) {
+      btn.textContent = (prop === "actividad" || prop === "finca" || prop === "categoria") ? "Todas" : "Todos";
+      resetBtn.className = "btn-reset-individual inactive";
+      resetBtn.innerHTML = " ";
+    } else {
+      if (checkedList.length === 1) btn.textContent = checkedList[0];
+      else btn.textContent = `${checkedList.length} Sel.`;
+      
+      resetBtn.className = "btn-reset-individual active";
+      resetBtn.innerHTML = "🧹";
+    }
+  }
+
+  function handleCheckboxChange(cb, idBtn, prop) {
+    const val = cb.value;
+    if(cb.checked) {
+      if(!SELECCIONES[prop].includes(val)) SELECCIONES[prop].push(val);
+    } else {
+      SELECCIONES[prop] = SELECCIONES[prop].filter(v => v !== val);
+    }
+
+    renderMatrix();
+    checkGlobalClearVisibility();
+
+    const btn = document.getElementById(idBtn);
+    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
+    updateButtonLabels(btn, resetBtn, SELECCIONES[prop], prop);
+  }
+
+  // ===== FILTROS EN CASCADA — TAB INSUMOS =====
+
+  function toggleFechaInputsIns() {
+    const tipo = document.getElementById("filterFechaTipoIns").value;
+    document.getElementById("customDateInputsIns").style.display = (tipo === "personalizada") ? "block" : "none";
+    buildCascadingFiltersIns();
+    renderMatrixIns();
+  }
+
+  function onCustomDateChangeIns() {
+    buildCascadingFiltersIns();
+    renderMatrixIns();
+  }
+
+  function resetSingleFilterIns(prop) {
+    SELECCIONES_INS[prop] = [];
+    buildCascadingFiltersIns();
+    renderMatrixIns();
+  }
+
+  function getOptionsForIns(prop) {
+    const fFechaTipo = document.getElementById("filterFechaTipoIns").value;
+    const hoy = new Date();
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth();
+
+    const dataFiltered = DB_INSUMOS.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+
+      if(fFechaTipo !== "all" && r.fecha) {
+        const parts = r.fecha.split("-");
+        if(parts.length === 3) {
+          const rYear = parseInt(parts[0], 10);
+          const rMonth = parseInt(parts[1], 10) - 1;
+          if(fFechaTipo === "este_mes") {
+            if(rYear !== curYear || rMonth !== curMonth) return false;
+          } else if(fFechaTipo === "mes_pasado") {
+            let targetMonth = curMonth - 1; let targetYear = curYear;
+            if(targetMonth < 0) { targetMonth = 11; targetYear--; }
+            if(rYear !== targetYear || rMonth !== targetMonth) return false;
+          } else if(fFechaTipo === "ano_curso") {
+            if(rYear !== curYear) return false;
+          } else if(fFechaTipo === "personalizada") {
+            const desde = document.getElementById("filterFechaDesdeIns").value;
+            const hasta = document.getElementById("filterFechaHastaIns").value;
+            if(desde && r.fecha < desde) return false;
+            if(hasta && r.fecha > hasta) return false;
+          }
+        }
+      }
+
+      for (let targetFilterKey in SELECCIONES_INS) {
+        if (targetFilterKey !== prop && SELECCIONES_INS[targetFilterKey].length > 0 && !SELECCIONES_INS[targetFilterKey].includes(r[targetFilterKey])) {
+          return false;
+        }
+      }
+      return true;
+    });
+    return [...new Set(dataFiltered.map(r => r[prop]))].filter(Boolean).sort();
+  }
+
+  function buildCascadingFiltersIns() {
+    updateDropdownUIIns("dropSectorIns", "btnSectorIns", "sector");
+    updateDropdownUIIns("dropCategoriaIns", "btnCategoriaIns", "categoria");
+    updateDropdownUIIns("dropCicloIns", "btnCicloIns", "ciclo");
+    updateDropdownUIIns("dropFincaIns", "btnFincaIns", "finca");
+    updateDropdownUIIns("dropLoteIns", "btnLoteIns", "lote");
+    updateDropdownUIIns("dropProductoIns", "btnProductoIns", "producto");
+  }
+
+  function updateDropdownUIIns(idDrop, idBtn, prop) {
+    const dropdown = document.getElementById(idDrop);
+    const btn = document.getElementById(idBtn);
+    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
+    const validOptions = getOptionsForIns(prop);
+    const prevChecked = SELECCIONES_INS[prop];
+
+    dropdown.innerHTML = "";
+    validOptions.forEach(val => {
+      const isChecked = prevChecked.includes(val);
+      const item = document.createElement("div");
+      item.className = "multiselect-option";
+      item.innerHTML = `<input type="checkbox" data-prop="${prop}" value="${val}" ${isChecked ? 'checked' : ''}> <span style="margin-left:4px;">${val}</span>`;
+
+      item.addEventListener("click", (e) => {
+        if(e.target.tagName !== "INPUT") {
+          const cb = item.querySelector("input");
+          cb.checked = !cb.checked;
+          handleCheckboxChangeIns(cb, idBtn, prop);
+        }
+      });
+
+      item.querySelector("input").addEventListener("change", (e) => {
+        handleCheckboxChangeIns(e.target, idBtn, prop);
+      });
+      dropdown.appendChild(item);
+    });
+
+    updateButtonLabels(btn, resetBtn, prevChecked, prop);
+  }
+
+  function handleCheckboxChangeIns(cb, idBtn, prop) {
+    const val = cb.value;
+    if(cb.checked) {
+      if(!SELECCIONES_INS[prop].includes(val)) SELECCIONES_INS[prop].push(val);
+    } else {
+      SELECCIONES_INS[prop] = SELECCIONES_INS[prop].filter(v => v !== val);
+    }
+
+    renderMatrixIns();
+
+    const btn = document.getElementById(idBtn);
+    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
+    updateButtonLabels(btn, resetBtn, SELECCIONES_INS[prop], prop);
+  }
+
+  // ===== RENDER MATRIZ — TAB INSUMOS (árbol Ciclo > Categoría > Producto x Finca) =====
+
+  function toggleCicloIns(ciclo) {
+    if (COLLAPSED_CICLOS_INS.has(ciclo)) COLLAPSED_CICLOS_INS.delete(ciclo);
+    else COLLAPSED_CICLOS_INS.add(ciclo);
+    renderMatrixIns();
+  }
+
+  function toggleCategoriaIns(key) {
+    if (COLLAPSED_CATS_INS.has(key)) COLLAPSED_CATS_INS.delete(key);
+    else COLLAPSED_CATS_INS.add(key);
+    renderMatrixIns();
+  }
+
+  function setTreeStateIns(expand) {
+    if (expand) {
+      COLLAPSED_CICLOS_INS.clear();
+      COLLAPSED_CATS_INS.clear();
+    } else {
+      COLLAPSED_CICLOS_INS = new Set(LAST_TREE_KEYS_INS.ciclos);
+      COLLAPSED_CATS_INS = new Set(LAST_TREE_KEYS_INS.cats);
+    }
+    renderMatrixIns();
+  }
+
+  let METRICAS_VISIBLES_INS = { cant: true, area: true, dosis: true };
+
+  function toggleMetricIns(metric, visible) {
+    // Evita quedarse sin ninguna métrica visible (tabla vacía / colspan=0)
+    const activasSinEsta = Object.keys(METRICAS_VISIBLES_INS).filter(m => m !== metric && METRICAS_VISIBLES_INS[m]);
+    if(!visible && activasSinEsta.length === 0) {
+      document.querySelector(`.metric-toggle-chip input[onchange*="'${metric}'"]`).checked = true;
+      return;
+    }
+    METRICAS_VISIBLES_INS[metric] = visible;
+    renderMatrixIns();
+  }
+
+  function avgArr(arr) {
+    return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  }
+
+  function renderMatrixIns() {
+    const fFechaTipo = document.getElementById("filterFechaTipoIns").value;
+    const hoy = new Date();
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth();
+
+    TOOLTIP_REGISTRY_INS = {};
+
+    function pasaFecha(r) {
+      if(fFechaTipo === "all" || !r.fecha) return true;
+      const parts = r.fecha.split("-");
+      if(parts.length !== 3) return true;
+      const rYear = parseInt(parts[0], 10);
+      const rMonth = parseInt(parts[1], 10) - 1;
+      if(fFechaTipo === "este_mes") return (rYear === curYear && rMonth === curMonth);
+      if(fFechaTipo === "mes_pasado") {
+        let targetMonth = curMonth - 1; let targetYear = curYear;
+        if(targetMonth < 0) { targetMonth = 11; targetYear--; }
+        return (rYear === targetYear && rMonth === targetMonth);
+      }
+      if(fFechaTipo === "ano_curso") return rYear === curYear;
+      if(fFechaTipo === "personalizada") {
+        const desde = document.getElementById("filterFechaDesdeIns").value;
+        const hasta = document.getElementById("filterFechaHastaIns").value;
+        if(desde && r.fecha < desde) return false;
+        if(hasta && r.fecha > hasta) return false;
+        return true;
+      }
+      return true;
+    }
+
+    const filtered = DB_INSUMOS.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+      for (let prop in SELECCIONES_INS) {
+        if (SELECCIONES_INS[prop].length > 0 && !SELECCIONES_INS[prop].includes(r[prop])) return false;
+      }
+      return pasaFecha(r);
+    });
+
+    // Combustible respeta Sector / Ciclo / Finca. Si el usuario filtra por Categoría, Producto o Lote
+    // (filtros propios de Insumos, sin sentido para Combustible), se oculta el bloque por completo
+    // en vez de mostrarlo sin filtrar — eso es lo que generaba el comportamiento "errático".
+    const filtrosInsumoEspecificosActivos = SELECCIONES_INS.categoria.length > 0 || SELECCIONES_INS.producto.length > 0 || SELECCIONES_INS.lote.length > 0;
+    const filteredCombustible = filtrosInsumoEspecificosActivos ? [] : DB_COMBUSTIBLE.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+      if (SELECCIONES_INS.sector.length > 0 && !SELECCIONES_INS.sector.includes(r.sector)) return false;
+      if (SELECCIONES_INS.ciclo.length > 0 && !SELECCIONES_INS.ciclo.includes(r.ciclo)) return false;
+      if (SELECCIONES_INS.finca.length > 0 && !SELECCIONES_INS.finca.includes(r.finca)) return false;
+      return pasaFecha(r);
+    });
+
+    document.getElementById("recordCounterIns").textContent = `${filtered.length + filteredCombustible.length} movimientos coincidentes`;
+
+    const container = document.getElementById("matrixContainerIns");
+
+    let warningHtml = "";
+    if(INSUMOS_LOAD_ERROR) {
+      warningHtml += `<div class="alert alert-danger d-flex justify-content-between align-items-center m-2" style="font-size:12px;">
+        <span>⚠️ No se pudo cargar <strong>Consumo de Insumos</strong> (fallo de red/worker). La tabla de abajo puede estar incompleta.</span>
+        <button class="btn-organic-action" style="background:var(--grad-naranja);" onclick="INSUMOS_LOAD_ERROR=false; loadDataInsumos();">↻ Reintentar</button>
+      </div>`;
+    }
+    if(COMBUSTIBLE_LOAD_ERROR) {
+      warningHtml += `<div class="alert alert-danger d-flex justify-content-between align-items-center m-2" style="font-size:12px;">
+        <span>⚠️ No se pudo cargar <strong>Combustible</strong> (fallo de red/worker). La tabla de abajo puede estar incompleta.</span>
+        <button class="btn-organic-action" style="background:var(--grad-naranja);" onclick="COMBUSTIBLE_LOAD_ERROR=false; loadDataCombustible().then(renderMatrixIns);">↻ Reintentar</button>
+      </div>`;
+    }
+    if(filtrosInsumoEspecificosActivos && DB_COMBUSTIBLE.length) {
+      warningHtml += `<div class="alert alert-warning m-2" style="font-size:12px;">
+        ℹ️ Ocultando <strong>Combustible</strong> mientras haya un filtro de Categoría, Producto o Lote activo (no aplican a ese origen). Límpialos para volver a verlo.
+      </div>`;
+    }
+
+    if(!filtered.length && !filteredCombustible.length) {
+      container.innerHTML = warningHtml + `<div class="p-4 text-center text-muted fw-medium">Sin datos coincidentes para los criterios seleccionados.</div>`;
+      return;
+    }
+
+    const fincas = [...new Set([...filtered.map(r => r.finca), ...filteredCombustible.map(r => r.finca)])].filter(Boolean).sort();
+
+    // Construir árbol: ciclo -> categoria -> producto -> { um, fincaData:{}, totalCant, totalArea, allDosis:[] }
+    const tree = {};
+    const catTotals = {};
+
+    function addTooltip(cellKey, item) {
+      if(!TOOLTIP_REGISTRY_INS[cellKey]) TOOLTIP_REGISTRY_INS[cellKey] = [];
+      TOOLTIP_REGISTRY_INS[cellKey].push(item);
+    }
+
+    filtered.forEach(r => {
+      const ciclo = r.ciclo || "Sin Ciclo";
+      const cat = r.categoria || "Sin Categoría";
+      const prod = r.producto || "Sin Producto";
+      if(!tree[ciclo]) tree[ciclo] = {};
+      if(!tree[ciclo][cat]) tree[ciclo][cat] = {};
+      if(!tree[ciclo][cat][prod]) tree[ciclo][cat][prod] = { um: r.um, fincaData: {}, totalCant: 0, totalArea: 0, allDosis: [] };
+      const node = tree[ciclo][cat][prod];
+      if(!node.fincaData[r.finca]) node.fincaData[r.finca] = { cant: 0, area: 0, dosisVals: [] };
+      node.fincaData[r.finca].cant += r.cantidad;
+      node.fincaData[r.finca].area += r.area;
+      if(r.dosis) node.fincaData[r.finca].dosisVals.push(r.dosis);
+      node.totalCant += r.cantidad;
+      node.totalArea += r.area;
+      if(r.dosis) node.allDosis.push(r.dosis);
+
+      const item = { orden: r.orden, actividad: r.actividad, lote: r.lote, sector: r.sector, finca: r.finca, cantidad: r.cantidad, area: r.area, dosis: r.dosis, um: r.um };
+      addTooltip(`${ciclo}|||${cat}|||${prod}|||${r.finca}`, item);
+      addTooltip(`${ciclo}|||${cat}|||${prod}|||__TOTAL__`, item);
+
+      // Rollup de categoría — usado para la fila de Subtotal (ej. Semilla, donde varios SKU son equivalentes)
+      const catKey = `${ciclo}|||${cat}`;
+      if(!catTotals[catKey]) catTotals[catKey] = { fincaData: {}, totalCant: 0, totalArea: 0, allDosis: [] };
+      const ct = catTotals[catKey];
+      if(!ct.fincaData[r.finca]) ct.fincaData[r.finca] = { cant: 0, area: 0, dosisVals: [] };
+      ct.fincaData[r.finca].cant += r.cantidad;
+      ct.fincaData[r.finca].area += r.area;
+      if(r.dosis) ct.fincaData[r.finca].dosisVals.push(r.dosis);
+      ct.totalCant += r.cantidad;
+      ct.totalArea += r.area;
+      if(r.dosis) ct.allDosis.push(r.dosis);
+
+      addTooltip(`${ciclo}|||${cat}|||__SUBTOTAL__|||${r.finca}`, item);
+      addTooltip(`${ciclo}|||${cat}|||__SUBTOTAL__|||__TOTAL__`, item);
+    });
+
+    // ----- Combustible: Cantidad real (Litros); Área tomada del modelo de Avance por Ciclo+Finca+Actividad -----
+    const CAT_COMBUSTIBLE = "Combustible";
+    const fincasVistasPorProd = {}; // evita sumar el Área más de una vez por finca (viene de un índice, no de un acumulado)
+    filteredCombustible.forEach(r => {
+      const ciclo = r.ciclo || "Sin Ciclo";
+      const cat = CAT_COMBUSTIBLE;
+      const prod = r.actividad || "Sin Actividad";
+      if(!tree[ciclo]) tree[ciclo] = {};
+      if(!tree[ciclo][cat]) tree[ciclo][cat] = {};
+      if(!tree[ciclo][cat][prod]) tree[ciclo][cat][prod] = { um: "Litros", fincaData: {}, totalCant: 0, totalArea: 0, allDosis: [] };
+      const node = tree[ciclo][cat][prod];
+      const areaKey = `${r.compaia}|||${ciclo}|||${r.finca}|||${prod}`;
+      const areaVal = AREA_INDEX[areaKey] || 0;
+      const vistoKey = `${ciclo}|||${prod}|||${r.finca}`;
+
+      if(!node.fincaData[r.finca]) {
+        node.fincaData[r.finca] = { cant: 0, area: 0, dosisVals: [] };
+      }
+      if(!fincasVistasPorProd[vistoKey]) {
+        fincasVistasPorProd[vistoKey] = true;
+        node.fincaData[r.finca].area = areaVal;
+        node.totalArea += areaVal;
+      }
+      node.fincaData[r.finca].cant += r.cantidad;
+      node.totalCant += r.cantidad;
+
+      const item = { orden: r.reporte, actividad: prod, lote: "—", sector: r.sector, finca: r.finca, cantidad: r.cantidad, area: areaVal, dosis: 0, um: "Litros" };
+      addTooltip(`${ciclo}|||${cat}|||${prod}|||${r.finca}`, item);
+      addTooltip(`${ciclo}|||${cat}|||${prod}|||__TOTAL__`, item);
+    });
+    // Dosis de Combustible = Cantidad / Área (no hay campo propio como en Insumos)
+    Object.keys(tree).forEach(ciclo => {
+      if(!tree[ciclo][CAT_COMBUSTIBLE]) return;
+      Object.keys(tree[ciclo][CAT_COMBUSTIBLE]).forEach(prod => {
+        const node = tree[ciclo][CAT_COMBUSTIBLE][prod];
+        Object.keys(node.fincaData).forEach(f => {
+          const fd = node.fincaData[f];
+          fd.dosisVals = fd.area > 0 ? [fd.cant / fd.area] : [];
+        });
+        node.allDosis = node.totalArea > 0 ? [node.totalCant / node.totalArea] : [];
+      });
+    });
+
+    const ciclosKeys = Object.keys(tree).sort();
+    LAST_TREE_KEYS_INS = { ciclos: [...ciclosKeys], cats: [] };
+    ciclosKeys.forEach(ciclo => {
+      Object.keys(tree[ciclo]).sort().forEach(cat => {
+        LAST_TREE_KEYS_INS.cats.push(`${ciclo}|||${cat}`);
+      });
+    });
+
+    // Categorías que agrupan SKUs equivalentes y por eso llevan fila de Subtotal
+    const CATEGORIAS_CON_SUBTOTAL = ["semilla"];
+    // Combustible se dibuja siempre al final de cada Ciclo, con una fila separadora antes
+    function ordenarCategorias(ciclo) {
+      const cats = Object.keys(tree[ciclo]);
+      const normales = cats.filter(c => c !== CAT_COMBUSTIBLE).sort();
+      const conCombustible = cats.includes(CAT_COMBUSTIBLE) ? [...normales, CAT_COMBUSTIBLE] : normales;
+      return conCombustible;
+    }
+
+    const METRIC_DEFS = [
+      { key: "cant", headerShort: "Cant.<br>Gastada", totalLabel: "Total<br>Cant. Gastada", cls: "col-m-cant", totalCls: "col-total-cant" },
+      { key: "area", headerShort: "Área Mzn<br>aplicada", totalLabel: "Total<br>Área Mzn aplicada", cls: "col-m-area", totalCls: "col-total-area" },
+      { key: "dosis", headerShort: "Dosis x Mzn", totalLabel: "Total<br>Dosis x Mzn", cls: "col-m-dosis", totalCls: "col-total-dosis" }
+    ];
+    const metricasActivas = METRIC_DEFS.filter(m => METRICAS_VISIBLES_INS[m.key]);
+    const nMetricas = metricasActivas.length;
+
+    let html = `<table class="pivot-gantt pivot-insumos"><thead>`;
+    html += `<tr class="main-hdr-row">`;
+    html += `<th class="col-tree-sticky c1" rowspan="2">Ciclo</th>`;
+    html += `<th class="col-tree-sticky c2" rowspan="2">Categoría Insumo</th>`;
+    html += `<th class="col-tree-sticky c3" rowspan="2">Producto Utilizado</th>`;
+    html += `<th class="col-tree-sticky c4" rowspan="2">UM</th>`;
+    fincas.forEach(f => {
+      html += `<th colspan="${nMetricas}" class="finca-group-hdr">${escHtml(f)}</th>`;
+    });
+    metricasActivas.forEach(m => {
+      html += `<th class="${m.cls} ${m.totalCls}" rowspan="2">${m.totalLabel}</th>`;
+    });
+    html += `</tr><tr class="sub-hdr-row">`;
+    fincas.forEach(() => {
+      metricasActivas.forEach(m => {
+        html += `<th class="${m.cls}">${m.headerShort}</th>`;
+      });
+    });
+    html += `</tr></thead><tbody>`;
+
+    function celda(popupIdBase, cant, area, dosisVals, isTotal) {
+      const vals = { cant, area, dosis: avgArr(dosisVals) };
+      const isBlank = (cant === 0 && area === 0 && !dosisVals.length);
+      const safeId = escHtml(popupIdBase);
+      let out = "";
+      metricasActivas.forEach(m => {
+        const cls = isTotal ? `${m.cls} ${m.totalCls}` : m.cls;
+        if(isBlank) {
+          out += `<td class="${cls}" style="color:#cbd5e1;">-</td>`;
+        } else {
+          out += `<td class="${cls}"><div class="cell-interactive" data-popup-id="${safeId}"><div class="mzn-badge-container">${vals[m.key].toFixed(2)}</div></div></td>`;
+        }
+      });
+      return out;
+    }
+
+    function metricasDe(ciclo, cat, prodOSubtotal, node, esSubtotal) {
+      const prefix = esSubtotal ? `${ciclo}|||${cat}|||__SUBTOTAL__` : `${ciclo}|||${cat}|||${prodOSubtotal}`;
+      let out = "";
+      fincas.forEach(f => {
+        const fd = node.fincaData[f];
+        out += fd ? celda(`${prefix}|||${f}`, fd.cant, fd.area, fd.dosisVals, false) : celda("", 0, 0, [], false);
+      });
+      out += celda(`${prefix}|||__TOTAL__`, node.totalCant, node.totalArea, node.allDosis, true);
+      return out;
+    }
+
+    function metricasBlancas() {
+      let out = "";
+      fincas.forEach(() => { out += celda("", 0, 0, [], false); });
+      out += celda("", 0, 0, [], true);
+      return out;
+    }
+
+    ciclosKeys.forEach(ciclo => {
+      const cicloCollapsed = COLLAPSED_CICLOS_INS.has(ciclo);
+
+      if(cicloCollapsed) {
+        html += `<tr class="tree-row-ciclo">
+                   <td class="col-tree-sticky c1"><span class="tree-toggle tree-toggle-ciclo" data-ciclo="${escHtml(ciclo)}">▸ ${escHtml(ciclo)}</span></td>
+                   <td class="col-tree-sticky c2"></td>
+                   <td class="col-tree-sticky c3" colspan="2">(colapsado)</td>
+                   ${metricasBlancas()}
+                 </tr>`;
+        return;
+      }
+
+      // ----- Prepaso: construir filas del bloque de Insumos (para calcular rowspan del Ciclo) -----
+      const catsOrdenadas = ordenarCategorias(ciclo).filter(c => c !== CAT_COMBUSTIBLE);
+      const filasInsumos = [];
+      catsOrdenadas.forEach(cat => {
+        const catKey = `${ciclo}|||${cat}`;
+        const catCollapsed = COLLAPSED_CATS_INS.has(catKey);
+        const hasSubtotal = CATEGORIAS_CON_SUBTOTAL.includes(cat.toLowerCase());
+        if(catCollapsed) {
+          filasInsumos.push({ type: "cat-collapsed", cat, catKey, hasSubtotal });
+          return;
+        }
+        const prods = Object.keys(tree[ciclo][cat]).sort();
+        const catRowspan = prods.length + (hasSubtotal ? 1 : 0);
+        prods.forEach((prod, idx) => {
+          filasInsumos.push({ type: "leaf", cat, catKey, prod, node: tree[ciclo][cat][prod], firstOfCat: idx === 0, catRowspan });
+        });
+        if(hasSubtotal && catTotals[catKey]) {
+          filasInsumos.push({ type: "subtotal", cat, catKey, node: catTotals[catKey] });
+        }
+      });
+
+      const cicloRowspan = Math.max(filasInsumos.length, 1); // ya no se usa para rowspan, pero se mantiene por si acaso
+
+      filasInsumos.forEach((row, i) => {
+        html += `<tr class="tree-row-${row.type === 'leaf' ? 'leaf' : (row.type === 'subtotal' ? 'subtotal' : 'categoria')}">`;
+        // Ciclo se repite en cada fila (sin rowspan) igual que en el bloque de Combustible
+        html += `<td class="col-tree-sticky c1">${escHtml(ciclo)}</td>`;
+        if(row.type === "cat-collapsed") {
+          html += `<td class="col-tree-sticky c2"><span class="tree-toggle tree-toggle-cat" data-key="${escHtml(row.catKey)}">▸ ${escHtml(row.cat)}</span></td>`;
+          html += `<td class="col-tree-sticky c3" colspan="2">(colapsado)</td>`;
+          if(row.hasSubtotal && catTotals[row.catKey]) {
+            html += metricasDe(ciclo, row.cat, null, catTotals[row.catKey], true);
+          } else {
+            html += metricasBlancas();
+          }
+        } else if(row.type === "leaf") {
+          // Categoría se repite en cada fila de hoja (sin rowspan)
+          const catToggle = row.firstOfCat
+            ? `<span class="tree-toggle tree-toggle-cat" data-key="${escHtml(row.catKey)}">▾ ${escHtml(row.cat)}</span>`
+            : escHtml(row.cat);
+          html += `<td class="col-tree-sticky c2">${catToggle}</td>`;
+          html += `<td class="col-tree-sticky c3">${escHtml(row.prod)}</td><td class="col-tree-sticky c4">${escHtml(row.node.um)}</td>`;
+          html += metricasDe(ciclo, row.cat, row.prod, row.node, false);
+        } else if(row.type === "subtotal") {
+          html += `<td class="col-tree-sticky c2">${escHtml(row.cat)}</td>`;
+          html += `<td class="col-tree-sticky c3" colspan="2">Subtotal ${escHtml(row.cat)}</td>`;
+          html += metricasDe(ciclo, row.cat, null, row.node, true);
+        }
+        html += `</tr>`;
+      });
+
+      // ----- Bloque Combustible (si existe para este ciclo) -----
+      if(tree[ciclo][CAT_COMBUSTIBLE]) {
+        const catKey = `${ciclo}|||${CAT_COMBUSTIBLE}`;
+        const catCollapsed = COLLAPSED_CATS_INS.has(catKey);
+
+        html += `<tr class="tree-row-spacer"><td class="col-tree-sticky c1"></td><td class="col-tree-sticky c2"></td><td class="col-tree-sticky c3" colspan="2"></td>${metricasBlancas()}</tr>`;
+
+        if(catCollapsed) {
+          html += `<tr class="tree-row-categoria">
+                     <td class="col-tree-sticky c1">${escHtml(ciclo)}</td>
+                     <td class="col-tree-sticky c2"><span class="tree-toggle tree-toggle-cat" data-key="${escHtml(catKey)}">▸ ${escHtml(CAT_COMBUSTIBLE)}</span></td>
+                     <td class="col-tree-sticky c3" colspan="2">(colapsado)</td>
+                     ${metricasBlancas()}
+                   </tr>`;
+        } else {
+          const prods = Object.keys(tree[ciclo][CAT_COMBUSTIBLE]).sort();
+          prods.forEach((prod, idx) => {
+            const node = tree[ciclo][CAT_COMBUSTIBLE][prod];
+            html += `<tr class="tree-row-leaf">
+                       <td class="col-tree-sticky c1">${escHtml(ciclo)}</td>
+                       ${idx === 0 ? `<td class="col-tree-sticky c2" rowspan="${prods.length}"><span class="tree-toggle tree-toggle-cat" data-key="${escHtml(catKey)}">▾ ${escHtml(CAT_COMBUSTIBLE)}</span></td>` : ''}
+                       <td class="col-tree-sticky c3">${escHtml(prod)}</td>
+                       <td class="col-tree-sticky c4">${escHtml(node.um)}</td>
+                       ${metricasDe(ciclo, CAT_COMBUSTIBLE, prod, node, false)}
+                     </tr>`;
+          });
+        }
+      }
+
+      html += `<tr class="tree-row-fin"><td class="col-tree-sticky c1" colspan="4">Fin ${escHtml(ciclo)}</td>${metricasBlancas()}</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = warningHtml + html;
+
+    container.querySelectorAll(".tree-toggle-ciclo").forEach(el => {
+      el.addEventListener("click", () => toggleCicloIns(el.getAttribute("data-ciclo")));
+    });
+    container.querySelectorAll(".tree-toggle-cat").forEach(el => {
+      el.addEventListener("click", () => toggleCategoriaIns(el.getAttribute("data-key")));
+    });
+    container.querySelectorAll(".cell-interactive").forEach(el => {
+      el.addEventListener("click", () => showDetailModalIns(el.getAttribute("data-popup-id")));
+    });
+  }
+
+
+  let CURRENT_DETAIL_DATA_INS = [];
+  let CURRENT_DETAIL_LABEL_INS = "detalle";
+
+  function showDetailModalIns(key) {
+    const dataset = TOOLTIP_REGISTRY_INS[key];
+    if (!dataset) return;
+
+    const parts = key.split("|||");
+    const ciclo = parts[0], cat = parts[1], prod = parts[2], finca = parts[3];
+    const isTotal = finca === "__TOTAL__";
+    const isSubtotal = prod === "__SUBTOTAL__";
+    const prodLabel = isSubtotal ? `Subtotal ${cat}` : prod;
+    const um = dataset[0] ? dataset[0].um : "";
+
+    CURRENT_DETAIL_DATA_INS = dataset;
+    CURRENT_DETAIL_LABEL_INS = `${prodLabel}_${isTotal ? 'TODAS_FINCAS' : finca}`;
+
+    document.getElementById("insumoModalTitle").textContent = `Desglose de Consumo — ${prodLabel}${um ? ' (' + um + ')' : ''}`;
+    document.getElementById("insumoModalSubtitle").textContent = `${ciclo} · ${cat} · ${isTotal ? "Todas las Fincas" : finca}`;
+    document.getElementById("insumoModalCount").textContent = `${dataset.length} movimiento(s)`;
+
+    let html = `<thead><tr>
+      <th>Orden</th><th>Sector</th><th>Finca</th><th>Lote</th><th>Actividad</th><th>Cant. Gastada</th><th>UM</th><th>Área Mzn</th><th>Dosis x Mzn</th>
+    </tr></thead><tbody>`;
+    dataset.forEach(item => {
+      html += `<tr>
+        <td>#${escHtml(item.orden)}</td>
+        <td>${escHtml(item.sector)}</td>
+        <td>${escHtml(item.finca)}</td>
+        <td>${escHtml(item.lote)}</td>
+        <td>${escHtml(item.actividad)}</td>
+        <td>${item.cantidad.toFixed(2)}</td>
+        <td>${escHtml(item.um)}</td>
+        <td>${item.area.toFixed(2)}</td>
+        <td>${item.dosis.toFixed(2)}</td>
+      </tr>`;
+    });
+    html += `</tbody>`;
+    document.getElementById("insumoModalTable").innerHTML = html;
+
+    document.getElementById("insumoModalOverlay").classList.add("show");
+  }
+
+  function hideDetailModalIns() {
+    document.getElementById("insumoModalOverlay").classList.remove("show");
+  }
+
+  function exportDetailToExcelIns() {
+    const table = document.getElementById("insumoModalTable");
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table, { raw: false });
+    XLSX.writeFile(wb, `INFOAGRO_DETALLE_${CURRENT_DETAIL_LABEL_INS.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
+  }
+
+  function exportPivotToExcelIns() {
+    const table = document.querySelector("#matrixContainerIns table.pivot-gantt");
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table, { raw: false });
+    XLSX.writeFile(wb, `INFOAGRO_CONSUMO_INSUMOS_${COMPAIA_SELECCIONADA.replace(/ /g, '_')}.xlsx`);
+  }
+
+  function toggleDropdown(e, idDrop) {
+    e.stopPropagation();
+    const dropdown = document.getElementById(idDrop);
+    const wasOpen = dropdown.classList.contains("show");
+    
+    if(!wasOpen) {
+      buildCascadingFilters();
+    }
+    
+    closeAllDropdowns();
+    if(!wasOpen) dropdown.classList.add("show");
+  }
+
+  function closeAllDropdowns() {
+    document.querySelectorAll(".multiselect-dropdown").forEach(d => d.classList.remove("show"));
+  }
+
+  function toggleFechaInputs() {
+    const tipo = document.getElementById("filterFechaTipo").value;
+    document.getElementById("customDateInputs").style.display = (tipo === "personalizada") ? "block" : "none";
+    buildCascadingFilters();
+    renderMatrix();
+    checkGlobalClearVisibility();
+  }
+
+  function onCustomDateChange() {
+    buildCascadingFilters();
+    renderMatrix();
+    checkGlobalClearVisibility();
+  }
+
+  function resetSingleFilter(id) {
+    SELECCIONES[id.toLowerCase()] = [];
+    buildCascadingFilters();
+    renderMatrix();
+    checkGlobalClearVisibility();
+  }
+
+  function resetAllFilters() {
+    for(let key in SELECCIONES) SELECCIONES[key] = [];
+    document.getElementById("filterFechaTipo").value = "este_mes";
+    document.getElementById("customDateInputs").style.display = "none";
+    buildCascadingFilters();
+    renderMatrix();
+    checkGlobalClearVisibility();
+  }
+
+  function checkGlobalClearVisibility() {
+    const clearBtn = document.getElementById("btnGlobalClear");
+    let hasActiveFilter = false;
+
+    for (let key in SELECCIONES) {
+      if (SELECCIONES[key].length > 0) {
+        hasActiveFilter = true;
+        break;
+      }
+    }
+
+    const fechaTipo = document.getElementById("filterFechaTipo").value;
+    if (fechaTipo !== "este_mes") hasActiveFilter = true;
+
+    if (hasActiveFilter) clearBtn.style.display = "inline-flex";
+    else clearBtn.style.display = "none";
+  }
+
+  function renderMatrix() {
+    const fFechaTipo = document.getElementById("filterFechaTipo").value;
+    const orderMode = document.getElementById("pivotGroupingOrder").value;
+    const hoy = new Date();
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth();
+
+    TOOLTIP_REGISTRY = {};
+
+    const filtered = DB_RAW.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+
+      for (let prop in SELECCIONES) {
+        if (SELECCIONES[prop].length > 0 && !SELECCIONES[prop].includes(r[prop])) return false;
+      }
+
+      if(fFechaTipo !== "all" && r.fecha) {
+        const parts = r.fecha.split("-");
+        if(parts.length === 3) {
+          const rYear = parseInt(parts[0], 10);
+          const rMonth = parseInt(parts[1], 10) - 1; 
+          if(fFechaTipo === "este_mes") {
+            if(rYear !== curYear || rMonth !== curMonth) return false;
+          } else if(fFechaTipo === "mes_pasado") {
+            let targetMonth = curMonth - 1; let targetYear = curYear;
+            if(targetMonth < 0) { targetMonth = 11; targetYear--; }
+            if(rYear !== targetYear || rMonth !== targetMonth) return false;
+          } else if(fFechaTipo === "ano_curso") {
+            if(rYear !== curYear) return false;
+          } else if(fFechaTipo === "personalizada") {
+            const desde = document.getElementById("filterFechaDesde").value;
+            const hasta = document.getElementById("filterFechaHasta").value;
+            if(desde && r.fecha < desde) return false;
+            if(hasta && r.fecha > hasta) return false;
+          }
+        }
+      }
+      return true;
+    });
+
+    document.getElementById("recordCounter").textContent = `${filtered.length} operaciones coincidentes`;
+
+    const container = document.getElementById("matrixContainer");
+    if(!filtered.length) {
+      container.innerHTML = `<div class="p-4 text-center text-muted fw-medium">Sin datos coincidentes para los criterios seleccionados.</div>`;
+      return;
+    }
+
+    const listaFechasBase = [...new Set(filtered.map(r => r.fecha))].sort();
+    const columnasMapeadas = {}; 
+    filtered.forEach(r => {
+      const key = (orderMode === "finca_actividad") ? `${r.finca}|||${r.actividad}` : `${r.actividad}|||${r.finca}`;
+      columnasMapeadas[key] = { 
+        padre: (orderMode === "finca_actividad") ? r.finca : r.actividad, 
+        hijo: (orderMode === "finca_actividad") ? r.actividad : r.finca 
+      };
+    });
+
+    const llavesColumnas = Object.keys(columnasMapeadas).sort();
+    const matrizValores = {};
+    const totalesColumnas = {}; 
+    
+    llavesColumnas.forEach(colKey => { totalesColumnas[colKey] = 0; });
+
+    filtered.forEach(r => {
+      const colKey = (orderMode === "finca_actividad") ? `${r.finca}|||${r.actividad}` : `${r.actividad}|||${r.finca}`;
+      if(!matrizValores[r.fecha]) matrizValores[r.fecha] = {};
+      matrizValores[r.fecha][colKey] = (matrizValores[r.fecha][colKey] || 0) + r.avance;
+      totalesColumnas[colKey] += r.avance;
+
+      const popupId = `pop_${r.fecha}_${colKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+      if(!TOOLTIP_REGISTRY[popupId]) TOOLTIP_REGISTRY[popupId] = [];
+      TOOLTIP_REGISTRY[popupId].push({
+        orden: r.orden,
+        proveedor: r.proveedor,
+        ciclo: r.ciclo,          
+        lote: r.lote_agricola,
+        avance: r.avance
+      });
+    });
+
+    const bloquesPadre = {};
+    llavesColumnas.forEach(k => {
+      const p = columnasMapeadas[k].padre;
+      bloquesPadre[p] = (bloquesPadre[p] || 0) + 1;
+    });
+
+    let html = `<table class="pivot-gantt"><thead><tr class="main-hdr-row">`;
+    html += `<th rowspan="3" class="col-fecha-sticky">Fecha</th>`;
+
+    // Renderizar Fila Nivel 1 (Padre)
+    Object.keys(bloquesPadre).sort().forEach(padre => {
+      html += `<th colspan="${bloquesPadre[padre]}">${padre}</th>`;
+    });
+    
+    html += `</tr><tr class="sub-hdr-row">`;
+
+    // Renderizar Fila Nivel 2 (Hijo - Aquí se evita el recorte del texto)
+    llavesColumnas.forEach(k => {
+      html += `<th>${columnasMapeadas[k].hijo}</th>`;
+    });
+    
+    html += `</tr><tr class="total-hdr-row">`;
+    llavesColumnas.forEach(colKey => {
+      const totalCol = totalesColumnas[colKey] || 0;
+      html += `<th>${totalCol > 0 ? totalCol.toFixed(1) : '0.0'}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+
+    listaFechasBase.forEach(fechaBase => {
+      html += `<tr><td class="col-fecha-sticky">${formatToCustomDate(fechaBase)}</td>`;
+      llavesColumnas.forEach(colKey => {
+        const val = (matrizValores[fechaBase] && matrizValores[fechaBase][colKey]) ? matrizValores[fechaBase][colKey] : 0;
+        
+        if(val > 0) {
+          const pId = `pop_${fechaBase}_${colKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          html += `<td>
+                    <div class="cell-interactive" data-popup-id="${pId}" onmouseenter="showPopup(event)" onmousemove="movePopup(event)" onmouseleave="hidePopup()">
+                      <div class="mzn-badge-container">
+                        ${val.toFixed(1)}
+                      </div>
+                    </div>
+                   </td>`;
+        } else {
+          html += `<td style="color:#cbd5e1;">-</td>`;
+        }
+      });
+      html += `</tr>`;
+    });
+
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  }
+
+  const popupEl = document.getElementById("global-gantt-tooltip");
+
+  function showPopup(e) {
+    const key = e.currentTarget.getAttribute("data-popup-id");
+    const dataset = TOOLTIP_REGISTRY[key];
+    if (!dataset) return;
+
+    let content = `<div class="popup-hdr">Desglose de Operación</div>`;
+    dataset.forEach(item => {
+      content += `
+        <div class="popup-block">
+          <div class="popup-item"><span class="p-label">Orden:</span><span class="p-val">#${item.orden}</span></div>
+          <div class="popup-item"><span class="p-label">Proveedor:</span><span class="p-val" style="color:#ffffff;">${item.proveedor}</span></div>
+          <div class="popup-item"><span class="p-label">Ciclo:</span><span class="p-val">${item.ciclo}</span></div>
+          <div class="popup-item"><span class="p-label">Lote:</span><span class="p-val">${item.lote}</span></div>
+          <div class="popup-item"><span class="p-label">Avance:</span><span class="p-val" style="color:#4ade80;">${item.avance.toFixed(1)} Mzn</span></div>
+        </div>
+        ${dataset.length > 1 ? '<hr style="margin:4px 0; opacity:0.1; border-color:#fff;">' : ''}
+      `;
+    });
+
+    popupEl.innerHTML = content;
+    popupEl.style.display = "block";
+    movePopup(e);
+  }
+
+  function movePopup(e) {
+    const width = 320; 
+    const height = popupEl.offsetHeight || 120;
+    let left = e.clientX - (width / 2);
+    let top = e.clientY - height - 12;
+    if (left + width > window.innerWidth) left = window.innerWidth - width - 10;
+    if (left < 0) left = 10;
+    if (top < 0) top = e.clientY + 15;
+
+    popupEl.style.left = left + "px";
+    popupEl.style.top = top + "px";
+  }
+
+  function hidePopup() { popupEl.style.display = "none"; }
+
+  function exportPivotToExcel() {
+    const table = document.querySelector("table.pivot-gantt");
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table, { raw: false });
+    XLSX.writeFile(wb, `INFOAGRO_MATRIZ_${COMPAIA_SELECCIONADA.replace(/ /g, '_')}.xlsx`);
+  }
+
+  document.addEventListener("click", (e) => {
+    if(!e.target.closest(".filter-item-wrap")) {
+      closeAllDropdowns();
+      buildCascadingFilters();
+      buildCascadingFiltersIns();
+    }
+  });
+  
+  async function initAll() {
+    await loadData();
+    buildAreaIndex();
+    await Promise.all([loadDataInsumos(), loadDataCombustible()]);
+    renderMatrixIns();
+    if(FILTRO_GLOBAL_PENDIENTE) aplicarFiltroGlobal(FILTRO_GLOBAL_PENDIENTE);
+  }
+
+  // ===================================================================
+  // ADAPTADOR DE FILTRO GLOBAL — INFOAGRO BI
+  // Traduce {compania, sector, ciclo, finca} del shell a las variables internas
+  // de este panel: COMPAIA_SELECCIONADA, SELECCIONES y SELECCIONES_INS.
+  // ===================================================================
+  let FILTRO_GLOBAL_PENDIENTE = null;
+
+  function aplicarFiltroGlobal(filtros){
+    if(!DB_RAW.length){ FILTRO_GLOBAL_PENDIENTE = filtros; return; }
+    filtros = filtros || {};
+
+    // --- Compañía: este panel sólo trabaja con UNA compañía activa a la vez ---
+    // Si el filtro global trae exactamente una, se selecciona esa. Si trae varias
+    // o ninguna, se deja la compañía que ya estaba activa (no se puede mostrar 2 a la vez aquí).
+    if(filtros.compania && filtros.compania.length === 1){
+      const select = document.getElementById("filterHeaderCompaia");
+      const existe = Array.from(select.options).some(o => o.value === filtros.compania[0]);
+      if(existe && select.value !== filtros.compania[0]){
+        select.value = filtros.compania[0];
+        onHeaderCompaiaChange(); // ya llama buildCascadingFilters + renderMatrix (actividades e insumos)
+      }
+    }
+
+    // --- Sector, Ciclo y Finca: se aplican como selección múltiple en cascada, igual a como el usuario lo haría a mano ---
+    if(filtros.sector){
+      SELECCIONES.sector = [...filtros.sector];
+      SELECCIONES_INS.sector = [...filtros.sector];
+    }
+    if(filtros.ciclo){
+      SELECCIONES.ciclo = [...filtros.ciclo];
+      SELECCIONES_INS.ciclo = [...filtros.ciclo];
+    }
+    if(filtros.finca){
+      SELECCIONES.finca = [...filtros.finca];
+      SELECCIONES_INS.finca = [...filtros.finca];
+    }
+
+    buildCascadingFilters();
+    renderMatrix();
+    checkGlobalClearVisibility();
+    buildCascadingFiltersIns();
+    renderMatrixIns();
+  }
+
+  function enviarUniversoAlShell(){
+    if(!DB_RAW.length) return;
+    window.parent.postMessage({
+      type: 'INFOAGRO_UNIVERSO_RESPUESTA',
+      universo: {
+        compania: [...new Set(DB_RAW.map(r => r.compaia))].filter(Boolean).sort(),
+        sector: [...new Set(DB_RAW.map(r => r.sector))].filter(Boolean).sort(),
+        ciclo: [...new Set(DB_RAW.map(r => r.ciclo))].filter(Boolean).sort(),
+        finca: [...new Set(DB_RAW.map(r => r.finca))].filter(Boolean).sort()
+      }
+    }, '*');
+  }
+
+  window.addEventListener('message', function(ev){
+    if(!ev.data) return;
+    if(ev.data.type === 'INFOAGRO_FILTROS_UPDATE'){
+      aplicarFiltroGlobal(ev.data.filtros);
+    }
+    if(ev.data.type === 'INFOAGRO_SOLICITAR_UNIVERSO'){
+      enviarUniversoAlShell();
+    }
+  });
+
+  initAll().then(function(){
+    enviarUniversoAlShell();
+  });
+</script>
+
+</body>
+</html>
