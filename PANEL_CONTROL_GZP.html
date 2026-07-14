@@ -4702,7 +4702,12 @@ function construirVistaActivoBiologico() {
     if (esProducto) {
       nombre = r.product_id[1];
       sku = (nombre.includes('[') && nombre.includes(']')) ? nombre.substring(nombre.indexOf('[') + 1, nombre.indexOf(']')) : 'S/C';
-      cantidad = Math.abs(r.unit_amount || 0);
+      // cantidad se acumula CON SIGNO (igual que "valor"): unit_amount viene negativo en las salidas
+      // (BM/OUT) y positivo en las entradas/reversos (BM/IN), y así se cancelan correctamente al sumar
+      // varias líneas de un mismo Finca+Ciclo+Producto. Aplicar Math.abs() aquí (por línea) inflaba el
+      // total, porque una salida y su reverso se sumaban en vez de restarse. Math.abs() se aplica solo
+      // al mostrar el total ya acumulado (ver renderKpiSemillaYProtectoresAB, valorMetricaAB, etc.).
+      cantidad = r.unit_amount || 0;
       pid = extraerIdOdoo(r.product_id);
       totalProducto += valor;
     } else if (r.x_studio_es_cierre_de_ab) {
@@ -4831,12 +4836,13 @@ const AB_METRICAS_DEF = {
 
 function valorMetricaAB(celda, metrica) {
   if (!celda) return null;
-  // celda.valor se acumula CON SIGNO (ver comentario en construirVistaActivoBiologico); se aplica
-  // Math.abs() aquí, al momento de mostrar, para que una devolución (entrada+reverso que se cancelan)
-  // no infle el número — el signo solo importaba para que se cancelaran correctamente al sumar.
-  if (metrica === 'cantidad') return celda.cantidad;
+  // celda.valor y celda.cantidad se acumulan CON SIGNO (ver comentario en construirVistaActivoBiologico);
+  // se aplica Math.abs() aquí, al momento de mostrar, para que una devolución (entrada+reverso que se
+  // cancelan) no infle el número — el signo solo importaba para que se cancelaran correctamente al sumar.
+  const cantAbs = (celda.cantidad !== null && celda.cantidad !== undefined) ? Math.abs(celda.cantidad) : null;
+  if (metrica === 'cantidad') return cantAbs;
   if (metrica === 'costoTotal') return Math.abs(celda.valor);
-  if (metrica === 'costoUnitario') return (celda.cantidad && celda.cantidad > 0) ? Math.abs(celda.valor) / celda.cantidad : null;
+  if (metrica === 'costoUnitario') return (cantAbs && cantAbs > 0) ? Math.abs(celda.valor) / cantAbs : null;
   if (metrica === 'mzn') return (celda.mzn !== null && celda.mzn !== undefined) ? celda.mzn : null;
   if (metrica === 'costoMzn') return (celda.mzn && celda.mzn > 0) ? Math.abs(celda.valor) / celda.mzn : null;
   return null;
@@ -5215,21 +5221,22 @@ function construirGraficoYKpisAB(idx, nivel, valor, cultivosSel, fincasSel, metr
   ciclosOrdenados.forEach((ciclo, i) => {
     const info = porCiclo[ciclo];
     const mznTotal = Object.values(info.mznPorFinca).reduce((s, v) => s + v, 0);
-    // info.mensualValor llega CON SIGNO (ver comentario en construirVistaActivoBiologico): se debe
-    // sumar con signo a través de los meses para que una devolución se cancele correctamente, y solo
-    // tomar Math.abs() del total/acumulado resultante — nunca de cada línea individual.
+    // info.mensualValor e info.mensualCantidad llegan CON SIGNO (ver comentario en
+    // construirVistaActivoBiologico): se deben sumar con signo a través de los meses para que una
+    // devolucion se cancele correctamente, y solo tomar Math.abs() del total/acumulado resultante -
+    // nunca de cada linea individual.
     const serieBase = metrica === 'costoMzn' ? info.mensualValor : info.mensualCantidad;
     const esMonetaria = metrica === 'costoMzn';
-    // montoEnPunto guarda, para cada mes, el monto "crudo" detrás del Costo/Mzn que se grafica (el
-    // costo total acumulado o mensual, según la Vista) — así el tooltip puede mostrar en córdobas
-    // cuánto pesa cada punto, y el Mzn usado, para ver si un Costo/Mzn alto es por más gasto o por
+    // montoEnPunto guarda, para cada mes, el monto "crudo" detras del Costo/Mzn que se grafica (el
+    // costo total acumulado o mensual, segun la Vista) - asi el tooltip puede mostrar en cordobas
+    // cuanto pesa cada punto, y el Mzn usado, para ver si un Costo/Mzn alto es por mas gasto o por
     // menos manzanas.
     let serie, montoEnPunto;
     if (vista === 'acumulado') {
       let acum = 0;
-      montoEnPunto = serieBase.map(v => { acum += v; return esMonetaria ? Math.abs(acum) : acum; });
+      montoEnPunto = serieBase.map(v => { acum += v; return Math.abs(acum); });
     } else {
-      montoEnPunto = serieBase.map(v => esMonetaria ? Math.abs(v) : v);
+      montoEnPunto = serieBase.map(v => Math.abs(v));
     }
     serie = montoEnPunto.map(m => mznTotal > 0 ? m / mznTotal : 0);
     const mesesConDatos = serieBase.filter(v => v !== 0).length;
@@ -5370,6 +5377,7 @@ function renderKpiSemillaYProtectoresAB() {
   ciclosSemilla.forEach(ciclo => {
     const d = semillaPorCiclo[ciclo];
     d.valor = Math.abs(d.valor); // ver nota de signo en construirVistaActivoBiologico
+    d.cantidad = Math.abs(d.cantidad); // idem: cantidad se acumuló con signo para netear entradas/salidas
     const mzn = Object.values(d.mznPorFinca).reduce((s, v) => s + v, 0);
     filasSemilla += `<tr class="clickable-row" onclick="abrirModalFincaSemilla('${ciclo.replace(/'/g,"\\'")}')" title="Clic para ver el detalle por Finca">
       <td><strong>${ciclo}</strong></td>
@@ -5474,7 +5482,7 @@ function abrirModalFincaSemilla(ciclo) {
     porFinca[l.finca].valor += l.valor;
     if (l.mzn !== null && l.mzn !== undefined) porFinca[l.finca].mzn = l.mzn;
   });
-  Object.values(porFinca).forEach(f => { f.valor = Math.abs(f.valor); });
+  Object.values(porFinca).forEach(f => { f.valor = Math.abs(f.valor); f.cantidad = Math.abs(f.cantidad); });
 
   const filasHtml = Object.keys(porFinca).sort().map(finca => {
     const f = porFinca[finca];
@@ -5537,7 +5545,7 @@ function abrirModalProductosProtectores(ciclo, sub) {
     porProducto[l.sku].valor += l.valor;
     if (l.mzn !== null && l.mzn !== undefined) porProducto[l.sku].mznPorFinca[l.finca] = l.mzn;
   });
-  Object.values(porProducto).forEach(p => { p.valor = Math.abs(p.valor); });
+  Object.values(porProducto).forEach(p => { p.valor = Math.abs(p.valor); p.cantidad = Math.abs(p.cantidad); });
 
   const filasHtml = Object.keys(porProducto).sort((a, b) => a.localeCompare(b, 'es', {numeric:true})).map(sku => {
     const p = porProducto[sku];
@@ -5572,7 +5580,7 @@ function abrirModalDetalleAB(tipo) {
       f.valor += l.valor;
       if (l.mzn !== null && l.mzn !== undefined) f.mzn = l.mzn;
     });
-    filas.forEach(f => { f.valor = Math.abs(f.valor); });
+    filas.forEach(f => { f.valor = Math.abs(f.valor); f.cantidad = Math.abs(f.cantidad); });
     filas.sort((a, b) => a.ciclo.localeCompare(b.ciclo, 'es', {numeric:true}) || a.finca.localeCompare(b.finca, 'es'));
 
     const filasHtml = filas.map(f => {
@@ -5605,7 +5613,7 @@ function abrirModalDetalleAB(tipo) {
       f.valor += l.valor;
       if (l.mzn !== null && l.mzn !== undefined) f.mznPorFinca[l.finca] = l.mzn;
     });
-    filas.forEach(f => { f.valor = Math.abs(f.valor); });
+    filas.forEach(f => { f.valor = Math.abs(f.valor); f.cantidad = Math.abs(f.cantidad); });
     filas.sort((a, b) => a.ciclo.localeCompare(b.ciclo, 'es', {numeric:true}) || a.sub.localeCompare(b.sub, 'es') || a.sku.localeCompare(b.sku, 'es', {numeric:true}));
 
     const filasHtml = filas.map(f => {
