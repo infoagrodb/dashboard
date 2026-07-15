@@ -8,15 +8,15 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <style>
   :root {
-    --bg-main: #FAFAF8;
-    --text-main: #22302A;
-    --text-muted: #8a9690;
-    --primary: #1B4332;
-    --primary-hover: #2D6A4F;
-    --primary-light: #E4F0E8;
-    --accent-peanut: #C9963B;
-    --accent-peanut-hover: #B3832E;
-    --border-color: #E1E0D8;
+    --bg-main: #f3f4f6;
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --primary-light: #dbeafe;
+    --accent-peanut: #b45309;
+    --accent-peanut-hover: #92400e;
+    --border-color: #e5e7eb;
     --card-bg: #ffffff;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
     --shadow-md: 0 4px 10px rgba(0,0,0,0.12);
@@ -41,63 +41,14 @@
     flex-direction: column;
   }
 
-  /* dashboard-container es hijo directo de body y padre de .container — necesita su
-     propia regla flex/min-height para completar la cadena que permite el scroll
-     interno en .alertas-container/.tab-panel, si no, el contenido se corta sin scroll. */
-  .dashboard-container {
-    display: flex; flex-direction: column; flex: 1; min-height: 0;
-  }
-
-  /* ---------- TOOLBAR DE UNA SOLA FILA — mismo patrón en las 5 secciones de INFOAGRO BI ---------- */
-  .toolbar-una-fila{
+  .header-wrapper {
     position: sticky; top: 0; z-index: 100;
-    display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
-    background:#fff; border-bottom:1px solid var(--border-color);
-    box-shadow: 0 2px 8px rgba(0,0,0,.06); padding:10px 24px; flex-shrink:0;
-  }
-  .tf-campos-grupo{
-    display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; flex:1;
-    max-height:500px; overflow:visible; transition:max-height .3s cubic-bezier(.4,0,.2,1), margin-bottom .3s ease, opacity .3s ease;
-    opacity:1;
-  }
-  .tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
-  .tf-campo{display:flex; flex-direction:column; gap:4px; min-width:170px; position:relative;}
-  .tf-campo label{font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700;}
-
-  .tf-acciones{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap;}
-  .tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-end;}
-  .tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:#1B4332; line-height:1.2; white-space:nowrap;}
-  .tf-titulo span{font-size:10.5px; color:var(--text-muted); font-weight:600;}
-  .tf-icon{
-    height:32px; min-width:32px; padding:0 8px; border-radius:7px; border:1px solid var(--border-color);
-    background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
-    font-size:14px; transition:all .15s ease;
-  }
-  .tf-icon:hover{background:#F1F4F1; border-color:var(--primary);}
-  .tf-icon-verde{background:#1B4332; border-color:#1B4332;}
-  .tf-icon-verde:hover{opacity:.88;}
-  .tf-icon-excel{background:#1a9448; border-color:#1a9448;}
-  .tf-icon-excel:hover{opacity:.88;}
-
-  @media (max-width:900px){
-    .toolbar-una-fila{padding:10px;}
-    .tf-campo{flex:1 1 130px;}
-    .ms-dropdown{max-width:none; width:100%;}
-    .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px;}
-    .tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
-    .campo-compania{order:1;}
-    .campo-sector{order:2;}
-    .campo-ciclo{order:3;}
-    .campo-finca{order:4;}
-    .campo-tipo{order:5;}
-  }
-  @media (max-width:520px){
-    .tf-campo{flex:1 1 100%;}
-    .ms-panel{min-width:0; width:100%; left:0; right:0;}
+    background: linear-gradient(90deg, #f97316 0%, #facc15 40%, #22c55e 100%);
+    padding: 10px 0 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); width: 100%;
   }
 
   header {
-    max-width: 1400px; margin: 0 auto; color: #ffffff; padding: 10px 24px;
+    max-width: 1400px; margin: 0 auto; color: #111827; padding: 10px 24px;
     display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
   }
 
@@ -111,20 +62,20 @@
 
   .header-filter-group { display: flex; flex-direction: column; gap: 4px; width: 220px; position: relative; }
   .header-filter-group .label-container { display: flex; justify-content: space-between; align-items: center; height: 16px; }
-  .header-filter-group label { font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.75); text-transform: uppercase; letter-spacing: 0.5px; }
+  .header-filter-group label { font-size: 10px; font-weight: 700; color: #1f2937; text-transform: uppercase; letter-spacing: 0.5px; }
 
   .header-filter-group .multiselect-dropdown {
-    background-color: rgba(255, 255, 255, 0.9); color: #1B4332; border: 1px solid rgba(255, 255, 255, 0.3);
-    padding: 6px 12px; border-radius: 6px; height: 34px; font-weight: 600;
+    background-color: rgba(255, 255, 255, 0.55); color: #111827; border: 1px solid rgba(17, 24, 39, 0.15);
+    padding: 6px 12px; border-radius: 6px; height: 34px;
   }
-  .header-filter-group .multiselect-dropdown:hover { border-color: #ffffff; background-color: #ffffff; transform: translateY(-1px); }
+  .header-filter-group .multiselect-dropdown:hover { border-color: #111827; background-color: rgba(255, 255, 255, 0.8); transform: translateY(-1px); }
 
   .btn-toggle-filters {
-    background-color: #C9963B; border: none; color: #2A1F0A; font-weight: 700;
+    background-color: #f97316; border: none; color: #ffffff; font-weight: 600;
     height: 34px; font-size: 13px; padding: 0 14px; border-radius: 999px; cursor: pointer;
     display: inline-flex; align-items: center; transition: all 0.15s ease;
   }
-  .btn-toggle-filters:hover { background-color: #D9A94B; transform: translateY(-1px); }
+  .btn-toggle-filters:hover { background-color: #fb923c; transform: translateY(-1px); }
 
   .container { max-width: 1400px; width: 100%; margin: 0 auto; padding: 16px 24px; display: flex; flex-direction: column; flex: 1; min-height: 0; }
 
@@ -148,26 +99,25 @@
     background: none; border: none; padding: 0; cursor: pointer; display: none; align-items: center; justify-content: center; width: 16px; height: 16px; color: #6b7280;
   }
   .btn-clear-individual:hover { transform: scale(1.2); color: #ef4444; }
-  .header-filter-group .btn-clear-individual { color: rgba(255,255,255,0.75); }
+  .header-filter-group .btn-clear-individual { color: #4b5563; }
   .btn-clear-individual svg { width: 15px; height: 15px; fill: currentColor; }
 
-  .multiselect-dropdown, .ms-dropdown {
+  .multiselect-dropdown {
     width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px;
     font-size: 13px; background-color: white; cursor: pointer; user-select: none;
     display: flex; justify-content: space-between; align-items: center; height: 34px;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .multiselect-dropdown:hover, .ms-dropdown:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(37,99,235,0.12); }
-  .multiselect-dropdown::after, .ms-dropdown::after { content: "▼"; font-size: 8px; color: var(--text-muted); margin-left: 6px; }
+  .multiselect-dropdown:hover { border-color: var(--primary); box-shadow: 0 2px 8px rgba(37,99,235,0.12); }
+  .multiselect-dropdown::after { content: "▼"; font-size: 8px; color: var(--text-muted); margin-left: 6px; }
 
-  .multiselect-options, .ms-panel {
-    display: none; flex-direction: column; position: absolute; top: 100%; left: 0; background-color: white;
+  .multiselect-options {
+    display: none; flex-direction: column; position: absolute; top: 100%; left: 0; right: 0; background-color: white;
     border: 1px solid var(--border-color); border-radius: 8px; max-height: 300px; overflow: hidden;
-    z-index: 1200; box-shadow: var(--shadow-md); margin-top: 6px;
+    z-index: 110; box-shadow: var(--shadow-md); margin-top: 6px;
     animation: dropdownFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    min-width: 230px; width: max-content; max-width: 320px;
   }
-  .multiselect-options.show, .ms-panel.show { display: flex; }
+  .multiselect-options.show { display: flex; }
 
   @keyframes dropdownFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
@@ -240,9 +190,9 @@
   .pivot-mode-btn.active { background-color: var(--primary); color: white; font-weight: 600; }
 
   .btn-excel {
-    background-color: #1B4332; color: white; border: none; font-size: 13px; font-weight: 600; padding: 6px 14px; height: 34px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;
+    background-color: #22c55e; color: white; border: none; font-size: 13px; font-weight: 600; padding: 6px 14px; height: 34px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s ease;
   }
-  .btn-excel:hover { background-color: #2D6A4F; }
+  .btn-excel:hover { background-color: #16a34a; }
 
   .table-container { background-color: var(--card-bg); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; border: 1px solid var(--border-color); overflow: auto; flex: 1; box-shadow: var(--shadow-sm); -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 
@@ -557,7 +507,7 @@
   /* ===== ALERTAS TAB ===== */
   .alertas-container {
     background: #fff; border: 1px solid var(--border-color); border-top: none;
-    border-radius: 0 0 12px 12px; flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px;
+    border-radius: 0 0 12px 12px; flex: 1; overflow-y: auto; padding: 20px;
     display: flex; flex-direction: column; gap: 20px;
   }
 
@@ -595,7 +545,7 @@
   .alerta-section-title .badge-alert.warning { background: #fef3c7; color: #b45309; }
 
   .alerta-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); }
-  .alerta-table { width: 100%; min-width: 900px; border-collapse: collapse; font-size: 13px; }
+  .alerta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .alerta-table th {
     background: #f9fafb; padding: 8px 14px; text-align: left; font-size: 11px;
     font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #374151;
@@ -691,64 +641,33 @@
 </head>
 <body>
 
-<div class="dashboard-container">
-
-  <div class="toolbar-una-fila" id="toolbarCompacta">
-    <div class="tf-titulo">
-      <h1>Siembra y Germinación</h1>
-      <span>Maní</span>
+<div class="header-wrapper">
+  <header>
+    <div class="header-title-area">
+      <h1>Control de Siembra y Germinación</h1>
+      <p>Matriz Pivot Tridimensional • Umbral Mínimo: 55% • Sincronización: <span id="fechaActualizacion">-</span></p>
     </div>
-    <div class="tf-campos-grupo filters-wrapper" id="panelFiltrosWrapper">
-      <div class="tf-campo campo-compania">
-        <label>Compañía</label>
-        <div class="ms-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
-        <div class="ms-panel" id="optsCompania"></div>
+    <div class="header-action-area">
+      <div class="header-quick-actions">
+        <button class="btn-toggle-filters" onclick="toggleFiltrosPanel()">🔍 Filtros</button>
+        <button class="btn-toggle-filters btn-menu-mobile" id="btnToggleHeaderMenu" onclick="toggleHeaderMenu()">☰ Menú</button>
       </div>
-      <div class="tf-campo campo-sector">
-        <label>Sector</label>
-        <div class="ms-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
-        <div class="ms-panel" id="optsSector"></div>
-      </div>
-      <div class="tf-campo campo-ciclo">
-        <label>Ciclo</label>
-        <div class="ms-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
-        <div class="ms-panel" id="optsCiclo"></div>
-      </div>
-      <div class="tf-campo campo-finca">
-        <label>Finca</label>
-        <div class="ms-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
-        <div class="ms-panel" id="optsFinca"></div>
-      </div>
-      <div class="tf-campo campo-tipo campo-solo-pivot">
-        <label>Tipo Recuento</label>
-        <div class="ms-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
-        <div class="ms-panel" id="optsTipo"></div>
+      <div class="header-menu-panel collapsed" id="headerMenuPanel">
+        <div class="header-filter-group">
+          <div class="label-container">
+            <label>Compañía</label>
+            <button class="btn-clear-individual" id="btn_clear_compania" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'compania', 'dropCompania', 'optsCompania', 'btn_clear_compania')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
+          <div class="multiselect-options" id="optsCompania"></div>
+        </div>
+        <button class="btn" onclick="cargarDatosDesdeGitHub()">🔄 Actualizar</button>
       </div>
     </div>
-
-    <div class="tf-acciones">
-      <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
-      </button>
-      <button class="tf-icon" onclick="limpiarTodosLosFiltros()" title="Limpiar todos los filtros">
-        <span>🧹</span>
-      </button>
-      <button class="tf-icon tf-icon-excel" onclick="exportarTablaAExcel()" title="Exportar a Excel">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="9" y1="13" x2="15" y2="19"/>
-          <line x1="15" y1="13" x2="9" y2="19"/>
-        </svg>
-      </button>
-      <button class="tf-icon" onclick="cargarDatosDesdeGitHub()" title="Actualizar">
-        <span>↻</span>
-      </button>
-      <button class="tf-icon" onclick="window.print()" title="Imprimir">
-        <span>🖨️</span>
-      </button>
-    </div>
-  </div>
+  </header>
+</div>
 
 <div class="container">
 
@@ -774,6 +693,52 @@
   <!-- TAB: PIVOT (original) -->
   <div class="tab-panel active" id="tabPivot">
 
+  <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
+    <div class="toolbar">
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Sector</label>
+          <button class="btn-clear-individual" id="btn_clear_sector" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'sector', 'dropSector', 'optsSector', 'btn_clear_sector')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
+        <div class="multiselect-options" id="optsSector"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Ciclo</label>
+          <button class="btn-clear-individual" id="btn_clear_ciclo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
+        <div class="multiselect-options" id="optsCiclo"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Finca</label>
+          <button class="btn-clear-individual" id="btn_clear_finca" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
+        <div class="multiselect-options" id="optsFinca"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Tipo Recuento</label>
+          <button class="btn-clear-individual" id="btn_clear_tipo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
+        <div class="multiselect-options" id="optsTipo"></div>
+      </div>
+      <button class="btn btn-clear-filters" onclick="limpiarTodosLosFiltros()">🧹 Limpiar Todo</button>
+    </div>
+  </div>
+
   <div class="table-toolbar">
     <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
     <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
@@ -791,6 +756,7 @@
         <div class="toolbar-group">
           <span class="toolbar-group-label">Herramientas</span>
           <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
+          <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
         </div>
       </div>
 
@@ -828,9 +794,75 @@
   <div class="tab-panel" id="tabAlertas">
     <div class="alertas-container">
 
-      <!-- Leyenda informativa (no es filtro), se mantiene visible -->
-      <div class="af-info" style="padding:8px 0;">
-        Hoy: <strong id="alertaFechaHoy">-</strong> &nbsp;|&nbsp; 10 DDS = días 10–14 &nbsp;|&nbsp; 15 DDS = día 15+
+      <!-- Filtros de alertas en cascada -->
+      <div class="alertas-filtros-bar" id="alertasFiltrosBar">
+        <div class="af-group">
+          <label class="af-label">📅 CICLO</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCiclo" onclick="toggleAfDropdown('afDropCiclo')">
+              <span id="afTextCiclo">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCiclo">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCiclo')"></div>
+              <div class="af-ms-items" id="afItemsCiclo"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('ciclo')">Aceptar</button>
+                <button onclick="afCerrar('afDropCiclo')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🏢 COMPAÑÍA</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCompania" onclick="toggleAfDropdown('afDropCompania')">
+              <span id="afTextCompania">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCompania">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCompania')"></div>
+              <div class="af-ms-items" id="afItemsCompania"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('compania')">Aceptar</button>
+                <button onclick="afCerrar('afDropCompania')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🗺️ SECTOR</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerSector" onclick="toggleAfDropdown('afDropSector')">
+              <span id="afTextSector">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropSector">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropSector')"></div>
+              <div class="af-ms-items" id="afItemsSector"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('sector')">Aceptar</button>
+                <button onclick="afCerrar('afDropSector')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">🌱 FINCA</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerFinca" onclick="toggleAfDropdown('afDropFinca')">
+              <span id="afTextFinca">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropFinca">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropFinca')"></div>
+              <div class="af-ms-items" id="afItemsFinca"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('finca')">Aceptar</button>
+                <button onclick="afCerrar('afDropFinca')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-info">
+          Hoy: <strong id="alertaFechaHoy">-</strong> &nbsp;|&nbsp; 10 DDS = días 10–14 &nbsp;|&nbsp; 15 DDS = día 15+
+        </div>
       </div>
 
       <!-- KPI Strip -->
@@ -968,8 +1000,6 @@
 
 </div><!-- end container -->
 
-</div><!-- end dashboard-container -->
-
 <div class="modal-overlay" id="popupDetalleOverlay" onclick="cerrarModalPopup()">
   <div class="modal-card" onclick="event.stopPropagation()">
     <div class="modal-header">
@@ -1017,12 +1047,7 @@ let estadoFincasColapso = {};
 let estadoGlobalColapsado = false; 
 let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: true, g15: true };
 
-function toggleFiltrosPanel() {
-  const panel = document.getElementById('panelFiltrosWrapper');
-  panel.classList.toggle('collapsed');
-  const icono = document.getElementById('iconoFiltrosFijo');
-  if(icono) icono.textContent = panel.classList.contains('collapsed') ? '🔍' : '🔽';
-}
+function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
 function toggleHeaderMenu() {
   document.getElementById('headerMenuPanel').classList.toggle('collapsed');
   document.getElementById('btnToggleHeaderMenu').classList.toggle('active-menu');
@@ -1030,10 +1055,6 @@ function toggleHeaderMenu() {
 function toggleTableMenu() {
   document.getElementById('tableToolbarLeft').classList.toggle('collapsed');
   document.getElementById('btnToggleTableMenu').classList.toggle('active-menu');
-}
-
-function toggleFiltrosExtra() {
-  document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed');
 }
 
 document.getElementById('pivotBody').addEventListener('click', function(e) {
@@ -1049,8 +1070,8 @@ document.getElementById('pivotBody').addEventListener('click', function(e) {
 });
 
 window.onclick = function(event) {
-  if (!event.target.matches('.multiselect-dropdown, .ms-dropdown') && !event.target.closest('.multiselect-options, .ms-panel')) {
-    document.querySelectorAll('.multiselect-options, .ms-panel').forEach(el => el.classList.remove('show'));
+  if (!event.target.matches('.multiselect-dropdown') && !event.target.closest('.multiselect-options')) {
+    document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
   }
 }
 
@@ -1068,7 +1089,7 @@ function toggleDropdown(event, idOpts) {
   event.stopPropagation();
   const optionsDiv = document.getElementById(idOpts);
   const estaAbierto = optionsDiv.classList.contains('show');
-  document.querySelectorAll('.multiselect-options, .ms-panel').forEach(el => el.classList.remove('show'));
+  document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
   if (!estaAbierto) {
     sincronizarCheckboxesConSeleccion(idOpts);
     optionsDiv.classList.add('show');
@@ -1245,10 +1266,6 @@ function aplicarFiltroDropdown(llaveFiltro, idDrop, idOpts, idBtnClear) {
   if (btn) btn.style.display = (marcados.length < (universosUnicos[llaveFiltro] || []).length) ? "inline-flex" : "none";
   contenedor.classList.remove('show');
   filtrarYMostrar();
-  // Compañía/Sector/Ciclo/Finca son compartidos con el tab Alertas Germinación (mismo
-  // panel de filtros arriba) — se reflejan directamente en alertasFiltros para que
-  // renderAlertas() use la misma selección sin un panel duplicado en ese tab.
-  if (AF_DIMENSIONES.includes(llaveFiltro)) alertasFiltros[llaveFiltro] = [...marcados];
   // Si cambió el ciclo, resetear caché de lluvia para recargar con el año correcto
   lluviaYaCargada = false;
   if (datosMaestrosUnificados.length > 0) renderAlertas();
@@ -1630,27 +1647,118 @@ function afGetValoresDisponibles(dim) {
   }).map(item => item[dim]))].sort();
 }
 
+function afPoblarPanel(dim) {
+  const contenedor = document.getElementById(`afItems${dim.charAt(0).toUpperCase()+dim.slice(1)}`);
+  if (!contenedor) return;
+  const disponibles = afGetValoresDisponibles(dim);
+  const seleccionados = alertasFiltros[dim];
+  // "Todos" item
+  const todosMarcado = seleccionados.length === 0;
+  let html = `<div class="af-ms-item" onclick="afToggleTodos('${dim}')">
+    <input type="checkbox" id="afTodos_${dim}" ${todosMarcado?'checked':''} onchange="afToggleTodos('${dim}')">
+    <span>(Seleccionar todo)</span>
+  </div>`;
+  // Universo completo pero mostrando disponibles vs grises
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  universo.forEach(v => {
+    const checked = seleccionados.length === 0 || seleccionados.includes(v);
+    const disabled = !disponibles.includes(v);
+    html += `<div class="af-ms-item${disabled?' disabled':''}" onclick="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+      <input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${checked?'checked':''} onchange="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+      <span>${v}</span>
+    </div>`;
+  });
+  contenedor.innerHTML = html;
+}
+
+function toggleAfDropdown(panelId) {
+  document.querySelectorAll('.af-ms-panel.open').forEach(p => { if(p.id !== panelId) p.classList.remove('open'); });
+  const panel = document.getElementById(panelId);
+  const dim = panelId.replace('afDrop','').toLowerCase();
+  // Guardar estado previo para cancelar
+  alertasFiltrosPrevios[dim] = [...alertasFiltros[dim]];
+  afPoblarPanel(dim);
+  panel.classList.toggle('open');
+}
+
+function afCerrar(panelId) {
+  const dim = panelId.replace('afDrop','').toLowerCase();
+  // Restaurar selección previa
+  alertasFiltros[dim] = [...alertasFiltrosPrevios[dim]];
+  document.getElementById(panelId).classList.remove('open');
+}
+
+function afToggleTodos(dim) {
+  const cb = document.getElementById(`afTodos_${dim}`);
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child) input`);
+  if (cb.checked) {
+    alertasFiltros[dim] = [];
+    items.forEach(i => i.checked = true);
+  } else {
+    alertasFiltros[dim] = [];
+    items.forEach(i => i.checked = false);
+  }
+  afActualizarTodosCheckbox(dim);
+}
+
+function afToggleItem(event, dim, valor) {
+  event.stopPropagation();
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const checkedVals = Array.from(items).filter(i => i.checked).map(i => i.value);
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  alertasFiltros[dim] = checkedVals.length === universo.length ? [] : checkedVals;
+  afActualizarTodosCheckbox(dim);
+}
+
+function afActualizarTodosCheckbox(dim) {
+  const cb = document.getElementById(`afTodos_${dim}`);
+  if (!cb) return;
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const total = items.length, checked = Array.from(items).filter(i=>i.checked).length;
+  cb.checked = checked === total; cb.indeterminate = checked > 0 && checked < total;
+}
+
+function afFiltrarItems(input, panelId) {
+  const txt = input.value.toLowerCase();
+  const items = document.querySelectorAll(`#${panelId} .af-ms-items .af-ms-item`);
+  items.forEach(el => {
+    el.style.display = el.textContent.toLowerCase().includes(txt) ? '' : 'none';
+  });
+}
+
+function afAplicar(dim) {
+  // Re-leer checkboxes del panel actual
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const marcados = Array.from(items).filter(i => i.checked).map(i => i.value);
+  const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
+  alertasFiltros[dim] = marcados.length === universo.length ? [] : marcados;
+  document.getElementById(`afDrop${dim.charAt(0).toUpperCase()+dim.slice(1)}`).classList.remove('open');
+  afActualizarTextos();
+  // Repoblar otros paneles para cascada
+  AF_DIMENSIONES.forEach(d => { if (d !== dim) afPoblarPanel(d); });
+  renderAlertas();
+}
+
+function afActualizarTextos() {
+  AF_DIMENSIONES.forEach(dim => {
+    const span = document.getElementById(`afText${dim.charAt(0).toUpperCase()+dim.slice(1)}`);
+    if (!span) return;
+    const sel = alertasFiltros[dim];
+    span.textContent = sel.length === 0 ? 'Todos' : sel.length === 1 ? sel[0] : `${sel.length} sel.`;
+  });
+}
 
 function inicializarSelectorCicloAlertas() {
-  const elFecha = document.getElementById('alertaFechaHoy');
-  if (elFecha) {
-    elFecha.textContent = new Date().toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'numeric' });
-  }
-  // Preseleccionar el ciclo más reciente — se refleja en ambos objetos (seleccionesFiltros
-  // controla el dropdown único visible arriba; alertasFiltros es el espejo que usa
-  // renderAlertas()) para que ambos queden consistentes desde el primer render.
+  document.getElementById('alertaFechaHoy').textContent =
+    new Date().toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'numeric' });
+  // Preseleccionar el ciclo más reciente
   const cicloMasReciente = (universosUnicos.ciclo || [])[0];
-  if (cicloMasReciente) {
-    alertasFiltros.ciclo = [cicloMasReciente];
-    seleccionesFiltros.ciclo = [cicloMasReciente];
-    const contOpts = document.getElementById('optsCiclo');
-    if (contOpts) {
-      contOpts.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => {
-        cb.checked = (cb.value === cicloMasReciente);
-      });
-    }
-    actualizarTextoDropdown('dropCiclo', 1, (universosUnicos.ciclo||[]).length, [cicloMasReciente]);
-  }
+  if (cicloMasReciente) alertasFiltros.ciclo = [cicloMasReciente];
+  afActualizarTextos();
+  // Cerrar paneles al clic fuera
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.af-ms-wrap')) document.querySelectorAll('.af-ms-panel.open').forEach(p => p.classList.remove('open'));
+  }, { once: false });
 }
 
 
@@ -1709,29 +1817,20 @@ function renderAlertas() {
 
   siembrasFiltradas.forEach(item => {
     const fechaSiembra = extraerFecha(item.rawSiembra);
-    // dds: edad REAL del lote (hoy - fecha de siembra) — determina en qué ventana cae
-    // (Espera/10-14/15+). tieneRecuento() ya usa el DDS que el técnico declaró en cada
-    // muestra para decidir SI un recuento específico (10 o 15) ya se hizo — eso es lo
-    // que prioriza el campo real de Odoo. Usar el DDS declarado también para la edad
-    // del lote hacía que un lote con sólo una muestra de "10" quedara marcado como
-    // completo aunque ya hubieran pasado 20+ días reales sin el recuento de 15.
     const dds = calcularDDS(fechaSiembra);
     if (dds === null) return;
 
     const tiene10 = tieneRecuento(item, 10, 14);
     const tiene15 = tieneRecuento(item, 15, null);
 
-    const entry = { ...item, fechaSiembra, dds, ddsReal: dds, tiene10, tiene15 };
+    const entry = { ...item, fechaSiembra, dds, tiene10, tiene15 };
     todos.push(entry);
 
     if (dds >= 0 && dds <= 9)                    enEspera.push(entry);
     if (dds >= 10 && dds <= 14 && !tiene10)       sin10.push(entry);
     if (dds >= 15 && !tiene15)                    sin15.push(entry);
-    // "Completos" muestra cualquier lote que ya tenga su recuento de 10 DDS — el
-    // recuento de 15 DDS puede faltar aún (se muestra como "-" en esa columna); si
-    // además ya pasó la ventana de 15 días sin ese segundo recuento, el mismo lote
-    // también aparece en "Sin 15 DDS" como alerta — ambas categorías no son excluyentes.
-    if (tiene10)                                  completos.push(entry);
+    if (dds >= 15 && tiene10 && tiene15)          completos.push(entry);
+    else if (dds >= 10 && dds <= 14 && tiene10)   completos.push(entry);
   });
 
   alertasCicloData = { sin10, sin15, enEspera, completos, todos };
@@ -1765,7 +1864,7 @@ function renderAlertas() {
   document.getElementById('seccionEspera').style.display   = enEspera.length === 0 ? 'none' : '';
   document.getElementById('seccion10dds').style.display    = sin10.length === 0 ? 'none' : '';
   document.getElementById('seccion15dds').style.display    = sin15.length === 0 ? 'none' : '';
-  document.getElementById('seccionCompletos').style.display = completos.length === 0 ? 'none' : '';
+  document.getElementById('seccionCompletos').style.display = 'none';
 
   if (sin10.length === 0 && sin15.length === 0) {
     document.getElementById('seccion10dds').style.display = '';
@@ -1908,7 +2007,7 @@ function renderTablaCompletosTabla(items) {
       const s = item.rawSiembra || {};
       grupos[key] = {
         finca: item.finca, lote: item.lote, ciclo: item.ciclo,
-        fechaSiembra: item.fechaSiembra, dds: item.ddsReal ?? item.dds,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
         variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
         sumSemillas: 0, countSemillas: 0,
         muestras10: [], muestras15: []
@@ -2058,21 +2157,13 @@ async function cargarDatosDesdeGitHub() {
     actualizarTextoDropdown('dropFinca', universosUnicos.finca.length, universosUnicos.finca.length, universosUnicos.finca);
     actualizarTextoDropdown('dropTipo', universosUnicos.tipo.length, universosUnicos.tipo.length, universosUnicos.tipo);
 
-    // Alertas Germinación se inicializa ANTES del pivot y con su propio try/catch: si
-    // algo falla al construir la tabla pivot (más abajo), no debe impedir que la fecha
-    // de hoy, el ciclo preseleccionado y los KPIs de Alertas queden correctos.
-    try {
-      inicializarSelectorCicloAlertas();
-      renderAlertas();
-    } catch (eAlertas) {
-      console.error('Error inicializando Alertas Germinación:', eAlertas);
-    }
-
-    document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
     filtrarYMostrar();
+    document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
+    inicializarSelectorCicloAlertas();
+    renderAlertas();
   } catch (e) {
-    console.error('Error cargando Siembra/Germinación:', e);
-    tbody.innerHTML = `<tr><td class="loading" style="color:#b45309;">Error al sincronizar datos (Worker/GitHub). Detalle en consola: ${e.message||e}</td></tr>`;
+    console.error(e);
+    tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar archivos desde GitHub.</td></tr>';
   }
 }
 
@@ -2319,8 +2410,6 @@ function exportarTablaAExcel() {
   XLSX.writeFile(wb, `Reporte_Pivot_Fijo_Mani_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
-// Los filtros Compañía/Sector/Ciclo/Finca/Tipo ahora viven de nuevo dentro de esta misma
-// sección (barra de filtros propia, visible arriba) — ya no se reciben desde un panel del shell.
 cargarDatosDesdeGitHub();
 </script>
 </body>
