@@ -268,6 +268,14 @@
   .modal-close { background: none; border: none; color: white; font-size: 24px; cursor: pointer; display: flex; align-items: center; }
   .modal-close:hover { color: #fca5a5; }
   .modal-body { padding: 20px; max-height: 450px; overflow-y: auto; background-color: #ffffff; }
+
+  /* Estilos específicos para la nueva Tabla del Modal */
+  .modal-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .modal-table th { background-color: #f1f5f9; color: #1e293b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.3px; padding: 10px 8px; border: 1px solid var(--border-color); text-align: left; }
+  .modal-table td { padding: 8px; border: 1px solid var(--border-color); color: var(--text-main); }
+  .modal-table tr:hover td { background-color: #f8fafc; }
+  .modal-filter-input { width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; margin-top: 5px; outline: none; }
+  .modal-filter-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
   
   .popup-data-grid { display: flex; flex-direction: column; gap: 14px; }
   .popup-item { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
@@ -1009,12 +1017,12 @@
 </div><!-- end container -->
 
 <div class="modal-overlay" id="popupDetalleOverlay" onclick="cerrarModalPopup()">
-  <div class="modal-card" onclick="event.stopPropagation()">
+  <div class="modal-card" style="width: 1100px; max-width: 95%;" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h3 id="popupTitle">Detalle Operativo</h3>
       <button class="modal-close" onclick="cerrarModalPopup()">&times;</button>
     </div>
-    <div class="modal-body" id="popupBodyContent"></div>
+    <div class="modal-body" id="popupBodyContent" style="max-height: 75vh; overflow-y: auto; padding: 15px;"></div>
   </div>
 </div>
 
@@ -1531,6 +1539,27 @@ async function abrirModalGrafico() {
 
 function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
 
+// Función de filtro dinámico en las columnas de la tabla del Modal
+function filtrarTablaModal() {
+  const inputs = document.querySelectorAll('.modal-filter-input');
+  const rows = document.querySelectorAll('#modalTableBody tr');
+  
+  rows.forEach(row => {
+    let match = true;
+    inputs.forEach(input => {
+      const colIndex = parseInt(input.getAttribute('data-col'));
+      const filterValue = input.value.toLowerCase().trim();
+      if (filterValue) {
+        const cellText = row.cells[colIndex].textContent.toLowerCase();
+        if (!cellText.includes(filterValue)) {
+          match = false;
+        }
+      }
+    });
+    row.style.display = match ? '' : 'none';
+  });
+}
+
 function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
   const overlay = document.getElementById('popupDetalleOverlay');
   const title = document.getElementById('popupTitle');
@@ -1538,9 +1567,50 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
   const itemsCelda = datosMaestrosUnificados.filter(d => d.finca === finca && d.lote === lote && d.ciclo === ciclo);
   if (itemsCelda.length === 0) return;
   
-  let html = `<div class="popup-data-grid">`;
+  let html = '';
+  
   if (tipoColumna === 'semillas') {
     title.textContent = `Detalle de Siembra - Lote: ${lote}`;
+    
+    // Ordenar ascendentemente por fecha de siembra
+    itemsCelda.sort((a, b) => {
+      const dateA = extraerFecha(a.rawSiembra) || '';
+      const dateB = extraerFecha(b.rawSiembra) || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    html += `
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>Reporte</th>
+            <th>Fecha Reporte</th>
+            <th>Ciclo</th>
+            <th>Finca</th>
+            <th>Lote</th>
+            <th>Variedad</th>
+            <th>Lote Semilla (Comasa)</th>
+            <th>Sem. Enteras</th>
+            <th>Sem. Quebradas</th>
+            <th>% Enteras</th>
+            <th>Total Sem. m.l.</th>
+          </tr>
+          <tr>
+            <th><input type="text" class="modal-filter-input" data-col="0" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="1" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="2" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="3" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="4" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="5" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="6" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="7" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="8" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="9" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="10" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+          </tr>
+        </thead>
+        <tbody id="modalTableBody">`;
+
     itemsCelda.forEach((item, idx) => {
       const s = item.rawSiembra || {};
       const enteras = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal || 0);
@@ -1548,53 +1618,98 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
       const totalSem = item.total_semillas || (enteras + quebradas);
       const pctEnteras = totalSem > 0 ? (enteras / totalSem) * 100 : 0;
       const idReporte = s.name || s.x_name || ('#' + (idx + 1));
+      const loteComasa = limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa); // Lote de semilla Comasa
+
       html += `
-        <div class="popup-multi-block">
-          <div class="popup-block-title">Reporte de Siembra: ${idReporte}</div>
-          <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${idReporte}</span></div>
-          <div class="popup-item"><span class="popup-label">Fecha Reporte:</span><span class="popup-value">${extraerFecha(s) || 'N/A'}</span></div>
-          <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
-          <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
-          <div class="popup-item"><span class="popup-label">Lote:</span><span class="popup-value">${item.lote}</span></div>
-          <div class="popup-item"><span class="popup-label">Variedad:</span><span class="popup-value">${limpiarDescripcion(s.x_studio_variedad)}</span></div>
-          <div class="popup-item"><span class="popup-label">Semillas Enteras:</span><span class="popup-value">${enteras.toFixed(2)}</span></div>
-          <div class="popup-item"><span class="popup-label">Semillas Quebradas:</span><span class="popup-value">${quebradas.toFixed(2)}</span></div>
-          <div class="popup-item"><span class="popup-label">% de Enteras:</span><span class="popup-value">${pctEnteras.toFixed(2)}%</span></div>
-          <div class="popup-item" style="background-color:#fff3cd;"><span class="popup-label">Total de Semillas m.l.:</span><span class="popup-value" style="color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</span></div>
-        </div>`;
+        <tr>
+          <td><strong>${idReporte}</strong></td>
+          <td>${extraerFecha(s) || 'N/A'}</td>
+          <td>${item.ciclo}</td>
+          <td>${item.finca}</td>
+          <td>${item.lote}</td>
+          <td>${limpiarDescripcion(s.x_studio_variedades || s.x_studio_variedad)}</td>
+          <td><span style="color:var(--accent-peanut); font-weight:700;">${loteComasa}</span></td>
+          <td style="text-align:right;">${enteras.toFixed(2)}</td>
+          <td style="text-align:right;">${quebradas.toFixed(2)}</td>
+          <td style="text-align:right; font-weight:600;">${pctEnteras.toFixed(2)}%</td>
+          <td style="text-align:right; background-color:#fff3cd; color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</td>
+        </tr>`;
     });
+
+    html += `</tbody></table>`;
   } else {
     const ddsObjetivo = tipoColumna.includes('10') ? 10 : 15;
     title.textContent = `Muestras Germinación (${ddsObjetivo} DDS)`;
-    let reportesProcesados = new Set();
 
+    let todasMuestras = [];
     itemsCelda.forEach((item) => {
       const muestrasFiltradas = (item.rawMuestrasOriginales || []).filter(m => Math.round(parseFloat(m.x_studio_dds)) === ddsObjetivo);
       muestrasFiltradas.forEach((m) => {
-        const idReporte = m.x_name || m.name || 'N/A';
-        if (reportesProcesados.has(idReporte)) return;
-        reportesProcesados.add(idReporte);
-        const obs = m.x_studio_observaciones || m.x_studio_observacion || m.comment || m.note || m.description || 'N/A';
-        html += `
-          <div class="popup-multi-block">
-            <div class="popup-block-title">Reporte Germinación: ${idReporte}</div>
-            <div class="popup-item"><span class="popup-label">Reporte:</span><span class="popup-value">${idReporte}</span></div>
-            <div class="popup-item"><span class="popup-label">Ciclo:</span><span class="popup-value">${item.ciclo}</span></div>
-            <div class="popup-item"><span class="popup-label">Finca:</span><span class="popup-value">${item.finca}</span></div>
-            <div class="popup-item"><span class="popup-label">Lote:</span><span class="popup-value">${item.lote}</span></div>
-            <div class="popup-item"><span class="popup-label">Fecha Muestreo:</span><span class="popup-value">${extraerFecha(m) || 'N/A'}</span></div>
-            <div class="popup-item"><span class="popup-label">DDS Registrado:</span><span class="popup-value">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</span></div>
-            <div class="popup-item"><span class="popup-label">Plantas / m.l.:</span><span class="popup-value" style="color:#0284c7; font-weight:700;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</span></div>
-            <div class="popup-item" style="flex-direction: column; align-items: flex-start; gap: 4px; background-color: #f8fafc;">
-              <span class="popup-label">Observación:</span>
-              <span class="popup-value" style="text-align: left; font-weight: normal; font-style: italic; color: #475569; width: 100%; white-space: normal;">${obs}</span>
-            </div>
-          </div>`;
+        todasMuestras.push({ item, m });
       });
     });
-    if (reportesProcesados.size === 0) html += `<div class="popup-item"><span style="color(--text-muted); font-style:italic;">No existen registros en Odoo para ${ddsObjetivo} DDS.</span></div>`;
+
+    // Ordenar ascendentemente por fecha de muestreo
+    todasMuestras.sort((a, b) => {
+      const dateA = extraerFecha(a.m) || '';
+      const dateB = extraerFecha(b.m) || '';
+      return dateA.localeCompare(dateB);
+    });
+
+    html += `
+      <table class="modal-table">
+        <thead>
+          <tr>
+            <th>Reporte</th>
+            <th>Fecha Muestreo</th>
+            <th>Ciclo</th>
+            <th>Finca</th>
+            <th>Lote</th>
+            <th>Lote Semilla (Comasa)</th>
+            <th>DDS Registrado</th>
+            <th>Plantas / m.l.</th>
+            <th>Observación</th>
+          </tr>
+          <tr>
+            <th><input type="text" class="modal-filter-input" data-col="0" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="1" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="2" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="3" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="4" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="5" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="6" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="7" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="8" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+          </tr>
+        </thead>
+        <tbody id="modalTableBody">`;
+
+    todasMuestras.forEach(({ item, m }) => {
+      const idReporte = m.x_name || m.name || 'N/A';
+      const obs = m.x_studio_observaciones || m.x_studio_observacion || m.comment || m.note || m.description || 'N/A';
+      const loteComasa = limpiarDescripcion(item.rawSiembra?.x_studio_lote_comasa || item.rawSiembra?.x_studio_lote_de_semilla_comasa); // Lote de semilla Comasa
+
+      html += `
+        <tr>
+          <td><strong>${idReporte}</strong></td>
+          <td>${extraerFecha(m) || 'N/A'}</td>
+          <td>${item.ciclo}</td>
+          <td>${item.finca}</td>
+          <td>${item.lote}</td>
+          <td><span style="color:var(--accent-peanut); font-weight:700;">${loteComasa}</span></td>
+          <td style="text-align:right;">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</td>
+          <td style="text-align:right; color:#0284c7; font-weight:700;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</td>
+          <td style="font-style: italic; color: #475569; white-space: normal; max-width: 250px;">${obs}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    if (todasMuestras.length === 0) {
+      html = `<div style="text-align:center; padding:20px; color:var(--text-muted); font-style:italic;">No existen registros en Odoo para ${ddsObjetivo} DDS.</div>`;
+    }
   }
-  body.innerHTML = html + `</div>`;
+  
+  body.innerHTML = html;
   overlay.classList.add('show');
 }
 
@@ -1787,7 +1902,6 @@ function contarGruposUnicos(items) {
   return new Set(items.map(i => `${i.finca}|||${i.lote}|||${i.fechaSiembra||''}`)).size;
 }
 
-// Función encargada de cambiar la columna de ordenamiento y refrescar las tablas
 function cambiarOrdenAlertas(key) {
   if (alertasSortConfig.key === key) {
     alertasSortConfig.asc = !alertasSortConfig.asc;
@@ -1798,7 +1912,6 @@ function cambiarOrdenAlertas(key) {
   renderAlertas();
 }
 
-// Actualiza las clases CSS de las cabeceras para mostrar flechas visuales de ordenamiento
 function actualizarEstilosCabecerasAlertas() {
   const prefijos = ['espera', '10dds', '15dds', 'completos'];
   const llavesColumnas = ['finca', 'lote', 'fechaSiembra', 'dds', 'variedad', 'semillas'];
@@ -1816,7 +1929,6 @@ function actualizarEstilosCabecerasAlertas() {
   });
 }
 
-// Función genérica para ordenar los arreglos agrupados de las alertas
 function ordenarFilasAlertas(filas) {
   return filas.sort((a, b) => {
     let valA = a[alertasSortConfig.key];
@@ -1890,7 +2002,6 @@ function renderAlertas() {
   if (totalAlertas === 0) tabBtnAlertas.classList.add('alerta-ok');
   else tabBtnAlertas.classList.remove('alerta-ok');
 
-  // Actualizar indicadores de cabeceras visuales
   actualizarEstilosCabecerasAlertas();
 
   renderTablaEspera(enEspera);
@@ -1934,7 +2045,6 @@ function renderTablaEspera(items) {
     if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
   });
 
-  // Aplicar ordenamiento dinámico
   const filas = ordenarFilasAlertas(Object.values(grupos));
 
   let html = '';
@@ -1982,7 +2092,6 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
     if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
   });
 
-  // Aplicar ordenamiento dinámico
   const filas = ordenarFilasAlertas(Object.values(grupos));
 
   let html = '';
@@ -2041,7 +2150,6 @@ function renderTablaCompletosTabla(items) {
     });
   });
 
-  // Aplicar ordenamiento dinámico
   const filas = ordenarFilasAlertas(Object.values(grupos));
 
   let html = '';
@@ -2395,7 +2503,7 @@ function renderPivot(data, ciclosVisibles) {
             if(mKey==='g10' || mKey==='g15') {
               subtotalHtml += `<td class="text-center"><span class="badge-pct ${valCalculado < 55 ? 'low' : ''}">${valCalculado.toFixed(2)}%</span></td>`;
             } else {
-              subtotalHtml += `<td class="text-right">${valCalculado.toFixed(2)}</td>Status`;
+              subtotalHtml += `<td class="text-right">${valCalculado.toFixed(2)}</td>`;
             }
           } else {
             subtotalHtml += `<td style="color: #cbd5e1;">-</td>`;
