@@ -272,7 +272,9 @@
   /* Estilos específicos para la nueva Tabla del Modal */
   .modal-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
   .modal-table th { background-color: #f1f5f9; color: #1e293b; font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: 0.3px; padding: 10px 8px; border: 1px solid var(--border-color); text-align: left; }
+  .modal-table th.technical-header { text-transform: none; font-family: 'Courier New', Courier, monospace; font-size: 11px; letter-spacing: 0; color: #1e3a8a; background-color: #eff6ff; font-weight: bold; text-align: center; border: 2px solid #bfdbfe; }
   .modal-table td { padding: 8px; border: 1px solid var(--border-color); color: var(--text-main); }
+  .modal-table td.technical-cell { font-family: 'Courier New', Courier, monospace; font-weight: bold; text-align: center; }
   .modal-table tr:hover td { background-color: #f8fafc; }
   .modal-filter-input { width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; margin-top: 5px; outline: none; }
   .modal-filter-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
@@ -497,20 +499,6 @@
 
   .tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
   .tab-panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-
-  @media (max-width: 768px) {
-    .tabs-nav { gap: 10px; padding: 10px 0 0; }
-    .tab-btn { padding: 12px 14px; gap: 10px; border-radius: 16px; }
-    .tab-icon { font-size: 24px; }
-    .tab-title { font-size: 13px; }
-    .tab-subtitle { display: none; }
-    .tab-badge { min-width: 22px; height: 22px; font-size: 11px; }
-  }
-  @media (max-width: 480px) {
-    .tab-icon { font-size: 20px; }
-    .tab-title { font-size: 12px; }
-    .tab-btn { padding: 10px 12px; gap: 8px; border-radius: 14px; }
-  }
 
   /* ===== ALERTAS TAB ===== */
   .alertas-container {
@@ -985,7 +973,7 @@
         </div>
       </div>
 
-      <!-- Tabla de lotes COMPLETOS -->
+      <!-- Tabla de lotes COMPLETOS (Modificada con columnas separadas) -->
       <div id="seccionCompletos" style="display:none;">
         <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0;">
           ✅ Lotes con Recuentos de Germinación Completos
@@ -999,8 +987,10 @@
                 <th class="sortable" id="th_completos_lote" onclick="cambiarOrdenAlertas('lote')">Lote</th>
                 <th class="sortable" id="th_completos_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra</th>
                 <th class="sortable" id="th_completos_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy</th>
-                <th>Recuento 10 DDS</th>
-                <th>Recuento 15 DDS</th>
+                <th style="color:#0284c7;">Plantas 10 DDS</th>
+                <th style="color:#0284c7;">% Germ 10 DDS</th>
+                <th style="color:#2563eb;">Plantas 15 DDS</th>
+                <th style="color:#2563eb;">% Germ 15 DDS</th>
                 <th class="sortable" id="th_completos_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad</th>
                 <th class="sortable" id="th_completos_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.</th>
                 <th>Acción</th>
@@ -1017,7 +1007,7 @@
 </div><!-- end container -->
 
 <div class="modal-overlay" id="popupDetalleOverlay" onclick="cerrarModalPopup()">
-  <div class="modal-card" style="width: 1100px; max-width: 95%;" onclick="event.stopPropagation()">
+  <div class="modal-card" style="width: 1250px; max-width: 95%;" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h3 id="popupTitle">Detalle Operativo</h3>
       <button class="modal-close" onclick="cerrarModalPopup()">&times;</button>
@@ -1063,7 +1053,6 @@ let estadoFincasColapso = {};
 let estadoGlobalColapsado = false; 
 let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: true, g15: true };
 
-// Estado de ordenamiento para la pestaña de alertas (Fecha Siembra Ascendente por defecto)
 let alertasSortConfig = { key: 'fechaSiembra', asc: true };
 
 function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
@@ -1539,7 +1528,6 @@ async function abrirModalGrafico() {
 
 function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
 
-// Función de filtro dinámico en las columnas de la tabla del Modal
 function filtrarTablaModal() {
   const inputs = document.querySelectorAll('.modal-filter-input');
   const rows = document.querySelectorAll('#modalTableBody tr');
@@ -1572,7 +1560,6 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
   if (tipoColumna === 'semillas') {
     title.textContent = `Detalle de Siembra - Lote: ${lote}`;
     
-    // Ordenar ascendentemente por fecha de siembra
     itemsCelda.sort((a, b) => {
       const dateA = extraerFecha(a.rawSiembra) || '';
       const dateB = extraerFecha(b.rawSiembra) || '';
@@ -1618,7 +1605,7 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
       const totalSem = item.total_semillas || (enteras + quebradas);
       const pctEnteras = totalSem > 0 ? (enteras / totalSem) * 100 : 0;
       const idReporte = s.name || s.x_name || ('#' + (idx + 1));
-      const loteComasa = limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa); // Lote de semilla Comasa
+      const loteComasa = limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa);
 
       html += `
         <tr>
@@ -1649,7 +1636,6 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
       });
     });
 
-    // Ordenar ascendentemente por fecha de muestreo
     todasMuestras.sort((a, b) => {
       const dateA = extraerFecha(a.m) || '';
       const dateB = extraerFecha(b.m) || '';
@@ -1666,8 +1652,9 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
             <th>Finca</th>
             <th>Lote</th>
             <th>Lote Semilla (Comasa)</th>
-            <th>DDS Registrado</th>
-            <th>Plantas / m.l.</th>
+            <th class="technical-header">x_studio_dds</th>
+            <th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (10 DDS)</th>
+            <th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (15 DDS)</th>
             <th>Observación</th>
           </tr>
           <tr>
@@ -1680,6 +1667,7 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
             <th><input type="text" class="modal-filter-input" data-col="6" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
             <th><input type="text" class="modal-filter-input" data-col="7" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
             <th><input type="text" class="modal-filter-input" data-col="8" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
+            <th><input type="text" class="modal-filter-input" data-col="9" placeholder="Filtrar..." oninput="filtrarTablaModal()"></th>
           </tr>
         </thead>
         <tbody id="modalTableBody">`;
@@ -1687,7 +1675,8 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
     todasMuestras.forEach(({ item, m }) => {
       const idReporte = m.x_name || m.name || 'N/A';
       const obs = m.x_studio_observaciones || m.x_studio_observacion || m.comment || m.note || m.description || 'N/A';
-      const loteComasa = limpiarDescripcion(item.rawSiembra?.x_studio_lote_comasa || item.rawSiembra?.x_studio_lote_de_semilla_comasa); // Lote de semilla Comasa
+      const loteComasa = limpiarDescripcion(item.rawSiembra?.x_studio_lote_comasa || item.rawSiembra?.x_studio_lote_de_semilla_comasa); 
+      const valorPlantas = parseFloat(m.x_studio_cant_plantas_x_mtr_lineal || 0).toFixed(2);
 
       html += `
         <tr>
@@ -1697,8 +1686,13 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
           <td>${item.finca}</td>
           <td>${item.lote}</td>
           <td><span style="color:var(--accent-peanut); font-weight:700;">${loteComasa}</span></td>
-          <td style="text-align:right;">${m.x_studio_dds ? parseFloat(m.x_studio_dds).toFixed(2) : ddsObjetivo + '.00'}</td>
-          <td style="text-align:right; color:#0284c7; font-weight:700;">${parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0).toFixed(2)}</td>
+          <td class="technical-cell" style="color:#475569; background-color:#f1f5f9;">${ddsObjetivo}</td>
+          <td class="technical-cell" style="text-align:right; color:#0284c7; font-size:13px; background-color: ${ddsObjetivo === 10 ? '#eff6ff' : '#ffffff'};">
+            ${ddsObjetivo === 10 ? valorPlantas : '-'}
+          </td>
+          <td class="technical-cell" style="text-align:right; color:#2563eb; font-size:13px; background-color: ${ddsObjetivo === 15 ? '#f0fdf4' : '#ffffff'};">
+            ${ddsObjetivo === 15 ? valorPlantas : '-'}
+          </td>
           <td style="font-style: italic; color: #475569; white-space: normal; max-width: 250px;">${obs}</td>
         </tr>`;
     });
@@ -1747,9 +1741,7 @@ let alertasCicloData = { sin10: [], sin15: [], completos: [], todos: [] };
 // ===== MULTISELECT CASCADA ALERTAS =====
 const AF_DIMENSIONES = ['ciclo','compania','sector','finca'];
 
-function afGetDatosBase() {
-  return datosMaestrosUnificados;
-}
+function afGetDatosBase() { return datosMaestrosUnificados; }
 
 function afGetValoresDisponibles(dim) {
   const otros = AF_DIMENSIONES.filter(d => d !== dim);
@@ -2122,10 +2114,11 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
   tbody.innerHTML = html;
 }
 
+// NUEVA FUNCIÓN: Renders de columnas físicas e independientes para plantas y porcentajes
 function renderTablaCompletosTabla(items) {
   const tbody = document.getElementById('tablaCompletosBody');
   if (!items || items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="alerta-empty"><span>📋</span>No hay lotes con ambos recuentos completos aún en este ciclo.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="alerta-empty"><span>📋</span>No hay lotes con ambos recuentos completos aún en este ciclo.</td></tr>`;
     return;
   }
 
@@ -2158,10 +2151,20 @@ function renderTablaCompletosTabla(items) {
     const avg10 = g.muestras10.length > 0 ? (g.muestras10.reduce((a,c)=>a+c,0)/g.muestras10.length) : null;
     const avg15 = g.muestras15.length > 0 ? (g.muestras15.reduce((a,c)=>a+c,0)/g.muestras15.length) : null;
     const sem = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas) : 0;
-    const germ10 = avg10 !== null && sem > 0 ? `(${((avg10/sem)*100).toFixed(1)}%)` : '';
-    const germ15 = avg15 !== null && sem > 0 ? `(${((avg15/sem)*100).toFixed(1)}%)` : '';
-    const p10txt = avg10 !== null ? `${avg10.toFixed(2)} pl/m.l. <span style="color:#6b7280;font-weight:400;">${germ10}</span>` : '-';
-    const p15txt = avg15 !== null ? `${avg15.toFixed(2)} pl/m.l. <span style="color:#6b7280;font-weight:400;">${germ15}</span>` : '-';
+    
+    // Cálculo de porcentajes independientes
+    const pct10 = avg10 !== null && sem > 0 ? (avg10 / sem) * 100 : null;
+    const pct15 = avg15 !== null && sem > 0 ? (avg15 / sem) * 100 : null;
+
+    // Render de Plantas 10 DDS
+    const p10txt = avg10 !== null ? `${avg10.toFixed(2)} pl/m.l.` : '-';
+    // Render de Porcentaje 10 DDS (badge con umbral crítico de 55%)
+    const g10txt = pct10 !== null ? `<span class="badge-pct ${pct10 < 55 ? 'low' : ''}">${pct10.toFixed(1)}%</span>` : '-';
+
+    // Render de Plantas 15 DDS
+    const p15txt = avg15 !== null ? `${avg15.toFixed(2)} pl/m.l.` : '-';
+    // Render de Porcentaje 15 DDS
+    const g15txt = pct15 !== null ? `<span class="badge-pct ${pct15 < 55 ? 'low' : ''}">${pct15.toFixed(1)}%</span>` : '-';
 
     const fincaEsc = g.finca.replace(/'/g,"\\'");
     const loteEsc  = g.lote.replace(/'/g,"\\'");
@@ -2172,8 +2175,13 @@ function renderTablaCompletosTabla(items) {
       <td>${g.lote}</td>
       <td>${formatFechaLegible(g.fechaSiembra)}</td>
       <td><span class="badge-dds pendiente">${g.dds} días</span></td>
-      <td style="color:#0284c7;font-weight:600;">${p10txt}</td>
-      <td style="color:#2563eb;font-weight:600;">${p15txt}</td>
+      
+      <!-- Columnas Separadas de Evaluación -->
+      <td style="color:#0284c7; font-weight:600; text-align:right;">${p10txt}</td>
+      <td style="text-align:center;">${g10txt}</td>
+      <td style="color:#2563eb; font-weight:600; text-align:right;">${p15txt}</td>
+      <td style="text-align:center;">${g15txt}</td>
+      
       <td>${g.variedad}</td>
       <td style="text-align:right;">${semillas}</td>
       <td style="white-space:nowrap;">
@@ -2216,7 +2224,7 @@ async function cargarDatosDesdeGitHub() {
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];
 
-    ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
+    let ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
 
     datosMaestrosUnificados = siembraData.map(s => {
       const finca = limpiarDescripcion(s.x_studio_finca);
@@ -2313,7 +2321,6 @@ function filtrarYMostrar() {
 
 function generarEncabezadosDinamicos(ciclosVisibles) {
   const header = document.getElementById('tablaHeader');
-  const subCabecerasCount = obtenerColumnasActivasPorCicloCount();
   let tr1 = `<tr><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Finca</th><th rowspan="2" style="text-align: left; min-width:160px; max-width:160px;">Lote de finca</th>`;
   let tr2 = `<tr>`;
 
