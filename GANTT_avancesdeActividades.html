@@ -114,6 +114,28 @@
     }
     .btn-toggle-ribbon:hover { background: rgba(255, 255, 255, 0.25); }
 
+    /* Variante flotante fija, esquina superior derecha del iframe (coincide con el
+       hueco que deja el shell INFOAGRO BI en su topbar). */
+    .btn-toggle-ribbon-fijo {
+      position: fixed;
+      top: 12px;
+      right: 16px;
+      z-index: 500;
+      background: #ffffff;
+      color: #1B4332;
+      border: 1.5px solid #E1E0D8;
+      font-size: 12.5px;
+      font-weight: 700;
+      padding: 0 14px;
+      height: 34px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.12);
+    }
+    .btn-toggle-ribbon-fijo:hover {
+      background: #F1F4F1;
+      border-color: #2D6A4F;
+    }
+
     .btn-organic-action.clear-all {
       background: var(--grad-naranja);
       display: none;
@@ -192,17 +214,19 @@
       top: 105%;
       left: 0;
       width: 100%;
+      min-width: 200px;
       background: #ffffff;
       border: 1px solid rgba(82, 183, 136, 0.2);
       border-radius: 6px;
       box-shadow: var(--shadow-lg);
-      max-height: 240px;
-      overflow-y: auto;
+      max-height: 280px;
+      overflow: hidden;
       z-index: 1000;
-      padding: 4px;
+      padding: 0;
       display: none;
+      flex-direction: column;
     }
-    .multiselect-dropdown.show { display: block; }
+    .multiselect-dropdown.show { display: flex; }
 
     .multiselect-option {
       display: flex;
@@ -532,99 +556,327 @@
       display: flex; justify-content: space-between; align-items: center;
       padding: 10px 16px; border-top: 1px solid #f1f5f9; flex-shrink: 0;
     }
-  </style>
+  /* ---------- TOOLBAR DE UNA SOLA FILA — mismo patrón en las 5 secciones de INFOAGRO BI ---------- */
+.toolbar-una-fila{
+  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+  background:#fff; border:1px solid rgba(163,177,198,0.3); border-radius:10px;
+  box-shadow:0 1px 3px rgba(0,0,0,.06); padding:10px 14px; margin-bottom:10px; flex-shrink:0;
+}
+.tf-campos-grupo{
+  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; flex:1;
+  max-height:500px; overflow:visible; transition:max-height .3s cubic-bezier(.4,0,.2,1), margin-bottom .3s ease, opacity .3s ease;
+  opacity:1;
+}
+.tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
+.tf-campo{display:flex; flex-direction:column; gap:4px; min-width:0; position:relative;}
+.tf-campo label{font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:#8a9690; font-weight:700;}
+
+.ms-dropdown, .ms-dropdown-select{
+  height:32px; min-width:120px; max-width:170px; padding:0 10px; border:1px solid rgba(163,177,198,0.4);
+  border-radius:6px; font-size:12px; background:#fff; cursor:pointer; user-select:none;
+  display:flex; justify-content:space-between; align-items:center; font-family:inherit;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ms-dropdown:hover, .ms-dropdown-select:hover{border-color:#1b4332;}
+.ms-dropdown::after{content:"▼"; font-size:8px; color:#8a9690; margin-left:6px;}
+.ms-panel{
+  display:none; flex-direction:column; position:absolute; top:100%; left:0; min-width:220px;
+  background:#fff; border:1px solid rgba(163,177,198,0.4); border-radius:8px; max-height:280px;
+  overflow:hidden; z-index:1200; box-shadow:0 10px 26px rgba(0,0,0,.16); margin-top:4px;
+}
+.ms-panel.show{display:flex;}
+.ms-search{padding:8px; border-bottom:1px solid rgba(163,177,198,0.3); flex-shrink:0;}
+.ms-search input{
+  width:100%; padding:6px 9px; border:1px solid rgba(163,177,198,0.4); border-radius:6px;
+  font-size:12px; outline:none; font-family:inherit;
+}
+.ms-search input:focus{border-color:#1b4332;}
+.ms-items{overflow-y:auto; flex:1 1 auto; min-height:0; padding:4px 0;}
+.ms-item{display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; cursor:pointer;}
+.ms-item:hover{background:#F1F4F1;}
+.ms-item.selectall{border-bottom:1px solid rgba(163,177,198,0.3); font-weight:700;}
+.ms-item input{margin:0; accent-color:#1b4332;}
+.ms-footer{display:flex; gap:8px; padding:8px; border-top:1px solid rgba(163,177,198,0.3); flex-shrink:0;}
+.ms-footer button{
+  flex:1; border:none; border-radius:6px; padding:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.ms-footer .ok{background:#1b4332; color:#fff;}
+.ms-footer .ok:hover{background:#2d6a4f;}
+.ms-footer .cancel{background:#F1F4F1; color:#22302A;}
+
+.ms-date{
+  height:32px; padding:0 6px; border:1px solid rgba(163,177,198,0.4); border-radius:6px; font-size:11.5px; font-family:inherit;
+}
+
+.tf-acciones{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap;}
+.tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-start; padding-top:2px;}
+.tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:#1B4332; line-height:1.2; white-space:nowrap;}
+.tf-titulo span{font-size:10.5px; color:var(--text-muted,#8a9690); font-weight:600;}
+.tf-icon{
+  height:32px; min-width:32px; padding:0 8px; border-radius:7px; border:1px solid rgba(163,177,198,0.4);
+  background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+  font-size:14px; transition:all .15s ease;
+}
+.tf-icon:hover{background:#F1F4F1; border-color:#1b4332;}
+.tf-icon-verde{background:#1b4332; border-color:#1b4332;}
+.tf-icon-verde:hover{opacity:.88;}
+.tf-icon-excel{background:#1a9448; border-color:#1a9448;}
+.tf-icon-excel:hover{opacity:.88;}
+
+/* ---------- Tab Resumen de Actividades: tabla plana + columnas arrastrables ---------- */
+table.table-resumen-actividades{width:100%; border-collapse:collapse; font-size:12px;}
+table.table-resumen-actividades thead th{
+  background:#1b4332; color:#fff; padding:8px 12px; text-align:left; font-weight:700;
+  position:sticky; top:0; z-index:1; user-select:none;
+}
+table.table-resumen-actividades td{padding:6px 12px; border-bottom:1px solid #f1f5f9;}
+table.table-resumen-actividades tbody tr:hover{background:#eef3ee;}
+table.table-resumen-actividades .fila-resumen-subtotal{
+  background:#e4f0e8; font-weight:800; font-style:italic;
+}
+table.table-resumen-actividades .fila-resumen-total{
+  background:#1b4332; color:#fff; font-weight:800; position:sticky; bottom:0;
+}
+table.table-resumen-actividades .fila-resumen-total td{border-bottom:none;}
+
+/* Encabezados arrastrables (drag & drop nativo) para reordenar columnas */
+.th-arrastrable{cursor:grab;}
+.th-arrastrable:active{cursor:grabbing;}
+.th-drag-handle{opacity:.6; margin-right:4px; font-size:11px;}
+.th-arrastrando{opacity:.4;}
+.th-drop-target{outline:2px dashed #C9963B; outline-offset:-2px;}
+.th-subtotal-activo{background:#2d6a4f !important;}
+.th-subtotal-badge{background:#C9963B; color:#2A1F0A; font-size:9px; font-weight:800; padding:1px 4px; border-radius:4px; margin-left:2px;}
+.th-quitar-col{float:right; opacity:.5; cursor:pointer; font-size:11px; margin-left:6px;}
+.th-quitar-col:hover{opacity:1; color:#C9963B;}
+
+.fila-resumen-clicable{cursor:pointer;}
+.fila-resumen-clicable:hover{background:#e4f0e8 !important;}
+
+/* ---------- Tab Control de Aplicaciones (cascada de fungicidas) ---------- */
+table.ca-tabla{border-collapse:collapse; font-size:11.5px; white-space:nowrap;}
+table.ca-tabla th, table.ca-tabla td{border:1px solid #e2e8f0; padding:5px 8px;}
+table.ca-tabla thead th{
+  background:#1b4332; color:#fff; position:sticky; top:0; z-index:5;
+  font-size:10px; text-transform:uppercase; letter-spacing:.03em; font-weight:700; text-align:center;
+}
+table.ca-tabla td.ca-fija, table.ca-tabla th.ca-fija{
+  position:sticky; left:0; background:#fff; z-index:3; text-align:left;
+}
+table.ca-tabla th.ca-fija{z-index:6; background:#1b4332;}
+table.ca-tabla td.ca-fija-sector, table.ca-tabla th.ca-fija-sector{left:0; min-width:78px; max-width:78px; font-size:10.5px;}
+table.ca-tabla td.ca-fija-finca, table.ca-tabla th.ca-fija-finca{left:78px; min-width:130px; max-width:130px;}
+table.ca-tabla td.ca-fija-lote, table.ca-tabla th.ca-fija-lote{left:208px; min-width:110px; max-width:110px;}
+table.ca-tabla tbody tr:hover td:not(.ca-fija){filter:brightness(.97);}
+table.ca-tabla tbody tr:hover td.ca-fija{background:#f4f7f5;}
+.ca-celda{min-width:96px; text-align:center; vertical-align:middle;}
+.ca-celda-simple{min-width:96px; text-align:center; vertical-align:middle; background:#f8fafc; color:#000000; font-weight:400;}
+
+/* ---------- Calendario de Siembra (Sector > Finca > Grupo de Siembra) ---------- */
+table.ca-cal-tabla{border-collapse:collapse; font-size:11px;}
+table.ca-cal-tabla th, table.ca-cal-tabla td{border:1px solid #e2e8f0; padding:4px 8px; text-align:center;}
+table.ca-cal-tabla thead th{position:sticky; z-index:8; color:#1e293b; font-weight:700;}
+table.ca-cal-tabla thead tr:nth-child(1) th{top:0;}
+table.ca-cal-tabla thead tr:nth-child(2) th{top:28px;}
+table.ca-cal-tabla thead tr:nth-child(3) th{top:56px;}
+table.ca-cal-tabla thead tr:nth-child(4) th{top:84px;}
+.ca-cal-etapa-band{background:#fde047; color:#713f12; font-size:10.5px; letter-spacing:.04em;}
+.ca-cal-sector{background:#c7d2fe;}
+.ca-cal-finca{background:#fbcfe8; font-size:10.5px;}
+.ca-cal-sigla{background:#93c5fd; font-size:10px;}
+table.ca-cal-tabla td.ca-fija{position:sticky; left:0; z-index:4; background:#fff; font-weight:600; text-align:left; min-width:80px;}
+table.ca-cal-tabla th.ca-fija{position:sticky; left:0; top:0; z-index:9; background:#1b4332; color:#fff; text-align:left;}
+.ca-cal-total-row td{background:#1b4332; color:#fff; font-weight:700; position:sticky; top:112px; z-index:7;}
+.ca-cal-total-row td.ca-fija{left:0; z-index:10; background:#1b4332;}
+.ca-cal-valor{background:#bbf7d0; color:#14532d; font-weight:700;}
+.ca-cal-programado{background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:9px;}
+.ca-info-popover{
+  display:none; position:absolute; top:26px; left:0; z-index:50; width:360px;
+  background:#fff; border:1px solid rgba(163,177,198,0.4); border-radius:10px;
+  box-shadow:0 10px 26px rgba(0,0,0,.16); padding:14px; font-size:11.5px; color:#334155; line-height:1.5;
+}
+.ca-info-popover.show{display:block;}
+.ca-info-popover h4{margin:0 0 6px; font-size:12px; color:#1b4332;}
+.ca-info-popover .ca-leyenda-item{display:flex; align-items:center; gap:8px; margin-top:4px;}
+.ca-info-popover .ca-leyenda-swatch{width:14px; height:14px; border-radius:4px; flex-shrink:0;}
+
+/* ---------- Modal de detalle de registros (Resumen de Actividades) ---------- */
+.detalle-modal-overlay{
+  position:fixed; inset:0; background:rgba(27,67,50,.4); z-index:2000;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.detalle-modal-caja{
+  background:#fff; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,.3);
+  max-width:820px; width:100%; max-height:82vh; display:flex; flex-direction:column; overflow:hidden;
+}
+.detalle-modal-header{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:12px;
+  padding:16px 20px; border-bottom:1px solid #E1E0D8; flex-shrink:0;
+}
+.detalle-modal-titulo{font-size:15px; font-weight:800; color:#1B4332;}
+.detalle-modal-chips{display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:6px;}
+.detalle-modal-chip{font-size:11.5px; color:#5C6B63;}
+.detalle-modal-chip b{color:#22302A;}
+.detalle-modal-cerrar{
+  background:#E4F0E8; border:none; color:#1B4332; font-weight:700; border-radius:8px;
+  padding:7px 14px; cursor:pointer; font-size:12.5px; flex-shrink:0;
+}
+.detalle-modal-cerrar:hover{background:#d5e6db;}
+.detalle-modal-body{padding:0 20px 20px; overflow-y:auto;}
+table.detalle-modal-tabla{width:100%; border-collapse:collapse; font-size:12.5px; margin-top:14px;}
+table.detalle-modal-tabla thead th{
+  background:#1B4332; color:#fff; padding:8px 10px; text-align:left; font-weight:700;
+  position:sticky; top:0;
+}
+table.detalle-modal-tabla td{padding:7px 10px; border-bottom:1px solid #F0EFE9;}
+table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:none; padding-top:9px;}
+
+/* Responsive: en pantallas chicas los campos se apilan a ancho completo y las
+   acciones bajan a su propia fila. Jerarquía móvil: Compañía → Sector → Ciclo →
+   Finca → resto de campos propios de cada pestaña. */
+@media (max-width:900px){
+  .toolbar-una-fila{padding:10px;}
+  .tf-campo{flex:1 1 130px;}
+  .ms-dropdown, .ms-dropdown-select{max-width:none; width:100%;}
+  .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid rgba(163,177,198,0.3); padding-top:8px; margin-top:2px;}
+  .tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
+  .campo-compania{order:1;}
+  .campo-sector{order:2;}
+  .campo-ciclo{order:3;}
+  .campo-finca{order:4;}
+  .campo-actividad{order:5;}
+  .campo-periodo{order:6;}
+  .campo-proveedor{order:7;}
+  .campo-categoria{order:5;}
+  .campo-lote{order:6;}
+  .campo-producto{order:7;}
+}
+@media (max-width:520px){
+  .tf-campo{flex:1 1 100%;}
+  .ms-panel{min-width:0; width:100%; left:0; right:0;}
+}
+
+</style>
 </head>
 <body>
 
 <div class="dashboard-container">
 
-  <div class="page-hdr-container d-flex align-items-center justify-content-between">
-    <div class="d-flex align-items-center">
-      <span class="hdr-title">🌱 Matriz de Labores Diarias</span>
-      <span class="hdr-sub d-none d-md-inline">Análisis continuo de avance físico (Manzanas)</span>
+  <div class="toolbar-una-fila" id="toolbarCompacta">
+    <div class="tf-titulo">
+      <h1>Avance de Actividades</h1>
+      <span>Monitoreo cruzado</span>
     </div>
-    
-    <div class="hdr-controls-wrapper">
-      <button class="btn-toggle-ribbon" onclick="toggleFilterRibbon()" id="btnToggleRibbon">
-        📐 Ocultar Filtros
-      </button>
+    <div class="tf-campos-grupo filters-wrapper" id="filterRibbon">
 
-      <button class="btn-organic-action clear-all" id="btnGlobalClear" onclick="resetAllFilters()">
-        ↺ Limpiar Filtros
-      </button>
-
-      <div class="hdr-compaia-box">
-        <span class="hdr-compaia-icon">🏢</span>
-        <select id="filterHeaderCompaia" class="form-select hdr-select-compaia" onchange="onHeaderCompaiaChange()">
-          </select>
+      <div class="tf-campo campo-compania">
+        <label>Compañía</label>
+        <select id="filterHeaderCompaia" class="ms-dropdown-select" onchange="onHeaderCompaiaChange()"></select>
       </div>
+
+      <div class="tf-campo campo-sector">
+        <label>Sector</label>
+        <div class="ms-dropdown" id="dropSector" onclick="toggleMsGantt(event,'sector')">Todos</div>
+        <div class="ms-panel" id="msSector"></div>
+      </div>
+
+      <div class="tf-campo campo-ciclo">
+        <label>Ciclo</label>
+        <div class="ms-dropdown" id="dropCiclo" onclick="toggleMsGantt(event,'ciclo')">Todos</div>
+        <div class="ms-panel" id="msCiclo"></div>
+      </div>
+
+      <div class="tf-campo campo-finca">
+        <label>Finca</label>
+        <div class="ms-dropdown" id="dropFinca" onclick="toggleMsGantt(event,'finca')">Todas</div>
+        <div class="ms-panel" id="msFinca"></div>
+      </div>
+
+      <div class="tf-campo campo-actividad campo-actividades-y-resumen">
+        <label>Actividad</label>
+        <div class="ms-dropdown" id="dropActividad" onclick="toggleMsGantt(event,'actividad')">Todas</div>
+        <div class="ms-panel" id="msActividad"></div>
+      </div>
+
+      <div class="tf-campo campo-periodo campo-actividades-y-resumen">
+        <label>Período</label>
+        <select id="filterFechaTipo" class="ms-dropdown-select" onchange="toggleFechaInputs()">
+          <option value="all">Histórico</option>
+          <option value="este_mes" selected>Este Mes</option>
+          <option value="mes_pasado">Mes Pasado</option>
+          <option value="ano_curso">Año Curso</option>
+          <option value="personalizada">Rango...</option>
+        </select>
+      </div>
+
+      <div id="customDateInputs" class="tf-campo campo-actividades-y-resumen" style="display:none;">
+        <label>Rango de fechas</label>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="date" id="filterFechaDesde" class="ms-date" onchange="onCustomDateChange()">
+          <span style="font-size:11px; color:var(--tx-2, #8a9690);">a</span>
+          <input type="date" id="filterFechaHasta" class="ms-date" onchange="onCustomDateChange()">
+        </div>
+      </div>
+
+      <div class="tf-campo campo-proveedor campo-solo-actividades">
+        <label>Proveedor</label>
+        <div class="ms-dropdown" id="dropProveedor" onclick="toggleMsGantt(event,'proveedor')">Todos</div>
+        <div class="ms-panel" id="msProveedor"></div>
+      </div>
+
+      <div class="tf-campo campo-categoria campo-solo-insumos" style="display:none;">
+        <label>Categoría Insumo</label>
+        <div class="ms-dropdown" id="dropCategoria" onclick="toggleMsGantt(event,'categoria')">Todas</div>
+        <div class="ms-panel" id="msCategoria"></div>
+      </div>
+
+      <div class="tf-campo campo-lote campo-solo-insumos" style="display:none;">
+        <label>Lote</label>
+        <div class="ms-dropdown" id="dropLote" onclick="toggleMsGantt(event,'lote')">Todos</div>
+        <div class="ms-panel" id="msLote"></div>
+      </div>
+
+      <div class="tf-campo campo-producto campo-solo-insumos" style="display:none;">
+        <label>Producto</label>
+        <div class="ms-dropdown" id="dropProducto" onclick="toggleMsGantt(event,'producto')">Todos</div>
+        <div class="ms-panel" id="msProducto"></div>
+      </div>
+
+    </div>
+
+    <div class="tf-acciones">
+      <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
+      </button>
+      <button class="tf-icon" onclick="resetAllFiltersGantt()" title="Limpiar todos los filtros">
+        <span>🧹</span>
+      </button>
+      <button class="tf-icon tf-icon-excel" onclick="exportActivo()" title="Exportar a Excel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="19"/>
+          <line x1="15" y1="13" x2="9" y2="19"/>
+        </svg>
+      </button>
+      <button class="tf-icon" onclick="location.reload()" title="Actualizar">
+        <span>↻</span>
+      </button>
+      <button class="tf-icon" onclick="window.print()" title="Imprimir">
+        <span>🖨️</span>
+      </button>
     </div>
   </div>
 
   <div class="tabs-switch-container" id="tabsSwitch">
     <button class="tab-switch-btn active" id="tabBtnActividades" onclick="switchTab('actividades')">📊 Avance de Actividades</button>
     <button class="tab-switch-btn" id="tabBtnInsumos" onclick="switchTab('insumos')">🧪 Consumo de Insumos</button>
+    <button class="tab-switch-btn" id="tabBtnResumen" onclick="switchTab('resumen')">📋 Resumen de Actividades</button>
+    <button class="tab-switch-btn" id="tabBtnFungicidas" onclick="switchTab('fungicidas')">🧴 Control de Aplicaciones</button>
+    <button class="tab-switch-btn" id="tabBtnProgramacion" onclick="switchTab('programacion')">🗓️ Programación de aplicaciones</button>
   </div>
 
   <div class="tab-panel" id="tabPanelActividades">
-
-  <div class="filters-inline-container" id="filterRibbon" onclick="closeDropdownsEvent(event)">
-    
-    <div class="filter-item-wrap" style="min-width: 125px; flex: 0.8;">
-      <div class="fg-label">Período:</div>
-      <select id="filterFechaTipo" class="form-select-native form-control w-100" onchange="toggleFechaInputs()">
-        <option value="all">Histórico</option>
-        <option value="este_mes" selected>Este Mes</option>
-        <option value="mes_pasado">Mes Pasado</option>
-        <option value="ano_curso">Año Curso</option>
-        <option value="personalizada">Rango...</option>
-      </select>
-    </div>
-
-    <div id="customDateInputs" style="display: none; width: 190px;">
-      <div class="d-flex gap-1 align-items-center" style="height: 28px;">
-        <input type="date" id="filterFechaDesde" class="form-control" onchange="onCustomDateChange()">
-        <span class="text-muted">al</span>
-        <input type="date" id="filterFechaHasta" class="form-control" onchange="onCustomDateChange()">
-      </div>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Sector:</div>
-      <div class="multiselect-btn" id="btnSector" onclick="toggleDropdown(event, 'dropSector')">Todos</div>
-      <div class="multiselect-dropdown" id="dropSector"></div>
-      <button class="btn-reset-individual inactive" id="resetSector" onclick="resetSingleFilter('Sector')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Proveedor:</div>
-      <div class="multiselect-btn" id="btnProveedor" onclick="toggleDropdown(event, 'dropProveedor')">Todos</div>
-      <div class="multiselect-dropdown" id="dropProveedor"></div>
-      <button class="btn-reset-individual inactive" id="resetProveedor" onclick="resetSingleFilter('Proveedor')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Ciclo:</div>
-      <div class="multiselect-btn" id="btnCiclo" onclick="toggleDropdown(event, 'dropCiclo')">Todos</div>
-      <div class="multiselect-dropdown" id="dropCiclo"></div>
-      <button class="btn-reset-individual inactive" id="resetCiclo" onclick="resetSingleFilter('Ciclo')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Finca:</div>
-      <div class="multiselect-btn" id="btnFinca" onclick="toggleDropdown(event, 'dropFinca')">Todas</div>
-      <div class="multiselect-dropdown" id="dropFinca"></div>
-      <button class="btn-reset-individual inactive" id="resetFinca" onclick="resetSingleFilter('Finca')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Actividad:</div>
-      <div class="multiselect-btn" id="btnActividad" onclick="toggleDropdown(event, 'dropActividad')">Todas</div>
-      <div class="multiselect-dropdown" id="dropActividad"></div>
-      <button class="btn-reset-individual inactive" id="resetActividad" onclick="resetSingleFilter('Actividad')"> </button>
-    </div>
-
-  </div>
 
   <div class="table-toolbar">
     <div class="d-flex align-items-center gap-2">
@@ -651,69 +903,19 @@
 
   <div class="tab-panel" id="tabPanelInsumos" style="display:none;">
 
-  <div class="filters-inline-container" id="filterRibbonIns" onclick="closeDropdownsEvent(event)">
-
-    <div class="filter-item-wrap" style="min-width: 125px; flex: 0.8;">
-      <div class="fg-label">Período:</div>
-      <select id="filterFechaTipoIns" class="form-select-native form-control w-100" onchange="toggleFechaInputsIns()">
-        <option value="all">Histórico</option>
-        <option value="este_mes" selected>Este Mes</option>
-        <option value="mes_pasado">Mes Pasado</option>
-        <option value="ano_curso">Año Curso</option>
-        <option value="personalizada">Rango...</option>
-      </select>
-    </div>
-
-    <div id="customDateInputsIns" style="display: none; width: 190px;">
-      <div class="d-flex gap-1 align-items-center" style="height: 28px;">
-        <input type="date" id="filterFechaDesdeIns" class="form-control" onchange="onCustomDateChangeIns()">
-        <span class="text-muted">al</span>
-        <input type="date" id="filterFechaHastaIns" class="form-control" onchange="onCustomDateChangeIns()">
-      </div>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Sector:</div>
-      <div class="multiselect-btn" id="btnSectorIns" onclick="toggleDropdown(event, 'dropSectorIns')">Todos</div>
-      <div class="multiselect-dropdown" id="dropSectorIns"></div>
-      <button class="btn-reset-individual inactive" id="resetSectorIns" onclick="resetSingleFilterIns('sector')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Categoría Insumo:</div>
-      <div class="multiselect-btn" id="btnCategoriaIns" onclick="toggleDropdown(event, 'dropCategoriaIns')">Todas</div>
-      <div class="multiselect-dropdown" id="dropCategoriaIns"></div>
-      <button class="btn-reset-individual inactive" id="resetCategoriaIns" onclick="resetSingleFilterIns('categoria')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Ciclo:</div>
-      <div class="multiselect-btn" id="btnCicloIns" onclick="toggleDropdown(event, 'dropCicloIns')">Todos</div>
-      <div class="multiselect-dropdown" id="dropCicloIns"></div>
-      <button class="btn-reset-individual inactive" id="resetCicloIns" onclick="resetSingleFilterIns('ciclo')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Finca:</div>
-      <div class="multiselect-btn" id="btnFincaIns" onclick="toggleDropdown(event, 'dropFincaIns')">Todas</div>
-      <div class="multiselect-dropdown" id="dropFincaIns"></div>
-      <button class="btn-reset-individual inactive" id="resetFincaIns" onclick="resetSingleFilterIns('finca')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Lote:</div>
-      <div class="multiselect-btn" id="btnLoteIns" onclick="toggleDropdown(event, 'dropLoteIns')">Todos</div>
-      <div class="multiselect-dropdown" id="dropLoteIns"></div>
-      <button class="btn-reset-individual inactive" id="resetLoteIns" onclick="resetSingleFilterIns('lote')"> </button>
-    </div>
-
-    <div class="filter-item-wrap">
-      <div class="fg-label">Producto:</div>
-      <div class="multiselect-btn" id="btnProductoIns" onclick="toggleDropdown(event, 'dropProductoIns')">Todos</div>
-      <div class="multiselect-dropdown" id="dropProductoIns"></div>
-      <button class="btn-reset-individual inactive" id="resetProductoIns" onclick="resetSingleFilterIns('producto')"> </button>
-    </div>
-
+  <!-- Período de Insumos es distinto al de Actividades (fechas propias del modelo de
+       insumos) — vive oculto aquí y se muestra/oculta en la fila unificada de arriba
+       según la pestaña activa (ver JS: mostrarCamposSegunTab). -->
+  <div style="display:none;">
+    <select id="filterFechaTipoIns" onchange="toggleFechaInputsIns()">
+      <option value="all">Histórico</option>
+      <option value="este_mes" selected>Este Mes</option>
+      <option value="mes_pasado">Mes Pasado</option>
+      <option value="ano_curso">Año Curso</option>
+      <option value="personalizada">Rango...</option>
+    </select>
+    <input type="date" id="filterFechaDesdeIns" onchange="onCustomDateChangeIns()">
+    <input type="date" id="filterFechaHastaIns" onchange="onCustomDateChangeIns()">
   </div>
 
   <div class="table-toolbar">
@@ -740,6 +942,77 @@
 
   </div>
   <!-- /tabPanelInsumos -->
+
+  <div class="tab-panel" id="tabPanelResumen" style="display:none;">
+
+    <div class="table-toolbar" style="flex-wrap:wrap; gap:14px;">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">
+          Arrastra las columnas para reordenarlas · clic derecho para subtotal
+        </span>
+        <select id="selAgregarColResumen" class="ms-dropdown-select" style="height:28px; font-size:11px;" onchange="agregarColResumen(this.value)">
+          <option value="">+ Agregar columna...</option>
+        </select>
+      </div>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="text-muted" style="font-size: 11px;" id="recordCounterResumen">—</div>
+      </div>
+    </div>
+
+    <div class="table-responsive-organic" id="matrixContainerResumen">
+      <div class="loading-box text-center py-4">
+        <div class="loading-spinner"><div class="spinner-blob"></div></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /tabPanelResumen -->
+
+  <div class="tab-panel" id="tabPanelFungicidas" style="display:none;">
+
+    <div class="table-toolbar" style="flex-wrap:wrap; gap:14px;">
+      <div class="d-flex align-items-center gap-2 flex-wrap" style="position:relative;">
+        <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">
+          📅 Calendario de Siembra → Fungicidas → Cosecha · Ciclo Mani 2026
+        </span>
+        <button type="button" class="tf-icon" style="width:20px; height:20px; min-width:20px; padding:0; border-radius:50%; font-weight:800; font-size:12px; background:#1b4332; color:#fff; border-color:#1b4332;" onclick="toggleInfoCalendarioSiembra(event)" title="Cómo leer este calendario">!</button>
+        <div id="infoCalendarioSiembraPopover" class="ca-info-popover" onclick="event.stopPropagation()"></div>
+      </div>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="text-muted" style="font-size: 11px;" id="recordCounterSiembraCal">—</div>
+      </div>
+    </div>
+
+    <div class="table-responsive-organic" id="matrixContainerSiembraCal" style="max-height:640px; flex:none;">
+      <div class="loading-box text-center py-4">
+        <div class="loading-spinner"><div class="spinner-blob"></div></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /tabPanelFungicidas -->
+
+  <div class="tab-panel" id="tabPanelProgramacion" style="display:none;">
+
+    <div class="table-toolbar" style="flex-wrap:wrap; gap:14px;">
+      <div class="d-flex align-items-center gap-2 flex-wrap">
+        <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">
+          🧴 Cascada de Fungicidas · Ciclo Mani 2026 — cada lote sembrado, con Siembra → Fungicida I (+30d) → Fungicida II..VIII (+13d entre aplicación real y la siguiente) → Arranque/Combina
+        </span>
+      </div>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <div class="text-muted" style="font-size: 11px;" id="recordCounterFungicidas">—</div>
+      </div>
+    </div>
+
+    <div class="table-responsive-organic" id="matrixContainerFungicidas">
+      <div class="loading-box text-center py-4">
+        <div class="loading-spinner"><div class="spinner-blob"></div></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /tabPanelProgramacion -->
 
 </div>
 
@@ -786,25 +1059,47 @@
   }
 
   function switchTab(tab) {
-    const isAct = tab === 'actividades';
-    document.getElementById('tabPanelActividades').style.display = isAct ? 'flex' : 'none';
-    document.getElementById('tabPanelInsumos').style.display = isAct ? 'none' : 'flex';
-    document.getElementById('tabBtnActividades').classList.toggle('active', isAct);
-    document.getElementById('tabBtnInsumos').classList.toggle('active', !isAct);
+    const paneles = { actividades:'tabPanelActividades', insumos:'tabPanelInsumos', resumen:'tabPanelResumen', fungicidas:'tabPanelFungicidas', programacion:'tabPanelProgramacion' };
+    const botones = { actividades:'tabBtnActividades', insumos:'tabBtnInsumos', resumen:'tabBtnResumen', fungicidas:'tabBtnFungicidas', programacion:'tabBtnProgramacion' };
+    Object.keys(paneles).forEach(k=>{
+      document.getElementById(paneles[k]).style.display = (k===tab) ? 'flex' : 'none';
+      document.getElementById(botones[k]).classList.toggle('active', k===tab);
+    });
+    mostrarCamposSegunTab(tab);
+    if(tab==='resumen'){
+      renderResumenActividades();
+    }
+    if(tab==='fungicidas'){
+      renderCalendarioSiembra();
+    }
+    if(tab==='programacion'){
+      renderControlAplicaciones();
+    }
   }
 
-  function toggleFilterRibbon() {
-    const ribbon = document.getElementById("filterRibbon");
-    const btn = document.getElementById("btnToggleRibbon");
-    
-    if (ribbon.classList.contains("collapsed")) {
-      ribbon.classList.remove("collapsed");
-      btn.innerHTML = "📐 Ocultar Filtros";
-    } else {
-      closeAllDropdowns();
-      ribbon.classList.add("collapsed");
-      btn.innerHTML = "🔍 Mostrar Filtros";
-    }
+  // Sector/Ciclo/Finca son compartidos entre las 3 pestañas (mismos controles arriba);
+  // Período/Proveedor/Actividad son propios de Actividades; Categoría/Lote/Producto son
+  // propios de Insumos; Resumen no usa ninguno de esos (el usuario define sus propios
+  // niveles de agrupación dentro del tab).
+  function mostrarCamposSegunTab(tab){
+    document.querySelectorAll('.campo-solo-actividades').forEach(el=>{
+      el.style.display = (tab==='actividades') ? '' : 'none';
+    });
+    document.querySelectorAll('.campo-solo-insumos').forEach(el=>{
+      el.style.display = (tab==='insumos') ? '' : 'none';
+    });
+    // Actividad es visible en Avance de Actividades y en Resumen (usa el mismo control
+    // y la misma clave de SELECCIONES), pero no aplica en Consumo de Insumos ni en
+    // Control de Aplicaciones/Programación de aplicaciones (estos tabs siempre fijan
+    // Ciclo = Mani 2026 y Actividad = Siembra internamente, no dependen de los filtros
+    // superiores).
+    document.querySelectorAll('.campo-actividades-y-resumen').forEach(el=>{
+      el.style.display = (tab==='insumos' || tab==='fungicidas' || tab==='programacion') ? 'none' : '';
+    });
+  }
+
+  function toggleFiltrosExtra() {
+    document.getElementById("filterRibbon").classList.toggle("collapsed");
   }
 
   function formatToCustomDate(dateStr) {
@@ -854,13 +1149,14 @@
           finca: Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : (r.x_studio_finca || "Sin Finca"),
           lote_agricola: Array.isArray(r.x_studio_lote_agricola) ? r.x_studio_lote_agricola[1] : (r.x_studio_lote_agricola || "Sin Lote"),
           actividad: Array.isArray(r.x_studio_activiadad_realizada) ? r.x_studio_activiadad_realizada[1] : (r.x_studio_activiadad_realizada || "Sin Actividad"),
+          grupo_siembra: r.x_studio_grupo_de_siembra || "Sin Grupo",
           avance: Number(r.x_studio_avance_mzn || 0),
           fecha: r.x_studio_fecha || "" 
         };
       }).filter(r => r.fecha !== "");
 
       buildHeaderCompaiaOptions();
-      buildCascadingFilters();
+      construirFiltrosGantt();
       renderMatrix();
     } catch (e) {
       document.getElementById("matrixContainer").innerHTML = `<div class="alert alert-danger text-center m-2">⚠️ Error de comunicación de datos.</div>`;
@@ -952,7 +1248,7 @@
 
       INSUMOS_LOAD_ERROR = false;
       buildHeaderCompaiaOptions();
-      buildCascadingFiltersIns();
+      construirFiltrosGantt();
       renderMatrixIns();
     } catch (e) {
       if(!esReintento) {
@@ -987,150 +1283,44 @@
 
   function onHeaderCompaiaChange() {
     COMPAIA_SELECCIONADA = document.getElementById("filterHeaderCompaia").value;
-    buildCascadingFilters();
+    construirFiltrosGantt();
     renderMatrix();
     checkGlobalClearVisibility();
-    buildCascadingFiltersIns();
     renderMatrixIns();
+    if(document.getElementById('tabPanelResumen').style.display !== 'none') renderResumenActividades();
+    refrescarTabsFungicidasSiVisibles();
+  }
+
+  // Sector, Ciclo y Finca son compartidos entre Actividades e Insumos (misma selección
+  // visual arriba) — CAMPOS_COMPARTIDOS define en qué llave escribe cada uno dentro de
+  // SELECCIONES y SELECCIONES_INS a la vez.
+  const CAMPOS_COMPARTIDOS = ['sector','ciclo','finca'];
+  // Campos propios de cada pestaña (sólo existen en un lado)
+  const CAMPOS_SOLO_ACT = ['proveedor','actividad'];
+  const CAMPOS_SOLO_INS = ['categoria','lote','producto'];
+
+  function idsMsGantt(campo){
+    const mapaIds = {
+      sector:'Sector', ciclo:'Ciclo', finca:'Finca',
+      proveedor:'Proveedor', actividad:'Actividad',
+      categoria:'Categoria', lote:'Lote', producto:'Producto'
+    };
+    const suf = mapaIds[campo];
+    return { drop:'drop'+suf, panel:'ms'+suf };
   }
 
   function getOptionsFor(prop) {
-    const fFechaTipo = document.getElementById("filterFechaTipo").value;
+    const esCompartido = CAMPOS_COMPARTIDOS.includes(prop);
+    const esSoloIns = CAMPOS_SOLO_INS.includes(prop);
+    const fuente = esSoloIns ? DB_INSUMOS : DB_RAW;
+    const seleccionRef = esSoloIns ? SELECCIONES_INS : SELECCIONES;
+    const fFechaTipoId = esSoloIns ? "filterFechaTipoIns" : "filterFechaTipo";
+    const fFechaTipo = document.getElementById(fFechaTipoId).value;
     const hoy = new Date();
     const curYear = hoy.getFullYear();
     const curMonth = hoy.getMonth();
 
-    const dataFiltered = DB_RAW.filter(r => {
-      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
-
-      if(fFechaTipo !== "all" && r.fecha) {
-        const parts = r.fecha.split("-");
-        if(parts.length === 3) {
-          const rYear = parseInt(parts[0], 10);
-          const rMonth = parseInt(parts[1], 10) - 1; 
-          if(fFechaTipo === "este_mes") {
-            if(rYear !== curYear || rMonth !== curMonth) return false;
-          } else if(fFechaTipo === "mes_pasado") {
-            let targetMonth = curMonth - 1; let targetYear = curYear;
-            if(targetMonth < 0) { targetMonth = 11; targetYear--; }
-            if(rYear !== targetYear || rMonth !== targetMonth) return false;
-          } else if(fFechaTipo === "ano_curso") {
-            if(rYear !== curYear) return false;
-          } else if(fFechaTipo === "personalizada") {
-            const desde = document.getElementById("filterFechaDesde").value;
-            const hasta = document.getElementById("filterFechaHasta").value;
-            if(desde && r.fecha < desde) return false;
-            if(hasta && r.fecha > hasta) return false;
-          }
-        }
-      }
-
-      for (let targetFilterKey in SELECCIONES) {
-        if (targetFilterKey !== prop && SELECCIONES[targetFilterKey].length > 0 && !SELECCIONES[targetFilterKey].includes(r[targetFilterKey])) {
-          return false;
-        }
-      }
-      return true;
-    });
-    return [...new Set(dataFiltered.map(r => r[prop]))].filter(Boolean).sort();
-  }
-
-  function buildCascadingFilters() {
-    updateDropdownUI("dropProveedor", "btnProveedor", "proveedor");
-    updateDropdownUI("dropSector", "btnSector", "sector");
-    updateDropdownUI("dropCiclo", "btnCiclo", "ciclo");
-    updateDropdownUI("dropFinca", "btnFinca", "finca");
-    updateDropdownUI("dropActividad", "btnActividad", "actividad");
-  }
-
-  function updateDropdownUI(idDrop, idBtn, prop) {
-    const dropdown = document.getElementById(idDrop);
-    const btn = document.getElementById(idBtn);
-    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
-    const validOptions = getOptionsFor(prop);
-    const prevChecked = SELECCIONES[prop];
-
-    dropdown.innerHTML = "";
-    validOptions.forEach(val => {
-      const isChecked = prevChecked.includes(val);
-      const item = document.createElement("div");
-      item.className = "multiselect-option";
-      item.innerHTML = `<input type="checkbox" data-prop="${prop}" value="${val}" ${isChecked ? 'checked' : ''}> <span style="margin-left:4px;">${val}</span>`;
-      
-      item.addEventListener("click", (e) => {
-        if(e.target.tagName !== "INPUT") {
-          const cb = item.querySelector("input");
-          cb.checked = !cb.checked;
-          handleCheckboxChange(cb, idBtn, prop);
-        }
-      });
-      
-      item.querySelector("input").addEventListener("change", (e) => {
-        handleCheckboxChange(e.target, idBtn, prop);
-      });
-      dropdown.appendChild(item);
-    });
-
-    updateButtonLabels(btn, resetBtn, prevChecked, prop);
-  }
-
-  function updateButtonLabels(btn, resetBtn, checkedList, prop) {
-    if (checkedList.length === 0) {
-      btn.textContent = (prop === "actividad" || prop === "finca" || prop === "categoria") ? "Todas" : "Todos";
-      resetBtn.className = "btn-reset-individual inactive";
-      resetBtn.innerHTML = " ";
-    } else {
-      if (checkedList.length === 1) btn.textContent = checkedList[0];
-      else btn.textContent = `${checkedList.length} Sel.`;
-      
-      resetBtn.className = "btn-reset-individual active";
-      resetBtn.innerHTML = "🧹";
-    }
-  }
-
-  function handleCheckboxChange(cb, idBtn, prop) {
-    const val = cb.value;
-    if(cb.checked) {
-      if(!SELECCIONES[prop].includes(val)) SELECCIONES[prop].push(val);
-    } else {
-      SELECCIONES[prop] = SELECCIONES[prop].filter(v => v !== val);
-    }
-
-    renderMatrix();
-    checkGlobalClearVisibility();
-
-    const btn = document.getElementById(idBtn);
-    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
-    updateButtonLabels(btn, resetBtn, SELECCIONES[prop], prop);
-  }
-
-  // ===== FILTROS EN CASCADA — TAB INSUMOS =====
-
-  function toggleFechaInputsIns() {
-    const tipo = document.getElementById("filterFechaTipoIns").value;
-    document.getElementById("customDateInputsIns").style.display = (tipo === "personalizada") ? "block" : "none";
-    buildCascadingFiltersIns();
-    renderMatrixIns();
-  }
-
-  function onCustomDateChangeIns() {
-    buildCascadingFiltersIns();
-    renderMatrixIns();
-  }
-
-  function resetSingleFilterIns(prop) {
-    SELECCIONES_INS[prop] = [];
-    buildCascadingFiltersIns();
-    renderMatrixIns();
-  }
-
-  function getOptionsForIns(prop) {
-    const fFechaTipo = document.getElementById("filterFechaTipoIns").value;
-    const hoy = new Date();
-    const curYear = hoy.getFullYear();
-    const curMonth = hoy.getMonth();
-
-    const dataFiltered = DB_INSUMOS.filter(r => {
+    const dataFiltered = fuente.filter(r => {
       if (r.compaia !== COMPAIA_SELECCIONADA) return false;
 
       if(fFechaTipo !== "all" && r.fecha) {
@@ -1138,6 +1328,8 @@
         if(parts.length === 3) {
           const rYear = parseInt(parts[0], 10);
           const rMonth = parseInt(parts[1], 10) - 1;
+          const idDesde = esSoloIns ? "filterFechaDesdeIns" : "filterFechaDesde";
+          const idHasta = esSoloIns ? "filterFechaHastaIns" : "filterFechaHasta";
           if(fFechaTipo === "este_mes") {
             if(rYear !== curYear || rMonth !== curMonth) return false;
           } else if(fFechaTipo === "mes_pasado") {
@@ -1147,16 +1339,16 @@
           } else if(fFechaTipo === "ano_curso") {
             if(rYear !== curYear) return false;
           } else if(fFechaTipo === "personalizada") {
-            const desde = document.getElementById("filterFechaDesdeIns").value;
-            const hasta = document.getElementById("filterFechaHastaIns").value;
+            const desde = document.getElementById(idDesde).value;
+            const hasta = document.getElementById(idHasta).value;
             if(desde && r.fecha < desde) return false;
             if(hasta && r.fecha > hasta) return false;
           }
         }
       }
 
-      for (let targetFilterKey in SELECCIONES_INS) {
-        if (targetFilterKey !== prop && SELECCIONES_INS[targetFilterKey].length > 0 && !SELECCIONES_INS[targetFilterKey].includes(r[targetFilterKey])) {
+      for (let targetFilterKey in seleccionRef) {
+        if (targetFilterKey !== prop && seleccionRef[targetFilterKey].length > 0 && !seleccionRef[targetFilterKey].includes(r[targetFilterKey])) {
           return false;
         }
       }
@@ -1165,59 +1357,150 @@
     return [...new Set(dataFiltered.map(r => r[prop]))].filter(Boolean).sort();
   }
 
-  function buildCascadingFiltersIns() {
-    updateDropdownUIIns("dropSectorIns", "btnSectorIns", "sector");
-    updateDropdownUIIns("dropCategoriaIns", "btnCategoriaIns", "categoria");
-    updateDropdownUIIns("dropCicloIns", "btnCicloIns", "ciclo");
-    updateDropdownUIIns("dropFincaIns", "btnFincaIns", "finca");
-    updateDropdownUIIns("dropLoteIns", "btnLoteIns", "lote");
-    updateDropdownUIIns("dropProductoIns", "btnProductoIns", "producto");
+  function normalizarBusqueda(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+
+  // Construye TODOS los dropdowns visibles (compartidos + los propios de la pestaña activa)
+  function construirFiltrosGantt(){
+    [...CAMPOS_COMPARTIDOS, ...CAMPOS_SOLO_ACT, ...CAMPOS_SOLO_INS].forEach(campo => construirMsGantt(campo));
   }
 
-  function updateDropdownUIIns(idDrop, idBtn, prop) {
-    const dropdown = document.getElementById(idDrop);
-    const btn = document.getElementById(idBtn);
-    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
-    const validOptions = getOptionsForIns(prop);
-    const prevChecked = SELECCIONES_INS[prop];
+  function construirMsGantt(campo){
+    const { drop, panel: idPanel } = idsMsGantt(campo);
+    const dropEl = document.getElementById(drop);
+    const panel = document.getElementById(idPanel);
+    if(!dropEl || !panel) return;
 
-    dropdown.innerHTML = "";
-    validOptions.forEach(val => {
-      const isChecked = prevChecked.includes(val);
-      const item = document.createElement("div");
-      item.className = "multiselect-option";
-      item.innerHTML = `<input type="checkbox" data-prop="${prop}" value="${val}" ${isChecked ? 'checked' : ''}> <span style="margin-left:4px;">${val}</span>`;
+    const esSoloIns = CAMPOS_SOLO_INS.includes(campo);
+    const seleccionRef = esSoloIns ? SELECCIONES_INS : SELECCIONES;
+    const universo = getOptionsFor(campo);
+    const seleccionActual = seleccionRef[campo];
 
-      item.addEventListener("click", (e) => {
-        if(e.target.tagName !== "INPUT") {
-          const cb = item.querySelector("input");
-          cb.checked = !cb.checked;
-          handleCheckboxChangeIns(cb, idBtn, prop);
-        }
-      });
+    let itemsHtml = universo.map(v=>{
+      const marcado = !seleccionActual.length || seleccionActual.includes(v);
+      return `<div class="ms-item" data-val="${v}" data-texto="${normalizarBusqueda(v)}">
+        <input type="checkbox" value="${v}" ${marcado?'checked':''} onchange="actualizarSelectAllGantt('${campo}')">
+        <span>${v}</span>
+      </div>`;
+    }).join('');
+    panel.onclick = (ev)=>ev.stopPropagation();
+    panel.innerHTML = `
+      <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="buscarMsGantt('${campo}', this.value)"></div>
+      <div class="ms-item selectall">
+        <input type="checkbox" class="selectall-cb" checked onchange="toggleTodoMsGantt('${campo}', this.checked)">
+        <span>(Seleccionar todo)</span>
+      </div>
+      <div class="ms-items">${itemsHtml}</div>
+      <div class="ms-footer">
+        <button class="cancel" onclick="cerrarMsGantt('${campo}')">Cancelar</button>
+        <button class="ok" onclick="aplicarMsGantt('${campo}')">Aceptar</button>
+      </div>`;
 
-      item.querySelector("input").addEventListener("change", (e) => {
-        handleCheckboxChangeIns(e.target, idBtn, prop);
-      });
-      dropdown.appendChild(item);
+    const defaults = { sector:'Todos', ciclo:'Todos', finca:'Todas', proveedor:'Todos', actividad:'Todas', categoria:'Todas', lote:'Todos', producto:'Todos' };
+    if(!universo.length){ dropEl.textContent='—'; }
+    else if(!seleccionActual.length) dropEl.textContent = defaults[campo] || 'Todos';
+    else if(seleccionActual.length===1) dropEl.textContent = seleccionActual[0];
+    else dropEl.textContent = seleccionActual.length+' sel.';
+  }
+
+  window.toggleMsGantt = function(ev, campo){
+    ev.stopPropagation();
+    const { panel: idPanel } = idsMsGantt(campo);
+    const panel = document.getElementById(idPanel);
+    const abierto = panel.classList.contains('show');
+    document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show'));
+    if(!abierto) panel.classList.add('show');
+  };
+  document.addEventListener('click', ()=>document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show')));
+
+  window.actualizarSelectAllGantt = function(campo){
+    const { panel: idPanel } = idsMsGantt(campo);
+    const panel = document.getElementById(idPanel);
+    const selCb = panel.querySelector('.selectall-cb');
+    const visibles = Array.from(panel.querySelectorAll('.ms-items .ms-item')).filter(el=>el.style.display!=='none');
+    const cbs = visibles.map(el=>el.querySelector('input[type=checkbox]'));
+    const marcados = cbs.filter(cb=>cb.checked).length;
+    if(!cbs.length){ selCb.checked=false; selCb.indeterminate=false; return; }
+    selCb.checked = marcados===cbs.length;
+    selCb.indeterminate = marcados>0 && marcados<cbs.length;
+  };
+  window.toggleTodoMsGantt = function(campo, marcar){
+    const { panel: idPanel } = idsMsGantt(campo);
+    const panel = document.getElementById(idPanel);
+    panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+      if(el.style.display==='none') return;
+      const cb = el.querySelector('input[type=checkbox]'); if(cb) cb.checked = marcar;
     });
+    actualizarSelectAllGantt(campo);
+  };
+  window.buscarMsGantt = function(campo, texto){
+    const { panel: idPanel } = idsMsGantt(campo);
+    const panel = document.getElementById(idPanel);
+    const t = normalizarBusqueda(texto);
+    panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+      el.style.display = (!t || (el.getAttribute('data-texto')||'').includes(t)) ? 'flex' : 'none';
+    });
+    actualizarSelectAllGantt(campo);
+  };
+  window.aplicarMsGantt = function(campo){
+    const { panel: idPanel } = idsMsGantt(campo);
+    const panel = document.getElementById(idPanel);
+    const marcados = Array.from(panel.querySelectorAll('.ms-items input[type=checkbox]:checked')).map(cb=>cb.value);
+    const universoActual = getOptionsFor(campo);
+    const nuevaSeleccion = (marcados.length && marcados.length < universoActual.length) ? marcados : [];
 
-    updateButtonLabels(btn, resetBtn, prevChecked, prop);
-  }
-
-  function handleCheckboxChangeIns(cb, idBtn, prop) {
-    const val = cb.value;
-    if(cb.checked) {
-      if(!SELECCIONES_INS[prop].includes(val)) SELECCIONES_INS[prop].push(val);
+    if(CAMPOS_COMPARTIDOS.includes(campo)){
+      // Escribe en AMBOS objetos a la vez, ya que este campo es compartido entre pestañas
+      SELECCIONES[campo] = [...nuevaSeleccion];
+      SELECCIONES_INS[campo] = [...nuevaSeleccion];
+    } else if(CAMPOS_SOLO_INS.includes(campo)){
+      SELECCIONES_INS[campo] = nuevaSeleccion;
     } else {
-      SELECCIONES_INS[prop] = SELECCIONES_INS[prop].filter(v => v !== val);
+      SELECCIONES[campo] = nuevaSeleccion;
     }
 
+    panel.classList.remove('show');
+    construirFiltrosGantt();
+    renderMatrix();
     renderMatrixIns();
+    if(document.getElementById('tabPanelResumen').style.display !== 'none') renderResumenActividades();
+    refrescarTabsFungicidasSiVisibles();
+    checkGlobalClearVisibility();
+  };
+  window.cerrarMsGantt = function(campo){
+    const { panel: idPanel } = idsMsGantt(campo);
+    document.getElementById(idPanel).classList.remove('show');
+    construirFiltrosGantt();
+  };
 
-    const btn = document.getElementById(idBtn);
-    const resetBtn = document.getElementById(`reset${idBtn.substring(3)}`);
-    updateButtonLabels(btn, resetBtn, SELECCIONES_INS[prop], prop);
+  function resetAllFiltersGantt(){
+    CAMPOS_COMPARTIDOS.forEach(c=>{ SELECCIONES[c]=[]; SELECCIONES_INS[c]=[]; });
+    CAMPOS_SOLO_ACT.forEach(c=>{ SELECCIONES[c]=[]; });
+    CAMPOS_SOLO_INS.forEach(c=>{ SELECCIONES_INS[c]=[]; });
+    document.getElementById('filterFechaTipo').value = 'este_mes';
+    document.getElementById('filterFechaTipoIns').value = 'este_mes';
+    toggleFechaInputs();
+    construirFiltrosGantt();
+    renderMatrix();
+    renderMatrixIns();
+    if(document.getElementById('tabPanelResumen').style.display !== 'none') renderResumenActividades();
+    refrescarTabsFungicidasSiVisibles();
+    checkGlobalClearVisibility();
+  }
+
+
+  // ===== FILTROS EN CASCADA — TAB INSUMOS =====
+
+  function toggleFechaInputsIns() {
+    // El "Rango..." de Insumos usa los mismos inputs visibles que Actividades
+    // (filterFechaDesde/filterFechaHasta) — Período no es un campo compartido, cada
+    // pestaña guarda su propio tipo (filterFechaTipo vs filterFechaTipoIns).
+    construirFiltrosGantt();
+    renderMatrixIns();
+  }
+
+  function onCustomDateChangeIns() {
+    construirFiltrosGantt();
+    renderMatrixIns();
   }
 
   // ===== RENDER MATRIZ — TAB INSUMOS (árbol Ciclo > Categoría > Producto x Finca) =====
@@ -1545,13 +1828,12 @@
         }
       });
 
-      const cicloRowspan = Math.max(filasInsumos.length, 1);
+      const cicloRowspan = Math.max(filasInsumos.length, 1); // ya no se usa para rowspan, pero se mantiene por si acaso
 
       filasInsumos.forEach((row, i) => {
         html += `<tr class="tree-row-${row.type === 'leaf' ? 'leaf' : (row.type === 'subtotal' ? 'subtotal' : 'categoria')}">`;
-        if(i === 0) {
-          html += `<td class="col-tree-sticky c1" rowspan="${cicloRowspan}">${escHtml(ciclo)}</td>`;
-        }
+        // Ciclo se repite en cada fila (sin rowspan) igual que en el bloque de Combustible
+        html += `<td class="col-tree-sticky c1">${escHtml(ciclo)}</td>`;
         if(row.type === "cat-collapsed") {
           html += `<td class="col-tree-sticky c2"><span class="tree-toggle tree-toggle-cat" data-key="${escHtml(row.catKey)}">▸ ${escHtml(row.cat)}</span></td>`;
           html += `<td class="col-tree-sticky c3" colspan="2">(colapsado)</td>`;
@@ -1561,12 +1843,15 @@
             html += metricasBlancas();
           }
         } else if(row.type === "leaf") {
-          if(row.firstOfCat) {
-            html += `<td class="col-tree-sticky c2" rowspan="${row.catRowspan}"><span class="tree-toggle tree-toggle-cat" data-key="${escHtml(row.catKey)}">▾ ${escHtml(row.cat)}</span></td>`;
-          }
+          // Categoría se repite en cada fila de hoja (sin rowspan)
+          const catToggle = row.firstOfCat
+            ? `<span class="tree-toggle tree-toggle-cat" data-key="${escHtml(row.catKey)}">▾ ${escHtml(row.cat)}</span>`
+            : escHtml(row.cat);
+          html += `<td class="col-tree-sticky c2">${catToggle}</td>`;
           html += `<td class="col-tree-sticky c3">${escHtml(row.prod)}</td><td class="col-tree-sticky c4">${escHtml(row.node.um)}</td>`;
           html += metricasDe(ciclo, row.cat, row.prod, row.node, false);
         } else if(row.type === "subtotal") {
+          html += `<td class="col-tree-sticky c2">${escHtml(row.cat)}</td>`;
           html += `<td class="col-tree-sticky c3" colspan="2">Subtotal ${escHtml(row.cat)}</td>`;
           html += metricasDe(ciclo, row.cat, null, row.node, true);
         }
@@ -1674,6 +1959,366 @@
     XLSX.writeFile(wb, `INFOAGRO_DETALLE_${CURRENT_DETAIL_LABEL_INS.replace(/[^a-zA-Z0-9]/g, '_')}.xlsx`);
   }
 
+  // ===================================================================
+  // TAB "RESUMEN DE ACTIVIDADES" — tabla plana estilo Excel: una columna por
+  // dimensión (Ciclo, Sector, Finca, Lote, Actividad), sumando avance_mzn por
+  // combinación única. El orden de columnas se define arrastrando y soltando
+  // los encabezados (drag & drop nativo). Subtotales por la primera columna
+  // son opcionales (checkbox). Reutiliza DB_RAW (ya cargado por Avance de
+  // Actividades) y respeta Compañía/Sector/Ciclo/Finca/Período compartidos —
+  // no hace ninguna consulta nueva a Odoo. El export es el ícono general de
+  // la toolbar de INFOAGRO BI (usa exportActivo(), no un botón propio aquí).
+  // ===================================================================
+  const DIMENSIONES_RESUMEN = [
+    { valor:'ciclo', etiqueta:'Ciclo' },
+    { valor:'sector', etiqueta:'Sector' },
+    { valor:'finca', etiqueta:'Finca' },
+    { valor:'lote_agricola', etiqueta:'Lote' },
+    { valor:'actividad', etiqueta:'Actividad' },
+    { valor:'grupo_siembra', etiqueta:'Grupo de Siembra' }
+  ];
+  let ORDEN_COLUMNAS_RESUMEN = ['ciclo','sector','finca','lote_agricola','actividad']; // orden por defecto (Grupo de Siembra queda disponible para arrastrar, no aparece de entrada
+  let _filasResumenActuales = []; // filtro de dimensiones por índice de fila renderizada, usado por el modal de detalle
+
+  // Aplica los mismos filtros COMPARTIDOS que Avance de Actividades (Compañía, Sector,
+  // Ciclo, Finca, Actividad) pero NO el filtro de Período — como esta tabla pivotea el
+  // avance por mes, tiene más sentido ver siempre el histórico completo y dejar que el
+  // propio pivot muestre la evolución mes a mes, en vez de acotar a "Este Mes".
+  // Aplica los mismos filtros COMPARTIDOS que Avance de Actividades (Compañía, Sector,
+  // Ciclo, Finca, Actividad, Período) — Período es opcional aquí: aunque el pivot ya
+  // muestra varios meses a la vez, el usuario puede acotar el rango si lo necesita
+  // (ej. "Histórico" para ver todo, o un rango personalizado concreto).
+  function datosFiltradosResumen(){
+    const fFechaTipo = document.getElementById("filterFechaTipo").value;
+    const hoy = new Date();
+    const curYear = hoy.getFullYear();
+    const curMonth = hoy.getMonth();
+
+    return DB_RAW.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+      for (let prop in SELECCIONES) {
+        if (SELECCIONES[prop].length > 0 && !SELECCIONES[prop].includes(r[prop])) return false;
+      }
+      if(fFechaTipo !== "all" && r.fecha) {
+        const parts = r.fecha.split("-");
+        if(parts.length === 3) {
+          const rYear = parseInt(parts[0], 10);
+          const rMonth = parseInt(parts[1], 10) - 1;
+          if(fFechaTipo === "este_mes") {
+            if(rYear !== curYear || rMonth !== curMonth) return false;
+          } else if(fFechaTipo === "mes_pasado") {
+            let targetMonth = curMonth - 1; let targetYear = curYear;
+            if(targetMonth < 0) { targetMonth = 11; targetYear--; }
+            if(rYear !== targetYear || rMonth !== targetMonth) return false;
+          } else if(fFechaTipo === "ano_curso") {
+            if(rYear !== curYear) return false;
+          } else if(fFechaTipo === "personalizada") {
+            const desde = document.getElementById("filterFechaDesde").value;
+            const hasta = document.getElementById("filterFechaHasta").value;
+            if(desde && r.fecha < desde) return false;
+            if(hasta && r.fecha > hasta) return false;
+          }
+        }
+      }
+      return true;
+    });
+  }
+
+  // Agrupa por la combinación única de TODAS las columnas (en el orden actual) y
+  // suma avance_mzn — cada fila resultante es una combinación distinta, no un árbol.
+  // Agrupa por la combinación única de las columnas de dimensión + MES (extraído de
+  // r.fecha), sumando avance_mzn — cada combinación de dimensiones se convierte en una
+  // fila, y cada mes distinto se convierte en una columna (pivot), igual patrón que
+  // las matrices de Pluviosidad/Siembra.
+  const MESES_CORTOS_RESUMEN = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function agruparFilasResumen(datos){
+    const mapa = new Map();
+    const mesesVistos = new Set();
+    datos.forEach(r=>{
+      const valores = ORDEN_COLUMNAS_RESUMEN.map(col => r[col] || 'Sin dato');
+      const clave = valores.join('|||');
+      let mesClave = 'Sin fecha';
+      if(r.fecha){
+        const partes = r.fecha.split('-');
+        if(partes.length===3){
+          mesClave = `${MESES_CORTOS_RESUMEN[parseInt(partes[1],10)-1]} ${partes[0]}`;
+        }
+      }
+      mesesVistos.add(mesClave);
+      if(!mapa.has(clave)) mapa.set(clave, { valores, porMes:{}, total:0 });
+      const fila = mapa.get(clave);
+      fila.porMes[mesClave] = (fila.porMes[mesClave]||0) + (r.avance || 0);
+      fila.total += (r.avance || 0);
+    });
+    // Orden cronológico real de meses (no alfabético) para las columnas del pivot
+    const mesesOrdenados = Array.from(mesesVistos).sort((a,b)=>{
+      if(a==='Sin fecha') return 1; if(b==='Sin fecha') return -1;
+      const [ma,ya] = a.split(' '); const [mb,yb] = b.split(' ');
+      const ia = MESES_CORTOS_RESUMEN.indexOf(ma), ib = MESES_CORTOS_RESUMEN.indexOf(mb);
+      return (parseInt(ya,10)*12+ia) - (parseInt(yb,10)*12+ib);
+    });
+    const filas = Array.from(mapa.values()).sort((a,b)=>{
+      for(let i=0;i<a.valores.length;i++){
+        const cmp = String(a.valores[i]).localeCompare(String(b.valores[i]));
+        if(cmp !== 0) return cmp;
+      }
+      return 0;
+    });
+    return { filas, mesesOrdenados };
+  }
+
+  // Columna(s) de dimensión marcadas para subtotal — se activan/desactivan con clic
+  // derecho sobre el encabezado correspondiente (en vez de un checkbox global fijo
+  // a la primera columna).
+  let COLUMNAS_SUBTOTAL_RESUMEN = new Set();
+
+  function renderResumenActividades(){
+    const datos = datosFiltradosResumen();
+    const cont = document.getElementById('matrixContainerResumen');
+    document.getElementById('recordCounterResumen').textContent = `${datos.length} operaciones coincidentes`;
+
+    if(!datos.length){
+      cont.innerHTML = `<div class="alert alert-light text-center m-3">Sin datos para los filtros seleccionados.</div>`;
+      return;
+    }
+
+    const { filas, mesesOrdenados } = agruparFilasResumen(datos);
+    const totalGeneral = datos.reduce((a,r)=>a+(r.avance||0), 0);
+    const totalesPorMes = {};
+    mesesOrdenados.forEach(m=>{ totalesPorMes[m] = filas.reduce((a,f)=>a+(f.porMes[m]||0),0); });
+
+    const encabezados = ORDEN_COLUMNAS_RESUMEN.map((col, idx) => {
+      const etiqueta = DIMENSIONES_RESUMEN.find(d=>d.valor===col).etiqueta;
+      const marcada = COLUMNAS_SUBTOTAL_RESUMEN.has(col);
+      return `<th draggable="true" data-col="${col}" data-idx="${idx}"
+        ondragstart="dragStartColResumen(event)" ondragover="dragOverColResumen(event)"
+        ondrop="dropColResumen(event)" ondragend="dragEndColResumen(event)"
+        oncontextmenu="return toggleSubtotalColResumen(event, '${col}')"
+        class="th-arrastrable ${marcada?'th-subtotal-activo':''}" title="Arrastra para reordenar · clic derecho para subtotal">
+        <span class="th-drag-handle">⠿</span> ${etiqueta}${marcada?' <span class="th-subtotal-badge">Σ</span>':''}
+        ${ORDEN_COLUMNAS_RESUMEN.length>1 ? `<span class="th-quitar-col" onclick="event.stopPropagation(); quitarColResumen('${col}')" title="Quitar columna">✕</span>` : ''}
+      </th>`;
+    }).join('');
+    const encabezadosMes = mesesOrdenados.map(m => `<th class="text-end">${m}</th>`).join('');
+
+    // Refresca el selector "+ Agregar columna" con las dimensiones que aún no están
+    // visibles en la tabla (así "Grupo de Siembra" y cualquier columna quitada
+    // manualmente quedan disponibles para volver a agregarlas).
+    const selAgregar = document.getElementById('selAgregarColResumen');
+    const disponibles = DIMENSIONES_RESUMEN.filter(d => !ORDEN_COLUMNAS_RESUMEN.includes(d.valor));
+    selAgregar.innerHTML = '<option value="">+ Agregar columna...</option>' +
+      disponibles.map(d => `<option value="${d.valor}">${d.etiqueta}</option>`).join('');
+
+    _filasResumenActuales = [];
+    function pintarFila(fila, indent){
+      const celdasMes = mesesOrdenados.map(m => `<td class="text-end">${fila.porMes[m] ? fila.porMes[m].toFixed(1) : ''}</td>`).join('');
+      const primeraCelda = `<td style="padding-left:${12+indent}px;">${fila.valores[0]}</td>`;
+      const restoCeldas = fila.valores.slice(1).map(v=>`<td>${v}</td>`).join('');
+      const idxFila = _filasResumenActuales.length;
+      _filasResumenActuales.push(ORDEN_COLUMNAS_RESUMEN.reduce((acc,col,i)=>{ acc[col]=fila.valores[i]; return acc; },{}));
+      return `<tr class="fila-resumen-clicable" onclick="abrirDetalleFilaResumen(${idxFila})" title="Ver detalle de registros">${primeraCelda}${restoCeldas}${celdasMes}<td class="text-end fw-bold">${fila.total.toFixed(1)}</td></tr>`;
+    }
+
+    // Columnas marcadas Σ, en el orden en que aparecen en la tabla actual (izquierda a
+    // derecha) — el anidamiento de subtotales sigue ese mismo orden, igual que una
+    // tabla dinámica: subtotal de la primera columna marcada por fuera, luego dentro
+    // de ese grupo el subtotal de la segunda marcada, y así sucesivamente.
+    const idxsSubtotal = ORDEN_COLUMNAS_RESUMEN
+      .map((c,i)=>i)
+      .filter(i => COLUMNAS_SUBTOTAL_RESUMEN.has(ORDEN_COLUMNAS_RESUMEN[i]));
+
+    let filasHtml = '';
+
+    if(idxsSubtotal.length){
+      // Recorre recursivamente: agrupa por el primer nivel marcado, dentro de cada
+      // grupo agrupa por el siguiente nivel marcado, y así hasta el último — al final
+      // pinta las filas de detalle que quedan dentro del grupo más interno.
+      function renderGrupo(filasGrupo, nivelesRestantes, indent){
+        if(!nivelesRestantes.length){
+          filasGrupo.forEach(fila => { filasHtml += pintarFila(fila, indent); });
+          return;
+        }
+        const [idxActual, ...resto] = nivelesRestantes;
+        let grupoActual = null, filasDelGrupo = [];
+        const cerrarGrupo = () => {
+          if(grupoActual === null) return;
+          renderGrupo(filasDelGrupo, resto, indent + 16);
+          const subtotalPorMes = {};
+          let subtotalGeneral = 0;
+          filasDelGrupo.forEach(f=>{
+            mesesOrdenados.forEach(m => { subtotalPorMes[m] = (subtotalPorMes[m]||0) + (f.porMes[m]||0); });
+            subtotalGeneral += f.total;
+          });
+          const celdasMes = mesesOrdenados.map(m => `<td class="text-end">${subtotalPorMes[m] ? subtotalPorMes[m].toFixed(1) : ''}</td>`).join('');
+          const etiquetaCol = DIMENSIONES_RESUMEN.find(d=>d.valor===ORDEN_COLUMNAS_RESUMEN[idxActual]).etiqueta;
+          filasHtml += `<tr class="fila-resumen-subtotal">
+            <td colspan="${ORDEN_COLUMNAS_RESUMEN.length}" style="padding-left:${12+indent}px;">Subtotal ${etiquetaCol} — ${grupoActual}</td>
+            ${celdasMes}
+            <td class="text-end">${subtotalGeneral.toFixed(1)}</td>
+          </tr>`;
+        };
+        filasGrupo.forEach(fila=>{
+          const valorAgrupador = fila.valores[idxActual];
+          if(valorAgrupador !== grupoActual){
+            cerrarGrupo();
+            grupoActual = valorAgrupador; filasDelGrupo = [];
+          }
+          filasDelGrupo.push(fila);
+        });
+        cerrarGrupo();
+      }
+      renderGrupo(filas, idxsSubtotal, 0);
+    } else {
+      filas.forEach(fila => { filasHtml += pintarFila(fila, 0); });
+    }
+
+    const celdasTotalMes = mesesOrdenados.map(m => `<td class="text-end">${totalesPorMes[m].toFixed(1)}</td>`).join('');
+
+    cont.innerHTML = `
+      <table class="pivot-gantt table-resumen-actividades">
+        <thead>
+          <tr>
+            ${encabezados}
+            ${encabezadosMes}
+            <th class="text-end">Total (mz)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${filasHtml}
+          <tr class="fila-resumen-total">
+            <td colspan="${ORDEN_COLUMNAS_RESUMEN.length}">TOTAL GENERAL</td>
+            ${celdasTotalMes}
+            <td class="text-end">${totalGeneral.toFixed(1)}</td>
+          </tr>
+        </tbody>
+      </table>`;
+  }
+
+  // Clic derecho en un encabezado de dimensión activa/desactiva el subtotal por esa
+  // columna — devuelve false para evitar que el navegador abra su menú contextual.
+  window.toggleSubtotalColResumen = function(ev, col){
+    ev.preventDefault();
+    if(COLUMNAS_SUBTOTAL_RESUMEN.has(col)) COLUMNAS_SUBTOTAL_RESUMEN.delete(col);
+    else COLUMNAS_SUBTOTAL_RESUMEN.add(col);
+    renderResumenActividades();
+    return false;
+  };
+
+  window.agregarColResumen = function(col){
+    if(!col || ORDEN_COLUMNAS_RESUMEN.includes(col)) return;
+    ORDEN_COLUMNAS_RESUMEN.push(col);
+    renderResumenActividades();
+  };
+  window.quitarColResumen = function(col){
+    ORDEN_COLUMNAS_RESUMEN = ORDEN_COLUMNAS_RESUMEN.filter(c => c !== col);
+    COLUMNAS_SUBTOTAL_RESUMEN.delete(col);
+    renderResumenActividades();
+  };
+
+  const MESES_NOMBRE_LARGO_RESUMEN = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  function formatoFechaResumen(fechaStr){
+    if(!fechaStr) return '—';
+    const p = fechaStr.split('-');
+    if(p.length!==3) return fechaStr;
+    return `${p[2]}-${MESES_NOMBRE_LARGO_RESUMEN[parseInt(p[1],10)-1].slice(0,3)}-${p[0]}`;
+  }
+
+  // Abre un modal con el detalle de TODOS los registros individuales (Orden de Trabajo,
+  // Fecha, Avance, etc.) que componen una fila del Resumen — filtra sobre los mismos
+  // datos ya acotados por Compañía/Período/Sector/Ciclo/Finca/Actividad (datosFiltradosResumen),
+  // y además por la combinación exacta de columnas visibles en esa fila específica.
+  window.abrirDetalleFilaResumen = function(idxFila){
+    const filtroCombinacion = _filasResumenActuales[idxFila];
+    if(!filtroCombinacion) return;
+    const base = datosFiltradosResumen();
+    const registros = base.filter(r => {
+      return Object.keys(filtroCombinacion).every(col => (r[col] || 'Sin dato') === filtroCombinacion[col]);
+    }).sort((a,b) => (a.fecha||'').localeCompare(b.fecha||''));
+
+    const tituloPartes = Object.keys(filtroCombinacion).map(col => {
+      const etiqueta = DIMENSIONES_RESUMEN.find(d=>d.valor===col)?.etiqueta || col;
+      return `<span class="detalle-modal-chip"><b>${etiqueta}:</b> ${filtroCombinacion[col]}</span>`;
+    }).join('');
+
+    const totalAvance = registros.reduce((a,r)=>a+(r.avance||0),0);
+
+    const filasTabla = registros.map(r => `
+      <tr>
+        <td>${r.orden}</td>
+        <td>${formatoFechaResumen(r.fecha)}</td>
+        <td class="text-end fw-bold">${(r.avance||0).toFixed(1)}</td>
+        <td>${r.proveedor}</td>
+        <td>${r.compaia}</td>
+      </tr>`).join('');
+
+    const modalHtml = `
+      <div class="detalle-modal-overlay" id="detalleModalResumenOverlay" onclick="if(event.target===this) cerrarDetalleFilaResumen()">
+        <div class="detalle-modal-caja">
+          <div class="detalle-modal-header">
+            <div>
+              <div class="detalle-modal-titulo">Detalle de registros</div>
+              <div class="detalle-modal-chips">${tituloPartes}</div>
+            </div>
+            <button class="detalle-modal-cerrar" onclick="cerrarDetalleFilaResumen()">✕</button>
+          </div>
+          <div class="detalle-modal-body">
+            <table class="detalle-modal-tabla">
+              <thead>
+                <tr>
+                  <th>Orden de Trabajo</th>
+                  <th>Fecha</th>
+                  <th class="text-end">Avance (mz)</th>
+                  <th>Proveedor</th>
+                  <th>Compañía</th>
+                </tr>
+              </thead>
+              <tbody>${filasTabla}</tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" class="fw-bold">TOTAL (${registros.length} registro${registros.length!==1?'s':''})</td>
+                  <td class="text-end fw-bold">${totalAvance.toFixed(1)}</td>
+                  <td colspan="2"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>`;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  };
+  window.cerrarDetalleFilaResumen = function(){
+    const overlay = document.getElementById('detalleModalResumenOverlay');
+    if(overlay) overlay.remove();
+  };
+
+  // ---- Drag & drop de columnas (nativo HTML5) ----
+  let _colArrastrada = null;
+  window.dragStartColResumen = function(ev){
+    _colArrastrada = ev.currentTarget.getAttribute('data-col');
+    ev.currentTarget.classList.add('th-arrastrando');
+    ev.dataTransfer.effectAllowed = 'move';
+  };
+  window.dragOverColResumen = function(ev){
+    ev.preventDefault();
+    ev.currentTarget.classList.add('th-drop-target');
+  };
+  window.dragEndColResumen = function(ev){
+    document.querySelectorAll('.th-arrastrable').forEach(th=>th.classList.remove('th-arrastrando','th-drop-target'));
+  };
+  window.dropColResumen = function(ev){
+    ev.preventDefault();
+    const colDestino = ev.currentTarget.getAttribute('data-col');
+    document.querySelectorAll('.th-arrastrable').forEach(th=>th.classList.remove('th-arrastrando','th-drop-target'));
+    if(!_colArrastrada || _colArrastrada === colDestino) return;
+
+    const idxOrigen = ORDEN_COLUMNAS_RESUMEN.indexOf(_colArrastrada);
+    const idxDestino = ORDEN_COLUMNAS_RESUMEN.indexOf(colDestino);
+    ORDEN_COLUMNAS_RESUMEN.splice(idxOrigen, 1);
+    ORDEN_COLUMNAS_RESUMEN.splice(idxDestino, 0, _colArrastrada);
+    _colArrastrada = null;
+    renderResumenActividades();
+  };
+
   function exportPivotToExcelIns() {
     const table = document.querySelector("#matrixContainerIns table.pivot-gantt");
     if(!table) return;
@@ -1681,69 +2326,29 @@
     XLSX.writeFile(wb, `INFOAGRO_CONSUMO_INSUMOS_${COMPAIA_SELECCIONADA.replace(/ /g, '_')}.xlsx`);
   }
 
-  function toggleDropdown(e, idDrop) {
-    e.stopPropagation();
-    const dropdown = document.getElementById(idDrop);
-    const wasOpen = dropdown.classList.contains("show");
-    
-    if(!wasOpen) {
-      buildCascadingFilters();
-    }
-    
-    closeAllDropdowns();
-    if(!wasOpen) dropdown.classList.add("show");
-  }
-
   function closeAllDropdowns() {
-    document.querySelectorAll(".multiselect-dropdown").forEach(d => d.classList.remove("show"));
+    document.querySelectorAll(".ms-panel").forEach(d => d.classList.remove("show"));
   }
 
   function toggleFechaInputs() {
     const tipo = document.getElementById("filterFechaTipo").value;
-    document.getElementById("customDateInputs").style.display = (tipo === "personalizada") ? "block" : "none";
-    buildCascadingFilters();
+    document.getElementById("customDateInputs").style.display = (tipo === "personalizada") ? "flex" : "none";
+    construirFiltrosGantt();
     renderMatrix();
+    if(document.getElementById('tabPanelResumen').style.display !== 'none') renderResumenActividades();
     checkGlobalClearVisibility();
   }
 
   function onCustomDateChange() {
-    buildCascadingFilters();
+    construirFiltrosGantt();
     renderMatrix();
-    checkGlobalClearVisibility();
-  }
-
-  function resetSingleFilter(id) {
-    SELECCIONES[id.toLowerCase()] = [];
-    buildCascadingFilters();
-    renderMatrix();
-    checkGlobalClearVisibility();
-  }
-
-  function resetAllFilters() {
-    for(let key in SELECCIONES) SELECCIONES[key] = [];
-    document.getElementById("filterFechaTipo").value = "este_mes";
-    document.getElementById("customDateInputs").style.display = "none";
-    buildCascadingFilters();
-    renderMatrix();
+    if(document.getElementById('tabPanelResumen').style.display !== 'none') renderResumenActividades();
     checkGlobalClearVisibility();
   }
 
   function checkGlobalClearVisibility() {
-    const clearBtn = document.getElementById("btnGlobalClear");
-    let hasActiveFilter = false;
-
-    for (let key in SELECCIONES) {
-      if (SELECCIONES[key].length > 0) {
-        hasActiveFilter = true;
-        break;
-      }
-    }
-
-    const fechaTipo = document.getElementById("filterFechaTipo").value;
-    if (fechaTipo !== "este_mes") hasActiveFilter = true;
-
-    if (hasActiveFilter) clearBtn.style.display = "inline-flex";
-    else clearBtn.style.display = "none";
+    // El botón "Limpiar filtros" de la toolbar unificada (🧹) siempre está visible —
+    // ya no se oculta/muestra condicionalmente como antes (btnGlobalClear ya no existe).
   }
 
   function renderMatrix() {
@@ -1928,20 +2533,485 @@
     XLSX.writeFile(wb, `INFOAGRO_MATRIZ_${COMPAIA_SELECCIONADA.replace(/ /g, '_')}.xlsx`);
   }
 
-  document.addEventListener("click", (e) => {
-    if(!e.target.closest(".filter-item-wrap")) {
-      closeAllDropdowns();
-      buildCascadingFilters();
-      buildCascadingFiltersIns();
+  // Ícono de exportar de la toolbar unificada: exporta la tabla de la pestaña visible.
+  function exportActivo() {
+    const esActividades = document.getElementById('tabPanelActividades').style.display !== 'none';
+    const esInsumos = document.getElementById('tabPanelInsumos').style.display !== 'none';
+    const esFungicidas = document.getElementById('tabPanelFungicidas').style.display !== 'none';
+    const esProgramacion = document.getElementById('tabPanelProgramacion').style.display !== 'none';
+    if(esActividades) exportPivotToExcel();
+    else if(esInsumos) exportPivotToExcelIns();
+    else if(esFungicidas) exportarCalendarioSiembraAExcel();
+    else if(esProgramacion) exportarControlAplicacionesAExcel();
+    else {
+      const table = document.querySelector("#matrixContainerResumen table");
+      if(!table) return;
+      const wb = XLSX.utils.table_to_book(table, { raw: false });
+      const nombreCols = ORDEN_COLUMNAS_RESUMEN.map(c => DIMENSIONES_RESUMEN.find(d=>d.valor===c).etiqueta).join('_');
+      XLSX.writeFile(wb, `INFOAGRO_RESUMEN_ACTIVIDADES_${nombreCols}.xlsx`);
     }
-  });
-  
+  }
+
+  // ===================================================================
+  // TAB "CONTROL DE APLICACIONES" — cascada de Fungicidas
+  // Reutiliza DB_RAW (misma fuente que Avance de Actividades/Resumen —
+  // x_orden_campo_line_b660b), filtrado a ciclo Mani 2026. Cada registro de
+  // actividad "Siembra" es su propio evento (un lote puede tener siembra y
+  // re-siembra en fechas distintas — no se mezclan, mismo criterio que en
+  // Siembra y Germinación). Regla de fechas programadas:
+  //   Fungicida I   = Fecha Siembra + 30 días
+  //   Fungicida II  = Fecha REAL de Fungicida I (o programada si aún no se aplicó) + 13 días
+  //   ...así sucesivamente hasta Fungicida VIII
+  //   Arranque/Combina: sin fórmula de días — solo se muestra la fecha real cuando existe.
+  // ===================================================================
+  const ETAPAS_FUNGICIDA = ['Fungicida I','Fungicida II','Fungicida III','Fungicida IV','Fungicida V','Fungicida VI','Fungicida VII','Fungicida VIII'];
+  // Paleta: un color por etapa, para diferenciarlas de un vistazo tanto en la banda de
+  // encabezado como en el marcador FI/FII../FVIII que aparece debajo de cada finca dentro
+  // de la columna de Siembra — mismo color en los dos lugares.
+  const PALETA_ETAPA = {
+    'Siembra':        { bg:'#eab308', bgLight:'#fef9c3', text:'#713f12' },
+    'Fungicida I':    { bg:'#f59e0b', bgLight:'#fef3c7', text:'#78350f' },
+    'Fungicida II':   { bg:'#f97316', bgLight:'#ffedd5', text:'#7c2d12' },
+    'Fungicida III':  { bg:'#ef4444', bgLight:'#fee2e2', text:'#7f1d1d' },
+    'Fungicida IV':   { bg:'#ec4899', bgLight:'#fce7f3', text:'#831843' },
+    'Fungicida V':    { bg:'#a855f7', bgLight:'#f3e8ff', text:'#581c87' },
+    'Fungicida VI':   { bg:'#6366f1', bgLight:'#e0e7ff', text:'#312e81' },
+    'Fungicida VII':  { bg:'#0ea5e9', bgLight:'#e0f2fe', text:'#0c4a6e' },
+    'Fungicida VIII': { bg:'#14b8a6', bgLight:'#ccfbf1', text:'#134e4a' },
+    'Arranque':       { bg:'#65a30d', bgLight:'#ecfccb', text:'#3f6212' },
+    'Combina':        { bg:'#57534e', bgLight:'#e7e5e4', text:'#292524' },
+  };
+  const ETAPAS_COSECHA   = ['Arranque','Combina'];
+  let _controlAplicacionesData = [];
+
+  // Estos dos tabs ahora respetan los mismos filtros del toolbar de arriba (Compañía,
+  // Sector, Ciclo, Finca, Proveedor) — antes estaban fijos a Mani 2026 sin importar lo
+  // que el usuario eligiera arriba.
+  function filasBaseCA(){
+    return DB_RAW.filter(r => {
+      if (r.compaia !== COMPAIA_SELECCIONADA) return false;
+      if (SELECCIONES.sector.length && !SELECCIONES.sector.includes(r.sector)) return false;
+      if (SELECCIONES.ciclo.length && !SELECCIONES.ciclo.includes(r.ciclo)) return false;
+      if (SELECCIONES.finca.length && !SELECCIONES.finca.includes(r.finca)) return false;
+      if (SELECCIONES.proveedor.length && !SELECCIONES.proveedor.includes(r.proveedor)) return false;
+      return true;
+    });
+  }
+  function etiquetaCicloActivoCA(){
+    return SELECCIONES.ciclo.length ? SELECCIONES.ciclo.join(', ') : 'todos los ciclos';
+  }
+  // Si el tab Control de Aplicaciones o Programación de aplicaciones está visible cuando
+  // cambian los filtros de arriba, los vuelve a renderizar con el filtro nuevo aplicado.
+  function refrescarTabsFungicidasSiVisibles(){
+    if(document.getElementById('tabPanelFungicidas').style.display !== 'none') renderCalendarioSiembra();
+    if(document.getElementById('tabPanelProgramacion').style.display !== 'none') renderControlAplicaciones();
+  }
+
+  function toggleInfoCalendarioSiembra(event){
+    event.stopPropagation();
+    const pop = document.getElementById('infoCalendarioSiembraPopover');
+    const yaAbierto = pop.classList.contains('show');
+    if(yaAbierto){ pop.classList.remove('show'); return; }
+    const leyenda = ['Siembra', ...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA].map(etapa => {
+      const c = PALETA_ETAPA[etapa];
+      return `<div class="ca-leyenda-item"><span class="ca-leyenda-swatch" style="background:${c.bg};"></span>${etapa}</div>`;
+    }).join('');
+    pop.innerHTML = `
+      <h4>Cómo leer este calendario</h4>
+      Columnas por Sector › Finca › Grupo de Siembra, repetidas para cada etapa (Siembra, Fungicida I al VIII, Arranque, Combina). Filas por fecha.<br><br>
+      <b>Verde</b> = área real aplicada ese día (Odoo).<br>
+      <b>Celda de color</b> = fecha programada de esa etapa (Fungicida I = siembra +30 días; las siguientes, +13 días desde la aplicación real de la anterior, o desde su fecha programada si aún no se aplicó), mientras no exista un registro real.<br>
+      Dentro de la columna de <b>Siembra</b>, además aparece el mismo marcador (FI, FII... FVIII) en la fecha que le corresponde a cada finca, como vista previa — sin agregar columnas nuevas.<br><br>
+      <b>Colores por etapa:</b>
+      ${leyenda}
+    `;
+    pop.classList.add('show');
+    document.addEventListener('click', function cerrar(e){
+      if(!pop.contains(e.target)){ pop.classList.remove('show'); document.removeEventListener('click', cerrar); }
+    });
+  }
+
+  function normTxtCA(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+
+  function addDiasCA(fechaStr, dias){
+    const d = new Date(fechaStr + 'T00:00:00');
+    d.setDate(d.getDate() + dias);
+    return d.toISOString().split('T')[0];
+  }
+
+  function formatFechaCortaCA(f){
+    if(!f) return '—';
+    const p = String(f).split('-');
+    const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    return p.length===3 ? `${p[2]}-${meses[parseInt(p[1],10)-1]}-${p[0].slice(2)}` : f;
+  }
+
+  function formatFechaLargaCA(f){
+    if(!f) return '—';
+    const p = String(f).split('-');
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    return p.length===3 ? `${p[2].padStart(2,'0')}-${meses[parseInt(p[1],10)-1]}-${p[0]}` : f;
+  }
+
+  function construirControlAplicaciones(){
+    const filas = filasBaseCA();
+
+    // Índice de aplicaciones reales por finca|||lote|||actividad, ordenado por fecha asc.
+    const indice = {};
+    filas.forEach(r=>{
+      const key = `${r.finca}|||${r.lote_agricola}|||${r.actividad}`;
+      (indice[key] = indice[key] || []).push({ fecha: r.fecha, avance: r.avance });
+    });
+    Object.values(indice).forEach(arr => arr.sort((a,b)=> String(a.fecha).localeCompare(String(b.fecha))));
+
+    const eventosSiembra = filas.filter(r => normTxtCA(r.actividad) === normTxtCA('Siembra'));
+
+    // Un mismo lote suele sembrarse en varios días parciales (ej. Los Tololos: 23-jun,
+    // 24-jun, 24-jun...) — la fumigación se aplica UNA vez sobre todo el lote, así que
+    // agrupamos por Finca+Lote (no por cada registro parcial): área total = suma de todas
+    // las parciales, fecha base para la cascada = la PRIMERA fecha de siembra del lote.
+    const gruposLote = {};
+    eventosSiembra.forEach(ev => {
+      const key = `${ev.finca}|||${ev.lote_agricola}`;
+      if(!gruposLote[key]){
+        gruposLote[key] = { finca: ev.finca, lote: ev.lote_agricola, sector: ev.sector, compaia: ev.compaia, fechaSiembra: ev.fecha, areaSembrada: 0 };
+      }
+      gruposLote[key].areaSembrada += (ev.avance||0);
+      if(ev.fecha < gruposLote[key].fechaSiembra) gruposLote[key].fechaSiembra = ev.fecha;
+    });
+
+    const filasTabla = Object.values(gruposLote).map(ev => {
+      const claveEtapa = (act) => `${ev.finca}|||${ev.lote}|||${act}`;
+      const areaSembrada = ev.areaSembrada;
+
+      const etapas = [];
+      let fechaBase = ev.fechaSiembra;
+      ETAPAS_FUNGICIDA.forEach((etapa, i) => {
+        const salto = i===0 ? 30 : 13;
+        const fechaProgramada = addDiasCA(fechaBase, salto);
+        const registrosReales = indice[claveEtapa(etapa)] || [];
+        const real = registrosReales[0] || null;
+        const avanceReal = registrosReales.reduce((a,c)=>a + (c.avance||0), 0);
+        etapas.push({
+          etapa, fechaProgramada,
+          fechaReal: real ? real.fecha : null,
+          avanceReal, rest: areaSembrada - avanceReal
+        });
+        // La cadena continúa desde la fecha REAL si ya se aplicó (para no arrastrar
+        // atraso indefinidamente); si no, sigue proyectando desde la programada.
+        fechaBase = real ? real.fecha : fechaProgramada;
+      });
+
+      const cosecha = ETAPAS_COSECHA.map(etapa => {
+        const registrosReales = indice[claveEtapa(etapa)] || [];
+        const avanceReal = registrosReales.reduce((a,c)=>a + (c.avance||0), 0);
+        return { etapa, fechaReal: registrosReales[0] ? registrosReales[0].fecha : null, avanceReal, rest: areaSembrada - avanceReal };
+      });
+
+      return {
+        finca: ev.finca, lote: ev.lote, sector: ev.sector, compaia: ev.compaia,
+        fechaSiembra: ev.fechaSiembra, areaSembrada, etapas, cosecha
+      };
+    });
+
+    filasTabla.sort((a,b)=>
+      a.sector.localeCompare(b.sector) || a.finca.localeCompare(b.finca) || a.lote.localeCompare(b.lote)
+    );
+    return filasTabla;
+  }
+
+  function renderControlAplicaciones(){
+    const cont = document.getElementById('matrixContainerFungicidas');
+    const contador = document.getElementById('recordCounterFungicidas');
+    if(!DB_RAW.length){
+      cont.innerHTML = '<div class="text-center text-muted py-4">Cargando datos de actividades…</div>';
+      return;
+    }
+
+    const filas = construirControlAplicaciones();
+    _controlAplicacionesData = filas;
+
+    if(!filas.length){
+      cont.innerHTML = `<div class="text-center text-muted py-4">No se encontraron lotes con Siembra registrada para ${etiquetaCicloActivoCA()} (${COMPAIA_SELECCIONADA}).</div>`;
+      contador.textContent = '0 lotes';
+      return;
+    }
+
+    const hoy = new Date().toISOString().split('T')[0];
+
+    function celdaEtapa(et, esFungicida){
+      const fecha = et.fechaReal || (esFungicida ? et.fechaProgramada : null);
+      const texto = fecha ? formatFechaLargaCA(fecha) : '—';
+      const tip = `${et.etapa}${et.fechaReal ? ' · Aplicado: '+et.fechaReal+' · '+et.avanceReal.toFixed(2)+' mzn' : (esFungicida ? ' · Programado: '+et.fechaProgramada : ' · Sin registrar')}`;
+      return `<td class="ca-celda-simple" title="${tip}">${texto}</td>`;
+    }
+
+    const thead = `<thead><tr>
+      <th class="ca-fija ca-fija-sector">Sector</th>
+      <th class="ca-fija ca-fija-finca">Finca</th>
+      <th class="ca-fija ca-fija-lote">Lote</th>
+      <th>Fecha Siembra</th>
+      <th>Área Sembrada (mzn)</th>
+      ${ETAPAS_FUNGICIDA.map(e=>`<th>${e}</th>`).join('')}
+      ${ETAPAS_COSECHA.map(e=>`<th>${e}</th>`).join('')}
+    </tr></thead>`;
+
+    let tbody = '<tbody>';
+    filas.forEach(f=>{
+      tbody += `<tr>
+        <td class="ca-fija ca-fija-sector">${f.sector}</td>
+        <td class="ca-fija ca-fija-finca"><strong>${f.finca}</strong></td>
+        <td class="ca-fija ca-fija-lote">${f.lote}</td>
+        <td>${formatFechaCortaCA(f.fechaSiembra)}</td>
+        <td style="text-align:right;">${f.areaSembrada.toFixed(2)}</td>
+        ${f.etapas.map(et=>celdaEtapa(et, true)).join('')}
+        ${f.cosecha.map(et=>celdaEtapa(et, false)).join('')}
+      </tr>`;
+    });
+    tbody += '</tbody>';
+
+    cont.innerHTML = `<table class="ca-tabla" id="tablaControlAplicaciones">${thead}${tbody}</table>`;
+    contador.textContent = `${filas.length} lote${filas.length===1?'':'s'} sembrado${filas.length===1?'':'s'} · ${etiquetaCicloActivoCA()}`;
+  }
+
+  function exportarControlAplicacionesAExcel(){
+    const table = document.getElementById('tablaControlAplicaciones');
+    if(!table) return;
+    const clon = table.cloneNode(true);
+    const wb = XLSX.utils.table_to_book(clon, { raw: true });
+    XLSX.writeFile(wb, `INFOAGRO_Control_Aplicaciones_Mani2026_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  function siglaGrupoCA(g){
+    // "GRUPO DE SIEMBRA A" -> "GA"
+    const m = String(g||'').trim().match(/([A-Z])$/);
+    return m ? ('G'+m[1]) : '—';
+  }
+
+  function construirCalendarioSiembra(){
+    const todasFilas = filasBaseCA();
+    const filasSiembra = todasFilas.filter(r => normTxtCA(r.actividad)===normTxtCA('Siembra'));
+    if(!filasSiembra.length) return null;
+
+    function colKeyDe(r){
+      const grupo = (r.grupo_siembra && r.grupo_siembra !== 'Sin Grupo') ? r.grupo_siembra : 'Sin Grupo';
+      return `${r.sector}|||${r.finca}|||${grupo}`;
+    }
+
+    // Columnas únicas: Sector > Finca > Grupo de Siembra (a partir de los registros de Siembra)
+    const colMap = {};
+    filasSiembra.forEach(r=>{
+      const key = colKeyDe(r);
+      const grupo = (r.grupo_siembra && r.grupo_siembra !== 'Sin Grupo') ? r.grupo_siembra : 'Sin Grupo';
+      if(!colMap[key]) colMap[key] = { key, sector:r.sector, finca:r.finca, grupo, sigla: grupo==='Sin Grupo' ? '—' : siglaGrupoCA(grupo), total:0 };
+      colMap[key].total += (r.avance||0);
+    });
+    const columnas = Object.values(colMap).sort((a,b)=>
+      a.sector.localeCompare(b.sector) || a.finca.localeCompare(b.finca) || a.grupo.localeCompare(b.grupo)
+    );
+
+    // Matriz de Siembra: fecha -> colKey -> mzn sembrados ese día (si una finca/grupo no
+    // siembra ese día, la celda simplemente queda vacía).
+    const matrizSiembra = {};
+    filasSiembra.forEach(r=>{
+      const key = colKeyDe(r);
+      matrizSiembra[r.fecha] = matrizSiembra[r.fecha] || {};
+      matrizSiembra[r.fecha][key] = (matrizSiembra[r.fecha][key]||0) + (r.avance||0);
+    });
+
+    // Índice de aplicaciones reales por columna+actividad, ordenado por fecha asc.
+    const indiceEtapa = {};
+    todasFilas.forEach(r=>{
+      const key = `${colKeyDe(r)}|||${r.actividad}`;
+      (indiceEtapa[key] = indiceEtapa[key] || []).push({ fecha: r.fecha, avance: r.avance||0 });
+    });
+    Object.values(indiceEtapa).forEach(arr => arr.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))));
+
+    // Fecha base de siembra por columna (la más temprana)
+    const baseSiembraCol = {};
+    filasSiembra.forEach(r=>{
+      const key = colKeyDe(r);
+      if(!baseSiembraCol[key] || r.fecha < baseSiembraCol[key]) baseSiembraCol[key] = r.fecha;
+    });
+
+    // Cascada por columna (Sector/Finca/Grupo, igual que Siembra): Fungicida I = fecha
+    // base + 30 días; Fungicida II..VIII = fecha REAL de la etapa anterior (o programada
+    // si aún no se aplicó) + 13 días. La marca "programado" se ubica en la fila que cae
+    // según esa fecha calculada, y desaparece en cuanto hay un registro real.
+    const matricesEtapa = {};
+    const programadoEtapa = {};
+    [...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA].forEach(etapa => { matricesEtapa[etapa] = {}; programadoEtapa[etapa] = {}; });
+
+    columnas.forEach(c=>{
+      let fechaBase = baseSiembraCol[c.key];
+      if(!fechaBase) return;
+      ETAPAS_FUNGICIDA.forEach((etapa, i) => {
+        const salto = i===0 ? 30 : 13;
+        const fechaProgramada = addDiasCA(fechaBase, salto);
+        const regs = indiceEtapa[`${c.key}|||${etapa}`] || [];
+        regs.forEach(r=>{
+          matricesEtapa[etapa][r.fecha] = matricesEtapa[etapa][r.fecha] || {};
+          matricesEtapa[etapa][r.fecha][c.key] = (matricesEtapa[etapa][r.fecha][c.key]||0) + r.avance;
+        });
+        programadoEtapa[etapa][c.key] = { fechaProgramada, tieneReal: regs.length>0 };
+        fechaBase = regs.length ? regs[0].fecha : fechaProgramada;
+      });
+      ETAPAS_COSECHA.forEach(etapa=>{
+        const regs = indiceEtapa[`${c.key}|||${etapa}`] || [];
+        regs.forEach(r=>{
+          matricesEtapa[etapa][r.fecha] = matricesEtapa[etapa][r.fecha] || {};
+          matricesEtapa[etapa][r.fecha][c.key] = (matricesEtapa[etapa][r.fecha][c.key]||0) + r.avance;
+        });
+      });
+    });
+
+    // Rango de fechas: desde la primera siembra hasta la fecha (real o programada) más
+    // lejana entre todas las etapas, así el calendario alcanza hasta Combina.
+    let fechaMin = filasSiembra.reduce((min,r)=> (!min || r.fecha<min) ? r.fecha : min, null);
+    let fechaMax = fechaMin;
+    Object.values(matricesEtapa).forEach(m => Object.keys(m).forEach(f => { if(f>fechaMax) fechaMax=f; }));
+    Object.values(programadoEtapa).forEach(porCol => Object.values(porCol).forEach(info => {
+      if(info.fechaProgramada && info.fechaProgramada > fechaMax) fechaMax = info.fechaProgramada;
+    }));
+
+    const rangoFechas = [];
+    for(let d=new Date(fechaMin+'T00:00:00'); d<=new Date(fechaMax+'T00:00:00'); d.setDate(d.getDate()+1)){
+      rangoFechas.push(d.toISOString().split('T')[0]);
+    }
+
+    return { columnas, rangoFechas, matrizSiembra, matricesEtapa, programadoEtapa };
+  }
+
+  function renderCalendarioSiembra(){
+    const cont = document.getElementById('matrixContainerSiembraCal');
+    const contador = document.getElementById('recordCounterSiembraCal');
+    if(!DB_RAW.length){
+      cont.innerHTML = '<div class="text-center text-muted py-4">Cargando datos de actividades…</div>';
+      return;
+    }
+    const datos = construirCalendarioSiembra();
+    if(!datos){
+      cont.innerHTML = `<div class="text-center text-muted py-4">No se encontraron registros de Siembra para ${etiquetaCicloActivoCA()} (${COMPAIA_SELECCIONADA}).</div>`;
+      contador.textContent = '0 columnas';
+      return;
+    }
+    const { columnas, rangoFechas, matrizSiembra, matricesEtapa, programadoEtapa } = datos;
+    const nCols = columnas.length;
+    const ETAPAS_TODAS = ['Siembra', ...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA];
+
+    function fmtVal(v){ return v % 1 === 0 ? v.toFixed(0) : v.toFixed(2); }
+
+    // Fila 0: banda con el nombre de la etapa (Siembra, Fungicida I..VIII, Arranque, Combina)
+    let filaEtapa = '<tr><th class="ca-fija" rowspan="4">Fecha</th>';
+    ETAPAS_TODAS.forEach(etapa=>{
+      const colBanda = PALETA_ETAPA[etapa] || PALETA_ETAPA['Siembra'];
+      filaEtapa += `<th colspan="${nCols}" class="ca-cal-etapa-band" style="background:${colBanda.bg}; color:#fff;">${etapa.toUpperCase()}</th>`;
+    });
+    filaEtapa += '</tr>';
+
+    // Filas 1-3: Sector / Finca / Sigla, repetidas debajo de cada banda de etapa
+    let filaSector = '<tr>', filaFinca = '<tr>', filaSigla = '<tr>';
+    ETAPAS_TODAS.forEach(()=>{
+      for(let i=0;i<nCols;){
+        let j=i; while(j<nCols && columnas[j].sector===columnas[i].sector) j++;
+        filaSector += `<th colspan="${j-i}" class="ca-cal-sector">${columnas[i].sector}</th>`;
+        i=j;
+      }
+      for(let i=0;i<nCols;){
+        let j=i; while(j<nCols && columnas[j].finca===columnas[i].finca && columnas[j].sector===columnas[i].sector) j++;
+        filaFinca += `<th colspan="${j-i}" class="ca-cal-finca">${columnas[i].finca}</th>`;
+        i=j;
+      }
+      columnas.forEach(c=> filaSigla += `<th class="ca-cal-sigla">${c.sigla}</th>`);
+    });
+    filaSector += '</tr>'; filaFinca += '</tr>'; filaSigla += '</tr>';
+
+    // Fila de totales por columna y etapa
+    let filaTotal = `<tr class="ca-cal-total-row"><td class="ca-fija">Total (mzn)</td>`;
+    ETAPAS_TODAS.forEach(etapa=>{
+      columnas.forEach(c=>{
+        let total = 0;
+        if(etapa==='Siembra') total = c.total;
+        else Object.values(matricesEtapa[etapa]).forEach(porCol => { total += (porCol[c.key]||0); });
+        filaTotal += `<td>${fmtVal(total)}</td>`;
+      });
+    });
+    filaTotal += '</tr>';
+
+    const filasCuerpo = rangoFechas.map(f=>{
+      let fila = `<tr><td class="ca-fija">${formatFechaCortaCA(f)}</td>`;
+      ETAPAS_TODAS.forEach(etapa=>{
+        columnas.forEach(c=>{
+          if(etapa==='Siembra'){
+            const val = (matrizSiembra[f] && matrizSiembra[f][c.key]) || 0;
+            if(val>0){ fila += `<td class="ca-cal-valor">${fmtVal(val)}</td>`; return; }
+            // Vista previa dentro de la misma columna de Siembra: si esta fecha es cuando
+            // le toca la evaluación de algún Fungicida (I al VIII, y todavía no se aplicó),
+            // se marca "FI".."FVIII" aquí mismo, sin agregar columnas nuevas — el bloque de
+            // cada FUNGICIDA más a la derecha sigue mostrando el detalle completo (●) igual
+            // que antes. Fungicida I cae a +30d de la siembra; los siguientes a +13d de la
+            // fecha real de la etapa anterior (o de su programada, si aún no se aplicó).
+            let marcaSiembra = '';
+            let etapaSiembraNombre = '';
+            for(const etapaFung of ETAPAS_FUNGICIDA){
+              const infoF = programadoEtapa[etapaFung] && programadoEtapa[etapaFung][c.key];
+              if(infoF && !infoF.tieneReal && infoF.fechaProgramada === f){
+                marcaSiembra = etapaFung.replace('Fungicida ', 'F');
+                etapaSiembraNombre = etapaFung;
+                break;
+              }
+            }
+            if(marcaSiembra){
+              const colM = PALETA_ETAPA[etapaSiembraNombre];
+              fila += `<td class="ca-cal-programado" style="background:${colM.bgLight}; color:${colM.text};" title="Evaluación ${etapaSiembraNombre} programada">${marcaSiembra}</td>`;
+            } else {
+              fila += `<td></td>`;
+            }
+            return;
+          }
+          const val = (matricesEtapa[etapa][f] && matricesEtapa[etapa][f][c.key]) || 0;
+          if(val>0){
+            fila += `<td class="ca-cal-valor">${fmtVal(val)}</td>`;
+          } else {
+            const info = programadoEtapa[etapa][c.key];
+            const esProgramado = info && !info.tieneReal && info.fechaProgramada === f;
+            if(esProgramado){
+              const colE = PALETA_ETAPA[etapa];
+              fila += `<td class="ca-cal-programado" style="background:${colE.bgLight}; color:${colE.text};" title="Programado: ${etapa} = fecha base + días">●</td>`;
+            } else {
+              fila += `<td></td>`;
+            }
+          }
+        });
+      });
+      fila += '</tr>';
+      return fila;
+    }).join('');
+
+    cont.innerHTML = `<table class="ca-cal-tabla" id="tablaCalendarioSiembra">
+      <thead>${filaEtapa}${filaSector}${filaFinca}${filaSigla}</thead>
+      <tbody>${filaTotal}${filasCuerpo}</tbody>
+    </table>`;
+    contador.textContent = `${nCols} columnas (Sector › Finca › Grupo) × ${ETAPAS_TODAS.length} etapas · ${rangoFechas.length} días`;
+  }
+
+  function exportarCalendarioSiembraAExcel(){
+    const table = document.getElementById('tablaCalendarioSiembra');
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table.cloneNode(true), { raw: true });
+    XLSX.writeFile(wb, `INFOAGRO_Calendario_Siembra_Mani2026_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
   async function initAll() {
     await loadData();
     buildAreaIndex();
     await Promise.all([loadDataInsumos(), loadDataCombustible()]);
     renderMatrixIns();
+    mostrarCamposSegunTab('actividades'); // arranca en la pestaña Actividades
   }
+
+  // Los filtros Compañía/Sector/Ciclo/Finca ahora viven de nuevo dentro de esta misma
+  // sección (toolbar propia, visible arriba) — ya no se reciben desde un panel del shell.
   initAll();
 </script>
 
