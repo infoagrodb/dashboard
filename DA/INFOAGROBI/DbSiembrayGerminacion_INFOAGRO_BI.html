@@ -1379,17 +1379,25 @@ async function abrirModalGrafico(origen) {
 
 function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
 
-function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
+function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo, fechaSiembra) {
   const overlay = document.getElementById('popupDetalleOverlay');
   const title = document.getElementById('popupTitle');
   const body = document.getElementById('popupBodyContent');
-  const itemsCelda = datosMaestrosUnificados.filter(d => d.finca === finca && d.lote === lote && d.ciclo === ciclo);
+  let itemsCelda = datosMaestrosUnificados.filter(d => d.finca === finca && d.lote === lote && d.ciclo === ciclo);
+  // El % de germinación y el promedio de semillas se calculan por EVENTO de siembra
+  // (misma fecha exacta), no por todo el histórico del lote — un mismo lote puede
+  // tener siembra y re-siembra en fechas distintas (ej. junio y julio), y mezclarlas
+  // infla o distorsiona el promedio real de esa siembra puntual. Cuando la fila de
+  // origen trae su fechaSiembra, acotamos el detalle a esa misma fecha.
+  if (tipoColumna === 'semillas' && fechaSiembra) {
+    itemsCelda = itemsCelda.filter(d => extraerFecha(d.rawSiembra) === fechaSiembra);
+  }
   if (itemsCelda.length === 0) return;
   
   let html = '';
   
   if (tipoColumna === 'semillas') {
-    title.textContent = `Detalle de Siembra — ${finca} · Lote ${lote}`;
+    title.textContent = `Detalle de Siembra — ${finca} · Lote ${lote}${fechaSiembra ? ` · ${formatFechaLegible(fechaSiembra)}` : ''}`;
     itemsCelda.sort((a, b) => (extraerFecha(a.rawSiembra) || '').localeCompare(extraerFecha(b.rawSiembra) || ''));
 
     html += `<table class="modal-table"><thead><tr><th>Reporte</th><th>Fecha Reporte</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Variedad</th><th>Lote Semilla (Comasa)</th><th>Sem. Enteras</th><th>Sem. Quebradas</th><th>% Enteras</th><th>Total Sem. m.l.</th></tr></thead><tbody id="modalTableBody">`;
@@ -1860,7 +1868,7 @@ function renderTablaEspera(items) {
   const filas = ordenarFilasAlertas(Object.values(grupos));
   let html = '';
   filas.forEach(g => {
-    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td><span class="badge-dds pendiente">${g.dds} días</span></td><td><span style="color:#7c3aed; font-weight:700;">en ${10 - g.dds} días</span></td><td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
+    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td><span class="badge-dds pendiente">${g.dds} días</span></td><td><span style="color:#7c3aed; font-weight:700;">en ${10 - g.dds} días</span></td><td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}','${g.fechaSiembra}')">Ver Siembra</button></td></tr>`;
   });
   tbody.innerHTML = html;
 }
@@ -1883,7 +1891,7 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
   const filas = ordenarFilasAlertas(Object.values(grupos));
   let html = '';
   filas.forEach(g => {
-    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td><td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td><td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
+    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td><td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td><td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}','${g.fechaSiembra}')">Ver Siembra</button></td></tr>`;
   });
   tbody.innerHTML = html;
 }
@@ -1907,7 +1915,7 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
 
     html += `<tr>
       <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${g.fechaSiembraFormated}</td>
-      <td style="text-align:right;"><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}')">${g.semillasFormated}</button></td>
+      <td style="text-align:right;"><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}','${g.fechaSiembra}')">${g.semillasFormated}</button></td>
       <td><span class="badge-dds pendiente">${g.ddsFormated}</span></td>
       <td style="text-align:right;"><button class="btn-ver-siembra" style="color:#0284c7; border-color:#0284c7;" onclick="abrirModalPopupDetalle('10dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">${g.p10Val}</button></td>
       <td style="text-align:center;">${pct10 !== null ? `<span class="badge-pct ${pct10 < 55 ? 'low' : ''}">${pct10.toFixed(1)}%</span>` : '-'}</td>
