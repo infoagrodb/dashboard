@@ -514,18 +514,18 @@
   .kpi-strip {
     display: flex; gap: 14px; flex-wrap: wrap;
   }
-  .kpi-card {
+  .kpi-strip .kpi-card {
     flex: 1 1 160px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px;
     padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px;
     cursor: pointer; transition: all 0.18s ease; position: relative; overflow: hidden;
   }
-  .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
-  .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--kpi-color, #e5e7eb); border-radius: 12px 12px 0 0; }
-  .kpi-card.danger { --kpi-color: #ef4444; }
-  .kpi-card.warning { --kpi-color: #f59e0b; }
-  .kpi-card.ok { --kpi-color: #22c55e; }
-  .kpi-card.info { --kpi-color: #0284c7; }
-  .kpi-card.espera { --kpi-color: #7c3aed; }
+  .kpi-strip .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .kpi-strip .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--kpi-color, #e5e7eb); border-radius: 12px 12px 0 0; }
+  .kpi-strip .kpi-card.danger { --kpi-color: #ef4444; }
+  .kpi-strip .kpi-card.warning { --kpi-color: #f59e0b; }
+  .kpi-strip .kpi-card.ok { --kpi-color: #22c55e; }
+  .kpi-strip .kpi-card.info { --kpi-color: #0284c7; }
+  .kpi-strip .kpi-card.espera { --kpi-color: #7c3aed; }
   .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
   .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: var(--text-main); }
   .kpi-value.danger { color: #dc2626; }
@@ -546,11 +546,19 @@
 
   .alerta-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); }
   .alerta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  
+  /* Estilo interactivo para ordenar columnas en alertas */
   .alerta-table th {
     background: #f9fafb; padding: 8px 14px; text-align: left; font-size: 11px;
     font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #374151;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color); user-select: none;
   }
+  .alerta-table th.sortable { cursor: pointer; position: relative; padding-right: 20px; }
+  .alerta-table th.sortable:hover { background-color: #f1f5f9; color: var(--primary); }
+  .alerta-table th.sortable::after { content: ' ↕'; opacity: 0.4; font-size: 10px; position: absolute; right: 6px; top: 9px; }
+  .alerta-table th.sorted-asc::after { content: ' ↑'; opacity: 1; color: var(--primary); }
+  .alerta-table th.sorted-desc::after { content: ' ↓'; opacity: 1; color: var(--primary); }
+
   .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
   .alerta-table tr:last-child td { border-bottom: none; }
   .alerta-table tr:hover td { background: var(--bg-main); }
@@ -904,13 +912,13 @@
           <table class="alerta-table">
             <thead>
               <tr>
-                <th>Finca</th>
-                <th>Lote</th>
-                <th>Fecha Siembra</th>
-                <th>DDS Hoy</th>
+                <th class="sortable" id="th_espera_finca" onclick="cambiarOrdenAlertas('finca')">Finca</th>
+                <th class="sortable" id="th_espera_lote" onclick="cambiarOrdenAlertas('lote')">Lote</th>
+                <th class="sortable" id="th_espera_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra</th>
+                <th class="sortable" id="th_espera_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy</th>
                 <th>Días para 10 DDS</th>
-                <th>Variedad</th>
-                <th>Semillas m.l.</th>
+                <th class="sortable" id="th_espera_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad</th>
+                <th class="sortable" id="th_espera_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -929,13 +937,13 @@
           <table class="alerta-table">
             <thead>
               <tr>
-                <th>Finca</th>
-                <th>Lote</th>
-                <th>Fecha Siembra</th>
-                <th>DDS Hoy</th>
+                <th class="sortable" id="th_10dds_finca" onclick="cambiarOrdenAlertas('finca')">Finca</th>
+                <th class="sortable" id="th_10dds_lote" onclick="cambiarOrdenAlertas('lote')">Lote</th>
+                <th class="sortable" id="th_10dds_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra</th>
+                <th class="sortable" id="th_10dds_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy</th>
                 <th>Estado</th>
-                <th>Variedad</th>
-                <th>Semillas m.l.</th>
+                <th class="sortable" id="th_10dds_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad</th>
+                <th class="sortable" id="th_10dds_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -954,13 +962,13 @@
           <table class="alerta-table">
             <thead>
               <tr>
-                <th>Finca</th>
-                <th>Lote</th>
-                <th>Fecha Siembra</th>
-                <th>DDS Hoy</th>
+                <th class="sortable" id="th_15dds_finca" onclick="cambiarOrdenAlertas('finca')">Finca</th>
+                <th class="sortable" id="th_15dds_lote" onclick="cambiarOrdenAlertas('lote')">Lote</th>
+                <th class="sortable" id="th_15dds_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra</th>
+                <th class="sortable" id="th_15dds_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy</th>
                 <th>Estado</th>
-                <th>Variedad</th>
-                <th>Semillas m.l.</th>
+                <th class="sortable" id="th_15dds_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad</th>
+                <th class="sortable" id="th_15dds_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -979,14 +987,14 @@
           <table class="alerta-table">
             <thead>
               <tr>
-                <th>Finca</th>
-                <th>Lote</th>
-                <th>Fecha Siembra</th>
-                <th>DDS Hoy</th>
+                <th class="sortable" id="th_completos_finca" onclick="cambiarOrdenAlertas('finca')">Finca</th>
+                <th class="sortable" id="th_completos_lote" onclick="cambiarOrdenAlertas('lote')">Lote</th>
+                <th class="sortable" id="th_completos_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra</th>
+                <th class="sortable" id="th_completos_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy</th>
                 <th>Recuento 10 DDS</th>
                 <th>Recuento 15 DDS</th>
-                <th>Variedad</th>
-                <th>Semillas m.l.</th>
+                <th class="sortable" id="th_completos_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad</th>
+                <th class="sortable" id="th_completos_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.</th>
                 <th>Acción</th>
               </tr>
             </thead>
@@ -1046,6 +1054,9 @@ let chartInstanciaUnica = null;
 let estadoFincasColapso = {}; 
 let estadoGlobalColapsado = false; 
 let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: true, g15: true };
+
+// Estado de ordenamiento para la pestaña de alertas (Fecha Siembra Ascendente por defecto)
+let alertasSortConfig = { key: 'fechaSiembra', asc: true };
 
 function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
 function toggleHeaderMenu() {
@@ -1266,7 +1277,6 @@ function aplicarFiltroDropdown(llaveFiltro, idDrop, idOpts, idBtnClear) {
   if (btn) btn.style.display = (marcados.length < (universosUnicos[llaveFiltro] || []).length) ? "inline-flex" : "none";
   contenedor.classList.remove('show');
   filtrarYMostrar();
-  // Si cambió el ciclo, resetear caché de lluvia para recargar con el año correcto
   lluviaYaCargada = false;
   if (datosMaestrosUnificados.length > 0) renderAlertas();
 }
@@ -1355,7 +1365,6 @@ function procesarEstructuraGrafico() {
     (seleccionesFiltros.tipo || []).includes(d.tipo)
   );
 
-  // Calcular ventana: min(siembra) - 10 días  →  max(germinación ó siembra) + 20 días
   let fechasSiembra = siembrasFiltradas.map(s => extraerFecha(s.rawSiembra)).filter(Boolean);
   let fechasGerm = siembrasFiltradas.flatMap(s => (s.rawMuestrasOriginales||[]).map(g => extraerFecha(g))).filter(Boolean);
   let todasFechas = [...fechasSiembra, ...fechasGerm].sort();
@@ -1365,22 +1374,17 @@ function procesarEstructuraGrafico() {
   const fechaInicio = addDias(todasFechas[0], -10);
   const fechaFin    = addDias(todasFechas[todasFechas.length - 1], 20);
 
-  // Años dentro de la ventana (para filtrar lluvia por año)
   const anosVentana = new Set();
   for (let d = new Date(fechaInicio + 'T00:00:00'); d <= new Date(fechaFin + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
     anosVentana.add(String(d.getFullYear()));
   }
 
-  // Mapa día a día dentro de la ventana (incluye días sin datos = 0 lluvia)
   let mapaEjeTemporal = {};
   for (let d = new Date(fechaInicio + 'T00:00:00'); d <= new Date(fechaFin + 'T00:00:00'); d.setDate(d.getDate() + 1)) {
     const key = d.toISOString().split('T')[0];
     mapaEjeTemporal[key] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
   }
 
-  // Lluvia — construir Sets de IDs de finca y sector activos para match exacto por ID
-  // Los registros de lluvia tienen x_studio_finca=[id,'nombre'] y x_studio_sector_1=[id,'nombre']
-  // Las siembras filtradas ya nos dicen exactamente qué finca+sector IDs están activos
   const fincaIdsActivos  = new Set(siembrasFiltradas.map(s => {
     const lf = s.rawSiembra?.x_studio_finca;
     return Array.isArray(lf) ? lf[0] : null;
@@ -1397,7 +1401,6 @@ function procesarEstructuraGrafico() {
     const f = String(fecha).includes(' ') ? String(fecha).split(' ')[0] : String(fecha);
     if (!f || f.length < 10 || f < fechaInicio || f > fechaFin) return;
 
-    // Filtro por ID de finca — debe estar entre las fincas de las siembras filtradas
     const fincaIdLluvia  = Array.isArray(r.x_studio_finca)    ? r.x_studio_finca[0]    : null;
     const sectorIdLluvia = Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[0] : null;
 
@@ -1409,7 +1412,6 @@ function procesarEstructuraGrafico() {
     mapaEjeTemporal[f].countLluvia++;
   });
 
-  // Siembra
   siembrasFiltradas.forEach(s => {
     const f = extraerFecha(s.rawSiembra);
     if (!f || !mapaEjeTemporal[f]) return;
@@ -1417,7 +1419,6 @@ function procesarEstructuraGrafico() {
     mapaEjeTemporal[f].siembraCount++;
   });
 
-  // Germinación
   siembrasFiltradas.forEach(s => {
     (s.rawMuestrasOriginales || []).forEach(g => {
       const f = extraerFecha(g);
@@ -1453,14 +1454,13 @@ async function abrirModalGrafico() {
 
   if (!lluviaYaCargada || datosLluviaRaw.length === 0) {
     try {
-      // Detectar el año del ciclo activo para filtrar solo los registros relevantes
       const ciclosActivos = seleccionesFiltros.ciclo || [];
       const añoActivo = ciclosActivos.map(c => (c.match(/\d{4}/) || [])[0]).filter(Boolean)[0] || new Date().getFullYear();
       const fechaDesde = `${añoActivo}-01-01`;
 
       let todos = [], offset = 0;
       const limit = 500;
-      const MAX_PAGINAS = 10; // tope de seguridad: 10 × 500 = 5,000 registros máx
+      const MAX_PAGINAS = 10;
       let pagina = 0;
 
       while (pagina < MAX_PAGINAS) {
@@ -1472,7 +1472,7 @@ async function abrirModalGrafico() {
         if (batch.length === 0) break;
         todos = todos.concat(batch);
         loadingEl.textContent = `🌧️ Cargando lluvia ${añoActivo}... ${todos.length} registros`;
-        if (batch.length < limit) break; // última página
+        if (batch.length < limit) break;
         offset += limit;
         pagina++;
       }
@@ -1528,7 +1528,6 @@ async function abrirModalGrafico() {
     });
   }, 100);
 }
-
 
 function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
 
@@ -1593,7 +1592,7 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
           </div>`;
       });
     });
-    if (reportesProcesados.size === 0) html += `<div class="popup-item"><span style="color:var(--text-muted); font-style:italic;">No existen registros en Odoo para ${ddsObjetivo} DDS.</span></div>`;
+    if (reportesProcesados.size === 0) html += `<div class="popup-item"><span style="color(--text-muted); font-style:italic;">No existen registros en Odoo para ${ddsObjetivo} DDS.</span></div>`;
   }
   body.innerHTML = html + `</div>`;
   overlay.classList.add('show');
@@ -1609,7 +1608,6 @@ function cambiarTab(tab) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
   document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  // Ocultar botones Filtros/Menú cuando estamos en alertas
   const headerQA = document.querySelector('.header-quick-actions');
   if (headerQA) headerQA.style.display = tab === 'alertas' ? 'none' : '';
   if (tab === 'alertas') renderAlertas();
@@ -1627,9 +1625,8 @@ function formatFechaLegible(fechaStr) {
 }
 
 let alertaFiltroActivo = 'all';
-// Filtros propios del tab Alertas (independientes del pivot)
 let alertasFiltros = { ciclo: [], compania: [], sector: [], finca: [] };
-let alertasFiltrosPrevios = { ciclo: [], compania: [], sector: [], finca: [] }; // para cancelar
+let alertasFiltrosPrevios = { ciclo: [], compania: [], sector: [], finca: [] };
 let alertasCicloData = { sin10: [], sin15: [], completos: [], todos: [] };
 
 // ===== MULTISELECT CASCADA ALERTAS =====
@@ -1640,7 +1637,6 @@ function afGetDatosBase() {
 }
 
 function afGetValoresDisponibles(dim) {
-  // Valores posibles dado lo seleccionado en las OTRAS dimensiones
   const otros = AF_DIMENSIONES.filter(d => d !== dim);
   return [...new Set(afGetDatosBase().filter(item => {
     return otros.every(d => alertasFiltros[d].length === 0 || alertasFiltros[d].includes(item[d]));
@@ -1652,13 +1648,11 @@ function afPoblarPanel(dim) {
   if (!contenedor) return;
   const disponibles = afGetValoresDisponibles(dim);
   const seleccionados = alertasFiltros[dim];
-  // "Todos" item
   const todosMarcado = seleccionados.length === 0;
   let html = `<div class="af-ms-item" onclick="afToggleTodos('${dim}')">
     <input type="checkbox" id="afTodos_${dim}" ${todosMarcado?'checked':''} onchange="afToggleTodos('${dim}')">
     <span>(Seleccionar todo)</span>
   </div>`;
-  // Universo completo pero mostrando disponibles vs grises
   const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
   universo.forEach(v => {
     const checked = seleccionados.length === 0 || seleccionados.includes(v);
@@ -1675,7 +1669,6 @@ function toggleAfDropdown(panelId) {
   document.querySelectorAll('.af-ms-panel.open').forEach(p => { if(p.id !== panelId) p.classList.remove('open'); });
   const panel = document.getElementById(panelId);
   const dim = panelId.replace('afDrop','').toLowerCase();
-  // Guardar estado previo para cancelar
   alertasFiltrosPrevios[dim] = [...alertasFiltros[dim]];
   afPoblarPanel(dim);
   panel.classList.toggle('open');
@@ -1683,7 +1676,6 @@ function toggleAfDropdown(panelId) {
 
 function afCerrar(panelId) {
   const dim = panelId.replace('afDrop','').toLowerCase();
-  // Restaurar selección previa
   alertasFiltros[dim] = [...alertasFiltrosPrevios[dim]];
   document.getElementById(panelId).classList.remove('open');
 }
@@ -1727,14 +1719,12 @@ function afFiltrarItems(input, panelId) {
 }
 
 function afAplicar(dim) {
-  // Re-leer checkboxes del panel actual
   const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
   const marcados = Array.from(items).filter(i => i.checked).map(i => i.value);
   const universo = [...new Set(afGetDatosBase().map(d => d[dim]))].sort();
   alertasFiltros[dim] = marcados.length === universo.length ? [] : marcados;
   document.getElementById(`afDrop${dim.charAt(0).toUpperCase()+dim.slice(1)}`).classList.remove('open');
   afActualizarTextos();
-  // Repoblar otros paneles para cascada
   AF_DIMENSIONES.forEach(d => { if (d !== dim) afPoblarPanel(d); });
   renderAlertas();
 }
@@ -1751,16 +1741,13 @@ function afActualizarTextos() {
 function inicializarSelectorCicloAlertas() {
   document.getElementById('alertaFechaHoy').textContent =
     new Date().toLocaleDateString('es-NI', { day:'2-digit', month:'2-digit', year:'numeric' });
-  // Preseleccionar el ciclo más reciente
   const cicloMasReciente = (universosUnicos.ciclo || [])[0];
   if (cicloMasReciente) alertasFiltros.ciclo = [cicloMasReciente];
   afActualizarTextos();
-  // Cerrar paneles al clic fuera
   document.addEventListener('click', e => {
     if (!e.target.closest('.af-ms-wrap')) document.querySelectorAll('.af-ms-panel.open').forEach(p => p.classList.remove('open'));
   }, { once: false });
 }
-
 
 function calcularDDS(fechaSiembraStr) {
   if (!fechaSiembraStr) return null;
@@ -1774,7 +1761,6 @@ function tieneRecuento(item, ddsMin, ddsMax) {
   const muestras = item.rawMuestrasOriginales || [];
   const fechaSiembra = item.fechaSiembra;
   return muestras.some(m => {
-    // Método 1: campo DDS directo
     const ddsRaw = m.x_studio_dds ?? m.x_studio_dias_despues_siembra ?? m.x_studio_dds_1;
     if (ddsRaw !== undefined && ddsRaw !== null && ddsRaw !== false && ddsRaw !== '') {
       const dds = parseFloat(ddsRaw);
@@ -1783,7 +1769,6 @@ function tieneRecuento(item, ddsMin, ddsMax) {
         return dds >= ddsMin && dds <= ddsMax;
       }
     }
-    // Método 2: calcular DDS desde fecha de siembra vs fecha de germinación
     if (fechaSiembra) {
       const fGerm = extraerFecha(m);
       if (fGerm) {
@@ -1802,10 +1787,62 @@ function contarGruposUnicos(items) {
   return new Set(items.map(i => `${i.finca}|||${i.lote}|||${i.fechaSiembra||''}`)).size;
 }
 
+// Función encargada de cambiar la columna de ordenamiento y refrescar las tablas
+function cambiarOrdenAlertas(key) {
+  if (alertasSortConfig.key === key) {
+    alertasSortConfig.asc = !alertasSortConfig.asc;
+  } else {
+    alertasSortConfig.key = key;
+    alertasSortConfig.asc = true;
+  }
+  renderAlertas();
+}
+
+// Actualiza las clases CSS de las cabeceras para mostrar flechas visuales de ordenamiento
+function actualizarEstilosCabecerasAlertas() {
+  const prefijos = ['espera', '10dds', '15dds', 'completos'];
+  const llavesColumnas = ['finca', 'lote', 'fechaSiembra', 'dds', 'variedad', 'semillas'];
+  
+  prefijos.forEach(pref => {
+    llavesColumnas.forEach(col => {
+      const th = document.getElementById(`th_${pref}_${col}`);
+      if (th) {
+        th.classList.remove('sorted-asc', 'sorted-desc');
+        if (alertasSortConfig.key === col) {
+          th.classList.add(alertasSortConfig.asc ? 'sorted-asc' : 'sorted-desc');
+        }
+      }
+    });
+  });
+}
+
+// Función genérica para ordenar los arreglos agrupados de las alertas
+function ordenarFilasAlertas(filas) {
+  return filas.sort((a, b) => {
+    let valA = a[alertasSortConfig.key];
+    let valB = b[alertasSortConfig.key];
+
+    if (alertasSortConfig.key === 'semillas') {
+      valA = a.countSemillas > 0 ? (a.sumSemillas / a.countSemillas) : 0;
+      valB = b.countSemillas > 0 ? (b.sumSemillas / b.countSemillas) : 0;
+    }
+
+    if (valA === undefined || valA === null) return 1;
+    if (valB === undefined || valB === null) return -1;
+
+    let comp = 0;
+    if (typeof valA === 'string') {
+      comp = valA.localeCompare(valB);
+    } else {
+      comp = valA - valB;
+    }
+    return alertasSortConfig.asc ? comp : -comp;
+  });
+}
+
 function renderAlertas() {
   if (datosMaestrosUnificados.length === 0) return;
 
-  // Aplicar todos los filtros propios del tab Alertas en cascada
   const siembrasFiltradas = datosMaestrosUnificados.filter(d =>
     (alertasFiltros.ciclo.length    === 0 || alertasFiltros.ciclo.includes(d.ciclo)) &&
     (alertasFiltros.compania.length === 0 || alertasFiltros.compania.includes(d.compania)) &&
@@ -1826,7 +1863,7 @@ function renderAlertas() {
     const entry = { ...item, fechaSiembra, dds, tiene10, tiene15 };
     todos.push(entry);
 
-    if (dds >= 0 && dds <= 9)                    enEspera.push(entry);
+    if (dds >= 0 && dds <= 9)                     enEspera.push(entry);
     if (dds >= 10 && dds <= 14 && !tiene10)       sin10.push(entry);
     if (dds >= 15 && !tiene15)                    sin15.push(entry);
     if (dds >= 15 && tiene10 && tiene15)          completos.push(entry);
@@ -1835,7 +1872,6 @@ function renderAlertas() {
 
   alertasCicloData = { sin10, sin15, enEspera, completos, todos };
 
-  // KPIs — grupos únicos por Finca+Lote+Fecha para alertas; Total por Finca+Lote único
   const lotesUnicos = new Set(todos.map(i => `${i.finca}|||${i.lote}`)).size;
   document.getElementById('kpiTotal').textContent     = lotesUnicos;
   document.getElementById('kpiEspera').textContent    = contarGruposUnicos(enEspera);
@@ -1846,7 +1882,6 @@ function renderAlertas() {
   document.getElementById('badge15dds').textContent   = contarGruposUnicos(sin15);
   document.getElementById('badgeEspera').textContent  = contarGruposUnicos(enEspera);
 
-  // Badge del tab
   const totalAlertas = contarGruposUnicos(sin10) + contarGruposUnicos(sin15);
   const tabBadge = document.getElementById('tabBadgeAlertas');
   tabBadge.textContent = totalAlertas > 0 ? totalAlertas : '✓';
@@ -1855,15 +1890,18 @@ function renderAlertas() {
   if (totalAlertas === 0) tabBtnAlertas.classList.add('alerta-ok');
   else tabBtnAlertas.classList.remove('alerta-ok');
 
+  // Actualizar indicadores de cabeceras visuales
+  actualizarEstilosCabecerasAlertas();
+
+  renderTablaEspera(enEspera);
   renderTablaAlerta('tabla10ddsBody', sin10, '10 DDS');
   renderTablaAlerta('tabla15ddsBody', sin15, '15 DDS');
-  renderTablaEspera(enEspera);
   renderTablaCompletosTabla(completos);
   document.getElementById('badgeCompletos').textContent = contarGruposUnicos(completos);
 
-  document.getElementById('seccionEspera').style.display   = enEspera.length === 0 ? 'none' : '';
-  document.getElementById('seccion10dds').style.display    = sin10.length === 0 ? 'none' : '';
-  document.getElementById('seccion15dds').style.display    = sin15.length === 0 ? 'none' : '';
+  document.getElementById('seccionEspera').style.display    = enEspera.length === 0 ? 'none' : '';
+  document.getElementById('seccion10dds').style.display     = sin10.length === 0 ? 'none' : '';
+  document.getElementById('seccion15dds').style.display     = sin15.length === 0 ? 'none' : '';
   document.getElementById('seccionCompletos').style.display = 'none';
 
   if (sin10.length === 0 && sin15.length === 0) {
@@ -1880,7 +1918,6 @@ function renderTablaEspera(items) {
     return;
   }
 
-  // Agrupar por Finca + Lote + FechaSiembra
   const grupos = {};
   items.forEach(item => {
     const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
@@ -1897,11 +1934,8 @@ function renderTablaEspera(items) {
     if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
   });
 
-  const filas = Object.values(grupos).sort((a, b) => {
-    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
-    if (a.lote !== b.lote) return a.lote.localeCompare(b.lote);
-    return b.dds - a.dds;
-  });
+  // Aplicar ordenamiento dinámico
+  const filas = ordenarFilasAlertas(Object.values(grupos));
 
   let html = '';
   filas.forEach(g => {
@@ -1927,42 +1961,29 @@ function renderTablaEspera(items) {
 function renderTablaAlerta(tbodyId, items, etiqueta) {
   const tbody = document.getElementById(tbodyId);
   if (items.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" class="alerta-empty"><span>✅</span>Sin pendientes para ventana ${etiqueta}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>✅</span>Sin pendientes para ventana ${etiqueta}</td></tr>`;
     return;
   }
 
-  // Agrupar por Finca + Lote + FechaSiembra → promedio de semillas
   const grupos = {};
   items.forEach(item => {
     const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
     if (!grupos[key]) {
       const s = item.rawSiembra || {};
       grupos[key] = {
-        finca: item.finca,
-        lote: item.lote,
-        ciclo: item.ciclo,
-        fechaSiembra: item.fechaSiembra,
-        dds: item.dds,
-        tiene10: item.tiene10,
-        tiene15: item.tiene15,
+        finca: item.finca, lote: item.lote, ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
+        tiene10: item.tiene10, tiene15: item.tiene15,
         variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
-        sumSemillas: 0,
-        countSemillas: 0
+        sumSemillas: 0, countSemillas: 0
       };
     }
-    if (item.total_semillas > 0) {
-      grupos[key].sumSemillas += item.total_semillas;
-      grupos[key].countSemillas++;
-    }
-    // Usar el DDS más alto del grupo (más días = más urgente)
+    if (item.total_semillas > 0) { grupos[key].sumSemillas += item.total_semillas; grupos[key].countSemillas++; }
     if (item.dds > grupos[key].dds) grupos[key].dds = item.dds;
   });
 
-  const filas = Object.values(grupos).sort((a, b) => {
-    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
-    if (a.lote !== b.lote) return a.lote.localeCompare(b.lote);
-    return b.dds - a.dds; // más urgente primero
-  });
+  // Aplicar ordenamiento dinámico
+  const filas = ordenarFilasAlertas(Object.values(grupos));
 
   let html = '';
   filas.forEach(g => {
@@ -1999,7 +2020,6 @@ function renderTablaCompletosTabla(items) {
     return;
   }
 
-  // Agrupar por Finca + Lote + FechaSiembra
   const grupos = {};
   items.forEach(item => {
     const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
@@ -2021,10 +2041,8 @@ function renderTablaCompletosTabla(items) {
     });
   });
 
-  const filas = Object.values(grupos).sort((a,b) => {
-    if (a.finca !== b.finca) return a.finca.localeCompare(b.finca);
-    return a.lote.localeCompare(b.lote);
-  });
+  // Aplicar ordenamiento dinámico
+  const filas = ordenarFilasAlertas(Object.values(grupos));
 
   let html = '';
   filas.forEach(g => {
@@ -2082,7 +2100,6 @@ async function cargarDatosDesdeGitHub() {
   const tbody = document.getElementById('pivotBody');
   tbody.innerHTML = '<tr><td class="loading">Sincronizando orígenes de datos remotos y cruzando dimensiones...</td></tr>';
   try {
-    // Lluvia se carga de forma lazy al abrir el gráfico — no bloquea la carga inicial
     const [siembraRes, germinacionRes] = await Promise.all([
       fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_siembra", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Siembra.json"),
       fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_germinaciones", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Germinacion.json"),
@@ -2091,7 +2108,6 @@ async function cargarDatosDesdeGitHub() {
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];
 
-    // CORRECCIÓN: Ordenar los ciclos de manera descendente (los años más recientes primero)
     ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
 
     datosMaestrosUnificados = siembraData.map(s => {
@@ -2101,25 +2117,21 @@ async function cargarDatosDesdeGitHub() {
       const sectorSiembra = limpiarDescripcion(s.x_studio_sector_1);
       const compania = limpiarDescripcion(s.x_studio_compaia || s.x_studio_company_id);
 
-      // IDs numéricos de Odoo — match primario (más confiable)
       const loteIdS  = Array.isArray(s.x_studio_lote_de_finca) ? s.x_studio_lote_de_finca[0] : null;
-      const cicloIdS = Array.isArray(s.x_studio_ciclo)         ? s.x_studio_ciclo[0]          : null;
+      const cicloIdS = Array.isArray(s.x_studio_ciclo)         ? s.x_studio_ciclo[0]           : null;
       const añoCiclo = String(ciclo).match(/\d{4}/)?.[0] || null;
 
-      // Fallback texto normalizado por si los IDs no coinciden
       const cNorm = normalizeText(s.x_studio_ciclo);
       const fNorm = normalizeText(s.x_studio_finca);
       const lNorm = normalizeText(s.x_studio_lote_de_finca);
 
       const muestrasRelacionadas = germinacionData.filter(g => {
         const loteIdG  = Array.isArray(g.x_studio_lote_de_la_finca) ? g.x_studio_lote_de_la_finca[0] : null;
-        const cicloIdG = Array.isArray(g.x_studio_ciclo)            ? g.x_studio_ciclo[0]             : null;
-        // Match primario: ID de lote + año del ciclo
+        const cicloIdG = Array.isArray(g.x_studio_ciclo)            ? g.x_studio_ciclo[0]              : null;
         if (loteIdS && loteIdG && loteIdS === loteIdG) {
           if (cicloIdS && cicloIdG && cicloIdS === cicloIdG) return true;
           if (añoCiclo && String(g.x_studio_ciclo).includes(añoCiclo)) return true;
         }
-        // Fallback: texto normalizado finca + lote (sin sector que falla)
         const gFNorm = normalizeText(g.x_studio_finca);
         const gLNorm = normalizeText(g.x_studio_lote_de_la_finca);
         if (gFNorm === fNorm && gLNorm === lNorm) {
@@ -2168,7 +2180,6 @@ async function cargarDatosDesdeGitHub() {
 }
 
 function filtrarYMostrar() {
-  // 1. Filtrar los datos maestros basándonos puramente en lo seleccionado originalmente
   let filtrados = datosMaestrosUnificados.filter(d => 
     (seleccionesFiltros.compania || []).includes(d.compania) && 
     (seleccionesFiltros.sector || []).includes(d.sector) && 
@@ -2177,19 +2188,14 @@ function filtrarYMostrar() {
     (seleccionesFiltros.tipo || []).includes(d.tipo)
   );
 
-  // 2. Ejecutar la visibilidad cruzada de los dropdowns en la barra de herramientas
   refrescarVisibilidadCrucesFiltros();
 
-  // 3. CORRECCIÓN: Ajustar dinámicamente qué ciclos reales se van a pintar en las columnas de la tabla.
-  // Si el usuario tiene seleccionado "Todos", solo pintamos los ciclos que tengan datos vivos tras el cruce.
   let ciclosActivosParaRender = [];
   const totalCiclosUniverso = universosUnicos.ciclo || [];
   
   if (seleccionesFiltros.ciclo.length === totalCiclosUniverso.length) {
-    // Si están seleccionados todos, solo extraemos los ciclos presentes en el set de datos ya filtrado
     ciclosActivosParaRender = [...new Set(filtrados.map(d => d.ciclo))].sort().reverse();
   } else {
-    // Si el usuario marcó ciclos específicos a mano en el dropdown, respetamos estrictamente su selección manual
     ciclosActivosParaRender = [...seleccionesFiltros.ciclo].sort().reverse();
   }
 
@@ -2389,7 +2395,7 @@ function renderPivot(data, ciclosVisibles) {
             if(mKey==='g10' || mKey==='g15') {
               subtotalHtml += `<td class="text-center"><span class="badge-pct ${valCalculado < 55 ? 'low' : ''}">${valCalculado.toFixed(2)}%</span></td>`;
             } else {
-              subtotalHtml += `<td class="text-right">${valCalculado.toFixed(2)}</td>`;
+              subtotalHtml += `<td class="text-right">${valCalculado.toFixed(2)}</td>Status`;
             }
           } else {
             subtotalHtml += `<td style="color: #cbd5e1;">-</td>`;
