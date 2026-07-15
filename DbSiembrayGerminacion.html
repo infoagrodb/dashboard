@@ -971,11 +971,14 @@
         </div>
       </div>
 
-      <!-- TABLA: LOTES COMPLETOS CON BOTÓN FILTRO MULTISELECCIÓN AVANZADO -->
+      <!-- TABLA: LOTES COMPLETOS CON BOTÓN FILTRO MULTISELECCIÓN AVANZADO Y BOTÓN EXCEL SUPERIOR -->
       <div id="seccionCompletos" style="display:none;">
-        <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0;">
-          ✅ Lotes con Recuentos de Germinación Completos
-          <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
+        <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ✅ Lotes con Recuentos de Germinación Completos
+            <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
+          </div>
+          <button class="btn-excel" onclick="exportarTablaCompletosAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
         </div>
         <div class="alerta-table-wrap" style="overflow: visible;">
           <table class="alerta-table" id="tablaCompletosMaster">
@@ -1638,7 +1641,7 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
       <table class="modal-table">
         <thead>
           <tr>
-            <th>Reporte</th><th>Fecha Muestreo</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Lote Semilla (Comasa)</th><th class="technical-header">x_studio_dds</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (10 DDS)</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (15 DDS)</th><th>Observación</th>
+            <th>Reporte</th><th>Fecha Muestreo</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Lote Semilla (Comasa)</th><th class="technical-header">x_studio_dds</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (10 DDS)</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (15 DDS)</th><th>Observation</th>
           </tr>
         </thead>
         <tbody id="modalTableBody">`;
@@ -1969,7 +1972,6 @@ function renderAlertas() {
 
   alertasCicloData = { sin10, sin15, enEspera, completos, todos };
 
-  // 1. Extraer los grupos únicos iniciales de Lotes Completos antes del filtro inline por columna física
   const completosGruposRaw = [];
   const cacheGruposCompletos = {};
   completos.forEach(item => {
@@ -1993,16 +1995,18 @@ function renderAlertas() {
     });
   });
 
-  // Estructurar campos formateados para universos físicos de filtrado
   completosGruposRaw.forEach(g => {
     g.semillasFormated = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-';
     const avg10 = g.muestras10.length > 0 ? (g.muestras10.reduce((a,c)=>a+c,0)/g.muestras10.length) : null;
     const avg15 = g.muestras15.length > 0 ? (g.muestras15.reduce((a,c)=>a+c,0)/g.muestras15.length) : null;
     const sem = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas) : 0;
-    g.p10Val = avg10 !== null ? `${avg10.toFixed(2)} pl/m.l.` : '-';
+    
+    // Eliminación de "pl/m.l." para dejar estrictamente el valor numérico
+    g.p10Val = avg10 !== null ? `${avg10.toFixed(2)}` : '-';
     g.g10Val = avg10 !== null && sem > 0 ? `${((avg10 / sem) * 100).toFixed(1)}%` : '-';
-    g.p15Val = avg15 !== null ? `${avg15.toFixed(2)} pl/m.l.` : '-';
+    g.p15Val = avg15 !== null ? `${avg15.toFixed(2)}` : '-';
     g.g15Val = avg15 !== null && sem > 0 ? `${((avg15 / sem) * 100).toFixed(1)}%` : '-';
+    
     g.ddsFormated = `${g.dds} días`;
     g.fechaSiembraFormated = formatFechaLegible(g.fechaSiembra);
   });
@@ -2054,7 +2058,7 @@ function renderAlertas() {
   renderTablaAlerta('tabla10ddsBody', sin10, '10 DDS');
   renderTablaAlerta('tabla15ddsBody', sin15, '15 DDS');
   
-  // Render final de la tabla Lotes Completos pasándole los datos ya filtrados por columnas
+  // Render final de la tabla Lotes Completos
   inyectarFilasCompletosTablaDOM(completosGruposFiltrados);
   document.getElementById('badgeCompletos').textContent = completosGruposFiltrados.length;
 
@@ -2116,7 +2120,7 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
   filas.forEach(g => {
     html += `<tr>
       <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td>
-      <td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} days</span>`}</td>
+      <td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td>
       <td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td>
       <td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td>
       <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td>
@@ -2124,8 +2128,6 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
   });
   tbody.innerHTML = html;
 }
-
-function renderTablaCompletosTabla(items) { /* Reemplazada por la lógica unificada de renderAlertas() */ }
 
 function inyectarFilasCompletosTablaDOM(filasGrupos) {
   const tbody = document.getElementById('tablaCompletosBody');
@@ -2150,10 +2152,13 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
       <td>${g.lote}</td>
       <td>${g.fechaSiembraFormated}</td>
       <td><span class="badge-dds pendiente">${g.ddsFormated}</span></td>
+      
+      <!-- Sólo valores numéricos limpios sin pl/m.l. -->
       <td style="color:#0284c7; font-weight:600; text-align:right;">${g.p10Val}</td>
       <td style="text-align:center;">${pct10 !== null ? `<span class="badge-pct ${pct10 < 55 ? 'low' : ''}">${pct10.toFixed(1)}%</span>` : '-'}</td>
       <td style="color:#2563eb; font-weight:600; text-align:right;">${g.p15Val}</td>
       <td style="text-align:center;">${pct15 !== null ? `<span class="badge-pct ${pct15 < 55 ? 'low' : ''}">${pct15.toFixed(1)}%</span>` : '-'}</td>
+      
       <td>${g.variedad}</td>
       <td style="text-align:right;">${g.semillasFormated}</td>
       <td style="white-space:nowrap;">
@@ -2163,6 +2168,20 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
     </tr>`;
   });
   tbody.innerHTML = html;
+}
+
+// Función exportadora específica para la tabla de lotes completos
+function exportarTablaCompletosAExcel() {
+  const table = document.getElementById("tablaCompletosMaster");
+  const clonedTable = table.cloneNode(true);
+  
+  // Quitar elementos visuales del DOM temporal que arruinarían la exportación limpia a Excel
+  clonedTable.querySelectorAll('.col-inline-filter-panel').forEach(el => el.remove());
+  clonedTable.querySelectorAll('.btn-col-inline-filter').forEach(el => el.remove());
+  clonedTable.querySelectorAll('.sort-indicator').forEach(el => el.remove());
+  
+  const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Lotes Completos", raw: true });
+  XLSX.writeFile(wb, `Lotes_Completos_Germinacion_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
 function filtrarTablaAlertas(tipo) {
@@ -2401,6 +2420,14 @@ function renderPivot(data, ciclosVisibles) {
     });
   });
   tbody.innerHTML = htmlBuffer.join('');
+}
+
+function exportarTablaAExcel() {
+  const table = document.getElementById("tablaGerminacionMaster");
+  const clonedTable = table.cloneNode(true);
+  clonedTable.querySelectorAll('.toggle-icon').forEach(el => el.remove());
+  const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Germinación Maní", raw: true });
+  XLSX.writeFile(wb, `Reporte_Pivot_Fijo_Mani_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
 cargarDatosDesdeGitHub();
