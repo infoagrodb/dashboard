@@ -128,7 +128,7 @@
   }
   .ms-search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,0.12); }
 
-  .ms-items-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 0; padding: 4px 0; }
+  .ms-items-scroll { overflow-y: auto; flex: 1 1 auto; min-height: 0; max-height: 220px; padding: 4px 0; }
 
   .ms-selectall { border-bottom: 1px solid var(--border-color); font-weight: 700; flex-shrink: 0; }
 
@@ -249,7 +249,7 @@
   .text-left { text-align: left; }
   .loading { padding: 40px; text-align: center; color: var(--text-main); font-weight: 600; }
 
-  /* Pop-ups Originales En Bruto */
+  /* Pop-ups */
   .modal-overlay {
     display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); z-index: 500; align-items: center; justify-content: center;
@@ -276,24 +276,19 @@
   .modal-table td { padding: 8px; border: 1px solid var(--border-color); color: var(--text-main); }
   .modal-table td.technical-cell { font-family: 'Courier New', Courier, monospace; font-weight: bold; text-align: center; }
   .modal-table tr:hover td { background-color: #f8fafc; }
-  .modal-filter-input { width: 100%; padding: 4px 6px; border: 1px solid #cbd5e1; border-radius: 4px; font-size: 11px; margin-top: 5px; outline: none; }
-  .modal-filter-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
   
   .popup-data-grid { display: flex; flex-direction: column; gap: 14px; }
   .popup-item { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
   .popup-item:last-child { border-bottom: none; }
   .popup-label { font-weight: 600; color: #475569; }
   .popup-value { font-weight: 600; color: var(--text-main); text-align: right; }
-  .popup-multi-block { border: 1px solid var(--border-color); border-radius: 8px; background-color: #fff; overflow: hidden; }
-  .popup-block-title { background-color: #f1f5f9; color: #334155; font-size: 12px; font-weight: 700; padding: 6px 12px; border-bottom: 1px solid var(--border-color); }
 
-  /* ===== TABLET (<=1100px): la selección de columnas pasa a envolver en vez de ocultarse ===== */
+  /* ===== RESPONSIVE ===== */
   @media (max-width: 1100px) {
     .inline-column-selector { flex-wrap: wrap; overflow: visible; }
     .table-toolbar-left { row-gap: 8px; }
   }
 
-  /* ===== TABLET / MÓVIL GRANDE (<=768px) ===== */
   @media (max-width: 768px) {
     .header-wrapper { padding: 8px 0 10px; }
     header { flex-direction: column; text-align: center; align-items: stretch; padding: 8px 14px; gap: 10px; }
@@ -304,42 +299,26 @@
     .header-quick-actions { display: flex; gap: 8px; width: 100%; }
     .header-quick-actions .btn-toggle-filters { flex: 1 1 0; justify-content: center; height: 36px; font-size: 12.5px; }
     .btn-menu-mobile { display: inline-flex; background-color: rgba(17,24,39,0.85); }
-    .btn-menu-mobile:hover, .btn-menu-mobile.active-menu { background-color: #111827; }
 
     .header-menu-panel {
       flex-direction: column; align-items: stretch; gap: 10px;
       max-height: 400px; overflow: hidden; opacity: 1; margin-top: 10px;
       background-color: rgba(255,255,255,0.5); border-radius: 10px; padding: 10px;
-      transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease, padding 0.3s ease;
     }
     .header-menu-panel.collapsed { max-height: 0; opacity: 0; margin-top: 0; padding-top: 0; padding-bottom: 0; overflow: hidden; }
     .header-filter-group { width: 100%; }
 
     .toolbar { flex-direction: column; align-items: stretch; }
-    .toolbar .filter-group { flex: 0 0 auto; }
     .toolbar-wrapper { max-height: none; }
     .toolbar-wrapper:not(.collapsed) { max-height: 1400px; }
-    .btn-clear-filters { width: 100%; justify-content: center; }
 
     .table-toolbar { flex-direction: column; align-items: stretch; padding: 8px 10px; }
     .btn-table-menu-mobile { display: flex; width: 100%; justify-content: center; height: 36px; font-size: 12.5px; background-color: #475569; }
-    .btn-table-menu-mobile:hover, .btn-table-menu-mobile.active-menu { background-color: #334155; }
-    .table-toolbar-left {
-      flex-direction: column; align-items: stretch; width: 100%; gap: 8px;
-      max-height: 600px; overflow: hidden; opacity: 1; margin-top: 10px;
-      transition: max-height 0.3s ease, opacity 0.25s ease, margin-top 0.3s ease;
-    }
     .table-toolbar-left.collapsed { max-height: 0; opacity: 0; margin-top: 0; overflow: hidden; }
-    .table-toolbar-left > .btn,
-    .table-toolbar-left > .btn-excel,
-    .table-toolbar-left > .pivot-mode-selector { width: 100%; justify-content: center; text-align: center; }
     .pivot-mode-selector { flex-wrap: wrap; }
     .pivot-mode-btn { flex: 1 1 auto; padding: 7px 10px; }
     .inline-column-selector { flex-direction: column; align-items: flex-start; width: 100%; gap: 8px; }
     .inline-column-selector .col-label-btn { width: 100%; }
-    .col-label-btn { min-height: 34px; padding: 6px 12px; }
-    .modal-card { width: 94%; }
-    .modal-body { max-height: 65vh; }
     .container { padding: 10px; }
 
     #tablaHeader tr:first-child th:first-child,
@@ -350,297 +329,115 @@
     table { font-size: 12px; }
     #tablaHeader th { padding: 8px 10px; font-size: 10px; }
     td { padding: 7px 10px; }
-    .badge-pct { min-width: 46px; font-size: 10px; padding: 2px 6px; }
 
-    #popupGraficoOverlay .modal-card { width: 96%; }
-    #popupGraficoOverlay .modal-body { min-height: 0 !important; padding: 14px !important; }
     #popupGraficoOverlay .modal-body > div[style*="height:430px"] { height: 280px !important; }
-    #popupGraficoOverlay h3 { font-size: 14px; }
   }
 
-  /* ===== MÓVIL PEQUEÑO (<=480px) ===== */
   @media (max-width: 480px) {
-    .header-title-area h1 { font-size: 15px; }
-    .header-title-area p { font-size: 9.5px; }
-    .table-toolbar-left { gap: 8px; }
-    .table-toolbar-left > .btn,
-    .table-toolbar-left > .btn-excel { font-size: 12px; padding: 0 10px; }
     #tablaHeader tr:first-child th:first-child,
     .freeze-col-1 { min-width: 96px !important; max-width: 96px !important; }
     #tablaHeader tr:first-child th:nth-child(2),
     .freeze-col-2,
     .row-finca-header td:nth-child(2) { left: 96px !important; min-width: 96px !important; max-width: 96px !important; }
     table { font-size: 11px; }
-    #tablaHeader th { padding: 7px 8px; font-size: 9px; }
     td { padding: 6px 8px; }
-    .modal-card { width: 96%; border-radius: 12px; }
-    .popup-item { flex-direction: column; gap: 2px; }
-    .popup-value { text-align: left; }
-  }
-
-  @media (hover: none) and (pointer: coarse) {
-    .multiselect-dropdown, .col-label-btn, .btn, .btn-excel, .btn-toggle-filters, .pivot-mode-btn { min-height: 38px; }
-    .multiselect-item { padding: 10px 14px; }
-    .btn-clear-individual { width: 22px; height: 22px; }
   }
 
   /* ===== TAB NAVIGATION — CLAYMORPHISM ===== */
-  .tabs-nav {
-    display: flex; gap: 14px; flex-shrink: 0; padding: 16px 0 0;
-    background: transparent; border: none;
-  }
-
+  .tabs-nav { display: flex; gap: 14px; flex-shrink: 0; padding: 16px 0 0; }
   .tab-btn {
-    flex: 1; border: none; cursor: pointer;
-    border-radius: 20px; padding: 18px 24px;
+    flex: 1; border: none; cursor: pointer; border-radius: 20px; padding: 18px 24px;
     display: flex; align-items: center; justify-content: flex-start; gap: 16px;
-    font-family: inherit; text-align: left;
-    transition: all 0.25s cubic-bezier(0.34, 1.3, 0.64, 1);
-    position: relative; overflow: hidden;
-    background: #e8edf5;
-    box-shadow:
-      0 2px 0 #c8cedb,
-      0 4px 10px rgba(0,0,0,0.08),
-      inset 0 1px 0 rgba(255,255,255,0.7);
-    transform: translateY(0);
+    font-family: inherit; text-align: left; background: #e8edf5;
+    box-shadow: 0 2px 0 #c8cedb, 0 4px 10px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
   }
-
-  .tab-btn:hover {
-    transform: translateY(-3px);
-    box-shadow:
-      0 5px 0 #c8cedb,
-      0 8px 20px rgba(0,0,0,0.12),
-      inset 0 1px 0 rgba(255,255,255,0.8);
-  }
-
-  .tab-btn:active {
-    transform: translateY(2px);
-    box-shadow:
-      0 0px 0 #c8cedb,
-      0 2px 6px rgba(0,0,0,0.1),
-      inset 0 1px 0 rgba(255,255,255,0.5);
-  }
-
-  .tab-btn.active#tabBtnPivot {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    box-shadow:
-      0 5px 0 #93c5fd,
-      0 10px 28px rgba(37,99,235,0.22),
-      inset 0 1px 0 rgba(255,255,255,0.85);
-    transform: translateY(-4px);
-  }
-
-  .tab-btn.active#tabBtnAlertas {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    box-shadow:
-      0 5px 0 #fca5a5,
-      0 10px 28px rgba(220,38,38,0.22),
-      inset 0 1px 0 rgba(255,255,255,0.85);
-    transform: translateY(-4px);
-  }
-  .tab-btn.active#tabBtnAlertas.alerta-ok {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    box-shadow:
-      0 5px 0 #86efac,
-      0 10px 28px rgba(22,163,74,0.22),
-      inset 0 1px 0 rgba(255,255,255,0.85);
-  }
-
-  .tab-icon {
-    font-size: 32px; line-height: 1; flex-shrink: 0;
-    filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15));
-  }
-
+  .tab-btn:hover { transform: translateY(-3px); box-shadow: 0 5px 0 #c8cedb, 0 8px 20px rgba(0,0,0,0.12), inset 0 1px 0 rgba(255,255,255,0.8); }
+  .tab-btn.active#tabBtnPivot { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); box-shadow: 0 5px 0 #93c5fd, 0 10px 28px rgba(37,99,235,0.22); }
+  .tab-btn.active#tabBtnAlertas { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); box-shadow: 0 5px 0 #fca5a5, 0 10px 28px rgba(220,38,38,0.22); }
+  .tab-btn.active#tabBtnAlertas.alerta-ok { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%); box-shadow: 0 5px 0 #86efac, 0 10px 28px rgba(22,163,74,0.22); }
+  .tab-icon { font-size: 32px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.15)); }
   .tab-text-group { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-  .tab-title {
-    font-size: 15px; font-weight: 800; letter-spacing: -0.3px;
-    color: #374151; line-height: 1.2;
-  }
+  .tab-title { font-size: 15px; font-weight: 800; color: #374151; }
   .tab-btn.active#tabBtnPivot .tab-title { color: #1d4ed8; }
   .tab-btn.active#tabBtnAlertas .tab-title { color: #dc2626; }
-  .tab-subtitle { font-size: 11px; font-weight: 500; color: #9ca3af; line-height: 1.3; }
-  .tab-btn.active .tab-subtitle { opacity: 0.75; }
+  .tab-subtitle { font-size: 11px; color: #9ca3af; }
+  .tab-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; font-size: 12px; font-weight: 800; min-width: 26px; height: 26px; padding: 0 7px; margin-left: auto; background: #ef4444; color: #fff; animation: pulse-badge 2s infinite; }
+  .tab-badge.ok { background: #22c55e; animation: none; }
+  .tab-badge.loading { background: #d1d5db; color: #6b7280; animation: none; font-size: 10px; }
+  @keyframes pulse-badge { 0%, 100% { box-shadow: 0 2px 6px rgba(239,68,68,0.45); } 50% { box-shadow: 0 2px 14px rgba(239,68,68,0.75); } }
 
-  .tab-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    border-radius: 999px; font-size: 12px; font-weight: 800;
-    min-width: 26px; height: 26px; padding: 0 7px;
-    margin-left: auto; flex-shrink: 0;
-    background: #ef4444; color: #fff;
-    box-shadow: 0 2px 6px rgba(239,68,68,0.45);
-    animation: pulse-badge 2s infinite;
-  }
-  .tab-badge.ok {
-    background: #22c55e; color: #fff;
-    box-shadow: 0 2px 6px rgba(34,197,94,0.4);
-    animation: none;
-  }
-  .tab-badge.loading {
-    background: #d1d5db; color: #6b7280;
-    box-shadow: none; animation: none; font-size: 10px;
-  }
-
-  @keyframes pulse-badge {
-    0%, 100% { box-shadow: 0 2px 6px rgba(239,68,68,0.45); }
-    50% { box-shadow: 0 2px 14px rgba(239,68,68,0.75); }
-  }
-
-  .tab-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
-  .tab-panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+  .tab-panel { display: none; flex: 1; min-height: 0; }
+  .tab-panel.active { display: flex; flex-direction: column; }
 
   /* ===== ALERTAS TAB ===== */
-  .alertas-container {
-    background: #fff; border: 1px solid var(--border-color); border-top: none;
-    border-radius: 0 0 12px 12px; flex: 1; overflow-y: auto; padding: 20px;
-    display: flex; flex-direction: column; gap: 20px;
-  }
-
+  .alertas-container { background: #fff; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 12px 12px; flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
   .kpi-strip { display: flex; gap: 14px; flex-wrap: wrap; }
-  .kpi-strip .kpi-card {
-    flex: 1 1 160px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px;
-    padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px;
-    cursor: pointer; transition: all 0.18s ease; position: relative; overflow: hidden;
-  }
-  .kpi-strip .kpi-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .kpi-strip .kpi-card { flex: 1 1 160px; background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 14px 18px; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px; cursor: pointer; position: relative; overflow: hidden; }
   .kpi-strip .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--kpi-color, #e5e7eb); border-radius: 12px 12px 0 0; }
   .kpi-strip .kpi-card.danger { --kpi-color: #ef4444; }
   .kpi-strip .kpi-card.warning { --kpi-color: #f59e0b; }
   .kpi-strip .kpi-card.ok { --kpi-color: #22c55e; }
   .kpi-strip .kpi-card.info { --kpi-color: #0284c7; }
   .kpi-strip .kpi-card.espera { --kpi-color: #7c3aed; }
-  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-muted); }
-  .kpi-value { font-size: 32px; font-weight: 800; line-height: 1; color: var(--text-main); }
+  .kpi-label { font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); }
+  .kpi-value { font-size: 32px; font-weight: 800; color: var(--text-main); }
   .kpi-value.danger { color: #dc2626; }
   .kpi-value.warning { color: #d97706; }
   .kpi-value.ok { color: #16a34a; }
   .kpi-value.espera { color: #7c3aed; }
   .kpi-sub { font-size: 11px; color: var(--text-muted); }
 
-  .alerta-section-title {
-    font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px;
-    padding-bottom: 8px; border-bottom: 2px solid var(--border-color);
-  }
-  .alerta-section-title .badge-alert {
-    background: #fee2e2; color: #b91c1c; border-radius: 999px;
-    font-size: 11px; font-weight: 700; padding: 1px 8px;
-  }
+  .alerta-section-title { font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px; padding-bottom: 8px; border-bottom: 2px solid var(--border-color); }
+  .alerta-section-title .badge-alert { background: #fee2e2; color: #b91c1c; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 1px 8px; }
   .alerta-section-title .badge-alert.warning { background: #fef3c7; color: #b45309; }
 
   .alerta-table-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border-color); position: relative; }
   .alerta-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .alerta-table th { background: #f9fafb; padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #374151; border-bottom: 1px solid var(--border-color); }
   
-  .alerta-table th {
-    background: #f9fafb; padding: 10px 14px; text-align: left; font-size: 11px;
-    font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: #374151;
-    border-bottom: 1px solid var(--border-color); user-select: none; position: relative;
-  }
-  
-  /* ESTILADO DE RECUADRO FLOTANTE DE FILTROS EN COLUMNAS */
-  .th-inline-filter-container {
-    display: inline-flex; align-items: center; justify-content: space-between; width: 100%; position: relative;
-  }
-  .btn-col-inline-filter {
-    background: none; border: none; cursor: pointer; color: #9ca3af; margin-left: auto;
-    padding: 2px; display: inline-flex; align-items: center; border-radius: 4px; transition: all 0.15s;
-  }
+  /* Panel Flotante en Cabeceras */
+  .th-inline-filter-container { display: inline-flex; align-items: center; justify-content: space-between; width: 100%; position: relative; }
+  .btn-col-inline-filter { background: none; border: none; cursor: pointer; color: #9ca3af; margin-left: auto; padding: 2px; display: inline-flex; align-items: center; border-radius: 4px; }
   .btn-col-inline-filter:hover, .btn-col-inline-filter.active-filter { color: var(--primary); background-color: #e2e8f0; }
   .btn-col-inline-filter svg { width: 13px; height: 13px; fill: currentColor; }
-
-  .col-inline-filter-panel {
-    display: none; position: absolute; top: 100%; right: 0; z-index: 300;
-    background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px;
-    box-shadow: var(--shadow-md); min-width: 210px; max-width: 290px;
-    flex-direction: column; overflow: hidden; margin-top: 4px; text-transform: none; font-weight: normal;
-  }
+  .col-inline-filter-panel { display: none; position: absolute; top: 100%; right: 0; z-index: 300; background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: var(--shadow-md); min-width: 210px; max-height: 340px; margin-top: 4px; text-transform: none; font-weight: normal; flex-direction: column; overflow: hidden; }
   .col-inline-filter-panel.open { display: flex; }
 
   .alerta-table th.sortable { cursor: pointer; padding-right: 32px; }
   .alerta-table th.sortable:hover { background-color: #f1f5f9; }
-  .sort-indicator { opacity: 0.3; font-size: 10px; margin-left: 4px; pointer-events: none; }
-  .alerta-table th.sorted-asc .sort-indicator { opacity: 1; color: var(--primary); }
-  .alerta-table th.sorted-desc .sort-indicator { opacity: 1; color: var(--primary); }
+  .sort-indicator { opacity: 0.3; font-size: 10px; margin-left: 4px; }
+  .alerta-table th.sorted-asc .sort-indicator, .alerta-table th.sorted-desc .sort-indicator { opacity: 1; color: var(--primary); }
 
-  .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
-  .alerta-table tr:last-child td { border-bottom: none; }
+  .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; }
   .alerta-table tr:hover td { background: var(--bg-main); }
-
   .badge-dds { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
   .badge-dds.en-rango { background: #fee2e2; color: #b91c1c; }
   .badge-dds.vencido  { background: #fef3c7; color: #b45309; }
   .badge-dds.pendiente { background: #f3f4f6; color: #6b7280; }
 
-  .btn-ver-siembra {
-    background: none; border: 1px solid var(--primary); color: var(--primary);
-    border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer;
-  }
+  .btn-ver-siembra { background: none; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
   .btn-ver-siembra:hover { background: var(--primary); color: #fff; }
-
-  .alerta-empty { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
+  .alerta-empty { text-align: center; padding: 32px; color: var(--text-muted); }
   .alerta-empty span { font-size: 32px; display: block; margin-bottom: 8px; }
 
-  .alertas-filtros-bar {
-    display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap;
-    background: #f9fafb; border: 1px solid var(--border-color);
-    border-radius: 10px; padding: 12px 16px;
-  }
+  .alertas-filtros-bar { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; background: #f9fafb; border: 1px solid var(--border-color); border-radius: 10px; padding: 12px 16px; }
   .af-group { display: flex; flex-direction: column; gap: 4px; min-width: 140px; }
-  .af-label { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; }
+  .af-label { font-size: 10px; font-weight: 800; color: #6b7280; text-transform: uppercase; }
   .af-ms-wrap { position: relative; }
-  .af-ms-trigger {
-    display: flex; justify-content: space-between; align-items: center;
-    background: #fff; border: 1px solid var(--border-color); border-radius: 6px;
-    padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer;
-    min-width: 130px; user-select: none; white-space: nowrap; overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .af-ms-trigger:hover { border-color: var(--primary); }
-  .af-ms-trigger span:first-child { overflow: hidden; text-overflow: ellipsis; max-width: 110px; }
-  .af-arrow { font-size: 8px; color: #9ca3af; margin-left: 6px; flex-shrink: 0; }
-  .af-ms-panel {
-    display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 200;
-    background: #fff; border: 1px solid var(--border-color); border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 200px; max-width: 280px;
-    flex-direction: column; overflow: hidden;
-    animation: dropdownFadeIn 0.15s ease;
-  }
+  .af-ms-trigger { display: flex; justify-content: space-between; align-items: center; background: #fff; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .af-ms-panel { display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 200; background: #fff; border: 1px solid var(--border-color); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 200px; flex-direction: column; overflow: hidden; }
   .af-ms-panel.open { display: flex; }
   .af-ms-search { padding: 8px; border-bottom: 1px solid var(--border-color); }
-  .af-ms-search input {
-    width: 100%; padding: 5px 8px; border: 1px solid var(--border-color);
-    border-radius: 5px; font-size: 12px; outline: none; font-family: inherit;
-  }
-  .af-ms-search input:focus { border-color: var(--primary); }
+  .af-ms-search input { width: 100%; padding: 5px 8px; border: 1px solid var(--border-color); border-radius: 5px; font-size: 12px; outline: none; }
   .af-ms-items { max-height: 200px; overflow-y: auto; padding: 4px 0; }
-  .af-ms-item {
-    display: flex; align-items: center; gap: 8px; padding: 6px 12px;
-    font-size: 12px; cursor: pointer; color: #1e293b;
-  }
+  .af-ms-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
   .af-ms-item:hover { background: var(--primary-light); }
-  .af-ms-item input { accent-color: var(--primary); cursor: pointer; flex-shrink: 0; }
   .af-ms-item.disabled { opacity: 0.35; pointer-events: none; }
   .af-ms-footer { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--border-color); }
-  .af-ms-footer button {
-    flex: 1; padding: 5px 0; font-size: 12px; font-weight: 700; border-radius: 5px;
-    cursor: pointer; border: none; font-family: inherit;
-  }
+  .af-ms-footer button { flex: 1; padding: 5px 0; font-size: 12px; font-weight: 700; border-radius: 5px; cursor: pointer; border: none; }
   .af-ms-footer button:first-child { background: var(--primary); color: #fff; }
-  .af-ms-footer button:first-child:hover { background: var(--primary-hover); }
   .af-ms-footer button:last-child { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
   .af-info { font-size: 11px; color: var(--text-muted); margin-left: auto; align-self: center; }
-  @media (max-width: 768px) {
-    .alertas-filtros-bar { flex-direction: column; align-items: stretch; }
-    .af-group { min-width: unset; }
-    .af-ms-trigger { width: 100%; }
-    .af-ms-panel { min-width: 100%; }
-    .af-info { margin-left: 0; }
-  }
-
-  @media (max-width: 768px) {
-    .tab-btn { font-size: 11px; padding: 9px 10px; gap: 4px; }
-    .kpi-card { flex: 1 1 130px; padding: 12px 14px; }
-    .kpi-value { font-size: 26px; }
-    .alertas-container { padding: 12px; gap: 14px; }
-  }
 </style>
 </head>
 <body>
@@ -675,7 +472,7 @@
 
 <div class="container">
 
-  <!-- TAB NAVIGATION — CLAYMORPHISM (Orden cambiado según solicitud) -->
+  <!-- TAB NAVIGATION -->
   <div class="tabs-nav" id="tabsNav">
     <button class="tab-btn active" id="tabBtnAlertas" onclick="cambiarTab('alertas')">
       <span class="tab-icon">🚨</span>
@@ -694,7 +491,7 @@
     </button>
   </div>
 
-  <!-- TAB: ALERTAS GERMINACIÓN (Ahora es el primero) -->
+  <!-- TAB: ALERTAS GERMINACIÓN (Primer Tab) -->
   <div class="tab-panel active" id="tabAlertas">
     <div class="alertas-container">
 
@@ -769,8 +566,13 @@
         </div>
       </div>
 
-      <!-- KPI Strip -->
+      <!-- KPI Strip (Lotes Completos primero) -->
       <div class="kpi-strip" id="kpiStrip">
+        <div class="kpi-card ok" onclick="filtrarTablaAlertas('completos')">
+          <div class="kpi-label">✅ Lotes Completos</div>
+          <div class="kpi-value ok" id="kpiCompletos">-</div>
+          <div class="kpi-sub">Con ambos recuentos registrados</div>
+        </div>
         <div class="kpi-card info" onclick="filtrarTablaAlertas('all')">
           <div class="kpi-label">📋 Total Lotes Sembrados</div>
           <div class="kpi-value" id="kpiTotal">-</div>
@@ -791,14 +593,100 @@
           <div class="kpi-value warning" id="kpiSin15">-</div>
           <div class="kpi-sub">Lotes con 15+ días desde siembra</div>
         </div>
-        <div class="kpi-card ok" onclick="filtrarTablaAlertas('completos')">
-          <div class="kpi-label">✅ Lotes Completos</div>
-          <div class="kpi-value ok" id="kpiCompletos">-</div>
-          <div class="kpi-sub">Con ambos recuentos registrados</div>
+      </div>
+
+      <!-- TABLA 1: LOTES COMPLETOS (Posicionada al inicio por solicitud) -->
+      <div id="seccionCompletos" style="display:none;">
+        <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            ✅ Lotes con Recuentos de Germinación Completos
+            <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
+          </div>
+          <button class="btn-excel" onclick="exportarTablaCompletosAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
+        </div>
+        <div class="alerta-table-wrap" style="overflow: visible;">
+          <table class="alerta-table" id="tablaCompletosMaster">
+            <thead>
+              <tr>
+                <th class="sortable" id="th_completos_finca" onclick="manejadorHeaderClick(event, 'finca')">
+                  <div class="th-inline-filter-container">
+                    <span>Finca</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'finca')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_finca" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_lote" onclick="manejadorHeaderClick(event, 'lote')">
+                  <div class="th-inline-filter-container">
+                    <span>Lote</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'lote')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_lote" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_fechaSiembra" onclick="manejadorHeaderClick(event, 'fechaSiembra')">
+                  <div class="th-inline-filter-container">
+                    <span>Fecha Siembra</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'fechaSiembra')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_fechaSiembra" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_semillas" onclick="manejadorHeaderClick(event, 'semillas')">
+                  <div class="th-inline-filter-container">
+                    <span>Semillas m.l.</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'semillas')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_semillas" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_dds" onclick="manejadorHeaderClick(event, 'dds')">
+                  <div class="th-inline-filter-container">
+                    <span>DDS Hoy</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'dds')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_dds" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_p10" onclick="manejadorHeaderClick(event, 'p10')">
+                  <div class="th-inline-filter-container">
+                    <span style="color:#0284c7;">Plantas 10 DDS</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'p10')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_p10" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_g10" onclick="manejadorHeaderClick(event, 'g10')">
+                  <div class="th-inline-filter-container">
+                    <span style="color:#0284c7;">% Germ 10 DDS</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'g10')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_g10" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_p15" onclick="manejadorHeaderClick(event, 'p15')">
+                  <div class="th-inline-filter-container">
+                    <span style="color:#2563eb;">Plantas 15 DDS</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'p15')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_p15" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_g15" onclick="manejadorHeaderClick(event, 'g15')">
+                  <div class="th-inline-filter-container">
+                    <span style="color:#2563eb;">% Germ 15 DDS</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'g15')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_g15" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable" id="th_completos_variedad" onclick="manejadorHeaderClick(event, 'variedad')">
+                  <div class="th-inline-filter-container">
+                    <span>Variedad</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'variedad')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_variedad" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tablaCompletosBody"></tbody>
+          </table>
         </div>
       </div>
 
-      <!-- Secciones de Alertas de Tablas -->
+      <!-- Resto de Secciones de Alertas de Tablas -->
       <div id="seccionEspera" style="display:none;">
         <div class="alerta-section-title" style="color:#7c3aed; border-color:#ddd6fe;">
           🕐 Lotes en Espera de Evaluación — 0 a 9 DDS
@@ -871,197 +759,101 @@
         </div>
       </div>
 
-      <!-- TABLA: LOTES COMPLETOS CON BOTÓN FILTRO MULTISELECCIÓN AVANZADO Y BOTÓN EXCEL SUPERIOR -->
-      <div id="seccionCompletos" style="display:none;">
-        <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            ✅ Lotes con Recuentos de Germinación Completos
-            <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
-          </div>
-          <button class="btn-excel" onclick="exportarTablaCompletosAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
-        </div>
-        <div class="alerta-table-wrap" style="overflow: visible;">
-          <table class="alerta-table" id="tablaCompletosMaster">
-            <thead>
-              <tr>
-                <th class="sortable" id="th_completos_finca" onclick="manejadorHeaderClick(event, 'finca')">
-                  <div class="th-inline-filter-container">
-                    <span>Finca</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'finca')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_finca" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_lote" onclick="manejadorHeaderClick(event, 'lote')">
-                  <div class="th-inline-filter-container">
-                    <span>Lote</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'lote')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_lote" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_fechaSiembra" onclick="manejadorHeaderClick(event, 'fechaSiembra')">
-                  <div class="th-inline-filter-container">
-                    <span>Fecha Siembra</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'fechaSiembra')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_fechaSiembra" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_dds" onclick="manejadorHeaderClick(event, 'dds')">
-                  <div class="th-inline-filter-container">
-                    <span>DDS Hoy</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'dds')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_dds" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_p10" onclick="manejadorHeaderClick(event, 'p10')">
-                  <div class="th-inline-filter-container">
-                    <span style="color:#0284c7;">Plantas 10 DDS</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'p10')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_p10" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_g10" onclick="manejadorHeaderClick(event, 'g10')">
-                  <div class="th-inline-filter-container">
-                    <span style="color:#0284c7;">% Germ 10 DDS</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'g10')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_g10" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_p15" onclick="manejadorHeaderClick(event, 'p15')">
-                  <div class="th-inline-filter-container">
-                    <span style="color:#2563eb;">Plantas 15 DDS</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'p15')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_p15" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_g15" onclick="manejadorHeaderClick(event, 'g15')">
-                  <div class="th-inline-filter-container">
-                    <span style="color:#2563eb;">% Germ 15 DDS</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroFlotanteColumna(event, 'g15')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_g15" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_variedad" onclick="manejadorHeaderClick(event, 'variedad')">
-                  <div class="th-inline-filter-container">
-                    <span>Variedad</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'variedad')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_variedad" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th class="sortable" id="th_completos_semillas" onclick="manejadorHeaderClick(event, 'semillas')">
-                  <div class="th-inline-filter-container">
-                    <span>Semillas m.l.</span><span class="sort-indicator">↕</span>
-                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'semillas')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
-                    <div class="col-inline-filter-panel" id="fp_semillas" onclick="event.stopPropagation()"></div>
-                  </div>
-                </th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="tablaCompletosBody"></tbody>
-          </table>
-        </div>
-      </div>
-
     </div>
   </div>
 
-  <!-- TAB: PIVOT (Ahora es el segundo) -->
+  <!-- TAB: PIVOT (Segundo Tab) -->
   <div class="tab-panel" id="tabPivot">
 
-  <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
-    <div class="toolbar">
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Sector</label>
-          <button class="btn-clear-individual" id="btn_clear_sector" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'sector', 'dropSector', 'optsSector', 'btn_clear_sector')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
+    <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
+      <div class="toolbar">
+        <div class="filter-group">
+          <div class="label-container">
+            <label>Sector</label>
+            <button class="btn-clear-individual" id="btn_clear_sector" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'sector', 'dropSector', 'optsSector', 'btn_clear_sector')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
+          <div class="multiselect-options" id="optsSector"></div>
         </div>
-        <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
-        <div class="multiselect-options" id="optsSector"></div>
-      </div>
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Ciclo</label>
-          <button class="btn-clear-individual" id="btn_clear_ciclo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
+        <div class="filter-group">
+          <div class="label-container">
+            <label>Ciclo</label>
+            <button class="btn-clear-individual" id="btn_clear_ciclo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
+          <div class="multiselect-options" id="optsCiclo"></div>
         </div>
-        <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
-        <div class="multiselect-options" id="optsCiclo"></div>
-      </div>
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Finca</label>
-          <button class="btn-clear-individual" id="btn_clear_finca" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
+        <div class="filter-group">
+          <div class="label-container">
+            <label>Finca</label>
+            <button class="btn-clear-individual" id="btn_clear_finca" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
+          <div class="multiselect-options" id="optsFinca"></div>
         </div>
-        <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
-        <div class="multiselect-options" id="optsFinca"></div>
-      </div>
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Tipo Recuento</label>
-          <button class="btn-clear-individual" id="btn_clear_tipo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
+        <div class="filter-group">
+          <div class="label-container">
+            <label>Tipo Recuento</label>
+            <button class="btn-clear-individual" id="btn_clear_tipo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
+          <div class="multiselect-options" id="optsTipo"></div>
         </div>
-        <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
-        <div class="multiselect-options" id="optsTipo"></div>
+        <button class="btn btn-clear-filters" onclick="limpiarTodosLosFiltros()">🧹 Limpiar Todo</button>
       </div>
-      <button class="btn btn-clear-filters" onclick="limpiarTodosLosFiltros()">🧹 Limpiar Todo</button>
     </div>
-  </div>
 
-  <div class="table-toolbar">
-    <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
-    <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
-
-      <!-- Fila 1 -->
-      <div class="toolbar-row">
-        <div class="toolbar-group">
-          <span class="toolbar-group-label">Vista</span>
-          <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
-          <div class="pivot-mode-selector">
-            <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo → Recuentos</button>
-            <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos → Ciclos</button>
+    <div class="table-toolbar">
+      <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
+      <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
+        <div class="toolbar-row">
+          <div class="toolbar-group">
+            <span class="toolbar-group-label">Vista</span>
+            <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
+            <div class="pivot-mode-selector">
+              <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo → Recuentos</button>
+              <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos → Ciclos</button>
+            </div>
+          </div>
+          <div class="toolbar-group">
+            <span class="toolbar-group-label">Herramientas</span>
+            <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
+            <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
           </div>
         </div>
-        <div class="toolbar-group">
-          <span class="toolbar-group-label">Herramientas</span>
-          <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
-          <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
+        <div class="toolbar-row toolbar-row-metrics">
+          <span class="toolbar-group-label">Métricas visibles:</span>
+          <label class="col-label-btn"><input type="checkbox" id="col_semillas" checked onchange="actualizarVisibilidadColumnas()"> Semillas m.l.</label>
+          <label class="col-label-btn"><input type="checkbox" id="col_10dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 10 DDS</label>
+          <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
+          <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10</label>
+          <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15</label>
         </div>
       </div>
-
-      <!-- Fila 2 -->
-      <div class="toolbar-row toolbar-row-metrics">
-        <span class="toolbar-group-label">Métricas visibles:</span>
-        <label class="col-label-btn"><input type="checkbox" id="col_semillas" checked onchange="actualizarVisibilidadColumnas()"> Semillas m.l.</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_10dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 10 DDS</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15</label>
-      </div>
-
     </div>
-  </div>
 
-  <div class="table-container">
-    <table id="tablaGerminacionMaster">
-      <thead id="tablaHeader">
-        <tr>
-          <th class="loading">Estructurando dimensiones matriciales...</th>
-        </tr>
-      </thead>
-      <tbody id="pivotBody">
-        <tr>
-          <td class="loading">Sincronizando orígenes de datos remotos...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="table-container">
+      <table id="tablaGerminacionMaster">
+        <thead id="tablaHeader">
+          <tr>
+            <th class="loading">Estructurando dimensiones matriciales...</th>
+          </tr>
+        </thead>
+        <tbody id="pivotBody">
+          <tr>
+            <td class="loading">Sincronizando orígenes de datos remotos...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
   </div><!-- end tab-panel pivot -->
 
@@ -1072,7 +864,10 @@
   <div class="modal-card" style="width: 1250px; max-width: 95%;" onclick="event.stopPropagation()">
     <div class="modal-header">
       <h3 id="popupTitle">Detalle Operativo</h3>
-      <button class="modal-close" onclick="cerrarModalPopup()">&times;</button>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <button class="btn-excel" onclick="exportarModalDetalleAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
+        <button class="modal-close" onclick="cerrarModalPopup()">&times;</button>
+      </div>
     </div>
     <div class="modal-body" id="popupBodyContent" style="max-height: 75vh; overflow-y: auto; padding: 15px;"></div>
   </div>
@@ -1100,7 +895,7 @@ let datosLluviaRaw = [];
 let universosUnicos = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
 let seleccionesFiltros = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
 
-// Estado global para los filtros internos de las columnas físicas de la tabla Lotes Completos
+// Estado global filtros Lotes Completos
 let inlineFiltersCompletos = { finca: [], lote: [], fechaSiembra: [], dds: [], p10: [], g10: [], p15: [], g15: [], variedad: [], semillas: [] };
 let universosCompletosFisicos = {};
 
@@ -1137,7 +932,6 @@ document.getElementById('pivotBody').addEventListener('click', function(e) {
   }
 });
 
-// Cerrar paneles flotantes inline si se hace clic fuera
 window.onclick = function(event) {
   if (!event.target.matches('.multiselect-dropdown') && !event.target.closest('.multiselect-options')) {
     document.querySelectorAll('.multiselect-options').forEach(el => el.classList.remove('show'));
@@ -1208,7 +1002,6 @@ function actualizarVisibilidadColumnas() {
 }
 
 function obtenerMetricasActivas() { return METRICAS_LLAVES.filter(v => visibilidadColumnas[v]); }
-function obtenerColumnasActivasPorCicloCount() { return obtenerMetricasActivas().length; }
 function normalizeTextId(text) { return normalizeText(text).replace(/[^a-z0-9]/g, ""); }
 
 function limpiarDescripcion(valor) {
@@ -1251,10 +1044,12 @@ function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
   const contenedor = document.getElementById(idOpts);
   if (!contenedor) return;
   let universo = universosUnicos[llaveFiltro] || [];
+  const seleccionActual = seleccionesFiltros[llaveFiltro] || [];
   let itemsHtml = '';
   universo.forEach(item => {
+    const marcado = seleccionActual.includes(item);
     itemsHtml += `<div class="multiselect-item" id="item_${llaveFiltro}_${normalizeTextId(item)}" data-texto="${normalizeText(item)}" onclick="event.stopPropagation();">
-              <input type="checkbox" value="${item}" checked onchange="manejarCambioCheckbox('${llaveFiltro}', '${idOpts}')">
+              <input type="checkbox" value="${item}" ${marcado ? 'checked' : ''} onchange="manejarCambioCheckbox('${llaveFiltro}', '${idOpts}')">
               <span class="text-span">${item}</span>
             </div>`;
   });
@@ -1263,7 +1058,7 @@ function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
       <input type="text" class="ms-search-input" placeholder="Buscar..." oninput="filtrarBusquedaMultiselect(this, '${idOpts}')" onclick="event.stopPropagation();">
     </div>
     <div class="multiselect-item ms-selectall" onclick="event.stopPropagation();">
-      <input type="checkbox" class="ms-selectall-checkbox" checked onchange="toggleSeleccionarTodoVisible('${idOpts}', this.checked)">
+      <input type="checkbox" class="ms-selectall-checkbox" ${seleccionActual.length === universo.length ? 'checked' : ''} onchange="toggleSeleccionarTodoVisible('${idOpts}', this.checked)">
       <span>(Seleccionar todo)</span>
     </div>
     <div class="ms-items-scroll">${itemsHtml}</div>
@@ -1272,6 +1067,11 @@ function poblarOpcionesFijasHTML(idOpts, llaveFiltro, idDrop, idBtnClear) {
       <button type="button" class="ms-btn-ok" onclick="event.stopPropagation(); aplicarFiltroDropdown('${llaveFiltro}', '${idDrop}', '${idOpts}', '${idBtnClear}')">Aceptar</button>
       <button type="button" class="ms-btn-cancel" onclick="event.stopPropagation(); cancelarFiltroDropdown('${idOpts}')">Cancelar</button>
     </div>`;
+  // Refleja la selección inicial (por ejemplo, el ciclo activo) en el texto del
+  // dropdown y en el botón de "quitar filtro", en vez de dejarlos siempre en "Todos".
+  actualizarTextoDropdown(idDrop, seleccionActual.length, universo.length, seleccionActual);
+  const btnClear = document.getElementById(idBtnClear);
+  if (btnClear) btnClear.style.display = (seleccionActual.length < universo.length) ? "inline-flex" : "none";
 }
 
 function manejarCambioCheckbox(llaveFiltro, idOpts) { actualizarEstadoSeleccionarTodo(idOpts); }
@@ -1433,15 +1233,8 @@ function procesarEstructuraGrafico() {
     mapaEjeTemporal[key] = { lluvia: 0, countLluvia: 0, siembra: 0, siembraCount: 0, germinacion: 0, germinacionCount: 0 };
   }
 
-  const fincaIdsActivos  = new Set(siembrasFiltradas.map(s => {
-    const lf = s.rawSiembra?.x_studio_finca;
-    return Array.isArray(lf) ? lf[0] : null;
-  }).filter(Boolean));
-
-  const sectorIdsActivos = new Set(siembrasFiltradas.map(s => {
-    const ls = s.rawSiembra?.x_studio_sector_1;
-    return Array.isArray(ls) ? ls[0] : null;
-  }).filter(Boolean));
+  const fincaIdsActivos  = new Set(siembrasFiltradas.map(s => { const lf = s.rawSiembra?.x_studio_finca; return Array.isArray(lf) ? lf[0] : null; }).filter(Boolean));
+  const sectorIdsActivos = new Set(siembrasFiltradas.map(s => { const ls = s.rawSiembra?.x_studio_sector_1; return Array.isArray(ls) ? ls[0] : null; }).filter(Boolean));
 
   datosLluviaRaw.forEach(r => {
     const valor = parseFloat(r.x_studio_cantidad_promedio ?? r.x_studio_cantidad ?? r.x_pluviosidad ?? 0) || 0;
@@ -1559,12 +1352,8 @@ async function abrirModalGrafico() {
         interaction: { mode: 'index', intersect: false },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#475569', maxRotation: 45 } },
-          yLluvia:  { type: 'linear', position: 'left',  min: 0, title: { display: true, text: 'Lluvia (mm)', color: '#0284c7', font: { weight: 'bold', size: 11 } }, ticks: { color: '#0284c7' }, grid: { color: '#f1f5f9' } },
-          yMetricas:{ type: 'linear', position: 'right', min: 0, title: { display: true, text: 'Densidad (/ m.l.)', color: '#b35c04', font: { weight: 'bold', size: 11 } }, ticks: { color: '#b35c04' }, grid: { display: false } }
-        },
-        plugins: {
-          legend: { position: 'top', labels: { font: { size: 12, weight: '600' }, boxWidth: 12 } },
-          tooltip: { callbacks: { label: ctx => ctx.parsed.y === null ? null : `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(2)}${ctx.datasetIndex===0?' mm':' / m.l.'}` } }
+          yLluvia:  { type: 'linear', position: 'left',  min: 0, title: { display: true, text: 'Lluvia (mm)', color: '#0284c7', font: { weight: 'bold', size: 11 } } },
+          yMetricas:{ type: 'linear', position: 'right', min: 0, title: { display: true, text: 'Densidad (/ m.l.)', color: '#b35c04', font: { weight: 'bold', size: 11 } }, grid: { display: false } }
         }
       }
     });
@@ -1572,23 +1361,6 @@ async function abrirModalGrafico() {
 }
 
 function cerrarModalGrafico() { document.getElementById('popupGraficoOverlay').classList.remove('show'); }
-
-function filtrarTablaModal() {
-  const inputs = document.querySelectorAll('.modal-filter-input');
-  const rows = document.querySelectorAll('#modalTableBody tr');
-  rows.forEach(row => {
-    let match = true;
-    inputs.forEach(input => {
-      const colIndex = parseInt(input.getAttribute('data-col'));
-      const filterValue = input.value.toLowerCase().trim();
-      if (filterValue) {
-        const cellText = row.cells[colIndex].textContent.toLowerCase();
-        if (!cellText.includes(filterValue)) match = false;
-      }
-    });
-    row.style.display = match ? '' : 'none';
-  });
-}
 
 function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
   const overlay = document.getElementById('popupDetalleOverlay');
@@ -1603,27 +1375,13 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
     title.textContent = `Detalle de Siembra - Lote: ${lote}`;
     itemsCelda.sort((a, b) => (extraerFecha(a.rawSiembra) || '').localeCompare(extraerFecha(b.rawSiembra) || ''));
 
-    html += `
-      <table class="modal-table">
-        <thead>
-          <tr>
-            <th>Reporte</th><th>Fecha Reporte</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Variedad</th><th>Lote Semilla (Comasa)</th><th>Sem. Enteras</th><th>Sem. Quebradas</th><th>% Enteras</th><th>Total Sem. m.l.</th>
-          </tr>
-        </thead>
-        <tbody id="modalTableBody">`;
-
+    html += `<table class="modal-table"><thead><tr><th>Reporte</th><th>Fecha Reporte</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Variedad</th><th>Lote Semilla (Comasa)</th><th>Sem. Enteras</th><th>Sem. Quebradas</th><th>% Enteras</th><th>Total Sem. m.l.</th></tr></thead><tbody id="modalTableBody">`;
     itemsCelda.forEach((item, idx) => {
       const s = item.rawSiembra || {};
       const enteras = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal || 0);
       const quebradas = parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal || 0);
       const totalSem = item.total_semillas || (enteras + quebradas);
-      html += `<tr>
-          <td><strong>${s.name || s.x_name || ('#' + (idx + 1))}</strong></td>
-          <td>${extraerFecha(s) || 'N/A'}</td><td>${item.ciclo}</td><td>${item.finca}</td><td>${item.lote}</td><td>${limpiarDescripcion(s.x_studio_variedades || s.x_studio_variedad)}</td>
-          <td><span style="color:var(--accent-peanut); font-weight:700;">${limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa)}</span></td>
-          <td style="text-align:right;">${enteras.toFixed(2)}</td><td style="text-align:right;">${quebradas.toFixed(2)}</td><td style="text-align:right; font-weight:600;">${(totalSem > 0 ? (enteras/totalSem)*100 : 0).toFixed(2)}%</td>
-          <td style="text-align:right; background-color:#fff3cd; color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</td>
-        </tr>`;
+      html += `<tr><td><strong>${s.name || s.x_name || ('#' + (idx + 1))}</strong></td><td>${extraerFecha(s) || 'N/A'}</td><td>${item.ciclo}</td><td>${item.finca}</td><td>${item.lote}</td><td>${limpiarDescripcion(s.x_studio_variedades || s.x_studio_variedad)}</td><td><span style="color:var(--accent-peanut); font-weight:700;">${limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa)}</span></td><td style="text-align:right;">${enteras.toFixed(2)}</td><td style="text-align:right;">${quebradas.toFixed(2)}</td><td style="text-align:right; font-weight:600;">${(totalSem > 0 ? (enteras/totalSem)*100 : 0).toFixed(2)}%</td><td style="text-align:right; background-color:#fff3cd; color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</td></tr>`;
     });
     html += `</tbody></table>`;
   } else {
@@ -1637,25 +1395,10 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
     });
     todasMuestras.sort((a, b) => (extraerFecha(a.m) || '').localeCompare(extraerFecha(b.m) || ''));
 
-    html += `
-      <table class="modal-table">
-        <thead>
-          <tr>
-            <th>Reporte</th><th>Fecha Muestreo</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Lote Semilla (Comasa)</th><th class="technical-header">x_studio_dds</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (10 DDS)</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (15 DDS)</th><th>Observation</th>
-          </tr>
-        </thead>
-        <tbody id="modalTableBody">`;
-
+    html += `<table class="modal-table"><thead><tr><th>Reporte</th><th>Fecha Muestreo</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Lote Semilla (Comasa)</th><th class="technical-header">x_studio_dds</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (10 DDS)</th><th class="technical-header">x_studio_cant_plantas_x_mtr_lineal (15 DDS)</th><th>Observación</th></tr></thead><tbody id="modalTableBody">`;
     todasMuestras.forEach(({ item, m }) => {
       const valorPlantas = parseFloat(m.x_studio_cant_plantas_x_mtr_lineal || 0).toFixed(2);
-      html += `<tr>
-          <td><strong>${m.x_name || m.name || 'N/A'}</strong></td><td>${extraerFecha(m) || 'N/A'}</td><td>${item.ciclo}</td><td>${item.finca}</td><td>${item.lote}</td>
-          <td><span style="color:var(--accent-peanut); font-weight:700;">${limpiarDescripcion(item.rawSiembra?.x_studio_lote_comasa || item.rawSiembra?.x_studio_lote_de_semilla_comasa)}</span></td>
-          <td class="technical-cell" style="color:#475569; background-color:#f1f5f9;">${ddsObjetivo}</td>
-          <td class="technical-cell" style="text-align:right; color:#0284c7; font-size:13px; background-color: ${ddsObjetivo === 10 ? '#eff6ff' : '#ffffff'};">${ddsObjetivo === 10 ? valorPlantas : '-'}</td>
-          <td class="technical-cell" style="text-align:right; color:#2563eb; font-size:13px; background-color: ${ddsObjetivo === 15 ? '#f0fdf4' : '#ffffff'};">${ddsObjetivo === 15 ? valorPlantas : '-'}</td>
-          <td style="font-style: italic; color: #475569; white-space: normal; max-width: 250px;">${m.x_studio_observaciones || m.x_studio_observacion || 'N/A'}</td>
-        </tr>`;
+      html += `<tr><td><strong>${m.x_name || m.name || 'N/A'}</strong></td><td>${extraerFecha(m) || 'N/A'}</td><td>${item.ciclo}</td><td>${item.finca}</td><td>${item.lote}</td><td><span style="color:var(--accent-peanut); font-weight:700;">${limpiarDescripcion(item.rawSiembra?.x_studio_lote_comasa || item.rawSiembra?.x_studio_lote_de_semilla_comasa)}</span></td><td class="technical-cell" style="color:#475569; background-color:#f1f5f9;">${ddsObjetivo}</td><td class="technical-cell" style="text-align:right; color:#0284c7; font-size:13px; background-color: ${ddsObjetivo === 10 ? '#eff6ff' : '#ffffff'};">${ddsObjetivo === 10 ? valorPlantas : '-'}</td><td class="technical-cell" style="text-align:right; color:#2563eb; font-size:13px; background-color: ${ddsObjetivo === 15 ? '#f0fdf4' : '#ffffff'};">${ddsObjetivo === 15 ? valorPlantas : '-'}</td><td style="font-style: italic; color: #475569; white-space: normal; max-width: 250px;">${m.x_studio_observaciones || m.x_studio_observacion || 'N/A'}</td></tr>`;
     });
     html += `</tbody></table>`;
   }
@@ -1665,16 +1408,23 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
 
 function cerrarModalPopup() { document.getElementById('popupDetalleOverlay').classList.remove('show'); }
 
-// ===== TAB MANAGEMENT =====
-let tabActivo = 'alertas'; // Cambiado por defecto a 'alertas' ya que ahora es el primero
+function exportarModalDetalleAExcel() {
+  const tabla = document.querySelector('#popupBodyContent table.modal-table');
+  if (!tabla) return;
+  const tituloModal = (document.getElementById('popupTitle')?.textContent || 'Detalle').trim();
+  const nombreHoja = tituloModal.replace(/[\\/*?:\[\]]/g, '').slice(0, 31) || 'Detalle';
+  const wb = XLSX.utils.table_to_book(tabla, { sheet: nombreHoja, raw: true });
+  const nombreArchivo = tituloModal.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '');
+  XLSX.writeFile(wb, `${nombreArchivo}_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
+}
+
+let tabActivo = 'alertas'; 
 function cambiarTab(tab) {
   tabActivo = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('tabBtn' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
   document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
-  const headerQA = document.querySelector('.header-quick-actions');
-  if (headerQA) headerQA.style.display = tab === 'alertas' ? 'none' : '';
   if (tab === 'alertas') renderAlertas();
 }
 
@@ -1807,11 +1557,8 @@ function tieneRecuento(item, ddsMin, ddsMax) {
 
 function contarGruposUnicos(items) { return new Set(items.map(i => `${i.finca}|||${i.lote}|||${i.fechaSiembra||''}`)).size; }
 
-// Evitar que el clic en el botón del filtro dispare el ordenamiento de la columna
 function manejadorHeaderClick(event, key) {
-  if (event.target.closest('.btn-col-inline-filter') || event.target.closest('.col-inline-filter-panel')) {
-    return;
-  }
+  if (event.target.closest('.btn-col-inline-filter') || event.target.closest('.col-inline-filter-panel')) return;
   cambiarOrdenAlertas(key);
 }
 
@@ -1824,7 +1571,6 @@ function cambiarOrdenAlertas(key) {
 function actualizarEstilosCabecerasAlertas() {
   const prefijos = ['espera', '10dds', '15dds', 'completos'];
   const llavesColumnas = ['finca', 'lote', 'fechaSiembra', 'dds', 'variedad', 'semillas', 'p10', 'g10', 'p15', 'g15'];
-  
   prefijos.forEach(pref => {
     llavesColumnas.forEach(col => {
       const th = document.getElementById(`th_${pref}_${col}`);
@@ -1850,7 +1596,6 @@ function ordenarFilasAlertas(filas) {
   });
 }
 
-// LÓGICA DE CONTROL DE LOS PANELES DE FILTRO MULTISELECCIÓN FLOTANTES
 function toggleFiltroColumnaFlotante(event, key) {
   event.stopPropagation();
   const panel = document.getElementById(`fp_${key}`);
@@ -1859,11 +1604,9 @@ function toggleFiltroColumnaFlotante(event, key) {
   if (!estaAbierto) {
     poblarFiltroFlotanteDOM(key);
     panel.classList.add('open');
-    setTimeout(() => panel.querySelector('.ms-search-input')?.focus(), 50);
   }
 }
 
-// Alias de compatibilidad por seguridad de tipado
 function toggleFiltroFlotanteColumna(event, key) { toggleFiltroColumnaFlotante(event, key); }
 
 function poblarFiltroFlotanteDOM(key) {
@@ -1873,46 +1616,29 @@ function poblarFiltroFlotanteDOM(key) {
   const seleccionados = inlineFiltersCompletos[key] || [];
   
   let html = `
-    <div class="ms-search-wrap">
-      <input type="text" class="ms-search-input" placeholder="Enter text to filter..." oninput="filtrarBusquedaFiltroFlotante(this)">
-    </div>
-    <div class="multiselect-item ms-selectall">
-      <input type="checkbox" class="ms-selectall-checkbox" ${seleccionados.length === 0 ? 'checked' : ''} onchange="toggleSeleccionarTodoFlotante('${key}', this.checked)">
-      <span>(Select All)</span>
-    </div>
+    <div class="ms-search-wrap"><input type="text" class="ms-search-input" placeholder="Buscar..." oninput="filtrarBusquedaFiltroFlotante(this)"></div>
+    <div class="multiselect-item ms-selectall"><input type="checkbox" class="ms-selectall-checkbox" ${seleccionados.length === 0 ? 'checked' : ''} onchange="toggleSeleccionarTodoFlotante('${key}', this.checked)"><span>(Seleccionar todo)</span></div>
     <div class="ms-items-scroll" style="max-height:180px;">`;
     
   universo.forEach(v => {
     const isChecked = seleccionados.length === 0 || seleccionados.includes(v);
-    html += `
-      <div class="multiselect-item">
-        <input type="checkbox" value="${String(v).replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="manejarCambioCheckboxFlotante('${key}')">
-        <span>${v}</span>
-      </div>`;
+    html += `<div class="multiselect-item"><input type="checkbox" value="${String(v).replace(/"/g,'&quot;')}" ${isChecked ? 'checked' : ''} onchange="manejarCambioCheckboxFlotante('${key}')"><span>${v}</span></div>`;
   });
   
-  html += `</div>
-    <div class="multiselect-footer">
-      <button class="ms-btn-ok" onclick="aplicarFiltroFlotante('${key}')">OK</button>
-      <button class="ms-btn-cancel" onclick="document.getElementById('fp_${key}').classList.remove('open')">Cancel</button>
-    </div>`;
-    
+  html += `</div><div class="multiselect-footer"><button class="ms-btn-ok" onclick="aplicarFiltroFlotante('${key}')">OK</button><button class="ms-btn-cancel" onclick="document.getElementById('fp_${key}').classList.remove('open')">Cancelar</button></div>`;
   panel.innerHTML = html;
   actualizarEstadoCheckboxTodoFlotante(key);
 }
 
 function filtrarBusquedaFiltroFlotante(input) {
   const query = input.value.toLowerCase().trim();
-  const items = input.closest('.col-inline-filter-panel').querySelectorAll('.ms-items-scroll .multiselect-item');
-  items.forEach(item => {
+  input.closest('.col-inline-filter-panel').querySelectorAll('.ms-items-scroll .multiselect-item').forEach(item => {
     item.style.display = item.textContent.toLowerCase().includes(query) ? 'flex' : 'none';
   });
 }
 
-// Corrección del error tipográfico en la función para evitar conflictos
 function toggleSeleccionarTodoFlotante(key, checked) {
-  const panel = document.getElementById(`fp_${key}`);
-  panel.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = checked);
+  document.getElementById(`fp_${key}`).querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = checked);
   actualizarEstadoCheckboxTodoFlotante(key);
 }
 
@@ -1932,7 +1658,6 @@ function aplicarFiltroFlotante(key) {
   const checkboxes = Array.from(panel.querySelectorAll('.ms-items-scroll input[type="checkbox"]'));
   const marcados = checkboxes.filter(cb => cb.checked).map(cb => cb.value);
   const universo = universosCompletosFisicos[key] || [];
-  
   inlineFiltersCompletos[key] = marcados.length === universo.length ? [] : marcados;
   
   const btn = panel.parentElement.querySelector('.btn-col-inline-filter');
@@ -2059,11 +1784,12 @@ function renderAlertas() {
   inyectarFilasCompletosTablaDOM(completosGruposFiltrados);
   document.getElementById('badgeCompletos').textContent = completosGruposFiltrados.length;
 
-  document.getElementById('seccionEspera').style.display    = enEspera.length === 0 ? 'none' : '';
-  document.getElementById('seccion10dds').style.display     = sin10.length === 0 ? 'none' : '';
-  document.getElementById('seccion15dds').style.display     = sin15.length === 0 ? 'none' : '';
+  document.getElementById('seccionEspera').style.display    = (alertaFiltroActivo === 'all' || alertaFiltroActivo === 'espera') && enEspera.length > 0 ? '' : 'none';
+  document.getElementById('seccion10dds').style.display     = (alertaFiltroActivo === 'all' || alertaFiltroActivo === '10dds') ? '' : 'none';
+  document.getElementById('seccion15dds').style.display     = (alertaFiltroActivo === 'all' || alertaFiltroActivo === '15dds') ? '' : 'none';
+  document.getElementById('seccionCompletos').style.display = (alertaFiltroActivo === 'all' || alertaFiltroActivo === 'completos') ? '' : 'none';
 
-  if (sin10.length === 0 && sin15.length === 0) {
+  if (sin10.length === 0 && sin15.length === 0 && (alertaFiltroActivo === 'all' || alertaFiltroActivo === '10dds')) {
     document.getElementById('seccion10dds').style.display = '';
     document.getElementById('tabla10ddsBody').innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>🎉</span>¡Excelente! Todos los lotes tienen sus recuentos al día.</td></tr>`;
   }
@@ -2087,12 +1813,7 @@ function renderTablaEspera(items) {
   const filas = ordenarFilasAlertas(Object.values(grupos));
   let html = '';
   filas.forEach(g => {
-    html += `<tr>
-      <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td>
-      <td><span class="badge-dds pendiente">${g.dds} días</span></td><td><span style="color:#7c3aed; font-weight:700;">en ${10 - g.dds} días</span></td>
-      <td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td>
-      <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td>
-    </tr>`;
+    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td><span class="badge-dds pendiente">${g.dds} días</span></td><td><span style="color:#7c3aed; font-weight:700;">en ${10 - g.dds} días</span></td><td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
   });
   tbody.innerHTML = html;
 }
@@ -2115,13 +1836,7 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
   const filas = ordenarFilasAlertas(Object.values(grupos));
   let html = '';
   filas.forEach(g => {
-    html += `<tr>
-      <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td>
-      <td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td>
-      <td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td>
-      <td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td>
-      <td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td>
-    </tr>`;
+    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td><td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td><td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
   });
   tbody.innerHTML = html;
 }
@@ -2135,7 +1850,6 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
 
   const filasOrdenadas = ordenarFilasAlertas(filasGrupos);
   let html = '';
-  
   filasOrdenadas.forEach(g => {
     const avg10 = g.muestras10.length > 0 ? (g.muestras10.reduce((a,c)=>a+c,0)/g.muestras10.length) : null;
     const avg15 = g.muestras15.length > 0 ? (g.muestras15.reduce((a,c)=>a+c,0)/g.muestras15.length) : null;
@@ -2144,19 +1858,15 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
     const pct15 = avg15 !== null && sem > 0 ? (avg15 / sem) * 100 : null;
 
     html += `<tr>
-      <td><strong>${g.finca}</strong></td>
-      <td>${g.lote}</td>
-      <td>${g.fechaSiembraFormated}</td>
+      <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${g.fechaSiembraFormated}</td>
+      <td style="text-align:right;"><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">${g.semillasFormated}</button></td>
       <td><span class="badge-dds pendiente">${g.ddsFormated}</span></td>
-      
       <td style="color:#0284c7; font-weight:600; text-align:right;">${g.p10Val}</td>
       <td style="text-align:center;">${pct10 !== null ? `<span class="badge-pct ${pct10 < 55 ? 'low' : ''}">${pct10.toFixed(1)}%</span>` : '-'}</td>
       <td style="color:#2563eb; font-weight:600; text-align:right;">${g.p15Val}</td>
       <td style="text-align:center;">${pct15 !== null ? `<span class="badge-pct ${pct15 < 55 ? 'low' : ''}">${pct15.toFixed(1)}%</span>` : '-'}</td>
-      
       <td>${g.variedad}</td>
-      <td style="text-align:right;">${g.semillasFormated}</td>
-      <td style="white-space:nowrap;">
+      <td>
         <button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('10dds','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver 10 DDS</button>
         <button class="btn-ver-siembra" style="margin-left:4px;" onclick="abrirModalPopupDetalle('15dds','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver 15 DDS</button>
       </td>
@@ -2168,21 +1878,14 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
 function exportarTablaCompletosAExcel() {
   const table = document.getElementById("tablaCompletosMaster");
   const clonedTable = table.cloneNode(true);
-  
-  clonedTable.querySelectorAll('.col-inline-filter-panel').forEach(el => el.remove());
-  clonedTable.querySelectorAll('.btn-col-inline-filter').forEach(el => el.remove());
-  clonedTable.querySelectorAll('.sort-indicator').forEach(el => el.remove());
-  
+  clonedTable.querySelectorAll('.col-inline-filter-panel, .btn-col-inline-filter, .sort-indicator').forEach(el => el.remove());
   const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Lotes Completos", raw: true });
   XLSX.writeFile(wb, `Lotes_Completos_Germinacion_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
 function filtrarTablaAlertas(tipo) {
   alertaFiltroActivo = tipo;
-  document.getElementById('seccionEspera').style.display    = (tipo === 'all' || tipo === 'espera')    ? '' : 'none';
-  document.getElementById('seccion10dds').style.display     = (tipo === 'all' || tipo === '10dds')     ? '' : 'none';
-  document.getElementById('seccion15dds').style.display     = (tipo === 'all' || tipo === '15dds')     ? '' : 'none';
-  document.getElementById('seccionCompletos').style.display = (tipo === 'all' || tipo === 'completos') ? '' : 'none';
+  renderAlertas();
   if (tabActivo !== 'alertas') cambiarTab('alertas');
 }
 
@@ -2207,7 +1910,6 @@ async function cargarDatosDesdeGitHub() {
 
     const siembraData = siembraRes.result || [];
     const germinacionData = germinacionRes.result || [];
-
     let ciclosDetectados = [...new Set(siembraData.map(s => limpiarDescripcion(s.x_studio_ciclo)).filter(c => c && c !== 'N/A' && c !== 'false'))].sort().reverse();
 
     datosMaestrosUnificados = siembraData.map(s => {
@@ -2254,7 +1956,11 @@ async function cargarDatosDesdeGitHub() {
     universosUnicos.tipo     = [...new Set(datosMaestrosUnificados.map(d => d.tipo))].sort();
 
     Object.keys(seleccionesFiltros).forEach(key => { seleccionesFiltros[key] = [...(universosUnicos[key] || [])]; });
-    
+    // Ciclo activo por defecto (el más reciente detectado — hoy "Mani 2026") en vez
+    // de "Todos": el tab de Registros Siembra y Germinación abre directo filtrado al
+    // ciclo vigente. ciclosDetectados ya viene ordenado descendente.
+    if (ciclosDetectados.length) seleccionesFiltros.ciclo = [ciclosDetectados[0]];
+
     inicializarEstructuraFiltrosDOM();
     filtrarYMostrar();
     document.getElementById('fechaActualizacion').textContent = new Date().toLocaleString();
@@ -2423,7 +2129,6 @@ function exportarTablaAExcel() {
   XLSX.writeFile(wb, `Reporte_Pivot_Fijo_Mani_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
-// Inicialización de la app
 cargarDatosDesdeGitHub();
 </script>
 </body>
