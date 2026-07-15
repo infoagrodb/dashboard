@@ -675,16 +675,9 @@
 
 <div class="container">
 
-  <!-- TAB NAVIGATION — CLAYMORPHISM -->
+  <!-- TAB NAVIGATION — CLAYMORPHISM (Orden cambiado según solicitud) -->
   <div class="tabs-nav" id="tabsNav">
-    <button class="tab-btn active" id="tabBtnPivot" onclick="cambiarTab('pivot')">
-      <span class="tab-icon">📊</span>
-      <span class="tab-text-group">
-        <span class="tab-title">Registros Siembra y Germinación</span>
-        <span class="tab-subtitle">Siembra &amp; Germinación por ciclo, finca y lote</span>
-      </span>
-    </button>
-    <button class="tab-btn" id="tabBtnAlertas" onclick="cambiarTab('alertas')">
+    <button class="tab-btn active" id="tabBtnAlertas" onclick="cambiarTab('alertas')">
       <span class="tab-icon">🚨</span>
       <span class="tab-text-group">
         <span class="tab-title">Alertas Germinación</span>
@@ -692,110 +685,17 @@
       </span>
       <span class="tab-badge loading" id="tabBadgeAlertas">...</span>
     </button>
+    <button class="tab-btn" id="tabBtnPivot" onclick="cambiarTab('pivot')">
+      <span class="tab-icon">📊</span>
+      <span class="tab-text-group">
+        <span class="tab-title">Registros Siembra y Germinación</span>
+        <span class="tab-subtitle">Siembra &amp; Germinación por ciclo, finca y lote</span>
+      </span>
+    </button>
   </div>
 
-  <!-- TAB: PIVOT (original) -->
-  <div class="tab-panel active" id="tabPivot">
-
-  <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
-    <div class="toolbar">
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Sector</label>
-          <button class="btn-clear-individual" id="btn_clear_sector" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'sector', 'dropSector', 'optsSector', 'btn_clear_sector')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
-        </div>
-        <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
-        <div class="multiselect-options" id="optsSector"></div>
-      </div>
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Ciclo</label>
-          <button class="btn-clear-individual" id="btn_clear_ciclo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
-        </div>
-        <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
-        <div class="multiselect-options" id="optsCiclo"></div>
-      </div>
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Finca</label>
-          <button class="btn-clear-individual" id="btn_clear_finca" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
-        </div>
-        <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
-        <div class="multiselect-options" id="optsFinca"></div>
-      </div>
-      <div class="filter-group">
-        <div class="label-container">
-          <label>Tipo Recuento</label>
-          <button class="btn-clear-individual" id="btn_clear_tipo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo')">
-            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-          </button>
-        </div>
-        <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
-        <div class="multiselect-options" id="optsTipo"></div>
-      </div>
-      <button class="btn btn-clear-filters" onclick="limpiarTodosLosFiltros()">🧹 Limpiar Todo</button>
-    </div>
-  </div>
-
-  <div class="table-toolbar">
-    <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
-    <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
-
-      <!-- Fila 1 -->
-      <div class="toolbar-row">
-        <div class="toolbar-group">
-          <span class="toolbar-group-label">Vista</span>
-          <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
-          <div class="pivot-mode-selector">
-            <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo → Recuentos</button>
-            <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos → Ciclos</button>
-          </div>
-        </div>
-        <div class="toolbar-group">
-          <span class="toolbar-group-label">Herramientas</span>
-          <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
-          <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
-        </div>
-      </div>
-
-      <!-- Fila 2 -->
-      <div class="toolbar-row toolbar-row-metrics">
-        <span class="toolbar-group-label">Métricas visibles:</span>
-        <label class="col-label-btn"><input type="checkbox" id="col_semillas" checked onchange="actualizarVisibilidadColumnas()"> Semillas m.l.</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_10dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 10 DDS</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10</label>
-        <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15</label>
-      </div>
-
-    </div>
-  </div>
-
-  <div class="table-container">
-    <table id="tablaGerminacionMaster">
-      <thead id="tablaHeader">
-        <tr>
-          <th class="loading">Estructurando dimensiones matriciales...</th>
-        </tr>
-      </thead>
-      <tbody id="pivotBody">
-        <tr>
-          <td class="loading">Sincronizando orígenes de datos remotos...</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  </div><!-- end tab-panel pivot -->
-
-  <!-- TAB: ALERTAS GERMINACIÓN -->
-  <div class="tab-panel" id="tabAlertas">
+  <!-- TAB: ALERTAS GERMINACIÓN (Ahora es el primero) -->
+  <div class="tab-panel active" id="tabAlertas">
     <div class="alertas-container">
 
       <!-- Filtros bar -->
@@ -1064,6 +964,106 @@
 
     </div>
   </div>
+
+  <!-- TAB: PIVOT (Ahora es el segundo) -->
+  <div class="tab-panel" id="tabPivot">
+
+  <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
+    <div class="toolbar">
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Sector</label>
+          <button class="btn-clear-individual" id="btn_clear_sector" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'sector', 'dropSector', 'optsSector', 'btn_clear_sector')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropSector" onclick="toggleDropdown(event, 'optsSector')">Todos</div>
+        <div class="multiselect-options" id="optsSector"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Ciclo</label>
+          <button class="btn-clear-individual" id="btn_clear_ciclo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'ciclo', 'dropCiclo', 'optsCiclo', 'btn_clear_ciclo')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropCiclo" onclick="toggleDropdown(event, 'optsCiclo')">Todos</div>
+        <div class="multiselect-options" id="optsCiclo"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Finca</label>
+          <button class="btn-clear-individual" id="btn_clear_finca" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'finca', 'dropFinca', 'optsFinca', 'btn_clear_finca')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropFinca" onclick="toggleDropdown(event, 'optsFinca')">Todos</div>
+        <div class="multiselect-options" id="optsFinca"></div>
+      </div>
+      <div class="filter-group">
+        <div class="label-container">
+          <label>Tipo Recuento</label>
+          <button class="btn-clear-individual" id="btn_clear_tipo" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'tipo', 'dropTipo', 'optsTipo', 'btn_clear_tipo')">
+            <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+          </button>
+        </div>
+        <div class="multiselect-dropdown" id="dropTipo" onclick="toggleDropdown(event, 'optsTipo')">Todos</div>
+        <div class="multiselect-options" id="optsTipo"></div>
+      </div>
+      <button class="btn btn-clear-filters" onclick="limpiarTodosLosFiltros()">🧹 Limpiar Todo</button>
+    </div>
+  </div>
+
+  <div class="table-toolbar">
+    <button class="btn-toggle-filters btn-opciones-pivot" id="btnToggleTableMenu" onclick="toggleTableMenu()">⚙️ Opciones de tabla</button>
+    <div class="table-toolbar-left collapsed" id="tableToolbarLeft">
+
+      <!-- Fila 1 -->
+      <div class="toolbar-row">
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">Vista</span>
+          <button class="btn btn-secondary" id="btnToggleGlobal" onclick="alternarColapsoGlobal()">📁 Colapsar Fincas</button>
+          <div class="pivot-mode-selector">
+            <button class="pivot-mode-btn active" id="mode_ciclo_recuento" onclick="cambiarModoPivot('ciclo_recuento')">Ciclo → Recuentos</button>
+            <button class="pivot-mode-btn" id="mode_recuento_ciclo" onclick="cambiarModoPivot('recuento_ciclo')">Recuentos → Ciclos</button>
+          </div>
+        </div>
+        <div class="toolbar-group">
+          <span class="toolbar-group-label">Herramientas</span>
+          <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico()">📊 Lluvia vs Siembra</button>
+          <button class="btn-excel" onclick="exportarTablaAExcel()">📥 Excel</button>
+        </div>
+      </div>
+
+      <!-- Fila 2 -->
+      <div class="toolbar-row toolbar-row-metrics">
+        <span class="toolbar-group-label">Métricas visibles:</span>
+        <label class="col-label-btn"><input type="checkbox" id="col_semillas" checked onchange="actualizarVisibilidadColumnas()"> Semillas m.l.</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_10dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 10 DDS</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_15dds" checked onchange="actualizarVisibilidadColumnas()"> Plantas 15 DDS</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_g10" checked onchange="actualizarVisibilidadColumnas()"> % Germ 10</label>
+        <label class="col-label-btn"><input type="checkbox" id="col_g15" checked onchange="actualizarVisibilidadColumnas()"> % Germ 15</label>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table id="tablaGerminacionMaster">
+      <thead id="tablaHeader">
+        <tr>
+          <th class="loading">Estructurando dimensiones matriciales...</th>
+        </tr>
+      </thead>
+      <tbody id="pivotBody">
+        <tr>
+          <td class="loading">Sincronizando orígenes de datos remotos...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  </div><!-- end tab-panel pivot -->
 
 </div>
 
@@ -1666,7 +1666,7 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo) {
 function cerrarModalPopup() { document.getElementById('popupDetalleOverlay').classList.remove('show'); }
 
 // ===== TAB MANAGEMENT =====
-let tabActivo = 'pivot';
+let tabActivo = 'alertas'; // Cambiado por defecto a 'alertas' ya que ahora es el primero
 function cambiarTab(tab) {
   tabActivo = tab;
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1846,7 +1846,7 @@ function ordenarFilasAlertas(filas) {
     }
     if (valA === undefined || valA === null) return 1;
     if (valB === undefined || valB === null) return -1;
-    return alertasSortConfig.asc ? (typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB) : (typeof valA === 'string' ? valB.localeCompare(valA) : valB - valA);
+    return alertasSortConfig.asc ? (typeof valA === 'string' ? valA.localeCompare(valB) : valA - valB) : (typeof valA === 'string' ? valB.localeCompare(valA) : valA - valB);
   });
 }
 
@@ -1909,6 +1909,7 @@ function filtrarBusquedaFiltroFlotante(input) {
   });
 }
 
+// Corrección del error tipográfico en la función para evitar conflictos
 function toggleSeleccionarTodoFlotante(key, checked) {
   const panel = document.getElementById(`fp_${key}`);
   panel.querySelectorAll('.ms-items-scroll input[type="checkbox"]').forEach(cb => cb.checked = checked);
@@ -2001,7 +2002,6 @@ function renderAlertas() {
     const avg15 = g.muestras15.length > 0 ? (g.muestras15.reduce((a,c)=>a+c,0)/g.muestras15.length) : null;
     const sem = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas) : 0;
     
-    // Eliminación de "pl/m.l." para dejar estrictamente el valor numérico
     g.p10Val = avg10 !== null ? `${avg10.toFixed(2)}` : '-';
     g.g10Val = avg10 !== null && sem > 0 ? `${((avg10 / sem) * 100).toFixed(1)}%` : '-';
     g.p15Val = avg15 !== null ? `${avg15.toFixed(2)}` : '-';
@@ -2011,7 +2011,6 @@ function renderAlertas() {
     g.fechaSiembraFormated = formatFechaLegible(g.fechaSiembra);
   });
 
-  // Generar universos únicos dinámicos para las columnas físicas de Lotes Completos
   universosCompletosFisicos.finca = [...new Set(completosGruposRaw.map(g => g.finca))].sort();
   universosCompletosFisicos.lote = [...new Set(completosGruposRaw.map(g => g.lote))].sort();
   universosCompletosFisicos.fechaSiembra = [...new Set(completosGruposRaw.map(g => g.fechaSiembraFormated))].sort();
@@ -2023,7 +2022,6 @@ function renderAlertas() {
   universosCompletosFisicos.variedad = [...new Set(completosGruposRaw.map(g => g.variedad))].sort();
   universosCompletosFisicos.semillas = [...new Set(completosGruposRaw.map(g => g.semillasFormated))].sort((a,b)=>parseFloat(a)-parseFloat(b));
 
-  // Aplicar el filtrado dinámico multiselección inline por columna física
   const completosGruposFiltrados = completosGruposRaw.filter(g => {
     return (inlineFiltersCompletos.finca.length === 0 || inlineFiltersCompletos.finca.includes(g.finca)) &&
            (inlineFiltersCompletos.lote.length === 0 || inlineFiltersCompletos.lote.includes(g.lote)) &&
@@ -2058,7 +2056,6 @@ function renderAlertas() {
   renderTablaAlerta('tabla10ddsBody', sin10, '10 DDS');
   renderTablaAlerta('tabla15ddsBody', sin15, '15 DDS');
   
-  // Render final de la tabla Lotes Completos
   inyectarFilasCompletosTablaDOM(completosGruposFiltrados);
   document.getElementById('badgeCompletos').textContent = completosGruposFiltrados.length;
 
@@ -2136,7 +2133,6 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
     return;
   }
 
-  // Respetar el ordenamiento de columnas configurado
   const filasOrdenadas = ordenarFilasAlertas(filasGrupos);
   let html = '';
   
@@ -2153,7 +2149,6 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
       <td>${g.fechaSiembraFormated}</td>
       <td><span class="badge-dds pendiente">${g.ddsFormated}</span></td>
       
-      <!-- Sólo valores numéricos limpios sin pl/m.l. -->
       <td style="color:#0284c7; font-weight:600; text-align:right;">${g.p10Val}</td>
       <td style="text-align:center;">${pct10 !== null ? `<span class="badge-pct ${pct10 < 55 ? 'low' : ''}">${pct10.toFixed(1)}%</span>` : '-'}</td>
       <td style="color:#2563eb; font-weight:600; text-align:right;">${g.p15Val}</td>
@@ -2170,12 +2165,10 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
   tbody.innerHTML = html;
 }
 
-// Función exportadora específica para la tabla de lotes completos
 function exportarTablaCompletosAExcel() {
   const table = document.getElementById("tablaCompletosMaster");
   const clonedTable = table.cloneNode(true);
   
-  // Quitar elementos visuales del DOM temporal que arruinarían la exportación limpia a Excel
   clonedTable.querySelectorAll('.col-inline-filter-panel').forEach(el => el.remove());
   clonedTable.querySelectorAll('.btn-col-inline-filter').forEach(el => el.remove());
   clonedTable.querySelectorAll('.sort-indicator').forEach(el => el.remove());
@@ -2430,6 +2423,7 @@ function exportarTablaAExcel() {
   XLSX.writeFile(wb, `Reporte_Pivot_Fijo_Mani_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
+// Inicialización de la app
 cargarDatosDesdeGitHub();
 </script>
 </body>
