@@ -129,12 +129,38 @@
 </head>
 <body>
 
+<button class="btn-filtros-fijo" id="btnFiltrosFijo" onclick="toggleBarraFiltros()">
+  <span id="iconoFiltrosFijo">🔽</span> Filtros
+</button>
+
 <div class="container">
 
   <div class="nota-fuentes" id="notaFuentes">Cargando datos…</div>
 
-  <!-- Familia y Recuento son propios de esta sección (no los cubre el filtro global del shell) -->
-  <div class="barra-filtros">
+  <!-- Todos los filtros son propios de esta sección: combina 3 fuentes (Odoo en vivo +
+       histórico Excel DA + histórico Excel GZP), así que Compañía/Sector/Ciclo/Finca
+       viven aquí igual que Familia/Recuento/DDS. -->
+  <div class="barra-filtros" id="barraFiltros">
+    <div class="filtro-grupo">
+      <label>Compañía</label>
+      <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
+      <div class="ms-panel" id="msCompania"></div>
+    </div>
+    <div class="filtro-grupo">
+      <label>Sector</label>
+      <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'sector')">Todos</div>
+      <div class="ms-panel" id="msSector"></div>
+    </div>
+    <div class="filtro-grupo">
+      <label>Ciclo</label>
+      <div class="ms-dropdown" id="dropCiclo" onclick="toggleMs(event,'ciclo')">Todos</div>
+      <div class="ms-panel" id="msCiclo"></div>
+    </div>
+    <div class="filtro-grupo">
+      <label>Finca</label>
+      <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
+      <div class="ms-panel" id="msFinca"></div>
+    </div>
     <div class="filtro-grupo">
       <label>Familia de Recuento</label>
       <div class="ms-dropdown" id="dropFamilia" onclick="toggleMs(event,'familia')">Todas</div>
@@ -474,35 +500,44 @@ async function cargarTodo(){
 
   construirFiltrosPropios();
   render();
-  enviarUniversoAlShell();
-  if(FILTRO_GLOBAL_PENDIENTE){ const f=FILTRO_GLOBAL_PENDIENTE; FILTRO_GLOBAL_PENDIENTE=null; aplicarFiltroGlobal(f); }
 }
 
 // ===================================================================
-// FILTROS PROPIOS (Familia, Recuento, DDS) — multiselect en cascada,
-// mismo patrón visual que el resto de INFOAGRO BI
+// FILTROS PROPIOS (Compañía, Sector, Ciclo, Finca, Familia, Recuento, DDS) —
+// multiselect en cascada, mismo patrón visual que el resto de INFOAGRO BI.
+// Esta sección combina 3 fuentes (Odoo + histórico DA + histórico GZP), así que
+// todos sus filtros son propios — no depende de un panel de filtros del shell.
 // ===================================================================
-let seleccionPropia = { familia: [], recuento: [], dds: [] }; // vacío = todos
-let filtroGlobalActivo = { compania: [], sector: [], ciclo: [], finca: [] }; // viene del shell
+const ORDEN_FILTROS = ['compania','sector','ciclo','finca','familia','recuento','dds'];
+let seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] }; // vacío = todos
 
 function universoPropio(){
+  // Cascada real: cada campo se acota por lo ya elegido en los campos ANTERIORES de
+  // ORDEN_FILTROS (Compañía condiciona Sector, Sector condiciona Ciclo, etc.), igual
+  // que el resto de INFOAGRO BI.
   let base = RAW;
-  base = base.filter(r => !filtroGlobalActivo.compania.length || filtroGlobalActivo.compania.includes(r.co));
-  base = base.filter(r => !filtroGlobalActivo.sector.length   || filtroGlobalActivo.sector.includes(r.se));
-  base = base.filter(r => !filtroGlobalActivo.ciclo.length    || filtroGlobalActivo.ciclo.includes(r.ci));
-  base = base.filter(r => !filtroGlobalActivo.finca.length    || filtroGlobalActivo.finca.includes(r.fi));
+  const camposRaw = { compania:'co', sector:'se', ciclo:'ci', finca:'fi', familia:'fa', recuento:'re' };
+  const universos = {};
 
-  const familias = [...new Set(base.map(r=>r.fa).filter(Boolean))].sort();
-  const baseFam = base.filter(r => !seleccionPropia.familia.length || seleccionPropia.familia.includes(r.fa));
-  const recuentos = [...new Set(baseFam.map(r=>r.re).filter(Boolean))].sort();
-  const dds = [...new Set(base.map(r=>r.dds).filter(Boolean))].sort((a,b)=>a-b);
-  return { familias, recuentos, dds };
+  ORDEN_FILTROS.forEach(clave=>{
+    if(clave==='dds'){
+      universos.dds = [...new Set(base.map(r=>r.dds).filter(Boolean))].sort((a,b)=>a-b);
+      return;
+    }
+    const campo = camposRaw[clave];
+    universos[clave] = [...new Set(base.map(r=>r[campo]).filter(Boolean))].sort();
+    // Acotar "base" con la selección de este campo antes de calcular el siguiente
+    const sel = seleccionPropia[clave];
+    if(sel && sel.length) base = base.filter(r => sel.includes(r[campo]));
+  });
+
+  return universos;
 }
 
 function construirFiltrosPropios(){
   const uni = universoPropio();
-  ['familia','recuento','dds'].forEach(clave=>{
-    const universo = clave==='familia'?uni.familias:clave==='recuento'?uni.recuentos:uni.dds;
+  ORDEN_FILTROS.forEach(clave=>{
+    const universo = uni[clave];
     const panel = document.getElementById('ms'+cap(clave));
     let itemsHtml = universo.map(v=>{
       const marcado = !seleccionPropia[clave].length || seleccionPropia[clave].includes(v);
@@ -566,11 +601,13 @@ window.buscarMsPropio = function(clave, texto){
 window.aplicarMsPropio = function(clave){
   const panel = document.getElementById('ms'+cap(clave));
   const marcados = Array.from(panel.querySelectorAll('.ms-items input[type=checkbox]:checked')).map(cb=>cb.value);
-  const universoActual = universoPropio()[clave==='familia'?'familias':clave==='recuento'?'recuentos':'dds'];
+  const universoActual = universoPropio()[clave];
   seleccionPropia[clave] = (marcados.length && marcados.length < universoActual.length) ? marcados : [];
   panel.classList.remove('show');
-  if(clave==='familia') construirFiltrosPropios(); // recalcular cascada de Recuento
-  else actualizarTextoDropPropio(clave, universoActual.length);
+  // Siempre se reconstruye todo el panel: con 7 campos en cascada (Compañía→Sector→
+  // Ciclo→Finca→Familia→Recuento→DDS), aceptar cualquiera de ellos puede acotar los
+  // que le siguen en el orden.
+  construirFiltrosPropios();
   render();
 };
 window.cerrarMsPropio = function(clave){ document.getElementById('ms'+cap(clave)).classList.remove('show'); construirFiltrosPropios(); };
@@ -585,7 +622,7 @@ function actualizarTextoDropPropio(clave, totalUniverso){
 }
 
 function limpiarFiltrosPropios(){
-  seleccionPropia = { familia: [], recuento: [], dds: [] };
+  seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] };
   construirFiltrosPropios();
   render();
 }
@@ -597,10 +634,10 @@ let recuentoSeleccionado = null; // idr del recuento activo en el panel de detal
 
 function datosFiltrados(){
   let d = RAW;
-  d = d.filter(r => !filtroGlobalActivo.compania.length || filtroGlobalActivo.compania.includes(r.co));
-  d = d.filter(r => !filtroGlobalActivo.sector.length   || filtroGlobalActivo.sector.includes(r.se));
-  d = d.filter(r => !filtroGlobalActivo.ciclo.length    || filtroGlobalActivo.ciclo.includes(r.ci));
-  d = d.filter(r => !filtroGlobalActivo.finca.length    || filtroGlobalActivo.finca.includes(r.fi));
+  d = d.filter(r => !seleccionPropia.compania.length || seleccionPropia.compania.includes(r.co));
+  d = d.filter(r => !seleccionPropia.sector.length   || seleccionPropia.sector.includes(r.se));
+  d = d.filter(r => !seleccionPropia.ciclo.length    || seleccionPropia.ciclo.includes(r.ci));
+  d = d.filter(r => !seleccionPropia.finca.length    || seleccionPropia.finca.includes(r.fi));
   d = d.filter(r => !seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa));
   d = d.filter(r => !seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re));
   d = d.filter(r => !seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds));
@@ -977,42 +1014,9 @@ function exportarDetalleExcel(){
   XLSX.writeFile(wb, `Recuentos_${nombreArchivo}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
-// ===================================================================
-// ADAPTADOR DE FILTRO GLOBAL — INFOAGRO BI
-// Traduce {compania, sector, ciclo, finca} del shell. Nota: aquí Ciclo mezcla
-// histórico (2012-2024) y en vivo (2025+) sin distinción — tal como se acordó.
-// ===================================================================
-let FILTRO_GLOBAL_PENDIENTE = null;
-
-function aplicarFiltroGlobal(filtros){
-  if(!CARGA_LISTA){ FILTRO_GLOBAL_PENDIENTE = filtros; return; }
-  filtros = filtros || {};
-  ['compania','sector','ciclo','finca'].forEach(k=>{
-    if(filtros[k] !== undefined) filtroGlobalActivo[k] = filtros[k] || [];
-  });
-  construirFiltrosPropios();
-  render();
-}
-
-function enviarUniversoAlShell(){
-  if(!RAW.length) return;
-  window.parent.postMessage({
-    type: 'INFOAGRO_UNIVERSO_RESPUESTA',
-    universo: {
-      compania: [...new Set(RAW.map(r=>r.co))].filter(Boolean).sort(),
-      sector:   [...new Set(RAW.map(r=>r.se))].filter(Boolean).sort(),
-      ciclo:    ordenarCiclosDesc([...new Set(RAW.map(r=>r.ci))].filter(Boolean)),
-      finca:    [...new Set(RAW.map(r=>r.fi))].filter(Boolean).sort()
-    }
-  }, '*');
-}
-
-window.addEventListener('message', function(ev){
-  if(!ev.data) return;
-  if(ev.data.type === 'INFOAGRO_FILTROS_UPDATE') aplicarFiltroGlobal(ev.data.filtros);
-  if(ev.data.type === 'INFOAGRO_SOLICITAR_UNIVERSO') enviarUniversoAlShell();
-});
-
+// Los filtros Compañía/Sector/Ciclo/Finca/Familia/Recuento/DDS ahora viven todos
+// dentro de esta misma sección (barra de filtros propia, visible arriba) — ya no se
+// reciben desde un panel del shell.
 cargarTodo();
 </script>
 </body>

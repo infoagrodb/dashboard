@@ -131,6 +131,63 @@ select.sb-input{color:var(--tx-1)}
 .combo-item-clear{padding:7px 9px;font-size:11px;color:var(--coral);cursor:pointer;border-top:1px solid var(--border);text-align:center;font-weight:500}
 .combo-item-clear:hover{background:var(--coral-bg)}
 
+/* ---------- TOOLBAR DE UNA SOLA FILA — mismo patrón en las 5 secciones de INFOAGRO BI ---------- */
+.toolbar-una-fila{
+  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+  background:var(--surface); border-bottom:1px solid var(--border);
+  box-shadow:0 2px 8px rgba(0,0,0,.06); padding:10px 24px; flex-shrink:0; position:relative; z-index:2000;
+}
+.tf-campos-grupo{
+  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; flex:1;
+  max-height:500px; overflow:visible; transition:max-height .3s cubic-bezier(.4,0,.2,1), margin-bottom .3s ease, opacity .3s ease;
+  opacity:1;
+}
+.tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
+.tf-campo{display:flex; flex-direction:column; gap:4px; min-width:170px; position:relative;}
+.tf-campo label{font-size:9.5px; text-transform:uppercase; letter-spacing:.1em; color:var(--tx-3); font-weight:700;}
+
+.tf-campo .ms-dropdown{
+  height:32px; padding:0 10px; border:1.5px solid var(--border); border-radius:var(--r-xs);
+  font-size:12px; background:var(--surface-2); cursor:pointer; user-select:none;
+  display:flex; justify-content:space-between; align-items:center;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.tf-campo .ms-dropdown:hover{border-color:var(--border-h);}
+.tf-campo .ms-dropdown::after{content:"▼"; font-size:8px; color:var(--tx-3); margin-left:6px; flex-shrink:0;}
+.tf-campo .combo-dropdown.ms-panel{
+  min-width:220px; width:max-content; max-width:320px; left:0; right:auto; margin-top:4px; z-index:2100;
+}
+
+.tf-acciones{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap;}
+.tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-end;}
+.tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:#1B4332; line-height:1.2; white-space:nowrap;}
+.tf-titulo span{font-size:10.5px; color:var(--tx-3,#8a9690); font-weight:600;}
+.tf-icon{
+  height:32px; min-width:32px; padding:0 8px; border-radius:var(--r-xs); border:1.5px solid var(--border);
+  background:var(--surface-2); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+  font-size:14px; transition:all .15s ease;
+}
+.tf-icon:hover{background:var(--green-bg); border-color:var(--green);}
+.tf-icon-verde{background:var(--green); border-color:var(--green);}
+.tf-icon-verde:hover{opacity:.88;}
+.tf-icon-excel{background:#1a9448; border-color:#1a9448;}
+.tf-icon-excel:hover{opacity:.88;}
+
+@media (max-width:900px){
+  .toolbar-una-fila{padding:10px;}
+  .tf-campo{flex:1 1 130px; min-width:0;}
+  .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border); padding-top:8px; margin-top:2px;}
+  .tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
+  .campo-compania{order:1;}
+  .campo-sector{order:2;}
+  .campo-finca{order:3;}
+  .campo-productor{order:4;}
+}
+@media (max-width:520px){
+  .tf-campo{flex:1 1 100%;}
+  .tf-campo .combo-dropdown.ms-panel{min-width:0; width:100%; left:0; right:0;}
+}
+
 /* CHIPS */
 .chips{display:flex;gap:4px;flex-wrap:wrap}
 .chip{font-size:11px;padding:4px 10px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--tx-2);cursor:pointer;font-family:'Inter',sans-serif;transition:all .15s;font-weight:500}
@@ -519,11 +576,79 @@ select.sb-input{color:var(--tx-1)}
 </head>
 <body>
 
-<!-- El header con logo/título de INFOAGRO-MAPs se quitó: es redundante con el título
-     "Mapa de Fincas / INFOAGRO-MAPs" que ya muestra el shell INFOAGRO BI arriba, y le
-     restaba espacio vertical útil al mapa. El indicador de estado (pill) se reubica
-     como elemento flotante compacto sobre el propio mapa. -->
+<!-- El header con logo/título de INFOAGRO-MAPs se quitó del <body> porque el shell
+     INFOAGRO BI mostraba "Mapa de Fincas / INFOAGRO-MAPs" arriba. Ahora que el shell
+     ya NO muestra ningún título (cada sección construye el suyo, para no duplicar la
+     barra), el título vuelve a vivir aquí, dentro de la toolbar-una-fila. -->
 <span class="pill cargando pill-flotante" id="pill">⏳ Cargando...</span>
+
+<div class="toolbar-una-fila" id="toolbarCompacta">
+  <div class="tf-titulo">
+    <h1>Mapa de Fincas</h1>
+    <span>INFOAGRO-MAPs</span>
+  </div>
+  <div class="tf-campos-grupo filters-wrapper" id="filtersWrapperMapas">
+    <div class="tf-campo campo-compania">
+      <label>Compañía</label>
+      <div class="combo-box" id="cbCia">
+        <div class="ms-dropdown combo-trigger" onclick="toggleCombo('cbCia')">
+          <span class="combo-sel placeholder" id="cbCiaSel">Todas</span>
+        </div>
+        <div class="combo-dropdown ms-panel" id="cbCiaDD"></div>
+      </div>
+    </div>
+    <div class="tf-campo campo-productor">
+      <label>Productor</label>
+      <div class="combo-box" id="cbProd">
+        <div class="ms-dropdown combo-trigger" onclick="toggleCombo('cbProd')">
+          <span class="combo-sel placeholder" id="cbProdSel">Todos</span>
+        </div>
+        <div class="combo-dropdown ms-panel" id="cbProdDD"></div>
+      </div>
+    </div>
+    <div class="tf-campo campo-sector">
+      <label>Sector</label>
+      <div class="combo-box" id="cbSect">
+        <div class="ms-dropdown combo-trigger" onclick="toggleCombo('cbSect')">
+          <span class="combo-sel placeholder" id="cbSectSel">Todos</span>
+        </div>
+        <div class="combo-dropdown ms-panel" id="cbSectDD"></div>
+      </div>
+    </div>
+    <div class="tf-campo campo-finca">
+      <label>Finca</label>
+      <div class="combo-box" id="cbFinca">
+        <div class="ms-dropdown combo-trigger" onclick="toggleCombo('cbFinca')">
+          <span class="combo-sel placeholder" id="cbFincaSel">Todas</span>
+        </div>
+        <div class="combo-dropdown ms-panel" id="cbFincaDD"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tf-acciones">
+    <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
+    </button>
+    <button class="tf-icon" onclick="limpiarTodosFiltrosMapa()" title="Limpiar todos los filtros">
+      <span>🧹</span>
+    </button>
+    <button class="tf-icon tf-icon-excel" onclick="exportarFincasExcel()" title="Exportar a Excel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="9" y1="13" x2="15" y2="19"/>
+        <line x1="15" y1="13" x2="9" y2="19"/>
+      </svg>
+    </button>
+    <button class="tf-icon" onclick="location.reload()" title="Actualizar">
+      <span>↻</span>
+    </button>
+    <button class="tf-icon" onclick="window.print()" title="Imprimir">
+      <span>🖨️</span>
+    </button>
+  </div>
+</div>
 
 <div class="workspace">
   <div class="sidebar" id="sidebar">
@@ -543,49 +668,6 @@ select.sb-input{color:var(--tx-1)}
   <div class="sb-filtros" id="filtrosLotes">
       <div class="sb-search">
         <input class="sb-input" id="busq" type="text" placeholder="Buscar finca o lote...">
-      </div>
-      <!-- Compañía/Productor/Sector/Finca ahora los controla el panel de Filtros globales
-           del shell INFOAGRO BI. Se mantienen en el DOM (ocultos) porque refreshAll/
-           refreshSectFinca/refreshFinca y aplicarFiltroGlobal siguen usando estos IDs. -->
-      <div class="combo-wrap" style="display:none;">
-        <div class="combo-label">Compañía</div>
-        <div class="combo-box" id="cbCia">
-          <div class="combo-trigger" onclick="toggleCombo('cbCia')">
-            <span class="combo-sel placeholder" id="cbCiaSel">Todas</span>
-            <span class="combo-arrow">▼</span>
-          </div>
-          <div class="combo-dropdown" id="cbCiaDD"></div>
-        </div>
-      </div>
-      <div class="combo-wrap" style="display:none;">
-        <div class="combo-label">Productor</div>
-        <div class="combo-box" id="cbProd">
-          <div class="combo-trigger" onclick="toggleCombo('cbProd')">
-            <span class="combo-sel placeholder" id="cbProdSel">Todos</span>
-            <span class="combo-arrow">▼</span>
-          </div>
-          <div class="combo-dropdown" id="cbProdDD"></div>
-        </div>
-      </div>
-      <div class="combo-wrap" style="display:none;">
-        <div class="combo-label">Sector</div>
-        <div class="combo-box" id="cbSect">
-          <div class="combo-trigger" onclick="toggleCombo('cbSect')">
-            <span class="combo-sel placeholder" id="cbSectSel">Todos</span>
-            <span class="combo-arrow">▼</span>
-          </div>
-          <div class="combo-dropdown" id="cbSectDD"></div>
-        </div>
-      </div>
-      <div class="combo-wrap" style="display:none;">
-        <div class="combo-label">Finca</div>
-        <div class="combo-box" id="cbFinca">
-          <div class="combo-trigger" onclick="toggleCombo('cbFinca')">
-            <span class="combo-sel placeholder" id="cbFincaSel">Todas</span>
-            <span class="combo-arrow">▼</span>
-          </div>
-          <div class="combo-dropdown" id="cbFincaDD"></div>
-        </div>
       </div>
       <div class="chips">
         <button class="chip on" data-est="todas"    onclick="setEst('todas')">Todas</button>
@@ -682,6 +764,8 @@ select.sb-input{color:var(--tx-1)}
           <button class="bi pri" id="btnD" onclick="iniciarDibujo()" title="Dibujar">✏️</button>
           <button class="bi act" id="btnActividades" onclick="abrirActividadesDesdeCtx()" style="display:none" title="Ver actividades">📋</button>
           <button class="bi rec" id="btnRecuentos" onclick="abrirRecuentosDesdeCtx()" style="display:none" title="Ver recuentos">🔬</button>
+          <button class="bi rec" id="btnEstresHidrico" onclick="abrirEstresHidricoDesdeCtx()" style="display:none" title="Ver estrés hídrico">💧</button>
+          <button class="bi rec" id="btnGerminacion" onclick="abrirGerminacionDesdeCtx()" style="display:none" title="Ver germinación">🌱</button>
           <label class="bi kmz" title="Cargar KMZ / KML">
             📂
             <input type="file" id="fileKMZ" accept=".kmz,.kml" style="display:none" onchange="cargarKMZ(this)">
@@ -902,14 +986,61 @@ select.sb-input{color:var(--tx-1)}
   </div>
 </div>
 
+<!-- PANEL FINCA — Lluvia acumulada + Germinación (semillas vs plantas) -->
+<!-- PANEL ESTRÉS HÍDRICO — se abre desde el botón 💧 del panel de contexto de ciclo/lote -->
+<div class="rec-panel" id="hidricoPanel">
+  <div class="rec-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div>
+      <div class="rec-title" id="hidricoPanelTitle">Estrés hídrico</div>
+      <div class="rec-sub" id="hidricoPanelSub">—</div>
+    </div>
+    <button onclick="cerrarHidricoPanel()" style="border:none;background:none;font-size:16px;color:var(--tx-3);cursor:pointer;padding:0 2px;line-height:1">✕</button>
+  </div>
+  <div class="rec-body" id="hidricoPanelBody" style="overflow-y:auto;">
+    <div style="text-align:center;padding:20px;color:var(--tx-3);font-size:12px" id="hidricoPanelLoading">⏳ Cargando lluvia...</div>
+
+    <div id="hidricoPanelContenido" style="display:none;">
+      <div style="font-size:10px;color:var(--tx-3);margin-bottom:4px;" id="hidricoResumen">—</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;" id="hidricoDiasSinLluvia"></div>
+      <canvas id="hidricoChart" style="width:100%;height:130px;display:block;"></canvas>
+      <div style="display:flex;gap:14px;margin-top:6px;font-size:9.5px;color:var(--tx-2);flex-wrap:wrap;">
+        <span><span style="display:inline-block;width:9px;height:9px;background:#1A7FC4;border-radius:2px;margin-right:4px;"></span>Lluvia (mm), semana suficiente</span>
+        <span><span style="display:inline-block;width:9px;height:9px;background:#CC3333;border-radius:2px;margin-right:4px;"></span>Lluvia (mm), semana con déficit</span>
+        <span><span style="display:inline-block;width:9px;height:2px;background:#2D6A4F;margin-right:4px;vertical-align:middle;"></span>Mm requeridos (Maní)</span>
+        <span><span style="display:inline-block;width:9px;height:2px;background:#22302A;margin-right:4px;vertical-align:middle;"></span>HOY</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PANEL GERMINACIÓN — se abre desde el botón 🌱 del panel de contexto de ciclo/lote -->
+<div class="rec-panel" id="germPanel">
+  <div class="rec-header" style="display:flex;align-items:flex-start;justify-content:space-between">
+    <div>
+      <div class="rec-title" id="germPanelTitle">Germinación</div>
+      <div class="rec-sub" id="germPanelSub">—</div>
+    </div>
+    <button onclick="cerrarGermPanel()" style="border:none;background:none;font-size:16px;color:var(--tx-3);cursor:pointer;padding:0 2px;line-height:1">✕</button>
+  </div>
+  <div class="rec-body" id="germPanelBody" style="overflow-y:auto;">
+    <div style="text-align:center;padding:20px;color:var(--tx-3);font-size:12px" id="germPanelLoading">⏳ Cargando germinación...</div>
+
+    <div id="germPanelContenido" style="display:none;">
+      <div style="font-size:10px;color:var(--tx-3);margin-bottom:6px;">Semillas sembradas vs plantas germinadas por lote — usa el recuento de 15 DDS si existe; si no, el de 10 DDS (más fiel a la planta ya establecida).</div>
+      <canvas id="germChart" style="width:100%;height:150px;display:block;"></canvas>
+      <div id="germLeyenda" style="display:flex;gap:14px;margin-top:6px;font-size:10px;color:var(--tx-2);"></div>
+    </div>
+  </div>
+</div>
+
 <!-- SELECTOR KMZ MÚLTIPLES POLÍGONOS -->
 <div class="kmz-selector" id="kmzSelector">
   <div class="kmz-modal">
-    <h3>📂 Seleccionar polígono</h3>
-    <p id="kmzSelectorInfo">El archivo contiene múltiples polígonos. Selecciona el que corresponde al lote.</p>
+    <h3>📂 Seleccionar polígono(s)</h3>
+    <p id="kmzSelectorInfo">El archivo contiene múltiples polígonos. Selecciona el o los que corresponden al lote.</p>
     <div id="kmzSelectorList"></div>
     <div class="kmz-actions">
-      <button onclick="aplicarKmzSeleccionado()" class="ba pri" style="flex:1">✓ Aplicar seleccionado</button>
+      <button onclick="aplicarKmzSeleccionado()" class="ba pri" style="flex:1">✓ Aplicar seleccionado(s)</button>
       <button onclick="cerrarKmzSelector()" class="ba sec" style="flex:1">✕ Cancelar</button>
     </div>
   </div>
@@ -920,11 +1051,53 @@ select.sb-input{color:var(--tx-1)}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
 // ═══════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+
+// GitHub JSON (actualizado por GitHub Actions) — misma fuente que usan
+// DbPluviosidad, Siembra/Germinación y GANTT. Se usa como respaldo/primario
+// para los 3 modelos que alimentan los paneles 💧 Estrés Hídrico y 🌱 Germinación,
+// porque la consulta directa al Worker (Odoo vía MCP) puede reflejar una
+// instancia parcial/desactualizada para x_pluviosidad.
+const GITHUB_PV   = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Pluviosidad.json";
+const GITHUB_SIEM = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Siembra.json";
+const GITHUB_GERM = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Germinacion.json";
+// Actividades (x_orden_campo_line_b660b) — se usa como RESPALDO de fecha de siembra
+// cuando el lote todavía no tiene Reporte de Siembra (x_siembra) formal cargado en
+// Odoo, pero sí quedó registrada la actividad "Siembra" ejecutada en campo.
+const GITHUB_ACT  = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_AvancesActividades.json";
+
+// Pluvia: GitHub es la fuente PRIMARIA (igual que en DbPluviosidad_INFOAGRO_BI.html),
+// con el Worker sólo como respaldo si GitHub no responde.
+async function fetchGitHubOrWorker(githubUrl, workerUrl) {
+  try {
+    const r = await fetch(githubUrl + "?cache=" + Date.now());
+    if (r.ok) {
+      const j = await r.json();
+      const records = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : []);
+      if (records.length) return j;
+    }
+  } catch(e) {}
+  try {
+    const r = await fetch(workerUrl);
+    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+  } catch(e) {}
+  return { result: [] };
+}
+
+// Siembra/Germinación: Worker PRIMERO (igual que en DbSiembrayGerminacion_INFOAGRO_BI.html),
+// GitHub como respaldo.
+async function fetchLiveOrGitHub(workerUrl, githubUrl) {
+  try {
+    const r = await fetch(workerUrl);
+    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
+  } catch(e) {}
+  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+}
 
 // Colores por cultivo
 const CULTIVO_COLOR = {
@@ -1028,6 +1201,22 @@ function closeAllCombos() {
 }
 function buildCombo(ddId, items, selSet, onToggle, labelFn, single=false) {
   const dd=document.getElementById(ddId); dd.innerHTML='';
+
+  // Buscador — filtra los .combo-item visibles por texto, sin tocar la lógica de
+  // selección/cascada existente (misma idea que el buscador del resto de secciones).
+  const searchWrap=document.createElement('div');
+  searchWrap.style.cssText='padding:6px;border-bottom:1px solid var(--border);flex-shrink:0;';
+  searchWrap.innerHTML=`<input type="text" placeholder="Buscar..." style="width:100%;padding:6px 9px;border:1px solid var(--border);border-radius:6px;font-size:11.5px;outline:none;font-family:inherit;background:var(--surface);color:var(--tx-1);">`;
+  searchWrap.querySelector('input').addEventListener('click', e=>e.stopPropagation());
+  searchWrap.querySelector('input').addEventListener('input', e=>{
+    const t=e.target.value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    dd.querySelectorAll('.combo-item').forEach(el=>{
+      const txt=(el.textContent||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      el.style.display = (!t || txt.includes(t)) ? 'flex' : 'none';
+    });
+  });
+  dd.appendChild(searchWrap);
+
   if(selSet.size>0&&!single) {
     const clr=document.createElement('div'); clr.className='combo-item-clear';
     clr.textContent='✕ Limpiar selección';
@@ -1288,8 +1477,12 @@ function selItemCiclo(finca_line_id, lote_id, lote_nombre, record_id, e) {
   // Mostrar botones de ciclo
   const btnRec=document.getElementById('btnRecuentos');
   const btnAct=document.getElementById('btnActividades');
+  const btnHidrico=document.getElementById('btnEstresHidrico');
+  const btnGerm=document.getElementById('btnGerminacion');
   if(btnRec) btnRec.style.display='flex';
   if(btnAct) btnAct.style.display='flex';
+  if(btnHidrico) btnHidrico.style.display='flex';
+  if(btnGerm) btnGerm.style.display='flex';
   document.getElementById('ctxAP').textContent=lote_obj?.area_p?.toFixed(2)||'—';
   // ctxAA removido
   document.getElementById('lblAP').textContent='Área lote';
@@ -1320,6 +1513,15 @@ function selItemCiclo(finca_line_id, lote_id, lote_nombre, record_id, e) {
   } catch(e){}
 
   renderCiclos();
+  refrescarPanelesHidricoGermSiVisibles();
+}
+
+// Si los paneles 💧 Estrés Hídrico o 🌱 Germinación están abiertos y el usuario hace
+// clic en otro polígono (ciclo o lote), los recarga con los datos del nuevo lote en
+// vez de dejarlos "pegados" mostrando el lote anterior.
+function refrescarPanelesHidricoGermSiVisibles() {
+  if(document.getElementById('hidricoPanel')?.classList.contains('vis')) abrirEstresHidricoDesdeCtx();
+  if(document.getElementById('germPanel')?.classList.contains('vis')) abrirGerminacionDesdeCtx();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1393,8 +1595,12 @@ function selLote(id,e) {
   document.getElementById('ctxCicloTag').style.display='none';
   const _btnRec=document.getElementById('btnRecuentos');
   const _btnAct=document.getElementById('btnActividades');
+  const _btnHidrico=document.getElementById('btnEstresHidrico');
+  const _btnGerm=document.getElementById('btnGerminacion');
   if(_btnRec) _btnRec.style.display='none';
   if(_btnAct) _btnAct.style.display='none';
+  if(_btnHidrico) _btnHidrico.style.display='none';
+  if(_btnGerm) _btnGerm.style.display='none';
   document.getElementById('ctxAP').textContent=(loteAct.area_p||0).toFixed(2);
   // ctxAA removido
   document.getElementById('lblAP').textContent='Área perímetro';
@@ -1748,6 +1954,7 @@ function renderPolCiclo(tmpId,geom,cultivo,nombre,lote_id,finca_id,ciclo_id_para
         setTimeout(reposicionarActPanel, 0); // por si Actividades ya estaba abierto de un clic anterior
         const _ley = document.getElementById('leyenda');
         if(_ley){ _ley.style.opacity='0'; _ley.style.pointerEvents='none'; }
+        refrescarPanelesHidricoGermSiVisibles();
       }
     }
 
@@ -1819,6 +2026,430 @@ function abrirRecuentosDesdeCtx() {
 function cerrarRecPanel() {
   document.getElementById('recPanel').classList.remove('vis');
   mostrarLeyenda();
+}
+
+// ═══════════════════════════════════════════════════
+// PANEL FINCA — Lluvia acumulada (x_pluviosidad) + Germinación por lote
+// (x_siembra semillas vs x_germinaciones plantas, priorizando 15 DDS sobre 10 DDS)
+// ═══════════════════════════════════════════════════
+let _fincaPanelCache = {}; // nombreFinca -> {lluvia, siembras, germinaciones} — evita recargar si ya se abrió antes en esta sesión
+
+// Milímetros de agua requeridos por semana de desarrollo del cultivo, contando desde
+// la semana de siembra (semana 0). Tabla fija para Maní — es el único cultivo con este
+// parámetro disponible por ahora.
+const MM_REQUERIDOS_MANI = [
+  1.78,1.78,2.54,5.08,7.62,8.89,15.24,20.32,22.86,27.94,38.10,44.45,48.26,50.80,
+  53.34,50.80,48.26,44.45,31.75,25.40,20.32
+];
+function mmRequeridoSemana(semana){
+  if(semana < 0) return 0;
+  if(semana < MM_REQUERIDOS_MANI.length) return MM_REQUERIDOS_MANI[semana];
+  return MM_REQUERIDOS_MANI[MM_REQUERIDOS_MANI.length-1]; // se mantiene el último valor tras la última semana de la tabla
+}
+
+// ═══════════════════════════════════════════════════
+// PANEL ESTRÉS HÍDRICO — se abre desde el botón 💧 del panel de contexto del ciclo/lote
+// seleccionado (mismo patrón que abrirActividadesDesdeCtx/abrirRecuentosDesdeCtx).
+// ═══════════════════════════════════════════════════
+async function abrirEstresHidricoDesdeCtx() {
+  if(!itemCicloAct) return;
+  const finca = itemCicloAct.finca_nombre;
+  const lote  = itemCicloAct.lote_nombre;
+  const ciclo = itemCicloAct.ciclo?.nombre;
+
+  document.getElementById('hidricoPanelTitle').textContent = lote;
+  document.getElementById('hidricoPanelSub').textContent = `${finca} · ${ciclo}`;
+  document.getElementById('hidricoPanelContenido').style.display = 'none';
+  document.getElementById('hidricoPanelLoading').style.display = '';
+  document.getElementById('hidricoPanel').classList.add('vis');
+
+  try {
+    const { pluvia, siembras, actividadesSiembra } = await cargarDatosHidricoGerm(finca);
+    const siembraLote = siembras.find(s => s.ciclo===ciclo && s.lote===lote);
+    let fechaSiembra = siembraLote ? siembraLote.fecha : null;
+    let esRespaldo = false;
+
+    // Respaldo: si no hay Reporte de Siembra (x_siembra) formal para este lote/ciclo,
+    // usar la fecha de la actividad "Siembra" ejecutada en campo (x_orden_campo),
+    // tomando la más antigua si hubo varias entradas parciales.
+    if(!fechaSiembra){
+      const actLote = actividadesSiembra.filter(a => a.ciclo===ciclo && a.lote===lote);
+      if(actLote.length){ fechaSiembra = actLote[0].fecha; esRespaldo = true; }
+    }
+
+    const resumen = document.getElementById('hidricoResumen');
+    let semanas = [];
+    if(!fechaSiembra){
+      resumen.textContent = 'Este lote no tiene fecha de siembra registrada para este ciclo.';
+    } else {
+      semanas = agruparLluviaPorSemana(pluvia, fechaSiembra);
+      const totalMm = semanas.reduce((a,s)=>a+s.mmReal,0);
+      const prefijo = esRespaldo ? 'Siembra (aprox., desde Actividades)' : 'Siembra';
+      resumen.textContent = `${prefijo}: ${formatoFechaCorta(fechaSiembra)} · ${totalMm.toFixed(1)} mm acumulados reales`;
+      if(esRespaldo){
+        resumen.title = 'Este lote no tiene Reporte de Siembra formal cargado en Odoo (x_siembra) para este ciclo. Se usó la fecha de la actividad "Siembra" registrada en Avance de Actividades como aproximación.';
+        resumen.style.cursor = 'help';
+      } else {
+        resumen.removeAttribute('title');
+        resumen.style.cursor = '';
+      }
+    }
+    const diasInfo = calcularDiasSinLluvia(pluvia);
+    dibujarChartEstresHidrico(document.getElementById('hidricoChart'), semanas, fechaSiembra, diasInfo);
+    dibujarDiasSinLluvia(document.getElementById('hidricoDiasSinLluvia'), diasInfo);
+
+    document.getElementById('hidricoPanelLoading').style.display = 'none';
+    document.getElementById('hidricoPanelContenido').style.display = '';
+  } catch(err) {
+    document.getElementById('hidricoPanelLoading').textContent = '⚠️ Error cargando lluvia: ' + err.message;
+  }
+}
+function cerrarHidricoPanel() {
+  document.getElementById('hidricoPanel').classList.remove('vis');
+}
+
+// ═══════════════════════════════════════════════════
+// PANEL GERMINACIÓN — se abre desde el botón 🌱 del panel de contexto del ciclo/lote
+// ═══════════════════════════════════════════════════
+async function abrirGerminacionDesdeCtx() {
+  if(!itemCicloAct) return;
+  const finca = itemCicloAct.finca_nombre;
+  const ciclo = itemCicloAct.ciclo?.nombre;
+
+  document.getElementById('germPanelTitle').textContent = finca;
+  document.getElementById('germPanelSub').textContent = ciclo;
+  document.getElementById('germPanelContenido').style.display = 'none';
+  document.getElementById('germPanelLoading').style.display = '';
+  document.getElementById('germPanel').classList.add('vis');
+
+  try {
+    const { siembras, germinaciones } = await cargarDatosHidricoGerm(finca);
+
+    const siembraPorLoteCiclo = {};
+    siembras.filter(s=>s.ciclo===ciclo).forEach(s=>{
+      if(!siembraPorLoteCiclo[s.lote]) siembraPorLoteCiclo[s.lote] = { suma:0, n:0 };
+      siembraPorLoteCiclo[s.lote].suma += s.semilla;
+      siembraPorLoteCiclo[s.lote].n++;
+    });
+    const germPorLoteCiclo = {};
+    germinaciones.filter(g=>g.ciclo===ciclo).forEach(g=>{
+      if(!germPorLoteCiclo[g.lote]) germPorLoteCiclo[g.lote] = { dds10:[], dds15:[] };
+      if(!isNaN(g.dds)){
+        if(g.dds >= 15) germPorLoteCiclo[g.lote].dds15.push(g.plantas);
+        else if(g.dds >= 10) germPorLoteCiclo[g.lote].dds10.push(g.plantas);
+      }
+    });
+    const lotesCiclo = [...new Set([...Object.keys(siembraPorLoteCiclo), ...Object.keys(germPorLoteCiclo)])].sort();
+    const germinacionData = lotesCiclo.map(l => {
+      const s = siembraPorLoteCiclo[l];
+      const g = germPorLoteCiclo[l] || { dds10:[], dds15:[] };
+      const usaDds15 = g.dds15.length > 0;
+      const muestras = usaDds15 ? g.dds15 : g.dds10;
+      const plantasProm = muestras.length ? muestras.reduce((a,b)=>a+b,0)/muestras.length : null;
+      return {
+        lote: l,
+        semillas: s ? s.suma/s.n : null,
+        plantas: plantasProm,
+        fuenteDds: usaDds15 ? '15 DDS' : (g.dds10.length ? '10 DDS' : 'Sin recuento'),
+      };
+    });
+
+    dibujarChartGerminacionFinca(document.getElementById('germChart'), germinacionData);
+    const leyenda = document.getElementById('germLeyenda');
+    leyenda.innerHTML = germinacionData.length
+      ? `<span><span style="display:inline-block;width:9px;height:9px;background:#C9963B;border-radius:2px;margin-right:4px;"></span>Semillas (m.l.)</span>
+         <span><span style="display:inline-block;width:9px;height:9px;background:#1A9448;border-radius:2px;margin-right:4px;"></span>Plantas germinadas (m.l.)</span>`
+      : '<span style="color:var(--tx-3)">Sin datos de siembra/germinación para este ciclo.</span>';
+
+    document.getElementById('germPanelLoading').style.display = 'none';
+    document.getElementById('germPanelContenido').style.display = '';
+  } catch(err) {
+    document.getElementById('germPanelLoading').textContent = '⚠️ Error cargando germinación: ' + err.message;
+  }
+}
+function cerrarGermPanel() {
+  document.getElementById('germPanel').classList.remove('vis');
+}
+
+// Carga y cachea (por finca) los 3 modelos necesarios para ambos paneles — evita
+// repetir la consulta si se abre Estrés Hídrico y luego Germinación del mismo lote.
+let _hidricoGermCache = {};
+async function cargarDatosHidricoGerm(finca) {
+  if(_hidricoGermCache[finca]) return _hidricoGermCache[finca];
+
+  const [pluviaRes, siembraRes, germRes, actRes] = await Promise.all([
+    fetchGitHubOrWorker(GITHUB_PV, `${WORKER}/query?base=info&model=x_pluviosidad`),
+    fetchLiveOrGitHub(`${WORKER}/query?base=info&model=x_siembra`, GITHUB_SIEM),
+    fetchLiveOrGitHub(`${WORKER}/query?base=info&model=x_germinaciones`, GITHUB_GERM),
+    fetchLiveOrGitHub(`${WORKER}/query?base=info&model=x_orden_campo_line_b660b`, GITHUB_ACT),
+  ]);
+
+  const extraerRecs = j => Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+  const nombreDe = v => Array.isArray(v) ? v[1] : v;
+  // Normaliza para comparar nombres de finca sin que espacios extra, tildes o may/min
+  // rompan el cruce entre modelos (x_pluviosidad/x_siembra/x_germinaciones pueden
+  // registrar el mismo nombre con variaciones mínimas de formato).
+  const norm = s => String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ');
+  const fincaNorm = norm(finca);
+
+  const pluviaRaw = extraerRecs(pluviaRes);
+  const pluvia = pluviaRaw
+    .filter(r => norm(nombreDe(r.x_studio_finca)) === fincaNorm)
+    .map(r => ({ fecha: r.x_studio_fecha, mm: Number(r.x_studio_cantidad_promedio||0) }))
+    .filter(r => r.fecha)
+    .sort((a,b) => a.fecha.localeCompare(b.fecha));
+
+  // Diagnóstico: si no hubo match pero el modelo sí tiene registros, mostrar en consola
+  // los nombres de finca reales que trae x_pluviosidad para comparar contra "finca".
+  if(!pluvia.length && pluviaRaw.length){
+    const nombresDisponibles = [...new Set(pluviaRaw.map(r=>nombreDe(r.x_studio_finca)))];
+    console.warn(`[Estrés hídrico] Sin match de lluvia para "${finca}". Nombres de finca en x_pluviosidad:`, nombresDisponibles);
+  }
+
+  const siembras = extraerRecs(siembraRes)
+    .filter(r => norm(nombreDe(r.x_studio_finca)) === fincaNorm)
+    .map(r => ({
+      ciclo: nombreDe(r.x_studio_ciclo) || 'Sin ciclo',
+      lote: nombreDe(r.x_studio_lote_de_finca) || 'Sin lote',
+      fecha: r.x_studio_fecha || null,
+      semilla: Number(r.x_studio_semilla_entre_x_mtrs_lineal||0),
+    }))
+    .filter(r => r.fecha);
+
+  const germinaciones = extraerRecs(germRes)
+    .filter(r => norm(nombreDe(r.x_studio_finca)) === fincaNorm)
+    .map(r => ({
+      ciclo: nombreDe(r.x_studio_ciclo) || 'Sin ciclo',
+      lote: nombreDe(r.x_studio_lote_de_la_finca) || 'Sin lote',
+      dds: parseFloat(r.x_studio_dds),
+      plantas: Number(r.x_studio_cant_plantas_x_mtr_lineal||0),
+    }));
+
+  // Actividades "Siembra" (x_orden_campo_line_b660b) — respaldo de fecha de siembra
+  // para cuando el lote todavía no tiene Reporte de Siembra (x_siembra) formal.
+  const actividadesSiembra = extraerRecs(actRes)
+    .filter(r => norm(nombreDe(r.x_studio_finca)) === fincaNorm
+              && norm(nombreDe(r.x_studio_activiadad_realizada)) === 'siembra')
+    .map(r => ({
+      ciclo: nombreDe(r.x_studio_ciclo) || 'Sin ciclo',
+      lote: nombreDe(r.x_studio_lote_agricola) || 'Sin lote',
+      fecha: r.x_studio_fecha || null,
+    }))
+    .filter(r => r.fecha)
+    .sort((a,b) => a.fecha.localeCompare(b.fecha));
+
+  const datos = { pluvia, siembras, germinaciones, actividadesSiembra };
+  _hidricoGermCache[finca] = datos;
+  return datos;
+}
+
+function formatoFechaCorta(f){
+  if(!f) return '—';
+  const p = f.split('-');
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return p.length===3 ? `${p[2]}-${meses[parseInt(p[1],10)-1]}-${p[0]}` : f;
+}
+
+// Umbrales (en días) para el semáforo de "días sin lluvia" — ajustables si Ignacio
+// define otro criterio agronómico. Por defecto: ≤5 verde, 6-10 amarillo, >10 rojo.
+const UMBRAL_DIAS_SIN_LLUVIA = { verde: 5, amarillo: 10 };
+
+// Calcula cuántos días pasaron desde la última lluvia registrada (mm>0) para esta
+// finca hasta hoy. Devuelve null si no hay ningún registro de lluvia.
+function calcularDiasSinLluvia(pluvia) {
+  const conLluvia = pluvia.filter(p => p.mm > 0);
+  if(!conLluvia.length) return null;
+  const ultima = conLluvia[conLluvia.length - 1]; // pluvia ya viene ordenada por fecha asc.
+  const fechaUltima = new Date(ultima.fecha + 'T00:00:00');
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const dias = Math.round((hoy - fechaUltima) / 86400000);
+  return { dias, fecha: ultima.fecha, mm: ultima.mm };
+}
+
+// Pinta el badge con semáforo junto al resumen del panel.
+function dibujarDiasSinLluvia(contenedor, info) {
+  if(!info){
+    contenedor.innerHTML = `<span style="font-size:10px;color:var(--tx-3);">Sin registros de lluvia para esta finca.</span>`;
+    return;
+  }
+  const { dias, fecha, mm } = info;
+  let clase = 'sem-verde';
+  if(dias > UMBRAL_DIAS_SIN_LLUVIA.amarillo) clase = 'sem-rojo';
+  else if(dias > UMBRAL_DIAS_SIN_LLUVIA.verde) clase = 'sem-amarillo';
+
+  contenedor.innerHTML = `
+    <div class="rec-semaforo ${clase}"></div>
+    <span style="font-size:10.5px;color:var(--tx-1);font-weight:600;">${dias} día${dias===1?'':'s'} sin lluvia</span>
+    <span style="font-size:9.5px;color:var(--tx-3);">(última: ${formatoFechaCorta(fecha)} · ${mm.toFixed(1)} mm)</span>
+  `;
+}
+
+// Agrupa la lluvia real en semanas contadas desde la fecha de siembra. SIEMPRE devuelve
+// las 21 semanas completas de la tabla de mm requeridos (MM_REQUERIDOS_MANI.length),
+// aunque la lluvia real todavía no llegue tan lejos — así la línea de "mm requeridos"
+// se ve completa desde el principio, mientras las barras de lluvia real se van
+// "construyendo" con el tiempo, semana a semana.
+function agruparLluviaPorSemana(pluvia, fechaSiembraStr){
+  const siembra = new Date(fechaSiembraStr+'T00:00:00');
+  const porSemana = {};
+  pluvia.forEach(p=>{
+    const fecha = new Date(p.fecha+'T00:00:00');
+    const dias = Math.floor((fecha - siembra) / 86400000);
+    if(dias < 0) return; // antes de la siembra no aplica al gráfico de estrés hídrico
+    const semana = Math.floor(dias/7);
+    porSemana[semana] = (porSemana[semana]||0) + p.mm;
+  });
+  const totalSemanas = MM_REQUERIDOS_MANI.length; // 21 semanas fijas, siempre completas
+  const semanas = [];
+  for(let s=0; s<totalSemanas; s++){
+    semanas.push({
+      semana: s,
+      mmReal: porSemana[s] ?? null, // null = todavía no hay dato real para esa semana (futura)
+      mmRequerido: mmRequeridoSemana(s)
+    });
+  }
+  return semanas;
+}
+
+// Gráfico combinado: barras de mm reales (sólo donde ya hay dato) + línea de mm
+// requeridos SIEMPRE completa en las 21 semanas — la línea se ve entera desde el
+// principio, marcando la meta, mientras las barras reales se van completando con el
+// tiempo a medida que llueve.
+function dibujarChartEstresHidrico(canvas, semanas, fechaSiembraStr, diasSinLluviaInfo) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 280, H = 130;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#F4F6F5'; ctx.fillRect(0,0,W,H);
+
+  if(!semanas.length){
+    ctx.fillStyle = '#8a9690'; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Sin fecha de siembra para calcular', W/2, H/2);
+    return;
+  }
+
+  const pad = { t:8, r:8, b:18, l:30 };
+  const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
+  const maxVal = Math.max(...semanas.map(s=>Math.max(s.mmReal||0, s.mmRequerido)), 1);
+  const grupoW = iW / semanas.length;
+  const barW = Math.max(2, grupoW*0.55);
+
+  ctx.strokeStyle = '#E1E0D8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t+iH); ctx.lineTo(pad.l+iW, pad.t+iH); ctx.stroke();
+
+  // Barras: mm reales llovidos esa semana — sólo se dibujan donde ya hay dato (mmReal
+  // !== null); las semanas futuras quedan sin barra, pero la línea de requeridos sigue.
+  semanas.forEach((s,i)=>{
+    if(s.mmReal === null) return;
+    const x = pad.l + i*grupoW + (grupoW-barW)/2;
+    const h = (s.mmReal/maxVal)*iH;
+    ctx.fillStyle = s.mmReal < s.mmRequerido ? '#CC3333' : '#1A7FC4';
+    ctx.fillRect(x, pad.t+iH-h, barW, h);
+  });
+
+  // Línea: mm requeridos según la semana de desarrollo del cultivo — siempre completa
+  ctx.beginPath();
+  semanas.forEach((s,i)=>{
+    const x = pad.l + i*grupoW + grupoW/2;
+    const y = pad.t + iH - (s.mmRequerido/maxVal)*iH;
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle = '#2D6A4F'; ctx.lineWidth = 2; ctx.stroke();
+
+  // Marca de semana con el último dato real cargado (línea punteada ámbar) — orienta
+  // hasta dónde llegan los registros de lluvia dentro de la tabla de 21 semanas.
+  const ultimaConDato = semanas.map((s,i)=>s.mmReal!==null?i:-1).filter(i=>i>=0).pop();
+  if(ultimaConDato !== undefined){
+    const x = pad.l + ultimaConDato*grupoW + grupoW/2;
+    ctx.strokeStyle = '#C9963B'; ctx.lineWidth = 1; ctx.setLineDash([3,3]);
+    ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, pad.t+iH); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Marca de HOY (fecha actual, ubicada en su semana correspondiente desde la siembra)
+  // + días sin lluvia — línea sólida oscura para distinguirla de la ámbar de arriba.
+  if(fechaSiembraStr){
+    const siembra = new Date(fechaSiembraStr+'T00:00:00');
+    const hoy = new Date(); hoy.setHours(0,0,0,0);
+    const semanaHoy = Math.floor((hoy - siembra) / (7*86400000));
+    if(semanaHoy >= 0 && semanaHoy < semanas.length){
+      const xHoy = pad.l + semanaHoy*grupoW + grupoW/2;
+      ctx.strokeStyle = '#22302A'; ctx.lineWidth = 1.3; ctx.setLineDash([]);
+      ctx.beginPath(); ctx.moveTo(xHoy, pad.t); ctx.lineTo(xHoy, pad.t+iH); ctx.stroke();
+
+      const xLabel = Math.min(Math.max(xHoy, pad.l+30), pad.l+iW-30);
+      const label = diasSinLluviaInfo ? `HOY · ${diasSinLluviaInfo.dias}d sin lluvia` : 'HOY';
+      const colorLabel = !diasSinLluviaInfo ? '#22302A'
+        : diasSinLluviaInfo.dias > UMBRAL_DIAS_SIN_LLUVIA.amarillo ? '#CC3333'
+        : diasSinLluviaInfo.dias > UMBRAL_DIAS_SIN_LLUVIA.verde ? '#C9963B' : '#2DB05A';
+      ctx.fillStyle = colorLabel; ctx.font = 'bold 8.5px Inter, sans-serif'; ctx.textAlign='center';
+      ctx.fillText(label, xLabel, pad.t+10);
+    }
+  }
+
+  ctx.fillStyle = '#8a9690'; ctx.font = '9px Inter, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('0', 2, pad.t+iH);
+  ctx.fillText(maxVal.toFixed(0)+'mm', 2, pad.t+8);
+  ctx.textAlign = 'center';
+  ctx.fillText('Semanas desde siembra →', pad.l+iW/2, H-4);
+}
+
+// Gráfico de barras agrupadas (semillas vs plantas) por lote
+function dibujarChartGerminacionFinca(canvas, germinacion) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 280, H = 150;
+  canvas.width = W; canvas.height = H;
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#F4F6F5'; ctx.fillRect(0,0,W,H);
+
+  if(!germinacion.length){
+    ctx.fillStyle = '#8a9690'; ctx.font = '11px Inter, sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText('Sin datos', W/2, H/2);
+    return;
+  }
+
+  const pad = { t:8, r:8, b:34, l:28 };
+  const iW = W - pad.l - pad.r, iH = H - pad.t - pad.b;
+  const maxVal = Math.max(...germinacion.flatMap(g=>[g.semillas||0, g.plantas||0]), 1);
+  const grupoW = iW / germinacion.length;
+  const barW = Math.max(3, grupoW*0.32);
+
+  ctx.strokeStyle = '#E1E0D8'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(pad.l, pad.t); ctx.lineTo(pad.l, pad.t+iH); ctx.lineTo(pad.l+iW, pad.t+iH); ctx.stroke();
+
+  germinacion.forEach((g,i)=>{
+    const xCentro = pad.l + i*grupoW + grupoW/2;
+
+    if(g.semillas !== null){
+      const h = (g.semillas/maxVal)*iH;
+      ctx.fillStyle = '#C9963B';
+      ctx.fillRect(xCentro - barW - 1, pad.t+iH-h, barW, h);
+    }
+    if(g.plantas !== null){
+      const h = (g.plantas/maxVal)*iH;
+      ctx.fillStyle = '#1A9448';
+      ctx.fillRect(xCentro + 1, pad.t+iH-h, barW, h);
+    }
+
+    ctx.save();
+    ctx.fillStyle = '#5C6B63'; ctx.font = '8px Inter, sans-serif';
+    ctx.translate(xCentro, pad.t+iH+4);
+    ctx.rotate(-Math.PI/5);
+    ctx.textAlign = 'right';
+    const nombreCorto = g.lote.length>10 ? g.lote.slice(0,9)+'…' : g.lote;
+    ctx.fillText(nombreCorto, 0, 0);
+    ctx.restore();
+
+    ctx.fillStyle = '#8a9690'; ctx.font = '7px Inter, sans-serif'; ctx.textAlign = 'center';
+    if(g.fuenteDds !== 'Sin recuento'){
+      const hMax = Math.max((g.semillas||0)/maxVal*iH, (g.plantas||0)/maxVal*iH);
+      ctx.fillText(g.fuenteDds, xCentro, pad.t+iH-hMax-3);
+    }
+  });
+
+  ctx.fillStyle = '#8a9690'; ctx.font = '9px Inter, sans-serif'; ctx.textAlign = 'left';
+  ctx.fillText('0', 2, pad.t+iH);
+  ctx.fillText(maxVal.toFixed(0), 2, pad.t+8);
 }
 
 // Umbrales semáforo por familia (ajustables)
@@ -1939,18 +2570,18 @@ function toggleRecFam(domId) {
 
 // ── SELECTOR KMZ ──────────────────────────────────────────────
 let _kmzPoligonos = [];
-let _kmzSelIdx    = 0;
+let _kmzSelIdxs   = new Set(); // multi-selección — varios polígonos pueden formar un solo lote
 let _kmzFileName  = '';
 let _kmzLayers    = {}; // previews en el mapa
 
 function mostrarKmzSelector(poligonos, fileName) {
   _kmzPoligonos = poligonos;
-  _kmzSelIdx    = 0;
+  _kmzSelIdxs   = new Set([0]); // multi-selección — arranca con el primero marcado
   _kmzFileName  = fileName;
 
   const loteNombre = modo==='lotes' ? loteAct?.nombre : itemCicloAct?.lote_nombre;
   document.getElementById('kmzSelectorInfo').textContent =
-    `El archivo tiene ${poligonos.length} polígonos. Selecciona el que corresponde a "${loteNombre}".`;
+    `El archivo tiene ${poligonos.length} polígonos. Marca todos los que forman el lote "${loteNombre}" — si son varias piezas del mismo lote, se combinan en una sola geometría.`;
 
   // Limpiar previews anteriores
   Object.values(_kmzLayers).forEach(l=>mapa.removeLayer(l));
@@ -1968,9 +2599,9 @@ function mostrarKmzSelector(poligonos, fileName) {
     layer.addTo(mapa);
     _kmzLayers[i] = layer;
 
-    // Item en lista
+    // Item en lista — checkbox (no radio), permite marcar varios a la vez
     const div = document.createElement('div');
-    div.className='kmz-item'+(i===0?' sel':'');
+    div.className='kmz-item'+(_kmzSelIdxs.has(i)?' sel':'');
     div.dataset.idx=i;
     div.innerHTML=`
       <div class="kmz-item-color" style="background:${color}"></div>
@@ -1978,30 +2609,85 @@ function mostrarKmzSelector(poligonos, fileName) {
         <div class="kmz-item-name">${p.nombre||'Polígono '+(i+1)}</div>
         <div class="kmz-item-area">${p.areaMzn.toFixed(2)} mzn</div>
       </div>
-      <div style="font-size:18px">${i===0?'✓':''}</div>`;
+      <div style="font-size:18px">${_kmzSelIdxs.has(i)?'✓':''}</div>`;
     div.onclick=()=>seleccionarKmzItem(i);
     list.appendChild(div);
   });
 
-  // Zoom al primer polígono
-  try{ mapa.fitBounds(_kmzLayers[0].getBounds(),{padding:[60,60]}); }catch(e){}
+  actualizarResumenKmzSeleccion();
+
+  // Zoom a todos los polígonos visibles
+  try{
+    const grupo = L.featureGroup(Object.values(_kmzLayers));
+    mapa.fitBounds(grupo.getBounds(),{padding:[60,60]});
+  }catch(e){}
   document.getElementById('kmzSelector').classList.add('vis');
 }
 
 function seleccionarKmzItem(idx) {
-  _kmzSelIdx = idx;
+  // Toggle: agrega o quita el polígono de la selección (no reemplaza como antes)
+  if(_kmzSelIdxs.has(idx)) _kmzSelIdxs.delete(idx);
+  else _kmzSelIdxs.add(idx);
+
   document.querySelectorAll('.kmz-item').forEach((el,i)=>{
-    el.classList.toggle('sel',i===idx);
-    el.querySelector('div:last-child').textContent = i===idx?'✓':'';
+    const sel = _kmzSelIdxs.has(i);
+    el.classList.toggle('sel', sel);
+    el.querySelector('div:last-child').textContent = sel?'✓':'';
   });
-  // Zoom al seleccionado
-  try{ mapa.fitBounds(_kmzLayers[idx].getBounds(),{padding:[60,60]}); }catch(e){}
+  actualizarResumenKmzSeleccion();
+
+  // Zoom a los polígonos actualmente marcados
+  try{
+    const capasSel = [..._kmzSelIdxs].map(i=>_kmzLayers[i]).filter(Boolean);
+    if(capasSel.length){
+      const grupo = L.featureGroup(capasSel);
+      mapa.fitBounds(grupo.getBounds(),{padding:[60,60]});
+    }
+  }catch(e){}
 }
 
+// Muestra un resumen (cuántos marcados + área combinada) arriba de la lista, para que
+// el usuario confirme visualmente que está combinando las piezas correctas.
+function actualizarResumenKmzSeleccion(){
+  const n = _kmzSelIdxs.size;
+  const areaTotal = [..._kmzSelIdxs].reduce((a,i)=>a+(_kmzPoligonos[i]?.areaMzn||0),0);
+  const info = document.getElementById('kmzSelectorInfo');
+  const loteNombre = modo==='lotes' ? loteAct?.nombre : itemCicloAct?.lote_nombre;
+  if(n===0){
+    info.innerHTML = `El archivo tiene ${_kmzPoligonos.length} polígonos. Marca los que forman el lote "${loteNombre}".`;
+  } else {
+    info.innerHTML = `<b>${n} polígono${n!==1?'s':''} seleccionado${n!==1?'s':''}</b> · área combinada: <b>${areaTotal.toFixed(2)} mzn</b>`;
+  }
+}
+
+// Combina los polígonos marcados en una sola geometría — un único Polygon si sólo se
+// marcó uno (comportamiento igual que antes), o un MultiPolygon si se marcaron varios
+// (caso de un lote agrícola exportado desde Google Earth como varias piezas separadas).
 async function aplicarKmzSeleccionado() {
-  const p = _kmzPoligonos[_kmzSelIdx];
+  const idxs = [..._kmzSelIdxs];
+  if(!idxs.length){ toast('Selecciona al menos un polígono', true); return; }
+
+  const seleccionados = idxs.map(i=>_kmzPoligonos[i]).filter(Boolean);
+  const areaTotal = seleccionados.reduce((a,p)=>a+(p.areaMzn||0),0);
+
+  let geomFinal;
+  if(seleccionados.length === 1){
+    geomFinal = seleccionados[0].geom;
+  } else {
+    // Combina todos los anillos de todos los polígonos/multipolígonos seleccionados
+    // en un único MultiPolygon — mismo criterio que getPolygons() ya usa para pintar
+    // lotes con múltiples piezas en el mapa.
+    const coordsCombinadas = [];
+    seleccionados.forEach(p=>{
+      const g = p.geom;
+      if(g.type==='Polygon') coordsCombinadas.push(g.coordinates);
+      else if(g.type==='MultiPolygon') g.coordinates.forEach(c=>coordsCombinadas.push(c));
+    });
+    geomFinal = { type:'MultiPolygon', coordinates: coordsCombinadas };
+  }
+
   cerrarKmzSelector();
-  if(p) await aplicarGeometria(p.geom, p.areaMzn, _kmzFileName);
+  await aplicarGeometria(geomFinal, areaTotal, _kmzFileName);
 }
 
 function cerrarKmzSelector() {
@@ -3350,6 +4036,40 @@ function toggleFiltros() {
   if(fab) fab.textContent = filtrosVisible ? '▲ ocultar' : '▼ mostrar';
 }
 
+// Colapsa/expande la fila de Compañía/Productor/Sector/Finca en la toolbar horizontal
+// (distinto de toggleFiltros(), que colapsa la búsqueda+chips dentro del sidebar).
+function toggleFiltrosExtra() {
+  document.getElementById('filtersWrapperMapas').classList.toggle('collapsed');
+}
+
+function limpiarTodosFiltrosMapa() {
+  selCias.clear(); selProds.clear(); selSects.clear(); selFincas.clear();
+  refreshAll();
+  renderLotes();
+}
+
+// Exporta la lista de fincas/lotes actualmente visible (según los filtros activos)
+// a un archivo Excel, usando el mismo LOTES ya cargado — sin nueva consulta a Odoo.
+function exportarFincasExcel() {
+  let l = LOTES;
+  if(selCias.size>0)  l = l.filter(x=>selCias.has(x.compania_id));
+  if(selProds.size>0) l = l.filter(x=>selProds.has(x.compania));
+  if(selSects.size>0) l = l.filter(x=>selSects.has(x.sector||'Sin sector'));
+  if(selFincas.size>0) l = l.filter(x=>selFincas.has(x.finca));
+
+  const filas = l.map(x => ({
+    Compañía: x.compania || '',
+    Sector: x.sector || 'Sin sector',
+    Finca: x.finca || '',
+    Lote: x.nombre || '',
+    Mapeado: (geo[x.id] ? 'Sí' : 'No')
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Fincas y Lotes');
+  XLSX.writeFile(wb, `INFOAGRO_MAPA_FINCAS_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 function toggleCtxPanel() {
   const p   = document.getElementById('ctxP');
   const btn = document.getElementById('ctxMinBtn');
@@ -3390,89 +4110,9 @@ function autoCollapseMobile() {
   }
 }
 
-// ===================================================================
-// ADAPTADOR DE FILTRO GLOBAL — INFOAGRO BI
-// A diferencia de las otras secciones, este panel tiene su PROPIO sidebar
-// de navegación (compañía → sector → finca, y selección de ciclo/lote).
-// El filtro global sólo fija el punto de partida; el usuario sigue
-// navegando libremente desde el sidebar propio del mapa después de eso.
-// ===================================================================
-let FILTRO_GLOBAL_PENDIENTE = null;
-
-function aplicarFiltroGlobal(filtros){
-  if(!COMPANIAS.length){ FILTRO_GLOBAL_PENDIENTE = filtros; return; }
-  filtros = filtros || {};
-
-  // --- Compañía: selCias es un Set de IDs, el filtro global manda nombres ---
-  if(filtros.compania){
-    selCias.clear();
-    if(filtros.compania.length){
-      COMPANIAS.forEach(c => { if(filtros.compania.includes(c.nombre)) selCias.add(c.id); });
-    }
-    // selCias vacío (0 o todas seleccionadas) = "Todas", igual que el comportamiento manual existente
-    selProds.clear(); selSects.clear(); selFincas.clear();
-    refreshAll();
-  }
-
-  // --- Sector: selSects es un Set de nombres (string), igual que el filtro global.
-  // Se aplica después de Compañía porque ese bloque limpia selSects al cambiar de compañía. ---
-  if(filtros.sector){
-    selSects.clear();
-    if(filtros.sector.length){
-      const disponibles = sectoresDisp(); // ya respeta la compañía recién aplicada
-      filtros.sector.forEach(s => { if(disponibles.includes(s)) selSects.add(s); });
-    }
-    refreshSectFinca();
-  }
-
-  // --- Finca: selFincas es un Set de nombres (string), igual que el filtro global ---
-  if(filtros.finca){
-    selFincas.clear();
-    if(filtros.finca.length){
-      const disponibles = fincasDisp(); // ya respeta compañía y sector recién aplicados
-      filtros.finca.forEach(f => { if(disponibles.includes(f)) selFincas.add(f); });
-    }
-    refreshFinca();
-  }
-
-  renderLotes();
-
-  // --- Ciclo: este panel sólo soporta UN ciclo activo a la vez (modo 'ciclos') ---
-  // Si el filtro global trae exactamente uno, se activa. Si trae varios o ninguno,
-  // se deja como estaba — el usuario elige manualmente desde el combo de Ciclos.
-  if(filtros.ciclo && filtros.ciclo.length === 1){
-    const match = CICLOS.find(c => c.nombre === filtros.ciclo[0]);
-    if(match) selCiclo(match.id);
-  }
-}
-
-function enviarUniversoAlShell(){
-  if(!COMPANIAS.length) return;
-  window.parent.postMessage({
-    type: 'INFOAGRO_UNIVERSO_RESPUESTA',
-    universo: {
-      compania: COMPANIAS.map(c => c.nombre).filter(Boolean).sort(),
-      sector: [...new Set(LOTES.map(l => l.sector))].filter(Boolean).sort(),
-      ciclo: [...new Set(CICLOS.map(c => c.nombre))].filter(Boolean).sort(),
-      finca: [...new Set(LOTES.map(l => l.finca))].filter(Boolean).sort()
-    }
-  }, '*');
-}
-
-window.addEventListener('message', function(ev){
-  if(!ev.data) return;
-  if(ev.data.type === 'INFOAGRO_FILTROS_UPDATE'){
-    aplicarFiltroGlobal(ev.data.filtros);
-  }
-  if(ev.data.type === 'INFOAGRO_SOLICITAR_UNIVERSO'){
-    enviarUniversoAlShell();
-  }
-});
-
-cargarDatos().then(function(){
-  if(FILTRO_GLOBAL_PENDIENTE) { const f = FILTRO_GLOBAL_PENDIENTE; FILTRO_GLOBAL_PENDIENTE = null; aplicarFiltroGlobal(f); }
-  enviarUniversoAlShell();
-});
+// Los filtros Compañía/Productor/Sector/Finca ahora viven de nuevo dentro de esta misma
+// sección (sidebar propio, visible arriba) — ya no se reciben desde un panel del shell.
+cargarDatos();
 </script>
 </body>
 </html>

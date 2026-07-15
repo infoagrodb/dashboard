@@ -133,7 +133,9 @@
   .principal{flex:1;display:flex;flex-direction:column;min-width:0;}
 
   .topbar{
-    display:flex;align-items:center;gap:14px;
+    display:none; /* En escritorio cada sección construye su propio título dentro
+                     de su toolbar-una-fila; el shell ya no muestra nada aquí. */
+    align-items:center;gap:14px;
     padding:14px 20px;
     background:var(--panel);
     border-bottom:1px solid var(--borde);
@@ -146,8 +148,6 @@
     width:36px;height:36px;border-radius:8px;
     align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;
   }
-  .titulo-vista{font-size:16px;font-weight:700;color:var(--verde-oscuro);margin-right:auto;}
-  .titulo-vista small{display:block;font-size:11px;font-weight:500;color:#8a9690;margin-top:1px;}
 
   .contenido{flex:1;position:relative;background:var(--fondo);overflow:hidden;}
   iframe.panel-iframe{width:100%;height:100%;border:none;display:block;}
@@ -164,121 +164,6 @@
   }
   @keyframes girar{to{transform:rotate(360deg);}}
 
-  /* ============ TOOLBAR DE ACCIONES ============ */
-  .toolbar-acciones{display:flex;align-items:center;gap:6px;position:relative;}
-
-  .btn-toolbar{
-    position:relative;
-    display:flex;align-items:center;gap:7px;
-    background:transparent;
-    border:1px solid var(--borde);
-    color:var(--texto);
-    border-radius:8px;
-    padding:8px 12px;
-    font-size:13px;
-    font-weight:600;
-    font-family:inherit;
-    cursor:pointer;
-    transition:background .15s, border-color .15s;
-  }
-  .btn-toolbar i{font-size:15px;color:var(--verde-medio);}
-  .btn-toolbar:hover{background:#F1F4F1;border-color:var(--verde-medio);}
-  .btn-toolbar.solo-icono{padding:8px;}
-  .btn-toolbar.solo-icono span{display:none;}
-
-  .btn-toolbar.destacado{
-    background:var(--verde-oscuro);border-color:var(--verde-oscuro);color:#fff;
-  }
-  .btn-toolbar.destacado i{color:var(--ambar);}
-  .btn-toolbar.destacado:hover{background:var(--verde-medio);border-color:var(--verde-medio);}
-  .btn-toolbar:disabled{opacity:.45;cursor:not-allowed;}
-  .btn-toolbar:disabled:hover{background:transparent;border-color:var(--borde);}
-
-  .badge-filtro{
-    position:absolute;top:-6px;right:-6px;
-    background:var(--ambar);color:#2A1F0A;
-    font-size:10px;font-weight:800;
-    width:16px;height:16px;border-radius:50%;
-    display:flex;align-items:center;justify-content:center;
-    display:none;
-  }
-  .badge-filtro.activo{display:flex;}
-
-  /* ---- Panel flotante de filtros en cascada ---- */
-  .panel-filtros-flotante{
-    position:absolute;
-    top:calc(100% + 10px);
-    right:0;
-    width:300px;
-    background:#fff;
-    border:1px solid var(--borde);
-    border-radius:12px;
-    box-shadow:0 14px 34px rgba(27,67,50,.16);
-    padding:16px;
-    z-index:70;
-    display:none;
-    flex-direction:column;
-    gap:12px;
-  }
-  .panel-filtros-flotante.abierto{display:flex;}
-  .panel-filtros-flotante::before{
-    content:"";
-    position:absolute;
-    top:-6px;right:18px;
-    width:12px;height:12px;
-    background:#fff;
-    border-left:1px solid var(--borde);
-    border-top:1px solid var(--borde);
-    transform:rotate(45deg);
-  }
-  .panel-filtros-titulo{
-    font-size:13px;font-weight:700;color:var(--verde-oscuro);
-    display:flex;align-items:center;justify-content:space-between;
-  }
-  .panel-filtros-titulo i{cursor:pointer;color:#8a9690;font-size:14px;}
-  .panel-filtros-nota{font-size:11px;color:#8a9690;margin-top:-6px;line-height:1.4;}
-
-  .filtro-campo{display:flex;flex-direction:column;gap:4px;position:relative;}
-  .filtro-campo label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#8a9690;font-weight:700;}
-
-  .ms-dropdown{
-    width:100%;padding:8px 10px;border:1px solid var(--borde);border-radius:8px;
-    font-size:13px;background:#fff;cursor:pointer;user-select:none;
-    display:flex;justify-content:space-between;align-items:center;height:34px;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .ms-dropdown:hover{border-color:var(--verde-medio);}
-  .ms-dropdown::after{content:"▼";font-size:8px;color:#8a9690;margin-left:6px;}
-
-  .ms-panel{
-    display:none;flex-direction:column;position:absolute;top:100%;left:0;right:0;background:#fff;
-    border:1px solid var(--borde);border-radius:8px;max-height:220px;overflow:hidden;
-    z-index:110;box-shadow:0 10px 26px rgba(27,67,50,.18);margin-top:6px;
-  }
-  .ms-panel.show{display:flex;}
-  .ms-search{padding:8px;border-bottom:1px solid var(--borde);flex-shrink:0;}
-  .ms-search input{
-    width:100%;padding:6px 9px;border:1px solid var(--borde);border-radius:6px;
-    font-size:12px;outline:none;font-family:inherit;
-  }
-  .ms-search input:focus{border-color:var(--verde-medio);}
-  .ms-items{overflow-y:auto;flex:1 1 auto;min-height:0;padding:4px 0;}
-  .ms-item{display:flex;align-items:center;gap:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;}
-  .ms-item:hover{background:#F1F4F1;}
-  .ms-item.selectall{border-bottom:1px solid var(--borde);font-weight:700;}
-  .ms-item input{margin:0;accent-color:var(--verde-oscuro);}
-  .ms-vacio{padding:14px 12px;text-align:center;font-size:12px;color:#8a9690;}
-  .ms-footer{display:flex;gap:8px;padding:8px;border-top:1px solid var(--borde);flex-shrink:0;}
-  .ms-footer button{
-    flex:1;border:none;border-radius:6px;padding:6px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;
-  }
-  .ms-footer .ok{background:var(--verde-oscuro);color:#fff;}
-  .ms-footer .ok:hover{background:var(--verde-medio);}
-  .ms-footer .cancel{background:#F1F4F1;color:var(--texto);}
-
-  .panel-filtros-acciones{display:flex;gap:8px;margin-top:2px;}
-  .panel-filtros-acciones .btn-toolbar{flex:1;justify-content:center;}
-
   /* ============ MÓVIL ============ */
   @media (max-width:820px){
     .sidebar{
@@ -293,13 +178,7 @@
       display:none;position:fixed;inset:0;background:rgba(20,26,43,.4);z-index:35;
     }
     .overlay-sidebar.activo{display:block;}
-    .topbar{gap:8px;}
-    .btn-toolbar span{display:none;}
-    .btn-toolbar{padding:8px;}
-    .panel-filtros-flotante{
-      position:fixed;top:60px;right:10px;left:10px;width:auto;
-    }
-    .panel-filtros-flotante::before{display:none;}
+    .topbar{display:flex;gap:8px;}
   }
 </style>
 </head>
@@ -354,55 +233,6 @@
       <button class="btn-menu-movil" id="btnAbrirSidebar" type="button" title="Abrir menú">
         <i class="bi bi-list"></i>
       </button>
-      <div class="titulo-vista" id="tituloVista">Pluviosidad<small id="subtituloVista">Análisis histórico</small></div>
-
-      <div class="toolbar-acciones">
-        <button class="btn-toolbar solo-icono" id="btnActualizar" type="button" title="Actualizar">
-          <i class="bi bi-arrow-clockwise"></i>
-        </button>
-        <button class="btn-toolbar solo-icono" id="btnImprimir" type="button" title="Imprimir">
-          <i class="bi bi-printer"></i>
-        </button>
-        <button class="btn-toolbar destacado" id="btnFiltro" type="button" title="Filtros globales" disabled>
-          <i class="bi bi-funnel"></i><span>Filtros</span>
-          <span class="badge-filtro" id="badgeFiltro">0</span>
-        </button>
-
-        <!-- Barra de filtros GLOBAL — se reconstruye con el universo real de cada sección al cambiar de vista -->
-        <div class="panel-filtros-flotante" id="panelFiltros">
-          <div class="panel-filtros-titulo">
-            Filtros globales
-            <i class="bi bi-x-lg" id="btnCerrarPanelFiltros"></i>
-          </div>
-          <div class="panel-filtros-nota" id="notaFiltros">Cargando universo de datos de esta sección…</div>
-
-          <div class="filtro-campo" id="campoCompania" style="display:none;">
-            <label>Compañía</label>
-            <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'msCompania')">Todas</div>
-            <div class="ms-panel" id="msCompania"></div>
-          </div>
-          <div class="filtro-campo" id="campoSector" style="display:none;">
-            <label>Sector</label>
-            <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'msSector')">Todos</div>
-            <div class="ms-panel" id="msSector"></div>
-          </div>
-          <div class="filtro-campo" id="campoCiclo" style="display:none;">
-            <label>Ciclo</label>
-            <div class="ms-dropdown" id="dropCiclo" onclick="toggleMs(event,'msCiclo')">Todos</div>
-            <div class="ms-panel" id="msCiclo"></div>
-          </div>
-          <div class="filtro-campo" id="campoFinca" style="display:none;">
-            <label>Finca</label>
-            <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'msFinca')">Todas</div>
-            <div class="ms-panel" id="msFinca"></div>
-          </div>
-
-          <div class="panel-filtros-acciones">
-            <button class="btn-toolbar" id="btnLimpiarFiltros" type="button">Limpiar</button>
-            <button class="btn-toolbar destacado" id="btnAplicarFiltros" type="button">Aplicar</button>
-          </div>
-        </div>
-      </div>
     </div>
 
     <div class="contenido">
@@ -419,13 +249,9 @@
   const btnAbrir = document.getElementById('btnAbrirSidebar');
   const btnCerrar = document.getElementById('btnCerrarSidebar');
   const overlay = document.getElementById('overlaySidebar');
-  const tituloVista = document.getElementById('tituloVista');
-  const subtituloVista = document.getElementById('subtituloVista');
   const items = document.querySelectorAll('.sidebar .item[data-archivo]');
   const frame = document.getElementById('frameSeccion');
   const estadoCarga = document.getElementById('estadoCarga');
-  const btnFiltro = document.getElementById('btnFiltro');
-  const notaFiltros = document.getElementById('notaFiltros');
 
   function abrirSidebar(){ sidebar.classList.add('expandida'); overlay.classList.add('activo'); }
   function cerrarSidebar(){ sidebar.classList.remove('expandida'); overlay.classList.remove('activo'); }
@@ -434,18 +260,11 @@
   btnCerrar.addEventListener('click', cerrarSidebar);
   overlay.addEventListener('click', cerrarSidebar);
 
-  // ================= ESTADO POR SECCIÓN =================
-  // Cada sección mantiene su propio universo y su propia selección de filtros,
-  // para no mezclar "Finca El Roble" de una sección con la de otra si cambian de vista.
-  const estadoSecciones = {}; // archivo -> { universo:{compania,sector,ciclo,finca}, seleccion:{...}, listo:bool }
+  // ================= CAMBIO DE SECCIÓN =================
+  // El shell ya NO maneja filtros: cada sección tiene su propio panel de filtros
+  // (Compañía/Sector/Ciclo/Finca), visible dentro de su propio iframe, tal como
+  // funcionaba antes de intentar centralizarlo aquí.
   let archivoActivo = null;
-
-  function estadoDe(archivo){
-    if(!estadoSecciones[archivo]){
-      estadoSecciones[archivo] = { universo: {compania:[],sector:[],ciclo:[],finca:[]}, seleccion: {compania:[],sector:[],ciclo:[],finca:[]}, listo:false };
-    }
-    return estadoSecciones[archivo];
-  }
 
   items.forEach((item) => {
     item.addEventListener('click', (e) => {
@@ -453,8 +272,6 @@
       if(item.classList.contains('activo')) return; // ya está activa, no recargar
       items.forEach(i => i.classList.remove('activo'));
       item.classList.add('activo');
-      tituloVista.childNodes[0].textContent = item.dataset.vista;
-      subtituloVista.textContent = item.dataset.sub || '';
       cambiarSeccion(item.dataset.archivo);
       if(window.innerWidth <= 820) cerrarSidebar();
     });
@@ -463,292 +280,12 @@
   function cambiarSeccion(archivo){
     archivoActivo = archivo;
     estadoCarga.classList.remove('oculto');
-    btnFiltro.disabled = true;
-    cerrarPanelFiltros();
     frame.src = archivo;
-
-    const est = estadoDe(archivo);
-    if(est.listo){
-      // ya visitamos esta sección antes en este mismo shell — reconstruir el panel sin esperar
-      construirPanelFiltros(archivo);
-    } else {
-      notaFiltros.textContent = 'Cargando universo de datos de esta sección…';
-    }
   }
 
   frame.addEventListener('load', () => {
     estadoCarga.classList.add('oculto');
-    // Pedirle a la sección recién cargada su universo real de compañía/ciclo/finca
-    frame.contentWindow.postMessage({ type:'INFOAGRO_SOLICITAR_UNIVERSO' }, '*');
-    // Si la sección ya tenía filtros aplicados de una visita previa, reenviarlos
-    const est = estadoDe(archivoActivo);
-    if(est.listo) enviarFiltros();
   });
-
-  // ================= RECEPCIÓN DE MENSAJES DEL IFRAME =================
-  window.addEventListener('message', (ev) => {
-    if(!ev.data) return;
-    if(ev.data.type === 'INFOAGRO_UNIVERSO_RESPUESTA'){
-      const archivo = archivoActivo; // el único iframe activo en este momento
-      const est = estadoDe(archivo);
-      est.universo = ev.data.universo || {compania:[],sector:[],ciclo:[],finca:[]};
-      claves.forEach(k => { if(!est.universo[k]) est.universo[k] = []; }); // por si una sección no reporta alguna clave
-      // Combinaciones reales (filas únicas compania/sector/ciclo/finca) — si la sección
-      // no las reporta (secciones más viejas), se cae a "sin relación conocida" y el
-      // panel se comporta como antes (todas las opciones siempre visibles).
-      est.combinaciones = Array.isArray(ev.data.combinaciones) ? ev.data.combinaciones : null;
-      console.log('[DEBUG cascada] Universo recibido de', archivo, ':', est.universo);
-      console.log('[DEBUG cascada] Combinaciones recibidas:', est.combinaciones ? est.combinaciones.length : 'null', est.combinaciones ? est.combinaciones.slice(0,5) : null);
-      if(!est.listo){
-        // primera vez que esta sección responde: seleccionar todo por defecto
-        est.seleccion = {};
-        claves.forEach(k => { est.seleccion[k] = [...est.universo[k]]; });
-        est.listo = true;
-      }
-      if(archivo === archivoActivo){
-        construirPanelFiltros(archivo);
-        btnFiltro.disabled = false;
-      }
-    }
-    if(ev.data.type === 'GZP_DATOS_EXPORT' || ev.data.type === 'INFOAGRO_DATOS_EXPORT'){
-      manejarExportacion(ev.data);
-    }
-  });
-
-  // ================= PANEL DE FILTROS DINÁMICO (multiselect en cascada) =================
-  const claves = ['compania','sector','ciclo','finca'];
-  function idsFor(llave){ return { drop:'drop'+cap(llave), panel:'ms'+cap(llave), campo:'campo'+cap(llave) }; }
-  function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
-  function normalizar(t){ return String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
-
-  // Dado el estado actual (combinaciones + selección en curso de los otros campos),
-  // devuelve qué valores de "llave" siguen siendo alcanzables — esto es lo que hace
-  // real la cascada (ej. si Sector=Sector 1 está marcado, Finca sólo debe ofrecer
-  // las fincas que existen en Sector 1, no el universo completo de fincas).
-  function universoDisponible(est, llave){
-    if(!est.combinaciones){
-      console.log('[DEBUG cascada] Sin combinaciones para', llave, '-> universo completo sin filtrar');
-      return est.universo[llave] || [];
-    }
-    // Sólo se usan como condicionantes las claves que esta sección realmente expone
-    // (universo no vacío) — si Mapas no maneja Ciclo, un filtro de Ciclo elegido en
-    // otra sección no debe bloquear las combinaciones aquí.
-    const otras = claves.filter(k => k !== llave && (est.universo[k]||[]).length > 0);
-    const filasValidas = est.combinaciones.filter(fila =>
-      otras.every(k => {
-        const sel = est.seleccionEnCurso ? est.seleccionEnCurso[k] : est.seleccion[k];
-        return !sel || !sel.length || sel.includes(fila[k]);
-      })
-    );
-    const disponibles = new Set(filasValidas.map(fila => fila[llave]).filter(Boolean));
-    if(llave === 'finca') console.log('[DEBUG cascada] finca <- seleccionEnCurso:', JSON.stringify(est.seleccionEnCurso), '| filasValidas:', filasValidas.length, '| disponibles:', [...disponibles]);
-    // Se preserva el orden original del universo completo, sólo se filtra
-    return (est.universo[llave] || []).filter(v => disponibles.has(v));
-  }
-
-  function construirPanelFiltros(archivo){
-    const est = estadoDe(archivo);
-    // Selección "en curso" = lo que hay marcado en los checkboxes ahora mismo (incluye
-    // cambios sin Aceptar todavía), para que la cascada reaccione mientras el usuario
-    // va tildando, no sólo después de presionar Aceptar en cada campo.
-    est.seleccionEnCurso = est.seleccionEnCurso || JSON.parse(JSON.stringify(est.seleccion));
-    let algunCampo = false;
-
-    claves.forEach(llave => {
-      const {campo, panel} = idsFor(llave);
-      const universoCompleto = est.universo[llave] || [];
-      const campoEl = document.getElementById(campo);
-      if(!universoCompleto.length){ campoEl.style.display = 'none'; return; }
-      campoEl.style.display = '';
-      algunCampo = true;
-
-      const universo = universoDisponible(est, llave);
-      const cont = document.getElementById(panel);
-      let itemsHtml = '';
-      universoCompleto.forEach(val => {
-        const disponible = universo.includes(val);
-        const marcadoPrevio = est.seleccion[llave].includes(val) || !est.seleccion[llave].length;
-        itemsHtml += `<div class="ms-item" data-val="${val}" data-texto="${normalizar(val)}" data-disponible="${disponible}" style="${disponible?'':'display:none;'}" onclick="event.stopPropagation();">
-          <input type="checkbox" value="${val}" ${marcadoPrevio && disponible ? 'checked' : ''} onchange="actualizarSelectAll('${llave}')">
-          <span>${val}</span>
-        </div>`;
-      });
-      cont.innerHTML = `
-        <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="buscarMs('${llave}', this.value)" onclick="event.stopPropagation();"></div>
-        <div class="ms-item selectall" onclick="event.stopPropagation();">
-          <input type="checkbox" class="selectall-cb" onchange="toggleTodoVisible('${llave}', this.checked)">
-          <span>(Seleccionar todo)</span>
-        </div>
-        <div class="ms-items">${itemsHtml}</div>
-        <div class="ms-footer">
-          <button type="button" class="cancel" onclick="event.stopPropagation(); cerrarMs('${llave}', true)">Cancelar</button>
-          <button type="button" class="ok" onclick="event.stopPropagation(); aplicarMs('${llave}')">Aceptar</button>
-        </div>`;
-      sincronizarChecks(llave);
-      actualizarTextoDrop(llave);
-    });
-
-    notaFiltros.textContent = algunCampo
-      ? 'Se aplican sólo a esta sección · estilo Excel (buscar / multi-selección / cascada)'
-      : 'Esta sección no expone campos de filtro compartidos.';
-    actualizarBadge();
-  }
-
-  function sincronizarChecks(llave){
-    const est = estadoDe(archivoActivo);
-    const {panel} = idsFor(llave);
-    document.querySelectorAll('#'+panel+' .ms-items input[type=checkbox]').forEach(cb => {
-      cb.checked = est.seleccion[llave].includes(cb.value) || !est.seleccion[llave].length;
-    });
-    actualizarSelectAll(llave);
-  }
-
-  window.toggleMs = function(ev, panelId){
-    ev.stopPropagation();
-    const llave = claves.find(k => idsFor(k).panel === panelId);
-    const panel = document.getElementById(panelId);
-    const abierto = panel.classList.contains('show');
-    document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('show'));
-    if(!abierto){ sincronizarChecks(llave); panel.classList.add('show'); }
-  };
-
-  window.actualizarSelectAll = function(llave){
-    const {panel} = idsFor(llave);
-    const cont = document.getElementById(panel);
-    const selCb = cont.querySelector('.selectall-cb');
-    const visibles = Array.from(cont.querySelectorAll('.ms-items .ms-item')).filter(el => el.style.display !== 'none');
-    const cbs = visibles.map(el => el.querySelector('input[type=checkbox]'));
-    const marcados = cbs.filter(cb => cb.checked).length;
-    if(cbs.length === 0){ selCb.checked=false; selCb.indeterminate=false; return; }
-    selCb.checked = marcados === cbs.length;
-    selCb.indeterminate = marcados > 0 && marcados < cbs.length;
-  };
-
-  window.toggleTodoVisible = function(llave, marcar){
-    const {panel} = idsFor(llave);
-    document.querySelectorAll('#'+panel+' .ms-items .ms-item').forEach(el => {
-      if(el.style.display === 'none') return;
-      const cb = el.querySelector('input[type=checkbox]');
-      if(cb) cb.checked = marcar;
-    });
-    actualizarSelectAll(llave);
-  };
-
-  window.buscarMs = function(llave, texto){
-    const {panel} = idsFor(llave);
-    const t = normalizar(texto || '');
-    document.querySelectorAll('#'+panel+' .ms-items .ms-item').forEach(el => {
-      const disponible = el.getAttribute('data-disponible') !== 'false';
-      const coincide = !t || (el.getAttribute('data-texto')||'').includes(t);
-      el.style.display = (disponible && coincide) ? 'flex' : 'none';
-    });
-    actualizarSelectAll(llave);
-  };
-
-  window.aplicarMs = function(llave){
-    const {panel} = idsFor(llave);
-    const est = estadoDe(archivoActivo);
-    const marcados = Array.from(document.querySelectorAll('#'+panel+' .ms-items input[type=checkbox]:checked')).map(cb => cb.value);
-    est.seleccion[llave] = marcados;
-    est.seleccionEnCurso[llave] = marcados;
-    document.getElementById(panel).classList.remove('show');
-    // Reconstruir todo el panel: al aceptar un campo, los demás deben recalcular su
-    // cascada (ej. al aceptar Sector, Finca debe reducirse a las fincas de ese sector).
-    construirPanelFiltros(archivoActivo);
-  };
-
-  window.cerrarMs = function(llave, revertir){
-    const {panel} = idsFor(llave);
-    document.getElementById(panel).classList.remove('show');
-    if(revertir){
-      const est = estadoDe(archivoActivo);
-      est.seleccionEnCurso[llave] = [...est.seleccion[llave]];
-      sincronizarChecks(llave);
-    }
-  };
-
-  function actualizarTextoDrop(llave){
-    const est = estadoDe(archivoActivo);
-    const {drop} = idsFor(llave);
-    const el = document.getElementById(drop);
-    if(!el) return;
-    const marcados = est.seleccion[llave] || [];
-    const total = (est.universo[llave] || []).length;
-    if(!total){ el.textContent = '—'; return; }
-    if(marcados.length === total) el.textContent = 'Todas';
-    else if(marcados.length === 0) el.textContent = 'Ninguno';
-    else if(marcados.length === 1) el.textContent = marcados[0];
-    else el.textContent = marcados.length + ' sel.';
-  }
-
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.ms-panel').forEach(p => p.classList.remove('show'));
-  });
-
-  // ---------- Panel flotante de filtros (contenedor) ----------
-  const panelFiltros = document.getElementById('panelFiltros');
-  const btnCerrarPanelFiltros = document.getElementById('btnCerrarPanelFiltros');
-  const btnAplicarFiltros = document.getElementById('btnAplicarFiltros');
-  const btnLimpiarFiltros = document.getElementById('btnLimpiarFiltros');
-  const badgeFiltro = document.getElementById('badgeFiltro');
-
-  function togglePanelFiltros(){ if(!btnFiltro.disabled) panelFiltros.classList.toggle('abierto'); }
-  function cerrarPanelFiltros(){ panelFiltros.classList.remove('abierto'); document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show')); }
-
-  btnFiltro.addEventListener('click', (e) => { e.stopPropagation(); togglePanelFiltros(); });
-  btnCerrarPanelFiltros.addEventListener('click', cerrarPanelFiltros);
-  panelFiltros.addEventListener('click', (e) => e.stopPropagation());
-
-  function actualizarBadge(){
-    const est = estadoDe(archivoActivo);
-    let n = 0;
-    claves.forEach(k => {
-      const total = (est.universo[k]||[]).length;
-      const sel = (est.seleccion[k]||[]).length;
-      if(total && sel < total) n++;
-    });
-    badgeFiltro.textContent = n;
-    badgeFiltro.classList.toggle('activo', n > 0);
-  }
-
-  function enviarFiltros(){
-    const est = estadoDe(archivoActivo);
-    const filtros = {};
-    claves.forEach(k => {
-      const total = (est.universo[k]||[]).length;
-      const sel = est.seleccion[k]||[];
-      filtros[k] = (total && sel.length < total) ? sel : []; // vacío = "todos" para la sección
-    });
-    frame.contentWindow.postMessage({ type:'INFOAGRO_FILTROS_UPDATE', filtros: filtros }, '*');
-  }
-
-  btnAplicarFiltros.addEventListener('click', () => {
-    actualizarBadge();
-    enviarFiltros();
-    cerrarPanelFiltros();
-  });
-
-  btnLimpiarFiltros.addEventListener('click', () => {
-    const est = estadoDe(archivoActivo);
-    claves.forEach(k => { est.seleccion[k] = [...(est.universo[k]||[])]; });
-    est.seleccionEnCurso = JSON.parse(JSON.stringify(est.seleccion));
-    construirPanelFiltros(archivoActivo);
-    actualizarBadge();
-    enviarFiltros();
-  });
-
-  // ---------- Actualizar / Imprimir ----------
-  document.getElementById('btnActualizar').addEventListener('click', () => {
-    frame.contentWindow.location.reload();
-  });
-  document.getElementById('btnImprimir').addEventListener('click', () => {
-    frame.contentWindow.print();
-  });
-
-  // ---------- Exportación: cada sección ya sabe exportar por su cuenta con XLSX propio ----------
-  // (Pluviosidad, GANTT y Siembra ya tienen su propio botón "Exportar" interno con su formato correcto;
-  // no se centraliza aquí para no perder columnas/formatos específicos de cada matriz pivot).
-  function manejarExportacion(){ /* reservado para un futuro export centralizado si se requiere */ }
 
 })();
 </script>

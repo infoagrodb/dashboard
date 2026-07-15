@@ -77,28 +77,138 @@ body{
   align-items: center;
 }
 
-/* BOTÓN DE MOSTRAR/OCULTAR FILTROS */
+/* BOTÓN DE MOSTRAR/OCULTAR FILTROS — toolbar flotante fija, esquina superior derecha
+   del iframe (coincide con el hueco que deja el shell INFOAGRO BI en su topbar). */
 .btn-hdr-toggle {
-  background: rgba(255, 255, 255, 0.1); 
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 0 10px; 
-  height: 24px;
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 500;
+  background: #ffffff;
+  color: #1B4332;
+  border: 1.5px solid #E1E0D8;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 0 14px;
+  height: 34px;
   cursor: pointer;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
   transition: all 0.2s ease;
 }
-.btn-hdr-toggle:hover { 
-  background: rgba(255, 255, 255, 0.2); 
-  border-color: rgba(255, 255, 255, 0.3);
+.btn-hdr-toggle:hover {
+  background: #F1F4F1;
+  border-color: #2D6A4F;
 }
 
 /* CONTENEDOR DE FILTROS */
+/* ---------- TOOLBAR DE UNA SOLA FILA — mismo patrón en las 5 secciones de INFOAGRO BI ---------- */
+.toolbar-una-fila{
+  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+  background:var(--card-bg); border:1px solid var(--border-color); border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm); padding:10px 14px; margin-bottom:10px; flex-shrink:0;
+}
+.tf-campo{display:flex; flex-direction:column; gap:4px; min-width:0; position:relative;}
+.tf-campo label{font-size:9.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700;}
+.tf-inner{display:flex; align-items:center; gap:4px;}
+.tf-inner select, .tf-inner .chk-btn{
+  height:32px; font-size:12px; border:1px solid var(--border-color); border-radius:6px;
+  background:var(--card-bg); color:var(--text-main); padding:0 8px; cursor:pointer;
+  max-width:160px;
+}
+.tf-inner select:hover, .tf-inner .chk-btn:hover{border-color:var(--brand-blue);}
+.tf-reset{
+  width:26px; height:26px; border-radius:6px; border:1px solid var(--border-color);
+  background:var(--card-bg); color:var(--text-muted); cursor:pointer; font-size:12px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.tf-reset:hover{background:#F1F4F1; color:var(--text-main);}
+
+/* ---------- Motor de multiselect con buscador — MISMO patrón que Recuentos de
+   Enfermedades, estandarizado en las 5 secciones de INFOAGRO BI. ---------- */
+.ms-dropdown{
+  height:32px; min-width:120px; max-width:170px; padding:0 10px; border:1px solid var(--border-color);
+  border-radius:6px; font-size:12px; background:var(--card-bg); cursor:pointer; user-select:none;
+  display:flex; justify-content:space-between; align-items:center;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.ms-dropdown:hover{border-color:var(--brand-blue);}
+.ms-dropdown::after{content:"▼"; font-size:8px; color:var(--text-muted); margin-left:6px;}
+.ms-panel{
+  display:none; flex-direction:column; position:absolute; top:100%; left:0; min-width:220px;
+  background:#fff; border:1px solid var(--border-color); border-radius:8px; max-height:260px;
+  overflow:hidden; z-index:1200; box-shadow:0 10px 26px rgba(0,0,0,.16); margin-top:4px;
+}
+.ms-panel.show{display:flex;}
+.ms-search{padding:8px; border-bottom:1px solid var(--border-color); flex-shrink:0;}
+.ms-search input{
+  width:100%; padding:6px 9px; border:1px solid var(--border-color); border-radius:6px;
+  font-size:12px; outline:none; font-family:inherit;
+}
+.ms-search input:focus{border-color:var(--brand-blue);}
+.ms-items{overflow-y:auto; flex:1 1 auto; min-height:0; padding:4px 0;}
+.ms-item{display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:12.5px; cursor:pointer;}
+.ms-item:hover{background:#F1F4F1;}
+.ms-item.selectall{border-bottom:1px solid var(--border-color); font-weight:700;}
+.ms-item input{margin:0; accent-color:var(--brand-blue);}
+.ms-footer{display:flex; gap:8px; padding:8px; border-top:1px solid var(--border-color); flex-shrink:0;}
+.ms-footer button{
+  flex:1; border:none; border-radius:6px; padding:6px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit;
+}
+.ms-footer .ok{background:var(--brand-dark); color:#fff;}
+.ms-footer .ok:hover{background:var(--brand-blue);}
+.ms-footer .cancel{background:#F1F4F1; color:var(--text-main);}
+
+/* ---------- "Mostrar media total" junto al título de la tabla, alineado a la derecha ---------- */
+.pivot-label-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+}
+.pivot-label-row .pivot-label{margin-bottom:0;}
+
+.tf-acciones{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap;}
+.tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-end;}
+.tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:#1B4332; line-height:1.2; white-space:nowrap;}
+.tf-titulo span{font-size:10.5px; color:var(--text-muted); font-weight:600;}
+.tf-icon{
+  height:32px; min-width:32px; padding:0 8px; border-radius:7px; border:1px solid var(--border-color);
+  background:var(--card-bg); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+  font-size:14px; transition:all .15s ease;
+}
+.tf-icon:hover{background:#F1F4F1; border-color:var(--brand-blue);}
+.tf-icon svg{width:15px; height:15px;}
+.tf-icon-verde{background:#1B4332; border-color:#1B4332;}
+.tf-icon-verde:hover{opacity:.88;}
+.tf-icon-calendario{background:#1B4332; color:#fff; padding:0 12px;}
+.tf-icon-calendario:hover{opacity:.88;}
+.tf-icon-texto{font-size:11.5px; font-weight:700; white-space:nowrap;}
+.tf-icon-excel{background:#1a9448; border-color:#1a9448;}
+.tf-icon-excel span{filter:brightness(0) invert(1);}
+.tf-icon-excel:hover{opacity:.88;}
+
+/* Responsive: en pantallas chicas los campos ocupan todo el ancho disponible y las
+   acciones bajan a su propia fila, en vez de comprimirse ilegibles. */
+@media (max-width:900px){
+  .toolbar-una-fila{padding:10px;}
+  .tf-campo{flex:1 1 130px;}
+  .tf-inner select, .tf-inner .chk-btn{max-width:none; flex:1;}
+  .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px;}
+.tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
+  .tf-icon-texto{display:none;}
+  /* Jerarquía en móvil: Compañía → Sector → Finca → resto de campos propios */
+  .campo-compania{order:1;}
+  .campo-sector{order:2;}
+  .campo-finca{order:3;}
+  .campo-mes{order:4;}
+  .campo-anios{order:5;}
+}
+@media (max-width:520px){
+  .tf-campo{flex:1 1 100%;}
+  .ms-panel{min-width:0; width:100%; left:0; right:0;}
+}
+
 .filters-wrapper {
   max-height: 500px;
   overflow: visible; 
@@ -114,6 +224,16 @@ body{
   opacity: 0;
   pointer-events: none;
 }
+
+.tf-campos-grupo{
+  display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap; flex:1;
+}
+
+.toggle-total-tabla{
+  display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+  color:var(--text-main); margin-bottom:8px; cursor:pointer;
+}
+.toggle-total-tabla input{accent-color:var(--brand-blue); cursor:pointer;}
 
 .filters-card{
   background:var(--card-bg);border-radius:var(--radius-md);
@@ -396,96 +516,64 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 
 <div class="dashboard-container">
 
-  <div class="page-hdr">
-    <div class="page-hdr-right">
-      <button class="btn-hdr-toggle" onclick="toggleRibbonFilters()">
-        <span id="ribbonIcon">🔼</span> <span id="ribbonText">Ocultar Filtros</span>
-      </button>
+  <div class="toolbar-una-fila" id="toolbarCompacta">
+    <div class="tf-titulo">
+      <h1>Pluviosidad</h1>
+      <span>Análisis histórico</span>
     </div>
-  </div>
-
-  <div class="filters-wrapper" id="filtersWrapper">
-    <div class="filters-card">
-      <div class="filters-row">
-
-        <div class="fg">
-          <div class="fg-label">Mes de Análisis</div>
-          <div class="fg-inner">
-            <select id="selMes"></select>
-            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selMes')">↺</button>
-          </div>
-        </div>
-
-        <div class="filter-divider"></div>
-
-        <!-- Compañía ahora la controla el panel de Filtros globales del shell INFOAGRO BI.
-             Se mantiene en el DOM (oculta) porque populateCascadeFilters/aplicarFiltroGlobal
-             siguen usando este <select> para la cascada Compañía → Sector. -->
-        <div class="fg" style="display:none;">
-          <div class="fg-label">Compañía</div>
-          <div class="fg-inner">
-            <select id="selCompania"><option value="">Todas</option></select>
-            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selCompania')">↺</button>
-          </div>
-        </div>
-
-        <!-- Sector ahora lo controla el panel de Filtros globales del shell INFOAGRO BI.
-             Se mantiene en el DOM (oculto) porque populateCascadeFilters/getFiltered
-             siguen usando este <select> internamente. -->
-        <div class="fg" style="display:none;">
-          <div class="fg-label">Sector</div>
-          <div class="fg-inner">
-            <select id="selSector"><option value="">Todos</option></select>
-            <button class="reset-btn" title="Limpiar" onclick="clearSingle('selSector')">↺</button>
-          </div>
-        </div>
-
-        <!-- Finca ahora la controla el panel de Filtros globales del shell INFOAGRO BI.
-             Se mantiene en el DOM (oculta) porque getFiltered()/aplicarFiltroGlobal siguen
-             leyendo este checklist internamente. -->
-        <div class="fg" style="display:none;">
-          <div class="fg-label">Finca</div>
-          <div class="fg-inner">
-            <div class="chk-wrap">
-              <button class="chk-btn" id="chkFincaBtn" onclick="toggleChk('chkFincaList','chkFincaBtn')">Todas las fincas</button>
-              <ul class="chk-list" id="chkFincaList"></ul>
-            </div>
-            <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkFincaList','chkFincaBtn','fincas')">↺</button>
-          </div>
-        </div>
-
-        <div class="filter-divider"></div>
-
-        <div class="fg">
-          <div class="fg-label">Años Históricos</div>
-          <div class="fg-inner">
-            <div class="chk-wrap">
-              <button class="chk-btn" id="chkYearBtn" onclick="toggleChk('chkYearList','chkYearBtn')">Todos los años</button>
-              <ul class="chk-list" id="chkYearList"></ul>
-            </div>
-            <button class="reset-btn" title="Limpiar" onclick="clearChecklist('chkYearList','chkYearBtn','años')">↺</button>
-          </div>
-        </div>
-
-        <div class="filter-divider"></div>
-
-        <div class="fg">
-          <div class="fg-label">Visualización y Reporte</div>
-          <div class="fg-inner">
-            <button class="btn-toggle-view" id="btnToggleView" onclick="toggleViewMode()">
-              <span>📅 Ver Calendario</span>
-            </button>
-            <label class="toggle-total" id="chkTotalColWrap">
-              <input type="checkbox" id="chkTotalCol" checked>
-              Mostrar media total
-            </label>
-            <button class="btn-excel" onclick="exportPivotToExcel()">
-              <span>⬇︎ Exportar reporte</span>
-            </button>
-          </div>
-        </div>
-
+    <div class="tf-campos-grupo filters-wrapper" id="filtersWrapper">
+      <div class="tf-campo campo-mes">
+        <label>Mes de Análisis</label>
+        <div class="ms-dropdown" id="dropMes" onclick="toggleMs(event,'mes')">Julio</div>
+        <div class="ms-panel" id="msMes"></div>
       </div>
+
+      <div class="tf-campo campo-anios">
+        <label>Años Históricos</label>
+        <div class="ms-dropdown" id="dropAnios" onclick="toggleMs(event,'anios')">Todos</div>
+        <div class="ms-panel" id="msAnios"></div>
+      </div>
+
+      <div class="tf-campo campo-sector">
+        <label>Sector</label>
+        <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'sector')">Todos</div>
+        <div class="ms-panel" id="msSector"></div>
+      </div>
+
+      <div class="tf-campo campo-finca">
+        <label>Finca</label>
+        <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
+        <div class="ms-panel" id="msFinca"></div>
+      </div>
+
+      <div class="tf-campo campo-compania">
+        <label>Compañía</label>
+        <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
+        <div class="ms-panel" id="msCompania"></div>
+      </div>
+    </div>
+
+    <div class="tf-acciones">
+      <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
+      </button>
+      <button class="tf-icon tf-icon-calendario" onclick="toggleViewMode()" id="btnToggleView" title="Ver calendario">
+        <span>📅</span><span class="tf-icon-texto">Ver Calendario</span>
+      </button>
+      <button class="tf-icon tf-icon-excel" onclick="exportPivotToExcel()" title="Exportar a Excel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="19"/>
+          <line x1="15" y1="13" x2="9" y2="19"/>
+        </svg>
+      </button>
+      <button class="tf-icon" onclick="location.reload()" title="Actualizar">
+        <span>↻</span>
+      </button>
+      <button class="tf-icon" onclick="window.print()" title="Imprimir">
+        <span>🖨️</span>
+      </button>
     </div>
   </div>
 
@@ -494,7 +582,13 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
   </div>
 
   <div class="pivot-section" id="viewTableSection">
-    <div class="pivot-label" id="pivotLabel">Distribución de lluvia diaria por año</div>
+    <div class="pivot-label-row">
+      <div class="pivot-label" id="pivotLabel">Distribución de lluvia diaria por año</div>
+      <label class="toggle-total" id="chkTotalColWrap">
+        <input type="checkbox" id="chkTotalCol" checked>
+        Mostrar media total
+      </label>
+    </div>
     <div class="tbl-wrap" id="pivotWrap">
       <table class="pivot">
         <thead id="pivotHead"></thead>
@@ -552,20 +646,8 @@ function getY(f){return parseInt(f.split("-")[0])}
 function getD(f){return parseInt(f.split("-")[2])}
 function unique(arr,k){return[...new Set(arr.map(r=>r[k]).filter(Boolean))].sort()}
 
-function toggleRibbonFilters() {
-  const wrapper = document.getElementById("filtersWrapper");
-  const icon = document.getElementById("ribbonIcon");
-  const text = document.getElementById("ribbonText");
-  
-  wrapper.classList.toggle("collapsed");
-  
-  if (wrapper.classList.contains("collapsed")) {
-    icon.textContent = "🔽";
-    text.textContent = "Mostrar Filtros";
-  } else {
-    icon.textContent = "🔼";
-    text.textContent = "Ocultar Filtros";
-  }
+function toggleFiltrosExtra() {
+  document.getElementById("filtersWrapper").classList.toggle("collapsed");
 }
 
 function toggleViewMode() {
@@ -576,14 +658,16 @@ function toggleViewMode() {
 
   if (CURRENT_VIEW === "table") {
     CURRENT_VIEW = "calendar";
-    btn.innerHTML = "<span>📊 Ver Tabla Matrix</span>";
+    btn.innerHTML = '<span>📊</span><span class="tf-icon-texto">Ver Tabla</span>';
+    btn.title = "Ver tabla matriz";
     tblSec.style.display = "none";
     calSec.style.display = "flex";
     chkTotalWrap.style.visibility = "hidden"; 
     fetchLiveWeather(); 
   } else {
     CURRENT_VIEW = "table";
-    btn.innerHTML = "<span>📅 Ver Calendario</span>";
+    btn.innerHTML = '<span>📅</span><span class="tf-icon-texto">Ver Calendario</span>';
+    btn.title = "Ver calendario";
     tblSec.style.display = "block";
     calSec.style.display = "none";
     chkTotalWrap.style.visibility = "visible";
@@ -726,162 +810,167 @@ async function loadData(){
   }
 }
 
-function initFilters(){
-  const mesEl=document.getElementById("selMes");
-  mesEl.innerHTML="";
-  
-  const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
-  
-  mesesDisponibles.forEach(m=>{
-    const o=document.createElement("option");
-    o.value=m; o.textContent=MESES_NOM[m]||m;
-    mesEl.appendChild(o);
-  });
+// ===================================================================
+// FILTROS — mismo motor de multiselect con buscador que usa Recuentos de
+// Enfermedades (ms-dropdown/ms-panel), estandarizado en toda INFOAGRO BI.
+// Mes de Análisis sigue siendo de selección ÚNICA (la tabla se arma para un
+// mes a la vez); Sector/Finca/Compañía/Años son multiselección real, con
+// cascada Compañía → Sector → Finca igual que antes.
+// seleccionFiltros[llave] vacío ([]) = "todos" para sector/finca/compania/anios.
+// ===================================================================
+let mesSeleccionado = null; // string único, ej. "07"
+let seleccionFiltros = { sector: [], finca: [], compania: [], anios: [] };
 
+function normalizarTxt(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+
+function initFilters(){
+  const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
   const hoy = new Date();
   const mesActualStr = String(hoy.getMonth() + 1).padStart(2, '0');
-
-  if(mesesDisponibles.includes(mesActualStr)) {
-    mesEl.value = mesActualStr;
-  } else {
-    if(mesesDisponibles.length > 0) {
-      mesEl.value = mesesDisponibles[0];
-    }
-  }
-
-  populateCompaniaFilter();
-  populateCascadeFilters();
-  populateYearChecklist();
+  mesSeleccionado = mesesDisponibles.includes(mesActualStr) ? mesActualStr : (mesesDisponibles[0] || null);
 
   document.getElementById("chkTotalCol").addEventListener("change",render);
-  document.getElementById("selCompania").addEventListener("change",()=>{
-    populateCascadeFilters(true);
-    render();
-  });
-  ["selMes","selSector"].forEach(id=>{
-    document.getElementById(id).addEventListener("change",()=>{
-      if (id === "selSector") populateCascadeFilters();
-      render();
-    });
-  });
+
+  construirTodosLosFiltros();
 }
 
-function populateCompaniaFilter(){
-  const coEl=document.getElementById("selCompania");
-  const curCo=coEl.value;
-  coEl.innerHTML = '<option value="">Todas</option>';
-  unique(RAW,"co").forEach(c=>{
-    const o=document.createElement("option"); o.value=c; o.textContent=c; coEl.appendChild(o);
+// Universo disponible de cada campo respetando la cascada Compañía → Sector → Finca
+// (Años y Mes no participan de esa cascada, se calculan sobre todo RAW).
+function universoCascada(){
+  let baseParaSector = RAW.filter(r => !seleccionFiltros.compania.length || seleccionFiltros.compania.includes(r.co));
+  let baseParaFinca = baseParaSector.filter(r => !seleccionFiltros.sector.length || seleccionFiltros.sector.includes(r.se));
+  return {
+    compania: unique(RAW,"co"),
+    sector: unique(baseParaSector,"se"),
+    finca: unique(baseParaFinca,"fi"),
+    anios: [...new Set(RAW.map(r=>getY(r.f)))].sort((a,b)=>b-a).map(String)
+  };
+}
+
+function construirTodosLosFiltros(){
+  // --- Mes: selección única, dropdown simple sin checkboxes ---
+  const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
+  document.getElementById('dropMes').textContent = MESES_NOM[mesSeleccionado] || mesSeleccionado || '—';
+  const panelMes = document.getElementById('msMes');
+  panelMes.onclick = (ev)=>ev.stopPropagation();
+  panelMes.innerHTML = `
+    <div class="ms-items">${mesesDisponibles.map(m=>`
+      <div class="ms-item" data-texto="${normalizarTxt(MESES_NOM[m]||m)}" onclick="event.stopPropagation(); seleccionarMes('${m}')">
+        <input type="radio" name="msMesRadio" ${m===mesSeleccionado?'checked':''} style="pointer-events:none;">
+        <span>${MESES_NOM[m]||m}</span>
+      </div>`).join('')}</div>`;
+
+  // --- Sector, Finca, Compañía, Años: multiselección real con buscador ---
+  const universo = universoCascada();
+  ['compania','sector','finca','anios'].forEach(llave=>{
+    const valores = universo[llave];
+    const panel = document.getElementById('ms'+cap(llave));
+    let itemsHtml = valores.map(v=>{
+      const marcado = !seleccionFiltros[llave].length || seleccionFiltros[llave].includes(v);
+      return `<div class="ms-item" data-val="${v}" data-texto="${normalizarTxt(v)}">
+        <input type="checkbox" value="${v}" ${marcado?'checked':''} onchange="actualizarSelectAllMs('${llave}')">
+        <span>${v}</span>
+      </div>`;
+    }).join('');
+    panel.onclick = (ev)=>ev.stopPropagation();
+    panel.innerHTML = `
+      <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="buscarMs('${llave}', this.value)"></div>
+      <div class="ms-item selectall">
+        <input type="checkbox" class="selectall-cb" checked onchange="toggleTodoMs('${llave}', this.checked)">
+        <span>(Seleccionar todo)</span>
+      </div>
+      <div class="ms-items">${itemsHtml}</div>
+      <div class="ms-footer">
+        <button class="cancel" onclick="cerrarMsFiltro('${llave}')">Cancelar</button>
+        <button class="ok" onclick="aplicarMsFiltro('${llave}')">Aceptar</button>
+      </div>`;
+    actualizarTextoDropFiltro(llave, valores.length);
   });
-  if(curCo) coEl.value = curCo;
 }
+function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
-function populateCascadeFilters(companiaCambio){
-  const coEl=document.getElementById("selCompania");
-  const activeCo = coEl.value;
-  const secEl=document.getElementById("selSector");
-  const curSec=secEl.value;
-
-  // Reconstruir sectores disponibles según la compañía activa (cascada real)
-  const baseSec = RAW.filter(r => !activeCo || r.co === activeCo);
-  secEl.innerHTML = '<option value="">Todos</option>';
-  unique(baseSec,"se").forEach(s=>{
-    const o=document.createElement("option"); o.value=s; o.textContent=s; secEl.appendChild(o);
-  });
-  if(!companiaCambio && curSec && unique(baseSec,"se").includes(curSec)) secEl.value = curSec;
-
-  const activeSector = secEl.value;
-  const baseFi = RAW.filter(r => (!activeCo || r.co === activeCo) && (!activeSector || r.se === activeSector));
-  
-  const ul=document.getElementById("chkFincaList");
-  ul.innerHTML="";
-  
-  unique(baseFi,"fi").forEach(fi=>{
-    const li=document.createElement("li");
-    li.innerHTML=`<label><input type="checkbox" value="${fi}"> ${fi}</label>`;
-    li.querySelector("input").addEventListener("change",()=>{
-      updateChkBtn("chkFincaList","chkFincaBtn","fincas");
-      render();
-    });
-    ul.appendChild(li);
-  });
-  updateChkBtn("chkFincaList","chkFincaBtn","fincas");
-}
-
-function populateYearChecklist(){
-  const years=[...new Set(RAW.map(r=>getY(r.f)))].sort((a,b)=>b-a);
-  const ul=document.getElementById("chkYearList");
-  ul.innerHTML="";
-  years.forEach(y=>{
-    const li=document.createElement("li");
-    li.innerHTML=`<label><input type="checkbox" value="${y}" checked> ${y}</label>`;
-    li.querySelector("input").addEventListener("change",()=>{
-      updateChkBtn("chkYearList","chkYearBtn","años");
-      render();
-    });
-    ul.appendChild(li);
-  });
-  updateChkBtn("chkYearList","chkYearBtn","años");
-}
-
-function toggleChk(listId,btnId){
-  document.getElementById(listId).classList.toggle("open");
-}
-
-document.addEventListener("click",e=>{
-  document.querySelectorAll(".chk-wrap").forEach(w=>{
-    const list=w.querySelector(".chk-list");
-    if(!w.contains(e.target)){
-      list.classList.remove("open");
-      if(list.id==="chkFincaList") updateChkBtn("chkFincaList","chkFincaBtn","fincas");
-      if(list.id==="chkYearList")  updateChkBtn("chkYearList","chkYearBtn","años");
-    }
-  });
-});
-
-function getSelFromList(listId){
-  return Array.from(document.querySelectorAll(`#${listId} input:checked`)).map(x=>x.value);
-}
-
-function updateChkBtn(listId,btnId,labelType){
-  const sel=getSelFromList(listId);
-  const btn=document.getElementById(btnId);
-  if(!sel.length) btn.textContent=labelType==="fincas"?"Todas las fincas":"Todos los años";
-  else if(sel.length<=2) btn.textContent=sel.join(", ");
-  else btn.textContent=sel.length+" "+labelType+" seleccionados";
-}
-
-function clearSingle(id){
-  if(id === "selMes") {
-    const hoy = new Date();
-    const mesActualStr = String(hoy.getMonth() + 1).padStart(2, '0');
-    const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
-    document.getElementById(id).value = mesesDisponibles.includes(mesActualStr) ? mesActualStr : mesesDisponibles[0];
-  } else {
-    document.getElementById(id).selectedIndex=0;
-  }
-  populateCascadeFilters(id === "selCompania");
+window.seleccionarMes = function(m){
+  mesSeleccionado = m;
+  document.querySelectorAll('#msMes .ms-panel, #msMes').forEach(p=>p.classList.remove('show'));
+  document.getElementById('msMes').classList.remove('show');
+  construirTodosLosFiltros();
   render();
+};
+
+window.toggleMs = function(ev, clave){
+  ev.stopPropagation();
+  const panel = document.getElementById('ms'+cap(clave));
+  const abierto = panel.classList.contains('show');
+  document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show'));
+  if(!abierto) panel.classList.add('show');
+};
+document.addEventListener('click', ()=>document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show')));
+
+window.actualizarSelectAllMs = function(clave){
+  const panel = document.getElementById('ms'+cap(clave));
+  const selCb = panel.querySelector('.selectall-cb');
+  const visibles = Array.from(panel.querySelectorAll('.ms-items .ms-item')).filter(el=>el.style.display!=='none');
+  const cbs = visibles.map(el=>el.querySelector('input[type=checkbox]'));
+  const marcados = cbs.filter(cb=>cb.checked).length;
+  if(!cbs.length){ selCb.checked=false; selCb.indeterminate=false; return; }
+  selCb.checked = marcados===cbs.length;
+  selCb.indeterminate = marcados>0 && marcados<cbs.length;
+};
+window.toggleTodoMs = function(clave, marcar){
+  const panel = document.getElementById('ms'+cap(clave));
+  panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+    if(el.style.display==='none') return;
+    const cb = el.querySelector('input[type=checkbox]'); if(cb) cb.checked = marcar;
+  });
+  actualizarSelectAllMs(clave);
+};
+window.buscarMs = function(clave, texto){
+  const panel = document.getElementById('ms'+cap(clave));
+  const t = normalizarTxt(texto);
+  panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+    el.style.display = (!t || (el.getAttribute('data-texto')||'').includes(t)) ? 'flex' : 'none';
+  });
+  actualizarSelectAllMs(clave);
+};
+window.aplicarMsFiltro = function(clave){
+  const panel = document.getElementById('ms'+cap(clave));
+  const marcados = Array.from(panel.querySelectorAll('.ms-items input[type=checkbox]:checked')).map(cb=>cb.value);
+  const universoActual = universoCascada()[clave];
+  seleccionFiltros[clave] = (marcados.length && marcados.length < universoActual.length) ? marcados : [];
+  panel.classList.remove('show');
+  // Reconstruir todo: Compañía→Sector→Finca están en cascada, aceptar cualquiera
+  // de ellos puede acotar los siguientes.
+  construirTodosLosFiltros();
+  render();
+};
+window.cerrarMsFiltro = function(clave){
+  document.getElementById('ms'+cap(clave)).classList.remove('show');
+  construirTodosLosFiltros();
+};
+
+function actualizarTextoDropFiltro(clave, totalUniverso){
+  const el = document.getElementById('drop'+cap(clave));
+  if(!el) return;
+  const sel = seleccionFiltros[clave];
+  const defaults = { sector:'Todos', finca:'Todas', compania:'Todas', anios:'Todos los años' };
+  if(!totalUniverso){ el.textContent='—'; return; }
+  if(!sel.length) el.textContent = defaults[clave];
+  else if(sel.length===1) el.textContent = sel[0];
+  else el.textContent = sel.length+' sel.';
 }
 
-function clearChecklist(listId,btnId,labelType){
-  document.querySelectorAll(`#${listId} input`).forEach(i=>i.checked=false);
-  updateChkBtn(listId,btnId,labelType);
-  render();
+function toggleFiltrosExtra() {
+  document.getElementById("filtersWrapper").classList.toggle("collapsed");
 }
 
 function getFiltered(){
-  const mes=document.getElementById("selMes").value;
-  const co=document.getElementById("selCompania").value;
-  const se=document.getElementById("selSector").value;
-  const selFi=getSelFromList("chkFincaList");
-  const selYears=getSelFromList("chkYearList").map(y=>parseInt(y));
+  const selAnios = seleccionFiltros.anios.map(y=>parseInt(y));
   return RAW.filter(r=>
-    getM(r.f)===mes&&
-    (!co||r.co===co)&&
-    (!se||r.se===se)&&
-    (!selFi.length||selFi.includes(r.fi))&&
-    (!selYears.length||selYears.includes(getY(r.f)))
+    getM(r.f)===mesSeleccionado &&
+    (!seleccionFiltros.compania.length || seleccionFiltros.compania.includes(r.co)) &&
+    (!seleccionFiltros.sector.length   || seleccionFiltros.sector.includes(r.se)) &&
+    (!seleccionFiltros.finca.length    || seleccionFiltros.finca.includes(r.fi)) &&
+    (!selAnios.length || selAnios.includes(getY(r.f)))
   );
 }
 
@@ -1024,7 +1113,7 @@ function buildKPI(data){
 }
 
 function buildPivot(data){
-  const mes=document.getElementById("selMes").value;
+  const mes=mesSeleccionado;
   const showTotal=document.getElementById("chkTotalCol").checked;
   const years=[...new Set(data.map(r=>getY(r.f)))].sort();
   const head=document.getElementById("pivotHead");
@@ -1177,7 +1266,7 @@ function buildCalendar(data) {
   const grid = document.getElementById("calendarGrid");
   grid.innerHTML = "";
 
-  const mesStr = document.getElementById("selMes").value;
+  const mesStr = mesSeleccionado;
   const yearsAvailable = [...new Set(data.map(r => getY(r.f)))].sort((a,b)=>b-a);
   
   if (!yearsAvailable.length || !data.length) {
@@ -1391,7 +1480,7 @@ function exportPivotToExcel(){
   });
   const blob=new Blob([csv.join("\n")],{type:"text/csv;charset=utf-8;"});
   const link=document.createElement("a");
-  const mesSel=document.getElementById("selMes").value;
+  const mesSel=mesSeleccionado;
   const mesNom=MESES_NOM[mesSel]||mesSel||"mes";
   link.href=URL.createObjectURL(blob);
   link.download=`reporte_pluviosidad_${mesNom}.csv`;
@@ -1400,81 +1489,9 @@ function exportPivotToExcel(){
   document.body.removeChild(link);
 }
 
-// ===================================================================
-// ADAPTADOR DE FILTRO GLOBAL — INFOAGRO BI
-// Recibe la selección del panel de filtros del shell (compania/sector/ciclo/finca)
-// y la traduce a los controles propios de esta sección.
-// Nota: Pluviosidad no tiene concepto de "ciclo" (usa Años históricos),
-// por lo que la clave "ciclo" del filtro global se ignora aquí a propósito.
-// ===================================================================
-let FILTRO_GLOBAL_LISTO = false; // evita aplicar antes de que loadData() haya llenado RAW
-
-function aplicarFiltroGlobal(filtros){
-  if(!RAW.length){ FILTRO_GLOBAL_PENDIENTE = filtros; return; }
-  filtros = filtros || {};
-
-  // --- Compañía: si viene una sola, se fija en el select; si vienen 0 o varias, se deja "Todas" ---
-  const coEl = document.getElementById("selCompania");
-  if(filtros.compania && filtros.compania.length === 1 && [...coEl.options].some(o=>o.value===filtros.compania[0])){
-    coEl.value = filtros.compania[0];
-  } else if(filtros.compania && filtros.compania.length !== 1){
-    coEl.value = "";
-  }
-  populateCascadeFilters(true);
-
-  // --- Sector: mismo criterio que Compañía — este select sólo admite un valor a la vez ---
-  const seEl = document.getElementById("selSector");
-  if(filtros.sector && filtros.sector.length === 1 && [...seEl.options].some(o=>o.value===filtros.sector[0])){
-    seEl.value = filtros.sector[0];
-  } else if(filtros.sector && filtros.sector.length !== 1){
-    seEl.value = "";
-  }
-  populateCascadeFilters();
-
-  // --- Finca: marca en el checklist las fincas recibidas (intersección con lo disponible) ---
-  if(filtros.finca){
-    const ul = document.getElementById("chkFincaList");
-    const disponibles = new Set(Array.from(ul.querySelectorAll("input")).map(i=>i.value));
-    ul.querySelectorAll("input").forEach(i=>{
-      i.checked = filtros.finca.length === 0 ? false : filtros.finca.includes(i.value);
-    });
-    updateChkBtn("chkFincaList","chkFincaBtn","fincas");
-  }
-
-  // --- Ciclo: no aplica en Pluviosidad (se documenta, no se traduce a Años) ---
-
-  render();
-}
-
-let FILTRO_GLOBAL_PENDIENTE = null;
-
-function enviarUniversoAlShell(){
-  if(!RAW.length) return;
-  window.parent.postMessage({
-    type: 'INFOAGRO_UNIVERSO_RESPUESTA',
-    universo: {
-      compania: unique(RAW,"co"),
-      sector: unique(RAW,"se"),
-      ciclo: [],              // Pluviosidad no maneja ciclo — el shell no mostrará este campo aquí
-      finca: unique(RAW,"fi")
-    }
-  }, '*');
-}
-
-window.addEventListener('message', function(ev){
-  if(!ev.data) return;
-  if(ev.data.type === 'INFOAGRO_FILTROS_UPDATE'){
-    aplicarFiltroGlobal(ev.data.filtros);
-  }
-  if(ev.data.type === 'INFOAGRO_SOLICITAR_UNIVERSO'){
-    enviarUniversoAlShell();
-  }
-});
-
-loadData().then(function(){
-  if(FILTRO_GLOBAL_PENDIENTE) aplicarFiltroGlobal(FILTRO_GLOBAL_PENDIENTE);
-  enviarUniversoAlShell();
-});
+// El filtro Compañía/Sector/Finca ahora vive de nuevo dentro de esta misma sección
+// (barra de filtros propia, visible arriba) — ya no se recibe desde un panel del shell.
+loadData();
 </script>
 </body>
 </html>
