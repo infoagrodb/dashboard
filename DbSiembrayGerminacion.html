@@ -408,7 +408,11 @@
   .sort-indicator { opacity: 0.3; font-size: 10px; margin-left: 4px; }
   .alerta-table th.sorted-asc .sort-indicator, .alerta-table th.sorted-desc .sort-indicator { opacity: 1; color: var(--primary); }
 
-  .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; }
+  .alerta-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; white-space: nowrap; }
+  /* Variedad puede traer nombres largos (ej. "GA 06-G CERTIFICADA IMPORTADA") que
+     estiran la tabla y descuadran el resto de columnas — se acota con elipsis y el
+     texto completo queda disponible al pasar el mouse (title). */
+  .alerta-table .col-variedad { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
   .alerta-table tr:hover td { background: var(--bg-main); }
   .badge-dds { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
   .badge-dds.en-rango { background: #fee2e2; color: #b91c1c; }
@@ -564,6 +568,7 @@
         <div class="af-info">
           Hoy: <strong id="alertaFechaHoy">-</strong> &nbsp;|&nbsp; 10 DDS = días 10–14 &nbsp;|&nbsp; 15 DDS = día 15+
         </div>
+        <button class="btn" style="background:#0284c7;" onclick="abrirModalGrafico('alertas')">📊 Lluvia vs Siembra</button>
       </div>
 
       <!-- KPI Strip (Lotes Completos primero) -->
@@ -671,7 +676,7 @@
                     <div class="col-inline-filter-panel" id="fp_g15" onclick="event.stopPropagation()"></div>
                   </div>
                 </th>
-                <th class="sortable" id="th_completos_variedad" onclick="manejadorHeaderClick(event, 'variedad')">
+                <th class="sortable col-variedad" id="th_completos_variedad" onclick="manejadorHeaderClick(event, 'variedad')">
                   <div class="th-inline-filter-container">
                     <span>Variedad</span><span class="sort-indicator">↕</span>
                     <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'variedad')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
@@ -700,7 +705,7 @@
                 <th class="sortable" id="th_espera_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra<span class="sort-indicator">↕</span></th>
                 <th class="sortable" id="th_espera_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy<span class="sort-indicator">↕</span></th>
                 <th>Días para 10 DDS</th>
-                <th class="sortable" id="th_espera_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad<span class="sort-indicator">↕</span></th>
+                <th class="sortable col-variedad" id="th_espera_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad<span class="sort-indicator">↕</span></th>
                 <th class="sortable" id="th_espera_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.<span class="sort-indicator">↕</span></th>
                 <th>Acción</th>
               </tr>
@@ -724,7 +729,7 @@
                 <th class="sortable" id="th_10dds_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra<span class="sort-indicator">↕</span></th>
                 <th class="sortable" id="th_10dds_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy<span class="sort-indicator">↕</span></th>
                 <th>Estado</th>
-                <th class="sortable" id="th_10dds_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad<span class="sort-indicator">↕</span></th>
+                <th class="sortable col-variedad" id="th_10dds_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad<span class="sort-indicator">↕</span></th>
                 <th class="sortable" id="th_10dds_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.<span class="sort-indicator">↕</span></th>
                 <th>Acción</th>
               </tr>
@@ -748,7 +753,7 @@
                 <th class="sortable" id="th_15dds_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra<span class="sort-indicator">↕</span></th>
                 <th class="sortable" id="th_15dds_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy<span class="sort-indicator">↕</span></th>
                 <th>Estado</th>
-                <th class="sortable" id="th_15dds_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad<span class="sort-indicator">↕</span></th>
+                <th class="sortable col-variedad" id="th_15dds_variedad" onclick="cambiarOrdenAlertas('variedad')">Variedad<span class="sort-indicator">↕</span></th>
                 <th class="sortable" id="th_15dds_semillas" onclick="cambiarOrdenAlertas('semillas')">Semillas m.l.<span class="sort-indicator">↕</span></th>
                 <th>Acción</th>
               </tr>
@@ -1208,14 +1213,21 @@ function addDias(fechaStr, dias) {
   return d.toISOString().split('T')[0];
 }
 
-function procesarEstructuraGrafico() {
-  let siembrasFiltradas = datosMaestrosUnificados.filter(d => 
-    (seleccionesFiltros.compania || []).includes(d.compania) && 
-    (seleccionesFiltros.sector || []).includes(d.sector) && 
-    (seleccionesFiltros.ciclo || []).includes(d.ciclo) && 
-    (seleccionesFiltros.finca || []).includes(d.finca) && 
-    (seleccionesFiltros.tipo || []).includes(d.tipo)
-  );
+function procesarEstructuraGrafico(origen) {
+  let siembrasFiltradas = origen === 'alertas'
+    ? datosMaestrosUnificados.filter(d =>
+        (alertasFiltros.ciclo.length    === 0 || alertasFiltros.ciclo.includes(d.ciclo)) &&
+        (alertasFiltros.compania.length === 0 || alertasFiltros.compania.includes(d.compania)) &&
+        (alertasFiltros.sector.length   === 0 || alertasFiltros.sector.includes(d.sector)) &&
+        (alertasFiltros.finca.length    === 0 || alertasFiltros.finca.includes(d.finca))
+      )
+    : datosMaestrosUnificados.filter(d =>
+        (seleccionesFiltros.compania || []).includes(d.compania) &&
+        (seleccionesFiltros.sector || []).includes(d.sector) &&
+        (seleccionesFiltros.ciclo || []).includes(d.ciclo) &&
+        (seleccionesFiltros.finca || []).includes(d.finca) &&
+        (seleccionesFiltros.tipo || []).includes(d.tipo)
+      );
 
   let fechasSiembra = siembrasFiltradas.map(s => extraerFecha(s.rawSiembra)).filter(Boolean);
   let fechasGerm = siembrasFiltradas.flatMap(s => (s.rawMuestrasOriginales||[]).map(g => extraerFecha(g))).filter(Boolean);
@@ -1282,7 +1294,8 @@ function procesarEstructuraGrafico() {
 
 let lluviaYaCargada = false;
 
-async function abrirModalGrafico() {
+async function abrirModalGrafico(origen) {
+  origen = origen || 'pivot';
   const overlay = document.getElementById('popupGraficoOverlay');
   overlay.classList.add('show');
   const loadingEl = document.getElementById('graficoLoading');
@@ -1294,7 +1307,12 @@ async function abrirModalGrafico() {
 
   if (!lluviaYaCargada || datosLluviaRaw.length === 0) {
     try {
-      const ciclosActivos = seleccionesFiltros.ciclo || [];
+      // El ciclo activo depende del tab desde donde se abrió el gráfico: en Alertas
+      // Germinación usa su propio filtro (alertasFiltros), en Registros usa el filtro
+      // global del header (seleccionesFiltros) — son estados independientes.
+      const ciclosActivos = origen === 'alertas'
+        ? (alertasFiltros.ciclo.length ? alertasFiltros.ciclo : (universosUnicos.ciclo || []))
+        : (seleccionesFiltros.ciclo || []);
       const añoActivo = ciclosActivos.map(c => (c.match(/\d{4}/) || [])[0]).filter(Boolean)[0] || new Date().getFullYear();
       const fechaDesde = `${añoActivo}-01-01`;
 
@@ -1323,7 +1341,7 @@ async function abrirModalGrafico() {
 
   setTimeout(() => {
     const ctx = document.getElementById('chartCorrelacionMaster').getContext('2d');
-    const ds = procesarEstructuraGrafico();
+    const ds = procesarEstructuraGrafico(origen);
     loadingEl.style.display = 'none';
 
     if (debugEl) {
@@ -1842,7 +1860,7 @@ function renderTablaEspera(items) {
   const filas = ordenarFilasAlertas(Object.values(grupos));
   let html = '';
   filas.forEach(g => {
-    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td><span class="badge-dds pendiente">${g.dds} días</span></td><td><span style="color:#7c3aed; font-weight:700;">en ${10 - g.dds} días</span></td><td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
+    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td><span class="badge-dds pendiente">${g.dds} días</span></td><td><span style="color:#7c3aed; font-weight:700;">en ${10 - g.dds} días</span></td><td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
   });
   tbody.innerHTML = html;
 }
@@ -1865,7 +1883,7 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
   const filas = ordenarFilasAlertas(Object.values(grupos));
   let html = '';
   filas.forEach(g => {
-    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td><td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td><td>${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
+    html += `<tr><td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td><td>${g.dds >= 15 ? `<span class="badge-dds vencido">${g.dds} días</span>` : `<span class="badge-dds en-rango">${g.dds} días</span>`}</td><td>${!g.tiene10 && g.dds >= 10 ? '<span class="badge-dds en-rango">Sin 10 DDS</span>' : ''}${!g.tiene15 && g.dds >= 15 ? '<span class="badge-dds vencido">Sin 15 DDS</span>' : ''}</td><td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td><td style="text-align:right;">${g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas).toFixed(2) : '-'}</td><td><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${g.finca.replace(/'/g,"\\'")}','${g.lote.replace(/'/g,"\\'")}','${g.ciclo.replace(/'/g,"\\'")}')">Ver Siembra</button></td></tr>`;
   });
   tbody.innerHTML = html;
 }
@@ -1895,7 +1913,7 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
       <td style="text-align:center;">${pct10 !== null ? `<span class="badge-pct ${pct10 < 55 ? 'low' : ''}">${pct10.toFixed(1)}%</span>` : '-'}</td>
       <td style="text-align:right;"><button class="btn-ver-siembra" style="color:#2563eb; border-color:#2563eb;" onclick="abrirModalPopupDetalle('15dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">${g.p15Val}</button></td>
       <td style="text-align:center;">${pct15 !== null ? `<span class="badge-pct ${pct15 < 55 ? 'low' : ''}">${pct15.toFixed(1)}%</span>` : '-'}</td>
-      <td>${g.variedad}</td>
+      <td class="col-variedad" title="${(g.variedad||'').replace(/"/g,'&quot;')}">${g.variedad}</td>
     </tr>`;
   });
   tbody.innerHTML = html;
