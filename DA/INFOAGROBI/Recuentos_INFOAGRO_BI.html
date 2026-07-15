@@ -44,14 +44,25 @@
   .spinner { width:16px; height:16px; border:2px solid var(--border-color); border-top-color:var(--primary); border-radius:50%; animation:girar .7s linear infinite; }
   @keyframes girar { to{ transform:rotate(360deg);} }
 
-  /* ---------- Barra de filtros propios (Familia y Recuento — no cubiertos por filtro global) ---------- */
-  .barra-filtros {
-    display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;
-    background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px;
-    padding:14px 16px; margin-bottom:16px; box-shadow:var(--shadow-sm);
+  /* ---------- TOOLBAR DE UNA SOLA FILA — mismo patrón en las 5 secciones de INFOAGRO BI ---------- */
+  .toolbar-una-fila{
+    position: sticky; top: 0; z-index: 100;
+    display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+    background:var(--card-bg); border:1px solid var(--border-color); border-bottom:1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06); padding:10px 16px; margin-bottom:16px; border-radius:12px;
   }
-  .filtro-grupo { display:flex; flex-direction:column; gap:4px; min-width:200px; flex:1; position:relative; }
-  .filtro-grupo label { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+  .tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-end;}
+  .tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:var(--primary); line-height:1.2; white-space:nowrap;}
+  .tf-titulo span{font-size:10.5px; color:var(--text-muted); font-weight:600;}
+  .tf-campos-grupo{
+    display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; flex:1;
+    max-height:500px; overflow:visible; transition:max-height .3s cubic-bezier(.4,0,.2,1), margin-bottom .3s ease, opacity .3s ease;
+    opacity:1;
+  }
+  .tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
+  .tf-campo{ display:flex; flex-direction:column; gap:4px; min-width:170px; flex:1; position:relative; }
+  .campo-dds{ max-width:110px; min-width:90px; flex:0 0 auto; }
+  .tf-campo label{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
   .ms-dropdown {
     padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:#fff;
     font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; height:36px;
@@ -74,8 +85,36 @@
   .ms-footer .ok { background:var(--primary); color:#fff; }
   .ms-footer .cancel { background:var(--primary-light); color:var(--text-main); }
 
-  .btn-limpiar { background:var(--card-bg); border:1.5px solid var(--border-color); color:var(--text-main); border-radius:8px; padding:0 14px; height:36px; font-weight:700; font-size:12.5px; cursor:pointer; }
-  .btn-limpiar:hover { border-color:var(--danger); color:var(--danger); }
+  .tf-acciones{display:flex; align-items:center; gap:6px; margin-left:auto; flex-wrap:wrap;}
+  .tf-icon{
+    height:32px; min-width:32px; padding:0 8px; border-radius:7px; border:1px solid var(--border-color);
+    background:var(--card-bg); cursor:pointer; display:flex; align-items:center; justify-content:center; gap:6px;
+    font-size:14px; transition:all .15s ease;
+  }
+  .tf-icon:hover{ background:#F1F4F1; border-color:var(--primary); }
+  .tf-icon svg{ width:15px; height:15px; }
+  .tf-icon-verde{ background:var(--primary); border-color:var(--primary); }
+  .tf-icon-verde:hover{ opacity:.88; }
+  .tf-icon-excel{ background:#1a9448; border-color:#1a9448; }
+  .tf-icon-excel:hover{ opacity:.88; }
+
+  /* Responsive: en pantallas chicas los campos ocupan todo el ancho disponible y las
+     acciones bajan a su propia fila, en vez de comprimirse ilegibles. */
+  @media (max-width:900px){
+    .toolbar-una-fila{ padding:10px; }
+    .tf-campo{ flex:1 1 130px; }
+    .campo-dds{ max-width:none; }
+    .tf-acciones{ width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px; }
+    .tf-titulo{ width:100%; align-self:flex-start; margin-bottom:2px; }
+    /* Jerarquía en móvil: Compañía → Sector → Finca → resto de campos propios */
+    .campo-compania{ order:1; }
+    .campo-sector{ order:2; }
+    .campo-finca{ order:3; }
+    .campo-ciclo{ order:4; }
+    .campo-familia{ order:5; }
+    .campo-recuento{ order:6; }
+    .campo-dds{ order:7; }
+  }
 
   .nota-fuentes { font-size:11px; color:var(--text-muted); margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap; }
   .nota-fuentes b { color:var(--text-main); }
@@ -129,55 +168,79 @@
 </head>
 <body>
 
-<button class="btn-filtros-fijo" id="btnFiltrosFijo" onclick="toggleBarraFiltros()">
-  <span id="iconoFiltrosFijo">🔽</span> Filtros
-</button>
-
-<div class="container">
-
-  <div class="nota-fuentes" id="notaFuentes">Cargando datos…</div>
-
-  <!-- Todos los filtros son propios de esta sección: combina 3 fuentes (Odoo en vivo +
-       histórico Excel DA + histórico Excel GZP), así que Compañía/Sector/Ciclo/Finca
-       viven aquí igual que Familia/Recuento/DDS. -->
-  <div class="barra-filtros" id="barraFiltros">
-    <div class="filtro-grupo">
+<!-- Todos los filtros son propios de esta sección: combina 3 fuentes (Odoo en vivo +
+     histórico Excel DA + histórico Excel GZP), así que Compañía/Sector/Ciclo/Finca
+     viven aquí igual que Familia/Recuento/DDS. -->
+<div class="toolbar-una-fila" id="toolbarCompacta">
+  <div class="tf-titulo">
+    <h1>Recuentos de Enfermedades</h1>
+    <span>Fitosanitario · 2012-2026</span>
+  </div>
+  <div class="tf-campos-grupo filters-wrapper" id="panelFiltrosWrapper">
+    <div class="tf-campo campo-compania">
       <label>Compañía</label>
       <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
       <div class="ms-panel" id="msCompania"></div>
     </div>
-    <div class="filtro-grupo">
+    <div class="tf-campo campo-sector">
       <label>Sector</label>
       <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'sector')">Todos</div>
       <div class="ms-panel" id="msSector"></div>
     </div>
-    <div class="filtro-grupo">
+    <div class="tf-campo campo-ciclo">
       <label>Ciclo</label>
       <div class="ms-dropdown" id="dropCiclo" onclick="toggleMs(event,'ciclo')">Todos</div>
       <div class="ms-panel" id="msCiclo"></div>
     </div>
-    <div class="filtro-grupo">
+    <div class="tf-campo campo-finca">
       <label>Finca</label>
       <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
       <div class="ms-panel" id="msFinca"></div>
     </div>
-    <div class="filtro-grupo">
+    <div class="tf-campo campo-familia">
       <label>Familia de Recuento</label>
       <div class="ms-dropdown" id="dropFamilia" onclick="toggleMs(event,'familia')">Todas</div>
       <div class="ms-panel" id="msFamilia"></div>
     </div>
-    <div class="filtro-grupo">
+    <div class="tf-campo campo-recuento">
       <label>Tipo de Recuento</label>
       <div class="ms-dropdown" id="dropRecuento" onclick="toggleMs(event,'recuento')">Todos</div>
       <div class="ms-panel" id="msRecuento"></div>
     </div>
-    <div class="filtro-grupo" style="max-width:140px;">
+    <div class="tf-campo campo-dds">
       <label>DDS</label>
       <div class="ms-dropdown" id="dropDds" onclick="toggleMs(event,'dds')">Todos</div>
       <div class="ms-panel" id="msDds"></div>
     </div>
-    <button class="btn-limpiar" onclick="limpiarFiltrosPropios()">🧹 Limpiar</button>
   </div>
+
+  <div class="tf-acciones">
+    <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
+    </button>
+    <button class="tf-icon" onclick="limpiarFiltrosPropios()" title="Limpiar todos los filtros">
+      <span>🧹</span>
+    </button>
+    <button class="tf-icon tf-icon-excel" onclick="exportarTodoExcel()" title="Exportar a Excel">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="9" y1="13" x2="15" y2="19"/>
+        <line x1="15" y1="13" x2="9" y2="19"/>
+      </svg>
+    </button>
+    <button class="tf-icon" onclick="cargarTodo()" title="Actualizar">
+      <span>↻</span>
+    </button>
+    <button class="tf-icon" onclick="window.print()" title="Imprimir">
+      <span>🖨️</span>
+    </button>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="nota-fuentes" id="notaFuentes">Cargando datos…</div>
 
   <div class="estado-carga" id="estadoCarga"><span class="spinner"></span> Cargando recuentos (Odoo + histórico DA + histórico GZP)…</div>
 
@@ -625,6 +688,34 @@ function limpiarFiltrosPropios(){
   seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] };
   construirFiltrosPropios();
   render();
+}
+
+function toggleFiltrosExtra(){
+  document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed');
+}
+
+// Exporta TODOS los registros que coinciden con los filtros activos (a diferencia de
+// exportarDetalleExcel, que exporta solo el recuento seleccionado en el panel de detalle).
+function exportarTodoExcel(){
+  const datos = datosFiltrados();
+  if(!datos.length) return;
+  const filas = datos.map(d=>({
+    Finca:d.fi, Lote:d.lo, Sector:d.se, Ciclo:d.ci, Compania:d.co,
+    Familia:d.fa, Recuento:d.re, DDS:d.dds, "Ventana DDS": ventanaDDS(d.dds),
+    Fecha: formatoFecha(d.fecha) || '',
+    Resultado: d.esPorc ? +(d.valor*100).toFixed(2) : +d.valor.toFixed(2),
+    Unidad: d.esPorc ? '%' : 'promedio',
+    "Área evaluada (mz)": d.area ?? '',
+    "Población (plantas)": d.poblacion ?? '',
+    "Estado fenológico": d.estadoFeno || '',
+    "Aplicación": d.aplicacion || '',
+    Observacion: d.obs || '',
+    Fuente: d.fuente==='vivo' ? 'En vivo (Odoo)' : 'Histórico (Excel)'
+  }));
+  const ws = XLSX.utils.json_to_sheet(filas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Recuentos');
+  XLSX.writeFile(wb, `Recuentos_INFOAGRO_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
 // ===================================================================
