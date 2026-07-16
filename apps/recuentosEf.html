@@ -351,7 +351,7 @@
         </div>
         <div class="field">
           <label>Edad del cultivo (días)</label>
-          <input type="number" id="f_edad">
+          <input type="number" id="f_edad" oninput="this.dataset.autofilled='false'">
           <div id="edadAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
         </div>
         <div class="field">
@@ -374,7 +374,7 @@
         </div>
         <div class="field">
           <label>Población plantas/m</label>
-          <input type="number" step="0.01" id="f_poblacion">
+          <input type="number" step="0.01" id="f_poblacion" oninput="this.dataset.autofilled='false'">
           <div id="poblacionAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
         </div>
         <div class="field">
@@ -583,11 +583,7 @@ const CATALOGO_BASE = [
 const SEED_SECTORES = [
   {id:1,nombre:"Sector 1"},
   {id:2,nombre:"Sector 2"},
-  {id:4,nombre:"Privado DA"},
   {id:5,nombre:"Sector 3"},
-  {id:6,nombre:"Taller DA"},
-  {id:7,nombre:"Invest. y Desarrollo"},
-  {id:8,nombre:"Privado GZP"},
   {id:9,nombre:"Sector 4"}
 ];
 const SEED_COMPANIAS = [
@@ -1136,15 +1132,20 @@ async function onLoteChange(){
     if(!res.ok) return;
     const data = await res.json();
 
+    // Solo se respeta un valor si el técnico lo escribió a mano (sin la bandera
+    // autofilled). Si el campo está vacío O el valor que tiene fue puesto por un
+    // auto-completado anterior (de otro lote), sí se reemplaza con el nuevo.
     const fEdad = document.getElementById('f_edad');
-    if(data.fecha_siembra && !fEdad.value){
+    if(data.fecha_siembra && (!fEdad.value || fEdad.dataset.autofilled === 'true')){
       const dias = Math.round((new Date() - new Date(data.fecha_siembra+'T00:00:00')) / 86400000);
       fEdad.value = dias;
+      fEdad.dataset.autofilled = 'true';
       notaEdad.textContent = `📅 Calculado: siembra ${data.fecha_siembra} (${dias} días)`;
     }
     const fPob = document.getElementById('f_poblacion');
-    if(data.poblacion_plantas_m != null && !fPob.value){
+    if(data.poblacion_plantas_m != null && (!fPob.value || fPob.dataset.autofilled === 'true')){
       fPob.value = data.poblacion_plantas_m;
+      fPob.dataset.autofilled = 'true';
       notaPob.textContent = data.poblacion_dds_usado === 15
         ? `🌱 Tomado de germinación a los 15 DDS`
         : `🌱 Tomado de germinación (${data.poblacion_dds_usado} DDS — no había registro de 15 DDS)`;
@@ -1164,8 +1165,8 @@ function poblarFormularioDesdeSesion(){
   onFincaChange();
   if(h.lote) document.getElementById('f_lote').value = h.lote;
   document.getElementById('f_area').value = h.area_evaluada ?? '';
-  document.getElementById('f_edad').value = h.edad_cultivo ?? '';
-  document.getElementById('f_poblacion').value = h.poblacion_plantas ?? '';
+  document.getElementById('f_edad').value = h.edad_cultivo ?? ''; document.getElementById('f_edad').dataset.autofilled='false';
+  document.getElementById('f_poblacion').value = h.poblacion_plantas ?? ''; document.getElementById('f_poblacion').dataset.autofilled='false';
   document.getElementById('f_aplicacion').value = h.aplicacion ?? '';
   document.getElementById('f_tecnico').value = h.tecnico ?? '';
   document.getElementById('f_estado_fenologico').value = h.estado_fenologico ?? '';
@@ -1176,8 +1177,8 @@ async function nuevaEvaluacionClick(){
   poblarSelects();
   document.getElementById('f_fecha').value = new Date().toISOString().slice(0,10);
   document.getElementById('f_area').value='';
-  document.getElementById('f_edad').value='';
-  document.getElementById('f_poblacion').value='';
+  document.getElementById('f_edad').value=''; document.getElementById('f_edad').dataset.autofilled='false';
+  document.getElementById('f_poblacion').value=''; document.getElementById('f_poblacion').dataset.autofilled='false';
   document.getElementById('f_aplicacion').value='';
   document.getElementById('f_tecnico').value = await kvGet('ultimo_tecnico','');
   document.getElementById('f_estado_fenologico').value='';
@@ -2126,7 +2127,7 @@ async function refrescarCatalogos(silencioso){
     const res = await fetch(base + '/catalogos-recuentos');
     if(!res.ok) throw new Error('HTTP '+res.status);
     const data = await res.json();
-    if(data.sectores) SECTORES = data.sectores;
+    if(data.sectores) SECTORES = data.sectores.filter(s=>/^Sector\s+\d+$/i.test(s.nombre));
     if(data.companias) COMPANIAS = data.companias;
     if(data.fincas) FINCAS = data.fincas;
     if(data.lotes) LOTES = data.lotes;
