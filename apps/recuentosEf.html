@@ -406,4 +406,1714 @@
       <div class="card" id="cardFotos" style="padding:12px 14px;display:none;">
         <div style="display:flex;justify-content:space-between;align-items:center;">
           <h3 style="margin:0;">📷 Fotos de esta planta</h3>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fotoInput').click()">+ Agregar fo
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fotoInput').click()">+ Agregar foto</button>
+        </div>
+        <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none;" onchange="onFotoSeleccionada(event)">
+        <div id="fotoThumbs" class="foto-thumbs"></div>
+      </div>
+
+      <div id="familiaContainer"></div>
+      <div class="btn-row" style="margin-top:14px;">
+        <button class="btn btn-ghost" id="btnPlantaPrev" onclick="cambiarPlanta(-1)">← Anterior</button>
+        <button class="btn btn-primary" id="btnPlantaNext" onclick="cambiarPlanta(1)">+ Agregar planta</button>
+      </div>
+      <div style="height:8px;"></div>
+      <button class="btn btn-amber" onclick="terminarEvaluacion()">✔ Terminar evaluación (<span id="totalPlantasBtn">1</span> planta)</button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-ghost" onclick="verResumenParcial()">📄 Ver resumen / imprimir PDF</button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-ghost" onclick="goScreen('screen-home')">Guardar borrador y salir</button>
+    </section>
+
+    <!-- ============ RESUMEN ============ -->
+    <section id="screen-resumen" class="screen">
+      <button class="backlink" onclick="goScreen('screen-planta')">← Volver a plantas</button>
+      <h2>Resumen del recuento</h2>
+      <p id="resumenSub"></p>
+      <div id="resumenTablas"></div>
+
+      <div class="card">
+        <h3 style="margin-bottom:10px;">Firmas</h3>
+        <div class="firma-box">
+          <div class="firma-label">
+            <span>Evaluador</span>
+            <button class="btn btn-ghost btn-sm" onclick="limpiarFirma('evaluador')">Limpiar</button>
+          </div>
+          <canvas id="firmaEvaluador" class="firma-canvas" width="600" height="180"></canvas>
+        </div>
+        <div class="firma-box">
+          <div class="firma-label">
+            <span>Supervisor</span>
+            <button class="btn btn-ghost btn-sm" onclick="limpiarFirma('supervisor')">Limpiar</button>
+          </div>
+          <canvas id="firmaSupervisor" class="firma-canvas" width="600" height="180"></canvas>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="descargarPDF()">📄 Descargar / imprimir PDF</button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-ghost" onclick="compartirPDF()">📤 Compartir PDF (WhatsApp, correo…)</button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar evaluación en este dispositivo</button>
+    </section>
+
+    <!-- ============ CONFIG ============ -->
+    <section id="screen-config" class="screen">
+      <button class="backlink" onclick="goScreen('screen-home')">← Evaluaciones</button>
+      <h2>Sincronización</h2>
+
+      <div class="card">
+        <h3>Enviar a Odoo</h3>
+        <p>Envía a Odoo las evaluaciones guardadas en este dispositivo.</p>
+        <button class="btn btn-amber" onclick="sincronizarTodo()">🔄 Sincronizar ahora (<span id="cfgPendingCount">0</span> pendientes)</button>
+      </div>
+
+      <div class="card">
+        <h3>Fincas, lotes y ciclos</h3>
+        <p>Se actualizan solos cada vez que abres la app (si hay señal). No necesitas hacer nada.</p>
+        <div id="catalogoInfo" style="font-size:0.78rem;color:var(--texto-suave);"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <div id="printArea"></div>
+</div>
+
+<script>
+/* =========================================================================
+   CATÁLOGO DE 34 TIPOS DE RECUENTO
+   Fórmulas replicadas 1:1 del código Python de los campos calculados de
+   Odoo Studio (x_recuentos_line_b8abb: x_studio_total / avg / porcentaje /
+   resultado), verificadas contra registros reales.
+   NOTA: el tipo 22 en Odoo hoy duplica avg+porcentaje (bug). Aquí se calcula
+   correcto (total/estaciones, sin duplicar) — ver NOTAS_recuentos_campo.md.
+   ========================================================================= */
+// ============================================================================
+// CONFIGURACIÓN DE FÁBRICA DEL SERVIDOR
+// Los técnicos de campo NUNCA deben tener que escribir esto — viene precargado
+// en el archivo. Si cambias el Worker o la clave, edita estas 2 líneas UNA vez
+// aquí y vuelve a compartir el archivo actualizado con todos los celulares.
+// ============================================================================
+// Membrete y código de folio por compañía. Si agregan una compañía nueva en Odoo,
+// súmala aquí (id de x_studio_company_id -> código y nombre a imprimir).
+const COMPANY_BRANDING = {
+  2: { codigo:'DA',  nombreLegal:'Comercializadora de Maní', lugar:'Chinandega, Nicaragua' },
+  3: { codigo:'GZP', nombreLegal:'Grupo ZP',                  lugar:'Chinandega, Nicaragua' },
+};
+function brandingDeCompania(companyId){
+  return COMPANY_BRANDING[companyId] || { codigo:'GEN', nombreLegal: companiaNombre(companyId) || 'Infoagro', lugar:'Nicaragua' };
+}
+// El folio REAL (DA-M-2026-0001) lo asigna Odoo de forma atómica al sincronizar (ver
+// ir.sequence en el Worker), así nunca chocan dos dispositivos. Mientras no haya sincronizado
+// (por ejemplo, imprimiendo en el campo sin señal), se muestra un FOLIO TEMPORAL derivado del
+// localId de la evaluación (ya es único, se generó con UUID al crearla) — no hace falta
+// coordinar nada: el Worker recalcula exactamente el mismo folio temporal de forma
+// independiente a partir del mismo localId, y lo deja anotado junto al folio real en la
+// observación del registro en Odoo, para poder relacionar "el PDF que se imprimió en el
+// campo" con "el registro que terminó quedando" aunque hayan pasado varios días entre uno y otro.
+function folioTemporalDeSesion(sesion){
+  const brand = brandingDeCompania(sesion.header.company);
+  const anio = new Date(sesion.header.fecha || Date.now()).getFullYear();
+  const sufijo = sesion.localId.replace(/-/g,'').slice(-8);
+  return `${brand.codigo}-M-${anio}-TMP-${sufijo}`;
+}
+
+const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
+const DEFAULT_SYNC_KEY   = "PON_AQUI_LA_MISMA_CLAVE_QUE_PUSISTE_EN_RECUENTOS_SYNC_KEY";
+
+// Fotos por planta requieren R2 en el Worker (ver NOTAS_recuentos_campo.md). Mientras no esté
+// activo, se oculta el botón para no generar fotos que nunca lograrán sincronizarse.
+// Para reactivar cuando actives R2: cambia esto a true.
+const FOTOS_HABILITADAS = false;
+
+const FAMILIAS_ORDEN = ["Poblacionales","Enfermedades Foliares","Enfermedades basales","Plaga","Desarrollo fenológico","Daños productivos"];
+
+const CATALOGO_BASE = [
+  {id:1,  nombre:"Promedio Plantas por metro",                              familia:"Poblacionales",          mtrs:2, um:"Mtrs", calc:"avg_mtr"},
+  {id:2,  nombre:"Promedio de hojas totales por planta",                    familia:"Enfermedades Foliares",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:3,  nombre:"% de hojas manchadas temprana",                          familia:"Enfermedades Foliares",  mtrs:1, um:"Planta", calc:"pct_base", base:2},
+  {id:4,  nombre:"% de hojas mancha tardía",                                familia:"Enfermedades Foliares",  mtrs:1, um:"Planta", calc:"pct_base", base:2},
+  {id:5,  nombre:"% de hojas mancha corchosas",                             familia:"Enfermedades Foliares",  mtrs:1, um:"Planta", calc:"pct_base", base:2},
+  {id:6,  nombre:"% de hojas con roya",                                     familia:"Enfermedades Foliares",  mtrs:1, um:"Planta", calc:"pct_base", base:2},
+  {id:7,  nombre:"% de hojas defoliadas",                                   familia:"Enfermedades Foliares",  mtrs:1, um:"Planta", calc:"pct_base", base:2},
+  {id:8,  nombre:"% de plantas con Rhizoctonia",                            familia:"Enfermedades basales",   mtrs:1, um:"Planta", calc:"pct_poblacion"},
+  {id:9,  nombre:"% de plantas con Moho Blanco",                            familia:"Enfermedades basales",   mtrs:10, um:"Mtrs", calc:"pct_poblacion"},
+  {id:10, nombre:"Promedio de Spodoptera sp x metro",                       familia:"Plaga",                  mtrs:2, um:"Mtrs", calc:"avg_mtr"},
+  {id:11, nombre:"Promedio de Anticarsia x metro",                          familia:"Plaga",                  mtrs:2, um:"Mtrs", calc:"avg_mtr"},
+  {id:12, nombre:"Promedio de gusano peludo por metro",                     familia:"Plaga",                  mtrs:2, um:"Mtrs", calc:"avg_mtr"},
+  {id:13, nombre:"Promedio Plantas muertas por plaga por metro",            familia:"Plaga",                  mtrs:2, um:"Mtrs", calc:"avg_est"},
+  {id:14, nombre:"Promedio Plantas muertas x damping x mtr",                familia:"Plaga",                  mtrs:2, um:"Mtrs", calc:"avg_mtr"},
+  {id:15, nombre:"% Hojas dañadas x plaga",                                 familia:"Plaga",                  mtrs:1, um:"Planta", calc:"pct_base", base:2},
+  {id:16, nombre:"Promedio de nudos x planta",                              familia:"Desarrollo fenológico",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:17, nombre:"Promedio de Flores x planta",                             familia:"Desarrollo fenológico",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:18, nombre:"Promedio de ramas por planta",                            familia:"Desarrollo fenológico",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:19, nombre:"Promedio de ginóforos x planta",                          familia:"Desarrollo fenológico",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:20, nombre:"Promedio de zapatos (Botitas) x planta",                  familia:"Desarrollo fenológico",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:21, nombre:"Promedio Cápsula por planta",                             familia:"Desarrollo fenológico",  mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:22, nombre:"Promedio Cápsulas dañadas ó podridas por planta",         familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:23, nombre:"Promedio Cápsulas Rhizoctonia por planta",                familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:24, nombre:"Promedio Cápsulas dañadas por plaga por planta",          familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"avg_est"},
+  {id:25, nombre:"% Inicial ramas con rhizoctonia (buba, zarpullido)",      familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:18},
+  {id:26, nombre:"% Intermedio ramas con rhizoctonia (coloración marrón)",  familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:18},
+  {id:27, nombre:"% Severo ramas con rhizoctonia (necrosis, rama muerta)",  familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:18},
+  {id:28, nombre:"% Total de ramas con rhizoctonia x planta",               familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:18},
+  {id:29, nombre:"% de ginóforos con rhizoctonia x planta",                 familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:19},
+  {id:30, nombre:"% de zapato/bota con rhizoctonia x planta",               familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:20},
+  {id:31, nombre:"% de ramas con moho x planta",                            familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:18},
+  {id:32, nombre:"% de ginóforos con moho x planta",                        familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:19},
+  {id:33, nombre:"% de zapato/bota con moho x planta",                      familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:20},
+  {id:34, nombre:"% de cápsulas con moho",                                  familia:"Daños productivos",      mtrs:1, um:"Planta", calc:"pct_base", base:21},
+];
+
+const SEED_SECTORES = [
+  {id:1,nombre:"Sector 1"},
+  {id:2,nombre:"Sector 2"},
+  {id:4,nombre:"Privado DA"},
+  {id:5,nombre:"Sector 3"},
+  {id:6,nombre:"Taller DA"},
+  {id:7,nombre:"Invest. y Desarrollo"},
+  {id:8,nombre:"Privado GZP"},
+  {id:9,nombre:"Sector 4"}
+];
+const SEED_COMPANIAS = [
+  {id:2,nombre:"Division Agricola Comasa"},
+  {id:3,nombre:"Grupo ZP"}
+];
+const SEED_FINCAS = [
+  {id:3,nombre:"Miramar",sector:2,company:2},
+  {id:4,nombre:"Palo de Pan",sector:1,company:2},
+  {id:6,nombre:"San Martin",sector:1,company:2},
+  {id:9,nombre:"La Concha",sector:2,company:2},
+  {id:10,nombre:"Llano Verde",sector:1,company:2},
+  {id:12,nombre:"Santa Isabel",sector:1,company:2},
+  {id:13,nombre:"Mercedes",sector:5,company:3},
+  {id:14,nombre:"Cocal",sector:5,company:3},
+  {id:15,nombre:"India",sector:5,company:3},
+  {id:16,nombre:"Llano Verde ZP",sector:5,company:3},
+  {id:17,nombre:"Paraiso",sector:5,company:3},
+  {id:21,nombre:"La Laguna",sector:1,company:2},
+  {id:24,nombre:"Montana",sector:1,company:2},
+  {id:25,nombre:"Rancho Pando",sector:1,company:2},
+  {id:26,nombre:"San Luis",sector:2,company:2},
+  {id:27,nombre:"Quinta Maria",sector:1,company:2},
+  {id:28,nombre:"Planta Posoltega",sector:7,company:2},
+  {id:29,nombre:"LlanoVerde Ganado",sector:5,company:3},
+  {id:30,nombre:"Las Grietas",sector:5,company:3},
+  {id:31,nombre:"Roma",sector:1,company:2},
+  {id:32,nombre:"Jonathan Picado",sector:4,company:2},
+  {id:33,nombre:"Taller",sector:6,company:2},
+  {id:34,nombre:"Miguel Zavala K",sector:4,company:2},
+  {id:35,nombre:"Santa Rosa",sector:4,company:2},
+  {id:36,nombre:"Palmira",sector:1,company:2},
+  {id:37,nombre:"Finca Santa Carlota",sector:4,company:2},
+  {id:38,nombre:"Mercedes",sector:4,company:2},
+  {id:39,nombre:"Llano Verde ZP",sector:4,company:2},
+  {id:40,nombre:"India",sector:4,company:2},
+  {id:41,nombre:"Paraiso",sector:4,company:2},
+  {id:42,nombre:"Cocal",sector:4,company:2},
+  {id:43,nombre:"Las Grietas",sector:4,company:2},
+  {id:44,nombre:"Servicios",sector:8,company:3},
+  {id:46,nombre:"Rancho Pando",sector:5,company:3},
+  {id:47,nombre:"Las Americas-elimanr",sector:2,company:2},
+  {id:48,nombre:"Experimental",sector:5,company:3},
+  {id:49,nombre:"Ernesto Diaz",sector:4,company:2},
+  {id:50,nombre:"Juan Alvaro Munguia",sector:4,company:2},
+  {id:51,nombre:"Tulio Darce",sector:8,company:3},
+  {id:52,nombre:"Rancho Candelaria",sector:8,company:3},
+  {id:53,nombre:"Ernesto Diaz",sector:8,company:3},
+  {id:54,nombre:"Josue Anduray",sector:8,company:3},
+  {id:55,nombre:"El Naranjo",sector:4,company:2},
+  {id:56,nombre:"La Ermita",sector:4,company:2},
+  {id:57,nombre:"Las Mesas",sector:4,company:2},
+  {id:58,nombre:"La Mata",sector:4,company:2},
+  {id:59,nombre:"Diputado",sector:8,company:3},
+  {id:60,nombre:"San Antonio",sector:4,company:2},
+  {id:61,nombre:"Santa Teresa",sector:4,company:2},
+  {id:62,nombre:"La Pistola",sector:1,company:2},
+  {id:63,nombre:"Finca San Blas",sector:9,company:2},
+  {id:64,nombre:"La Divina Providencia",sector:4,company:2},
+  {id:65,nombre:"Cristina",sector:5,company:3},
+  {id:66,nombre:"Las Americas",sector:2,company:2},
+  {id:67,nombre:"Paraiso MR",sector:5,company:3}
+];
+const SEED_LOTES = [
+  {id:5,nombre:"Pista",finca:3},
+  {id:6,nombre:"San Antonio",finca:4},
+  {id:8,nombre:"San Martin",finca:6},
+  {id:13,nombre:"San Andres",finca:9},
+  {id:14,nombre:"Mango",finca:9},
+  {id:15,nombre:"Lote 1",finca:4},
+  {id:16,nombre:"Jocote",finca:10},
+  {id:17,nombre:"Lote 2",finca:4},
+  {id:18,nombre:"Lote 3",finca:4},
+  {id:20,nombre:"Cristina",finca:10},
+  {id:21,nombre:"Cacho",finca:10},
+  {id:22,nombre:"El toro",finca:12},
+  {id:23,nombre:"Pancho",finca:10},
+  {id:24,nombre:"La Yuca",finca:9},
+  {id:25,nombre:"Yerama",finca:12},
+  {id:26,nombre:"Lote 3",finca:13},
+  {id:27,nombre:"Lote 2-CC",finca:14},
+  {id:28,nombre:"Lote 1-CC",finca:14},
+  {id:29,nombre:"Lote 2 MM",finca:13},
+  {id:30,nombre:"India",finca:15},
+  {id:31,nombre:"Las 100",finca:17},
+  {id:32,nombre:"Pochote",finca:17},
+  {id:33,nombre:"Lote 1y2",finca:13},
+  {id:35,nombre:"Lote 4",finca:13},
+  {id:36,nombre:"Lote 5",finca:13},
+  {id:37,nombre:"Lote 6",finca:13},
+  {id:38,nombre:"Lote 7",finca:13},
+  {id:39,nombre:"Lote 8",finca:13},
+  {id:40,nombre:"Lote 9",finca:13},
+  {id:41,nombre:"Lote 10",finca:13},
+  {id:42,nombre:"Lote 11",finca:13},
+  {id:43,nombre:"Lote 12",finca:13},
+  {id:44,nombre:"Lote 13",finca:13},
+  {id:45,nombre:"Lote 1 MM",finca:13},
+  {id:158,nombre:"Lote #1",finca:3},
+  {id:159,nombre:"Lote #2",finca:3},
+  {id:160,nombre:"Lote #3",finca:3},
+  {id:161,nombre:"Lote #4",finca:3},
+  {id:310,nombre:"Flores Verdes",finca:4},
+  {id:311,nombre:"La Pila",finca:21},
+  {id:312,nombre:"Lote 2",finca:21},
+  {id:313,nombre:"Adriana",finca:21},
+  {id:314,nombre:"Paco",finca:10},
+  {id:347,nombre:"Pochote",finca:21},
+  {id:419,nombre:"Las 60",finca:24},
+  {id:420,nombre:"Hamburguesa",finca:24},
+  {id:421,nombre:"Rio escondigo",finca:24},
+  {id:422,nombre:"Quesera I",finca:10},
+  {id:423,nombre:"Quesera II",finca:10},
+  {id:430,nombre:"Los Planes",finca:25},
+  {id:431,nombre:"La Grieta #1",finca:25},
+  {id:432,nombre:"La Grieta #2",finca:25},
+  {id:462,nombre:"Esmeralda",finca:3},
+  {id:463,nombre:"San Luis",finca:26},
+  {id:464,nombre:"La Pista",finca:9},
+  {id:503,nombre:"Montaña",finca:9},
+  {id:561,nombre:"Casco Finca",finca:16},
+  {id:562,nombre:"Lote 13",finca:16},
+  {id:563,nombre:"La Loma",finca:12},
+  {id:564,nombre:"Lote 11",finca:16},
+  {id:565,nombre:"Lote 6",finca:16},
+  {id:566,nombre:"Lote 7",finca:16},
+  {id:567,nombre:"Lote 12",finca:16},
+  {id:568,nombre:"Lote 14",finca:16},
+  {id:569,nombre:"Lote 4",finca:16},
+  {id:570,nombre:"Lote 8",finca:16},
+  {id:571,nombre:"Lote 5",finca:16},
+  {id:572,nombre:"Lote 10",finca:16},
+  {id:573,nombre:"Lote 9",finca:16},
+  {id:574,nombre:"Potrero",finca:14},
+  {id:575,nombre:"Las 27",finca:14},
+  {id:576,nombre:"Las 40",finca:14},
+  {id:577,nombre:"Francia",finca:17},
+  {id:578,nombre:"Santa Rosa I",finca:17},
+  {id:579,nombre:"Santa Rosa II",finca:17},
+  {id:580,nombre:"Potrero",finca:17},
+  {id:581,nombre:"Lote 1",finca:27},
+  {id:582,nombre:"Lote 2",finca:27},
+  {id:583,nombre:"Lote 3",finca:27},
+  {id:584,nombre:"Roma",finca:31},
+  {id:585,nombre:"Las Mesas",finca:32},
+  {id:586,nombre:"Santa Anita",finca:25},
+  {id:587,nombre:"Paraiso",finca:34},
+  {id:588,nombre:"Santa Rosa",finca:35},
+  {id:589,nombre:"Cocal",finca:34},
+  {id:590,nombre:"Palmira",finca:36},
+  {id:591,nombre:"Finca Santa Carlota",finca:37},
+  {id:592,nombre:"Mercedes",finca:34},
+  {id:593,nombre:"Lote 1y2",finca:38},
+  {id:594,nombre:"Lote 3",finca:38},
+  {id:595,nombre:"Lote 4.",finca:38},
+  {id:596,nombre:"Lote 5",finca:38},
+  {id:597,nombre:"Lote 6",finca:38},
+  {id:598,nombre:"Lote 7",finca:38},
+  {id:599,nombre:"Lote 8",finca:38},
+  {id:600,nombre:"Lote 9",finca:38},
+  {id:601,nombre:"Lote 10",finca:38},
+  {id:602,nombre:"Lote 11",finca:38},
+  {id:603,nombre:"Lote 12",finca:38},
+  {id:604,nombre:"Lote 13",finca:38},
+  {id:605,nombre:"Lote 1 MM",finca:38},
+  {id:606,nombre:"Lote 2 MM",finca:38},
+  {id:607,nombre:"Casco Finca",finca:39},
+  {id:608,nombre:"Lote 4",finca:39},
+  {id:609,nombre:"Lote 5",finca:39},
+  {id:610,nombre:"Lote 6",finca:39},
+  {id:611,nombre:"Lote 7",finca:39},
+  {id:612,nombre:"Lote 8",finca:39},
+  {id:613,nombre:"Lote 9",finca:39},
+  {id:614,nombre:"Lote 10",finca:39},
+  {id:615,nombre:"Lote 11",finca:39},
+  {id:616,nombre:"Lote 12",finca:39},
+  {id:617,nombre:"Lote 13",finca:39},
+  {id:618,nombre:"India",finca:40},
+  {id:619,nombre:"Santa Rosa I",finca:41},
+  {id:620,nombre:"Santa Rosa II",finca:41},
+  {id:621,nombre:"Potrero",finca:41},
+  {id:622,nombre:"Chilamate",finca:41},
+  {id:623,nombre:"Las 100",finca:41},
+  {id:624,nombre:"Francia",finca:41},
+  {id:625,nombre:"Potrero",finca:42},
+  {id:626,nombre:"Las 40",finca:42},
+  {id:627,nombre:"El Tiburon",finca:42},
+  {id:628,nombre:"Las 27",finca:42},
+  {id:629,nombre:"Lote 1CC",finca:42},
+  {id:630,nombre:"Lote 2CC",finca:42},
+  {id:631,nombre:"Las Grietas",finca:43},
+  {id:632,nombre:"Las Grietas",finca:30},
+  {id:633,nombre:"El Tiburon",finca:14},
+  {id:634,nombre:"Chilamate",finca:17},
+  {id:635,nombre:"Las 40",finca:17},
+  {id:636,nombre:"Jose Anduray",finca:44},
+  {id:637,nombre:"Tulio Darce",finca:44},
+  {id:638,nombre:"Ernesto Diaz",finca:44},
+  {id:639,nombre:"Rancho Candelaria",finca:44},
+  {id:640,nombre:"Lote 3 MM",finca:13},
+  {id:641,nombre:"Experimental",finca:48},
+  {id:643,nombre:"Santa Rosa",finca:35},
+  {id:644,nombre:"El Naranjo",finca:49},
+  {id:645,nombre:"La Ermita",finca:49},
+  {id:646,nombre:"La Mata",finca:50},
+  {id:647,nombre:"El Naranjo",finca:55},
+  {id:648,nombre:"La Ermita",finca:56},
+  {id:649,nombre:"Las Mesas",finca:57},
+  {id:650,nombre:"La Mata",finca:58},
+  {id:651,nombre:"Diputado",finca:59},
+  {id:652,nombre:"Rancho Candelaria",finca:52},
+  {id:653,nombre:"San Antonio",finca:60},
+  {id:654,nombre:"Santa Teresa",finca:61},
+  {id:655,nombre:"El toro - Testigo",finca:12},
+  {id:656,nombre:"Lote 15",finca:16},
+  {id:657,nombre:"Lote 1",finca:39},
+  {id:658,nombre:"Vivero",finca:14},
+  {id:659,nombre:"Lote 1",finca:62},
+  {id:660,nombre:"Lote 2",finca:62},
+  {id:661,nombre:"Lote 3",finca:62},
+  {id:662,nombre:"Lote 4",finca:62},
+  {id:663,nombre:"Lote 5",finca:62},
+  {id:664,nombre:"Lote 6",finca:62},
+  {id:665,nombre:"El Negrito",finca:63},
+  {id:666,nombre:"Los Tololos",finca:63},
+  {id:667,nombre:"La Compañia",finca:63},
+  {id:668,nombre:"Chepelolo",finca:63},
+  {id:669,nombre:"El Establo",finca:63},
+  {id:670,nombre:"Rugama",finca:63},
+  {id:671,nombre:"Lote 1",finca:16},
+  {id:672,nombre:"La Grieta #3",finca:25},
+  {id:673,nombre:"Cristina MR",finca:10},
+  {id:674,nombre:"Paso Picado",finca:25},
+  {id:675,nombre:"Santa Lucia",finca:31},
+  {id:676,nombre:"Lote 1",finca:64},
+  {id:677,nombre:"Lote 14",finca:39},
+  {id:678,nombre:"Lote 4-CC",finca:14},
+  {id:679,nombre:"San Blas",finca:63},
+  {id:680,nombre:"Escorcia",finca:63},
+  {id:681,nombre:"Avanzada",finca:63},
+  {id:682,nombre:"Cristina",finca:65},
+  {id:683,nombre:"La Grieta #4",finca:25},
+  {id:684,nombre:"GUILIGUISTE",finca:66},
+  {id:685,nombre:"LOS LIMONES",finca:66},
+  {id:686,nombre:"LOS RANCHOS",finca:66},
+  {id:687,nombre:"MARTILLO",finca:66},
+  {id:688,nombre:"TEMPISQUE",finca:66},
+  {id:689,nombre:"La Pista RP",finca:46},
+  {id:690,nombre:"Rancho Pando",finca:46},
+  {id:691,nombre:"Las 100 MR",finca:67},
+  {id:692,nombre:"Santa Rosa II MR",finca:67}
+];
+const SEED_CICLOS = [
+  {id:24,nombre:"Invest. y Des. 2026",company:2},
+  {id:25,nombre:"Mani 2026",company:2},
+  {id:26,nombre:"Servicios 2026",company:2},
+  {id:28,nombre:"Mani 2026",company:3}
+];
+
+let CATALOGO = JSON.parse(JSON.stringify(CATALOGO_BASE));
+let SECTORES = SEED_SECTORES, COMPANIAS = SEED_COMPANIAS, FINCAS = SEED_FINCAS, LOTES = SEED_LOTES, CICLOS = SEED_CICLOS;
+
+/* =========================================================================
+   INDEXEDDB
+   ========================================================================= */
+const DB_NAME='infoagro_recuentos', DB_VER=2;
+let dbP = null;
+function openDB(){
+  if(dbP) return dbP;
+  dbP = new Promise((resolve,reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VER);
+    req.onupgradeneeded = (e)=>{
+      const db = e.target.result;
+      if(!db.objectStoreNames.contains('sessions')){
+        const s = db.createObjectStore('sessions',{keyPath:'localId'});
+        s.createIndex('status','status');
+      }
+      if(!db.objectStoreNames.contains('kv')){
+        db.createObjectStore('kv',{keyPath:'key'});
+      }
+      if(!db.objectStoreNames.contains('photos')){
+        const p = db.createObjectStore('photos',{keyPath:'id'});
+        p.createIndex('sessionLocalId','sessionLocalId');
+      }
+    };
+    req.onsuccess = ()=>resolve(req.result);
+    req.onerror = ()=>reject(req.error);
+  });
+  return dbP;
+}
+async function idbGetAllSessions(){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('sessions','readonly');
+    const store = tx.objectStore('sessions');
+    const out=[];
+    store.openCursor().onsuccess=(e)=>{
+      const c = e.target.result;
+      if(c){ out.push(c.value); c.continue(); } else res(out);
+    };
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbPutSession(sess){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('sessions','readwrite');
+    tx.objectStore('sessions').put(sess);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbDeleteSession(localId){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('sessions','readwrite');
+    tx.objectStore('sessions').delete(localId);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function kvGet(key,fallback){
+  const db = await openDB();
+  return new Promise((res)=>{
+    const tx = db.transaction('kv','readonly');
+    const r = tx.objectStore('kv').get(key);
+    r.onsuccess=()=>res(r.result ? r.result.value : fallback);
+    r.onerror=()=>res(fallback);
+  });
+}
+async function kvSet(key,value){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('kv','readwrite');
+    tx.objectStore('kv').put({key,value});
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+
+/* ---- Fotos ---- */
+async function idbAddPhoto(photo){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('photos','readwrite');
+    tx.objectStore('photos').put(photo);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbGetPhotosForSession(sessionLocalId){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('photos','readonly');
+    const idx = tx.objectStore('photos').index('sessionLocalId');
+    const out=[];
+    idx.openCursor(IDBKeyRange.only(sessionLocalId)).onsuccess=(e)=>{
+      const c = e.target.result;
+      if(c){ out.push(c.value); c.continue(); } else res(out);
+    };
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbDeletePhoto(id){
+  const db = await openDB();
+  return new Promise((res,rej)=>{
+    const tx = db.transaction('photos','readwrite');
+    tx.objectStore('photos').delete(id);
+    tx.oncomplete=()=>res();
+    tx.onerror=()=>rej(tx.error);
+  });
+}
+async function idbUpdatePhoto(photo){
+  return idbAddPhoto(photo); // put() sobreescribe
+}
+
+/* =========================================================================
+   ESTADO DE LA EVALUACIÓN EN CURSO
+   ========================================================================= */
+function uuid(){
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8); return v.toString(16);
+  });
+}
+function nuevaSesion(){
+  const lines = {};
+  CATALOGO.forEach(t=>{
+    lines[t.id] = {idrecuento:t.id, e1:0,e2:0,e3:0,e4:0,e5:0,e6:0,e7:0,e8:0,e9:0,e10:0};
+  });
+  return {
+    localId: uuid(),
+    status: 'draft',
+    odooId: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    header: {
+      fecha:'', ciclo:null, sector:null, finca:null, lote:null, company:null, area_evaluada:null, edad_cultivo:null,
+      poblacion_plantas:null, aplicacion:'', fecha_aplicacion:null, estaciones:1, observacion:'',
+      tecnico:'', estado_fenologico:'', firma_evaluador:null, firma_supervisor:null, folio:null
+    },
+    currentStation: 1,
+    lines,
+    gpsPorPlanta: {}, // { "1": {lat,lng,acc,timestamp}, "2": {...}, ... } — una coordenada por estación
+    lastError: null
+  };
+}
+let sesionActual = null;
+
+/* =========================================================================
+   NAVEGACIÓN
+   ========================================================================= */
+function goScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='screen-home') renderHome();
+  if(id==='screen-config') renderConfig();
+  window.scrollTo(0,0);
+}
+
+function toast(msg, isErr){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr?' err':'');
+  setTimeout(()=>t.classList.remove('show'), 2600);
+}
+
+/* =========================================================================
+   HOME / LISTA DE SESIONES
+   ========================================================================= */
+let sincronizandoLocalId = null; // id de la evaluación que se está enviando ahora mismo
+
+async function renderHome(){
+  const list = await idbGetAllSessions();
+  list.sort((a,b)=> b.updatedAt.localeCompare(a.updatedAt));
+  const cont = document.getElementById('sessionList');
+  const empty = document.getElementById('emptyState');
+  cont.innerHTML='';
+  if(list.length===0){ empty.style.display='block'; }
+  else{
+    empty.style.display='none';
+    list.forEach(s=>{
+      const fincaName = fincaNombre(s.header.finca);
+      const loteName = loteNombre(s.header.lote);
+      const div = document.createElement('div');
+      div.className='session-item';
+      div.onclick=()=>abrirSesion(s.localId);
+      const enviandoAhora = sincronizandoLocalId === s.localId;
+      const estadoTag = enviandoAhora ? 'syncing' : s.status;
+      const tagTxt = {draft:'Borrador', pending_sync:'Por enviar', synced:'Enviado', error:'Error', syncing:'Enviando'}[estadoTag];
+      const iconoTag = enviandoAhora ? '<span class="mini-ring"></span>' : '<span class="mini-dot"></span>';
+      div.innerHTML = `
+        <div class="meta">
+          <div class="t1">${fincaName||'Finca sin definir'} · ${loteName||'Lote sin definir'}</div>
+          <div class="t2">${s.header.fecha||'sin fecha'} · Planta ${s.currentStation}/${s.header.estaciones}</div>
+        </div>
+        <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
+      `;
+      cont.appendChild(div);
+    });
+  }
+  const pending = list.filter(s=>s.status==='pending_sync'||s.status==='error').length;
+  document.getElementById('cfgPendingCount').textContent = pending;
+  updateOnlineUI();
+}
+
+function fincaNombre(id){ const f = FINCAS.find(x=>x.id===id); return f?f.nombre:null; }
+function loteNombre(id){ const l = LOTES.find(x=>x.id===id); return l?l.nombre:null; }
+function sectorNombre(id){ const s = SECTORES.find(x=>x.id===id); return s?s.nombre:null; }
+function companiaNombre(id){ const c = COMPANIAS.find(x=>x.id===id); return c?c.nombre:null; }
+
+async function abrirSesion(localId){
+  const list = await idbGetAllSessions();
+  const s = list.find(x=>x.localId===localId);
+  if(!s) return;
+  sesionActual = s;
+  if(!sesionActual.gpsPorPlanta) sesionActual.gpsPorPlanta = {}; // compatibilidad con evaluaciones creadas antes de este cambio
+  if(s.status==='draft'){
+    poblarFormularioDesdeSesion();
+    renderPlanta();
+    goScreen('screen-planta');
+  } else {
+    renderResumen(true);
+    goScreen('screen-resumen');
+  }
+}
+
+/* =========================================================================
+   FORM HEADER
+   ========================================================================= */
+function poblarSelects(){
+  const cSel = document.getElementById('f_ciclo');
+  cSel.innerHTML = CICLOS.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  const sSel = document.getElementById('f_sector');
+  sSel.innerHTML = SECTORES.map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
+  onSectorChange();
+}
+function onSectorChange(){
+  const sectorId = parseInt(document.getElementById('f_sector').value);
+  const fSel = document.getElementById('f_finca');
+  const fincas = FINCAS.filter(f=>f.sector===sectorId);
+  fSel.innerHTML = fincas.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
+  onFincaChange();
+}
+function onFincaChange(){
+  const fincaId = parseInt(document.getElementById('f_finca').value);
+  const lSel = document.getElementById('f_lote');
+  const lotes = LOTES.filter(l=>l.finca===fincaId);
+  lSel.innerHTML = lotes.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
+  const finca = FINCAS.find(f=>f.id===fincaId);
+  const compania = finca ? COMPANIAS.find(c=>c.id===finca.company) : null;
+  const badge = document.getElementById('companiaHeaderBadge');
+  if(compania){ badge.textContent = '🏢 ' + compania.nombre; badge.style.display='inline-flex'; }
+  else{ badge.style.display='none'; }
+}
+function poblarFormularioDesdeSesion(){
+  poblarSelects();
+  const h = sesionActual.header;
+  document.getElementById('f_fecha').value = h.fecha || new Date().toISOString().slice(0,10);
+  if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
+  if(h.sector) document.getElementById('f_sector').value = h.sector;
+  onSectorChange();
+  if(h.finca) document.getElementById('f_finca').value = h.finca;
+  onFincaChange();
+  if(h.lote) document.getElementById('f_lote').value = h.lote;
+  document.getElementById('f_area').value = h.area_evaluada ?? '';
+  document.getElementById('f_edad').value = h.edad_cultivo ?? '';
+  document.getElementById('f_poblacion').value = h.poblacion_plantas ?? '';
+  document.getElementById('f_aplicacion').value = h.aplicacion ?? '';
+  document.getElementById('f_tecnico').value = h.tecnico ?? '';
+  document.getElementById('f_estado_fenologico').value = h.estado_fenologico ?? '';
+  document.getElementById('f_observacion').value = h.observacion ?? '';
+}
+async function nuevaEvaluacionClick(){
+  sesionActual = nuevaSesion();
+  poblarSelects();
+  document.getElementById('f_fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('f_area').value='';
+  document.getElementById('f_edad').value='';
+  document.getElementById('f_poblacion').value='';
+  document.getElementById('f_aplicacion').value='';
+  document.getElementById('f_tecnico').value = await kvGet('ultimo_tecnico','');
+  document.getElementById('f_estado_fenologico').value='';
+  document.getElementById('f_observacion').value='';
+  goScreen('screen-form');
+}
+function pintarGpsPlanta(estado){
+  const el = document.getElementById('gpsPlantaResult');
+  if(!el) return;
+  el.textContent = estado;
+}
+function capturarGPSPlanta(silencioso){
+  if(!navigator.geolocation){
+    pintarGpsPlanta('GPS no disponible en este navegador');
+    if(!silencioso) toast('GPS no disponible en este dispositivo', true);
+    return;
+  }
+  const i = sesionActual.currentStation;
+  if(!silencioso) pintarGpsPlanta('Buscando señal GPS…');
+  navigator.geolocation.getCurrentPosition(pos=>{
+    const {latitude:lat, longitude:lng, accuracy:acc} = pos.coords;
+    sesionActual.gpsPorPlanta[i] = {lat, lng, acc, timestamp: new Date().toISOString()};
+    idbPutSession(sesionActual);
+    if(sesionActual.currentStation === i) renderGpsPlanta();
+  }, err=>{
+    const motivos = {
+      1: 'Permiso de ubicación denegado — actívalo en Ajustes del navegador/app',
+      2: 'No se pudo determinar la posición (revisa que el GPS del celular esté activado)',
+      3: 'Se agotó el tiempo esperando señal GPS',
+    };
+    pintarGpsPlanta('⚠️ ' + (motivos[err.code] || 'No se pudo obtener ubicación') + ' — toca Actualizar para reintentar');
+  }, {enableHighAccuracy:true, timeout:12000, maximumAge:15000});
+}
+function renderGpsPlanta(){
+  const i = sesionActual.currentStation;
+  const p = sesionActual.gpsPorPlanta[i];
+  if(p){
+    const precision = p.acc ? ` (±${Math.round(p.acc)}m)` : '';
+    pintarGpsPlanta(`📍 ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}${precision}`);
+  } else {
+    pintarGpsPlanta('Buscando señal GPS…');
+    capturarGPSPlanta(true);
+  }
+}
+function leerFormularioHeader(){
+  const h = sesionActual.header;
+  h.fecha = document.getElementById('f_fecha').value;
+  h.ciclo = parseInt(document.getElementById('f_ciclo').value) || null;
+  h.sector = parseInt(document.getElementById('f_sector').value) || null;
+  h.finca = parseInt(document.getElementById('f_finca').value) || null;
+  h.lote = parseInt(document.getElementById('f_lote').value) || null;
+  const finca = FINCAS.find(f=>f.id===h.finca);
+  h.company = finca ? finca.company : null;
+  h.area_evaluada = parseFloat(document.getElementById('f_area').value) || null;
+  h.edad_cultivo = parseInt(document.getElementById('f_edad').value) || null;
+  h.poblacion_plantas = parseFloat(document.getElementById('f_poblacion').value) || null;
+  h.aplicacion = document.getElementById('f_aplicacion').value;
+  h.tecnico = document.getElementById('f_tecnico').value;
+  h.estado_fenologico = document.getElementById('f_estado_fenologico').value;
+  h.observacion = document.getElementById('f_observacion').value;
+  if(h.tecnico) kvSet('ultimo_tecnico', h.tecnico);
+}
+async function iniciarEvaluacion(){
+  leerFormularioHeader();
+  if(!sesionActual.header.finca || !sesionActual.header.lote || !sesionActual.header.fecha){
+    toast('Completa fecha, finca y lote para continuar', true); return;
+  }
+  sesionActual.updatedAt = new Date().toISOString();
+  await idbPutSession(sesionActual);
+  renderPlanta();
+  goScreen('screen-planta');
+}
+function volverAFormulario(){
+  poblarFormularioDesdeSesion();
+  goScreen('screen-form');
+}
+async function verResumenParcial(){
+  leerFormularioHeader();
+  await idbPutSession(sesionActual);
+  calcularResultados();
+  renderResumen(false);
+  goScreen('screen-resumen');
+}
+
+/* =========================================================================
+   PANTALLA PLANTA (una estación a la vez)
+   ========================================================================= */
+/** Durante la captura (una planta a la vez) el técnico está anotando un conteo crudo, no un
+ *  porcentaje ni un promedio todavía — esos se calculan después. Quitamos esos prefijos aquí
+ *  para no confundir; el nombre completo ("% de...", "Promedio de...") se sigue mostrando tal
+ *  cual en el Resumen y en el PDF, donde sí corresponde al resultado ya calculado. */
+function nombreParaCaptura(nombre){
+  const limpio = nombre
+    .replace(/^%\s*de\s+/i, '')
+    .replace(/^%\s+/i, '')
+    .replace(/^Promedio\s+de\s+/i, '')
+    .replace(/^Promedio\s+/i, '');
+  return limpio.charAt(0).toUpperCase() + limpio.slice(1);
+}
+
+function renderPlanta(){
+  const n = sesionActual.header.estaciones;
+  const i = sesionActual.currentStation;
+  document.getElementById('plantaLabel').textContent = `Planta ${i} de ${n}`;
+  document.getElementById('plantaLote').textContent = `${fincaNombre(sesionActual.header.finca)||''} · ${loteNombre(sesionActual.header.lote)||''}`;
+  document.getElementById('plantaFill').style.width = Math.round((n/10)*100)+'%';
+  document.getElementById('btnPlantaPrev').disabled = (i<=1);
+  const btnNext = document.getElementById('btnPlantaNext');
+  if(i>=n){ btnNext.textContent = '+ Agregar planta'; btnNext.disabled = (n>=10); }
+  else{ btnNext.textContent = 'Siguiente →'; btnNext.disabled = false; }
+  document.getElementById('totalPlantasBtn').textContent = n;
+  document.getElementById('cardFotos').style.display = FOTOS_HABILITADAS ? 'block' : 'none';
+  if(FOTOS_HABILITADAS) renderFotosPlanta();
+  renderGpsPlanta();
+
+  const cont = document.getElementById('familiaContainer');
+  cont.innerHTML='';
+  FAMILIAS_ORDEN.forEach((fam,idx)=>{
+    const tipos = CATALOGO.filter(t=>t.familia===fam);
+    const det = document.createElement('details');
+    det.className='familia';
+    det.open = idx<3; // abre las 3 primeras familias por defecto (poblacionales/foliares/basales)
+    const sum = document.createElement('summary');
+    sum.innerHTML = `<span>${fam}</span><span class="chev">›</span>`;
+    det.appendChild(sum);
+    const filas = document.createElement('div');
+    filas.className='filas';
+    tipos.forEach(t=>{
+      const val = sesionActual.lines[t.id]['e'+i] ?? 0;
+      const fila = document.createElement('div');
+      fila.className='fila-tipo';
+      fila.innerHTML = `
+        <span class="nombre">${nombreParaCaptura(t.nombre)}</span>
+        <input type="number" step="any" inputmode="decimal"
+               data-idr="${t.id}" value="${val!==0?val:''}" placeholder="0"
+               class="${val!==0?'touched':''}"
+               onchange="onCampoPlanta(this, ${t.id})">
+      `;
+      filas.appendChild(fila);
+    });
+    det.appendChild(filas);
+    cont.appendChild(det);
+  });
+}
+function onCampoPlanta(input, idr){
+  const i = sesionActual.currentStation;
+  const v = parseFloat(input.value);
+  sesionActual.lines[idr]['e'+i] = isNaN(v) ? 0 : v;
+  input.classList.toggle('touched', !isNaN(v) && v!==0);
+}
+
+/* ---- Fotos por planta ---- */
+function comprimirImagen(file, maxW=1280, calidad=0.72){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = ()=>{ img.src = reader.result; };
+    reader.onerror = reject;
+    img.onload = ()=>{
+      const scale = Math.min(1, maxW/img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width*scale);
+      canvas.height = Math.round(img.height*scale);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob=>{
+        if(blob) resolve(blob); else reject(new Error('No se pudo comprimir la imagen'));
+      }, 'image/jpeg', calidad);
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function onFotoSeleccionada(event){
+  const file = event.target.files[0];
+  event.target.value = ''; // permite volver a elegir el mismo archivo después
+  if(!file) return;
+  toast('Procesando foto…');
+  try{
+    const blob = await comprimirImagen(file);
+    const photo = {
+      id: uuid(),
+      sessionLocalId: sesionActual.localId,
+      station: sesionActual.currentStation,
+      blob,
+      mime: 'image/jpeg',
+      createdAt: new Date().toISOString(),
+      synced: false,
+      url: null
+    };
+    await idbAddPhoto(photo);
+    toast('Foto agregada ✔');
+    renderFotosPlanta();
+  }catch(e){
+    toast('No se pudo guardar la foto: '+e.message, true);
+  }
+}
+async function renderFotosPlanta(){
+  const cont = document.getElementById('fotoThumbs');
+  cont.innerHTML = '';
+  const fotos = (await idbGetPhotosForSession(sesionActual.localId))
+    .filter(p=>p.station===sesionActual.currentStation);
+  fotos.forEach(p=>{
+    const url = URL.createObjectURL(p.blob);
+    const div = document.createElement('div');
+    div.className='foto-thumb';
+    div.innerHTML = `<img src="${url}"><button class="del" onclick="eliminarFoto('${p.id}')">✕</button>
+      ${p.synced?'<span class="badge-sync">✔</span>':''}`;
+    cont.appendChild(div);
+  });
+}
+async function eliminarFoto(id){
+  await idbDeletePhoto(id);
+  renderFotosPlanta();
+}
+
+async function cambiarPlanta(delta){
+  const n = sesionActual.header.estaciones;
+  const i = sesionActual.currentStation;
+  if(delta>0){
+    if(i>=n){
+      if(n>=10){ toast('Máximo 10 plantas por evaluación', true); return; }
+      // Agregar una planta nueva (crea el siguiente número de estación)
+      sesionActual.header.estaciones = n+1;
+      sesionActual.currentStation = n+1;
+    } else {
+      sesionActual.currentStation = i+1;
+    }
+  } else {
+    sesionActual.currentStation = Math.max(1, i-1);
+  }
+  sesionActual.updatedAt = new Date().toISOString();
+  await idbPutSession(sesionActual);
+  renderPlanta();
+  window.scrollTo(0,0);
+}
+async function terminarEvaluacion(){
+  const n = sesionActual.header.estaciones;
+  if(!confirm(`¿Terminar la evaluación con ${n} planta${n===1?'':'s'}? Podrás seguir editando antes de guardarla si hace falta.`)) return;
+  sesionActual.updatedAt = new Date().toISOString();
+  await idbPutSession(sesionActual);
+  calcularResultados();
+  renderResumen(false);
+  goScreen('screen-resumen');
+}
+
+/* =========================================================================
+   CÁLCULOS (réplica de las fórmulas de Odoo Studio, con id 22 corregido)
+   ========================================================================= */
+function calcularResultados(){
+  const est = sesionActual.header.estaciones;
+  const poblacion = sesionActual.header.poblacion_plantas || 0;
+  const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
+  const lines = sesionActual.lines;
+
+  // 1) totales
+  Object.values(lines).forEach(l=>{
+    let total=0;
+    for(let k=1;k<=est;k++) total += (l['e'+k]||0);
+    l.total = total;
+    l.mtrs = catById[l.idrecuento].mtrs;
+  });
+
+  // 2) avg / porcentaje / resultado (segunda pasada: los "pct_base" dependen del total de otra línea)
+  Object.values(lines).forEach(l=>{
+    const meta = catById[l.idrecuento];
+    let avg=0, porcentaje=0;
+    switch(meta.calc){
+      case 'avg_mtr':
+        avg = est*meta.mtrs ? l.total/(est*meta.mtrs) : 0;
+        break;
+      case 'avg_est':
+        avg = est ? l.total/est : 0;
+        break;
+      case 'pct_base': {
+        const base = lines[meta.base];
+        avg = 0;
+        porcentaje = (base && base.total) ? l.total/base.total : 0;
+        break;
+      }
+      case 'pct_poblacion': {
+        const denom = est*meta.mtrs*poblacion;
+        avg = 0;
+        porcentaje = denom ? l.total/denom : 0;
+        break;
+      }
+    }
+    l.avg = avg;
+    l.porcentaje = porcentaje;
+    l.resultado = avg + porcentaje; // id 22 corregido: solo tiene avg, porcentaje=0, así no se duplica
+  });
+}
+
+function fmt(n){
+  if(n===undefined||n===null||isNaN(n)) return '0';
+  return (Math.round(n*10000)/10000).toString();
+}
+function fmtPct(n){ return (Math.round(n*10000)/100)+'%'; }
+
+/* =========================================================================
+   RESUMEN
+   ========================================================================= */
+function renderResumen(readOnly){
+  const h = sesionActual.header;
+  const gpsCount = Object.keys(sesionActual.gpsPorPlanta || {}).length;
+  document.getElementById('resumenSub').textContent =
+    `${sectorNombre(h.sector)||''} · ${fincaNombre(h.finca)||''} · ${loteNombre(h.lote)||''} · ${h.fecha} · ${h.estaciones} estaciones · 📍 ${gpsCount}/${h.estaciones} georreferenciadas`;
+  const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
+  const cont = document.getElementById('resumenTablas');
+  cont.innerHTML='';
+  FAMILIAS_ORDEN.forEach(fam=>{
+    const tipos = CATALOGO.filter(t=>t.familia===fam);
+    const wrap = document.createElement('div');
+    wrap.className='card';
+    let rows='';
+    tipos.forEach(t=>{
+      const l = sesionActual.lines[t.id];
+      const esPct = (t.calc==='pct_base'||t.calc==='pct_poblacion');
+      const valor = esPct ? fmtPct(l.porcentaje) : fmt(l.avg);
+      rows += `<tr><td>${t.nombre}</td><td class="num">${fmt(l.total)}</td><td class="num">${valor}</td></tr>`;
+    });
+    wrap.innerHTML = `<h3>${fam}</h3>
+      <table class="resumen">
+        <thead><tr><th>Tipo</th><th style="text-align:right">Total</th><th style="text-align:right">Resultado</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+    cont.appendChild(wrap);
+  });
+  document.querySelector('#screen-resumen .btn-primary').style.display = readOnly ? 'none' : 'block';
+  restaurarFirmas();
+}
+
+/* =========================================================================
+   FIRMAS A DEDO (canvas, sin librerías — funciona offline)
+   ========================================================================= */
+const FIRMA_CANVAS_IDS = { evaluador: 'firmaEvaluador', supervisor: 'firmaSupervisor' };
+let firmasInicializadas = false;
+
+function initFirmas(){
+  if(firmasInicializadas) return;
+  firmasInicializadas = true;
+  Object.entries(FIRMA_CANVAS_IDS).forEach(([who, canvasId])=>{
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#1f3d2b';
+    let dibujando = false;
+
+    function posDesdeEvento(e){
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+    }
+    function empezar(e){
+      dibujando = true;
+      const p = posDesdeEvento(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      canvas.setPointerCapture(e.pointerId);
+    }
+    function mover(e){
+      if(!dibujando) return;
+      const p = posDesdeEvento(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+    function terminar(){
+      if(!dibujando) return;
+      dibujando = false;
+      guardarFirma(who, canvas);
+    }
+    canvas.addEventListener('pointerdown', empezar);
+    canvas.addEventListener('pointermove', mover);
+    canvas.addEventListener('pointerup', terminar);
+    canvas.addEventListener('pointerleave', terminar);
+  });
+}
+function guardarFirma(who, canvas){
+  if(!sesionActual) return;
+  sesionActual.header['firma_'+who] = canvas.toDataURL('image/png');
+  idbPutSession(sesionActual);
+}
+function limpiarFirma(who){
+  const canvas = document.getElementById(FIRMA_CANVAS_IDS[who]);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if(sesionActual) sesionActual.header['firma_'+who] = null;
+  if(sesionActual) idbPutSession(sesionActual);
+}
+function restaurarFirmas(){
+  initFirmas();
+  if(!sesionActual) return;
+  Object.entries(FIRMA_CANVAS_IDS).forEach(([who, canvasId])=>{
+    const canvas = document.getElementById(canvasId);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const data = sesionActual.header['firma_'+who];
+    if(data){
+      const img = new Image();
+      img.onload = ()=> ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      img.src = data;
+    }
+  });
+}
+
+/* =========================================================================
+   DESCARGAR / IMPRIMIR PDF (hoja tipo "Hoja de Recuentos", una página)
+   ========================================================================= */
+function fmtHoja(n){
+  if(n===undefined||n===null||isNaN(n)) return '';
+  return (Math.round(n*100)/100).toString();
+}
+/** Mini-mapa SVG relativo: no depende de internet ni de tiles de mapa. Normaliza los puntos
+ *  capturados a un cuadro y los dibuja a escala entre sí, conectados en el orden en que se
+ *  visitaron las plantas — sirve para ver de un vistazo si el recorrido cubrió el lote o si
+ *  quedó apiñado en un punto. */
+/** Mapa satelital REAL usando Esri World Imagery (misma fuente que tus otros dashboards,
+ *  no requiere API key). Arma un mosaico de tiles posicionados con matemática estándar de
+ *  slippy-map (Web Mercator) — sin canvas, para no toparse con problemas de CORS al leer
+ *  píxeles. Si no hay internet o los tiles tardan más de `timeoutMs`, devuelve null y quien
+ *  llama debe usar el mapa estilizado (generarMiniMapaSVG) como respaldo. */
+async function generarMapaSatelitalReal(gpsPorPlanta, size, timeoutMs){
+  timeoutMs = timeoutMs || 5000;
+  if(!navigator.onLine) return null;
+  const puntos = Object.entries(gpsPorPlanta)
+    .map(([est, p]) => ({ est: parseInt(est), lat: p.lat, lng: p.lng }))
+    .sort((a,b)=> a.est - b.est);
+  if(puntos.length === 0) return null;
+
+  const lats = puntos.map(p=>p.lat), lngs = puntos.map(p=>p.lng);
+  let minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  let minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const padLat = Math.max((maxLat-minLat)*0.4, 0.0025);
+  const padLng = Math.max((maxLng-minLng)*0.4, 0.0025);
+  minLat -= padLat; maxLat += padLat; minLng -= padLng; maxLng += padLng;
+
+  const lonToX = (lon,z)=> (lon+180)/360 * Math.pow(2,z);
+  const latToY = (lat,z)=>{ const r=lat*Math.PI/180; return (1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2 * Math.pow(2,z); };
+
+  let zoom = 17, originPxX=0, originPxY=0, containerW=size, containerH=size;
+  for(; zoom>=13; zoom--){
+    originPxX = lonToX(minLng,zoom)*256;
+    const endPxX = lonToX(maxLng,zoom)*256;
+    originPxY = latToY(maxLat,zoom)*256;
+    const endPxY = latToY(minLat,zoom)*256;
+    containerW = endPxX - originPxX;
+    containerH = endPxY - originPxY;
+    if(containerW<=size && containerH<=size) break;
+  }
+
+  const tileMinX = Math.floor(originPxX/256), tileMaxX = Math.floor((originPxX+containerW)/256);
+  const tileMinY = Math.floor(originPxY/256), tileMaxY = Math.floor((originPxY+containerH)/256);
+  const tiles = [];
+  for(let tx=tileMinX; tx<=tileMaxX; tx++){
+    for(let ty=tileMinY; ty<=tileMaxY; ty++){
+      tiles.push({ tx, ty, left: tx*256-originPxX, top: ty*256-originPxY });
+    }
+  }
+  if(tiles.length===0 || tiles.length>25) return null; // evita saturar si algo salió mal con el zoom
+
+  const urls = tiles.map(t=>`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${t.ty}/${t.tx}`);
+
+  // Esri devuelve un tile "válido" (200 OK) aunque no tenga imagen real para esa zona —
+  // muestra un aviso tipo "Map data not yet available" como si fuera la foto. Ese aviso es
+  // gris muy uniforme (casi sin variación de color), a diferencia de una foto satelital real
+  // (que sí tiene textura/variación). Lo detectamos muestreando los píxeles de cada tile.
+  function tileTieneImagenReal(img){
+    try{
+      const c = document.createElement('canvas');
+      c.width = 32; c.height = 32;
+      const ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, 32, 32);
+      const data = ctx.getImageData(0, 0, 32, 32).data;
+      let suma=0, sumaCuad=0, n=0;
+      for(let i=0; i<data.length; i+=4){
+        const brillo = (data[i]+data[i+1]+data[i+2])/3;
+        suma += brillo; sumaCuad += brillo*brillo; n++;
+      }
+      const media = suma/n;
+      const varianza = (sumaCuad/n) - (media*media);
+      // Placeholder de Esri: gris claro y muy plano (varianza mínima). Foto real: siempre
+      // tiene bastante variación de brillo (vegetación, sombras, caminos, etc).
+      return varianza > 12;
+    }catch(e){
+      return true; // si el canvas queda "manchado" (CORS) no podemos revisar el píxel; se asume válido
+    }
+  }
+
+  const cargaOk = await Promise.race([
+    Promise.all(urls.map(u=>new Promise(res=>{
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = ()=> res(tileTieneImagenReal(img));
+      img.onerror = ()=> res(false);
+      img.src = u;
+    }))).then(results=>results.every(Boolean)),
+    new Promise(res=>setTimeout(()=>res(false), timeoutMs)),
+  ]);
+  if(!cargaOk) return null;
+
+  const tilesHtml = tiles.map((t,i)=>
+    `<img src="${urls[i]}" style="position:absolute;left:${t.left.toFixed(1)}px;top:${t.top.toFixed(1)}px;width:256px;height:256px;">`
+  ).join('');
+
+  const proyectado = puntos.map(p=>({
+    est: p.est,
+    x: lonToX(p.lng,zoom)*256 - originPxX,
+    y: latToY(p.lat,zoom)*256 - originPxY,
+  }));
+  const puntosHtml = proyectado.map(p => `
+    <div style="position:absolute;left:${p.x.toFixed(1)}px;top:${p.y.toFixed(1)}px;transform:translate(-50%,-50%);
+      width:20px;height:20px;border-radius:50%;background:#3f6b3f;border:2px solid #fff;color:#fff;
+      font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;
+      box-shadow:0 1px 3px rgba(0,0,0,0.6);">${p.est}</div>
+  `).join('');
+  const lineaPuntos = proyectado.map(p=> p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');
+
+  return `<div class="print-mapa-svg" style="position:relative;width:${containerW.toFixed(0)}px;height:${containerH.toFixed(0)}px;overflow:hidden;">
+    ${tilesHtml}
+    <svg style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;" viewBox="0 0 ${containerW.toFixed(0)} ${containerH.toFixed(0)}">
+      <polyline points="${lineaPuntos}" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="4,3" opacity="0.9"/>
+    </svg>
+    ${puntosHtml}
+    <div style="position:absolute;right:8px;top:8px;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.85);border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#222;">N</div>
+    <div style="position:absolute;left:8px;bottom:6px;font-size:8px;color:#fff;font-weight:600;text-shadow:0 0 3px #000,0 0 3px #000;">Imagen: Esri World Imagery</div>
+  </div>`;
+}
+
+function generarPagina2GPS(gpsPorPlanta, folio, brand, h, mapaHtml, esSatelital){
+  const puntos = Object.entries(gpsPorPlanta).map(([est,p])=>({est:parseInt(est), ...p})).sort((a,b)=>a.est-b.est);
+  if(puntos.length === 0) return '';
+  const filas = puntos.map(p => `
+    <tr>
+      <td>${p.est}</td>
+      <td>${p.lat.toFixed(6)}</td>
+      <td>${p.lng.toFixed(6)}</td>
+      <td>${p.acc ? '±'+Math.round(p.acc)+'m' : '—'}</td>
+      <td>${p.timestamp ? new Date(p.timestamp).toLocaleTimeString() : '—'}</td>
+    </tr>
+  `).join('');
+  const nota = esSatelital
+    ? 'Imagen satelital real (Esri World Imagery). Puntos y recorrido superpuestos a escala. Coordenadas en formato decimal (WGS84).'
+    : 'Vista relativa dibujada (sin señal al imprimir, no es imagen satelital real): ubica cada planta a escala entre sí, conectadas en el orden en que se recorrieron — sirve para confirmar que el muestreo cubrió el lote y no se concentró en un solo punto. Coordenadas en formato decimal (WGS84).';
+  return `
+    <div class="print-page2">
+      <h2>Ubicación de las plantas evaluadas — ${folio}</h2>
+      <div class="print-mapa-wrap">
+        ${mapaHtml}
+      </div>
+      <table class="print-gps-tabla">
+        <thead><tr><th>Planta</th><th>Latitud</th><th>Longitud</th><th>Precisión</th><th>Hora</th></tr></thead>
+        <tbody>${filas}</tbody>
+      </table>
+      <p class="print-gps-nota">${nota}</p>
+    </div>
+  `;
+}
+
+/** Mini-mapa estilo "satelital": no depende de internet ni de tiles reales (la app es offline),
+ *  pero simula una vista aérea con parches de terreno en tonos verde/tierra, brújula y escala
+ *  aproximada, para que se sienta como una foto satelital en vez de un diagrama plano. Los puntos
+ *  se ubican a escala relativa entre sí (normalizados), conectados en el orden de recorrido. */
+function generarMiniMapaSVG(gpsPorPlanta, size){
+  const puntos = Object.entries(gpsPorPlanta)
+    .map(([est, p]) => ({ est: parseInt(est), lat: p.lat, lng: p.lng }))
+    .sort((a,b)=> a.est - b.est);
+  if(puntos.length === 0) return '';
+  const pad = 34;
+  const lats = puntos.map(p=>p.lat), lngs = puntos.map(p=>p.lng);
+  const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+  const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
+  const rangoLat = (maxLat - minLat) || 0.0003;
+  const rangoLng = (maxLng - minLng) || 0.0003;
+
+  const xy = puntos.map(p => ({
+    est: p.est,
+    x: pad + ((p.lng - minLng) / rangoLng) * (size - pad*2),
+    y: (size - pad) - ((p.lat - minLat) / rangoLat) * (size - pad*2), // invertido: lat mayor = arriba
+  }));
+
+  const linea = xy.map((p,i)=> (i===0?'M':'L') + p.x.toFixed(1) + ',' + p.y.toFixed(1)).join(' ');
+  const puntosSvg = xy.map(p => `
+    <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="10" fill="#3f6b3f" stroke="#fff" stroke-width="2"/>
+    <text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" font-size="9.5" fill="#fff" text-anchor="middle" dominant-baseline="central" font-weight="700">${p.est}</text>
+  `).join('');
+
+  // Distancia aproximada del lado del cuadro, en metros (para la barra de escala).
+  // 1 grado de latitud ≈ 111,320 m; se usa como referencia gruesa (no geodésica exacta).
+  const metrosLat = rangoLat * 111320;
+  const escalaTexto = metrosLat < 1000 ? Math.round(metrosLat) + ' m' : (metrosLat/1000).toFixed(1) + ' km';
+
+  // "Parches de terreno" pseudoaleatorios (deterministas, no cambian entre renders) para dar
+  // sensación de vista aérea sin depender de tiles de internet.
+  const semillas = [
+    [0.15,0.2,0.28,'#7a9a5a'], [0.6,0.1,0.22,'#8faa63'], [0.85,0.55,0.3,'#6f8f52'],
+    [0.25,0.7,0.26,'#87a862'], [0.5,0.85,0.24,'#7a9a5a'], [0.05,0.55,0.2,'#93af6c'],
+  ];
+  const parches = semillas.map(([fx,fy,fr,color])=>
+    `<circle cx="${(fx*size).toFixed(0)}" cy="${(fy*size).toFixed(0)}" r="${(fr*size).toFixed(0)}" fill="${color}" opacity="0.55"/>`
+  ).join('');
+
+  return `<svg class="print-mapa-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <radialGradient id="fondoTerreno" cx="50%" cy="45%" r="75%">
+        <stop offset="0%" stop-color="#9ab876"/>
+        <stop offset="100%" stop-color="#75925a"/>
+      </radialGradient>
+      <pattern id="lineasFilas" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(18)">
+        <line x1="0" y1="0" x2="0" y2="14" stroke="#5f7a48" stroke-width="1.4" opacity="0.35"/>
+      </pattern>
+    </defs>
+    <rect width="${size}" height="${size}" fill="url(#fondoTerreno)"/>
+    ${parches}
+    <rect width="${size}" height="${size}" fill="url(#lineasFilas)"/>
+    <rect x="1" y="1" width="${size-2}" height="${size-2}" fill="none" stroke="#4a5d38" stroke-width="2"/>
+    <path d="${linea}" fill="none" stroke="#fff" stroke-width="2.5" stroke-dasharray="4,3" opacity="0.9"/>
+    ${puntosSvg}
+    <!-- Brújula -->
+    <g transform="translate(${size-24},24)">
+      <circle r="13" fill="rgba(255,255,255,0.85)" stroke="#4a5d38"/>
+      <path d="M0,-9 L4,4 L0,1 L-4,4 Z" fill="#a4402d"/>
+      <text y="-15" font-size="8" text-anchor="middle" fill="#2a2a2a" font-weight="700">N</text>
+    </g>
+    <!-- Escala -->
+    <g transform="translate(14,${size-16})">
+      <line x1="0" y1="0" x2="34" y2="0" stroke="#fff" stroke-width="2.5"/>
+      <line x1="0" y1="-3" x2="0" y2="3" stroke="#fff" stroke-width="2"/>
+      <line x1="34" y1="-3" x2="34" y2="3" stroke="#fff" stroke-width="2"/>
+      <text x="17" y="-5" font-size="8" text-anchor="middle" fill="#fff" font-weight="700" style="paint-order:stroke;stroke:#4a5d38;stroke-width:2px;">≈ ${escalaTexto}</text>
+    </g>
+  </svg>`;
+}
+
+async function prepararYImprimirPDF(){
+  const h = sesionActual.header;
+  const est = h.estaciones;
+  const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
+  const folioEsProvisional = !sesionActual.header.folio;
+  const folio = sesionActual.header.folio || folioTemporalDeSesion(sesionActual);
+  const brand = brandingDeCompania(h.company);
+
+  const gpsPorPlanta = sesionActual.gpsPorPlanta || {};
+  let mapaHtml = null, esSatelital = false;
+  if(Object.keys(gpsPorPlanta).length > 0){
+    if(navigator.onLine) toast('Buscando imagen satelital…');
+    try{ mapaHtml = await generarMapaSatelitalReal(gpsPorPlanta, 480); }catch(e){ mapaHtml = null; }
+    if(mapaHtml){ esSatelital = true; }
+    else{ mapaHtml = generarMiniMapaSVG(gpsPorPlanta, 480); }
+  }
+
+  // Regla de la empresa: máximo 10 plantas por recuento. La tabla del PDF siempre muestra las
+  // 10 columnas fijas (en blanco las que no se usaron) para que el ancho de la hoja sea siempre
+  // el mismo y quepa en una página vertical tamaño carta. Los cálculos (resultado/porcentaje)
+  // siguen usando únicamente las plantas realmente evaluadas (`est`), esto es solo presentación.
+  const MAX_PLANTAS_PDF = 10;
+  const colsE = Array.from({length: MAX_PLANTAS_PDF}, (_,i)=>i+1);
+  const theadCols = colsE.map(i=>`<th>${i}</th>`).join('');
+
+  let filas = '';
+  FAMILIAS_ORDEN.forEach(fam=>{
+    filas += `<tr class="familia-row"><td colspan="${5+MAX_PLANTAS_PDF+2}">${fam}</td></tr>`;
+    CATALOGO.filter(t=>t.familia===fam).forEach(t=>{
+      const l = sesionActual.lines[t.id];
+      const esPct = (t.calc==='pct_base'||t.calc==='pct_poblacion');
+      const resultado = esPct ? fmtPct(l.porcentaje) : fmtHoja(l.avg);
+      const celdasE = colsE.map(i=> i<=est ? `<td>${l['e'+i] || ''}</td>` : `<td class="col-sin-usar"></td>`).join('');
+      filas += `<tr>
+        <td>${t.id}</td>
+        <td class="desc">${t.nombre}</td>
+        <td>${t.mtrs}</td>
+        <td>${t.um}</td>
+        ${celdasE}
+        <td>${fmtHoja(l.total)}</td>
+        <td>${resultado}</td>
+      </tr>`;
+    });
+  });
+
+  const gpsCount = Object.keys(sesionActual.gpsPorPlanta || {}).length;
+
+  const html = `
+    <div class="print-membrete">
+      <div>
+        <div class="empresa">${brand.nombreLegal}</div>
+        <div class="lugar">${brand.lugar}</div>
+        <div class="doc-titulo">Hoja de Recuentos · 📍 ${gpsCount}/${est} plantas georreferenciadas</div>
+      </div>
+      <div class="folio">${folio}<small>${folioEsProvisional ? 'Folio provisional (offline)' : 'N° de folio'}</small></div>
+    </div>
+    <div class="print-grid">
+      <div><b>Sector</b>${sectorNombre(h.sector)||''}</div>
+      <div><b>Finca</b>${fincaNombre(h.finca)||''}</div>
+      <div><b>Lote</b>${loteNombre(h.lote)||''}</div>
+
+      <div><b>Área evaluada (Mzn)</b>${h.area_evaluada ?? ''}</div>
+      <div><b>Población plantas</b>${h.poblacion_plantas ?? ''}</div>
+      <div><b>Fecha</b>${h.fecha||''}</div>
+
+      <div><b>Elaborado por</b>${h.tecnico||''}</div>
+      <div><b>Edad del cultivo</b>${h.edad_cultivo ?? ''} días</div>
+      <div><b>Estado fenológico</b>${h.estado_fenologico||''}</div>
+
+      <div><b>Ciclo</b>${CICLOS.find(c=>c.id===h.ciclo)?.nombre || ''}</div>
+      <div><b>Aplicación</b>${h.aplicacion||''}</div>
+      <div><b>Fecha aplicación</b>${h.fecha_aplicacion||''}</div>
+    </div>
+    ${h.observacion ? `<div class="print-obs"><b>Obs:</b> ${h.observacion}</div>` : ''}
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>N°</th><th style="text-align:left;">Descripción</th><th>T.M.</th><th>U/M</th>
+          ${theadCols}
+          <th>Total</th><th>Result.</th>
+        </tr>
+      </thead>
+      <tbody>${filas}</tbody>
+    </table>
+    <div class="print-firma">
+      <div>
+        ${h.firma_evaluador ? `<img src="${h.firma_evaluador}">` : '<div style="height:34px;"></div>'}
+        Evaluador${h.tecnico ? ': '+h.tecnico : ''}
+      </div>
+      <div>
+        ${h.firma_supervisor ? `<img src="${h.firma_supervisor}">` : '<div style="height:34px;"></div>'}
+        Supervisor
+      </div>
+    </div>
+    ${generarPagina2GPS(sesionActual.gpsPorPlanta || {}, folio, brand, h, mapaHtml, esSatelital)}
+  `;
+  document.getElementById('printArea').innerHTML = html;
+  await new Promise(res=>{
+    const imgs = document.querySelectorAll('#printArea img');
+    if(imgs.length===0){ res(); return; }
+    let restantes = imgs.length;
+    const listo = ()=>{ restantes--; if(restantes<=0) res(); };
+    imgs.forEach(img=> img.complete ? listo() : (img.onload = img.onerror = listo));
+    setTimeout(res, 2500); // respaldo por si alguna imagen se cuelga
+  });
+  setTimeout(()=>window.print(), 80);
+}
+async function descargarPDF(){
+  await prepararYImprimirPDF();
+}
+async function compartirPDF(){
+  toast('En la vista previa, toca el ícono 📤 (arriba) para enviarlo por WhatsApp, correo, Drive, etc.');
+  await prepararYImprimirPDF();
+}
+
+async function guardarEvaluacionFinal(){
+  sesionActual.status = 'pending_sync';
+  sesionActual.updatedAt = new Date().toISOString();
+  await idbPutSession(sesionActual);
+  toast('Evaluación guardada en el dispositivo ✔');
+  goScreen('screen-home');
+  intentarSincronizarSilencioso();
+}
+
+/* =========================================================================
+   SINCRONIZACIÓN CON ODOO (vía Cloudflare Worker)
+   ========================================================================= */
+function sesionToPayload(s){
+  const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
+  return {
+    localId: s.localId,
+    header: s.header,
+    gpsPorPlanta: s.gpsPorPlanta || {},
+    lines: Object.values(s.lines).map(l=>({
+      idrecuento:l.idrecuento,
+      familia: catById[l.idrecuento].familia,
+      mtrsmuestra: catById[l.idrecuento].mtrs,
+      e1:l.e1,e2:l.e2,e3:l.e3,e4:l.e4,e5:l.e5,
+      e6:l.e6,e7:l.e7,e8:l.e8,e9:l.e9,e10:l.e10
+    }))
+  };
+}
+async function sincronizarSesion(s){
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
+  if(!url){ throw new Error('Configura la URL del servidor en Ajustes'); }
+  const res = await fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json', 'X-Sync-Key': key||''},
+    body: JSON.stringify(sesionToPayload(s))
+  });
+  if(!res.ok){
+    const txt = await res.text().catch(()=> '');
+    throw new Error(`Servidor respondió ${res.status}: ${txt.slice(0,200)}`);
+  }
+  const data = await res.json();
+  if(data.folio){ s.header.folio = data.folio; await idbPutSession(s); }
+  await subirFotosDeSesion(s.localId, data.odoo_id, url, key);
+  return data.odoo_id;
+}
+async function subirFotosDeSesion(sessionLocalId, odooId, recuentosUrl, key){
+  if(!FOTOS_HABILITADAS) return;
+  const fotos = (await idbGetPhotosForSession(sessionLocalId)).filter(p=>!p.synced);
+  if(fotos.length===0) return;
+  const fotoUrl = recuentosUrl.replace(/\/recuentos\/?$/, '/recuentos/foto');
+  for(const p of fotos){
+    try{
+      const form = new FormData();
+      form.append('file', p.blob, `planta${p.station}.jpg`);
+      form.append('odoo_id', odooId);
+      form.append('station', p.station);
+      const res = await fetch(fotoUrl, { method:'POST', headers:{'X-Sync-Key': key||''}, body: form });
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      p.synced = true; p.url = data.url;
+      await idbUpdatePhoto(p);
+    }catch(e){
+      // se reintenta en la próxima sincronización; no bloquea el resto
+      console.warn('Foto no subida, se reintentará:', e.message);
+    }
+  }
+}
+let syncProgress = null; // {current, total} mientras sincronizarTodo() está corriendo
+
+async function sincronizarTodo(){
+  if(!navigator.onLine){ toast('Sin conexión — no se puede sincronizar ahora', true); return; }
+  const list = await idbGetAllSessions();
+  const pendientes = list.filter(s=>s.status==='pending_sync'||s.status==='error');
+  let ok=0, fail=0;
+  if(pendientes.length>0){
+    syncProgress = { current:0, total:pendientes.length };
+    renderEstadoPill();
+  }
+  for(const s of pendientes){
+    sincronizandoLocalId = s.localId;
+    renderEstadoPill();
+    if(document.getElementById('screen-home').classList.contains('active')) renderHome();
+    try{
+      const odooId = await sincronizarSesion(s);
+      s.status='synced'; s.odooId=odooId; s.lastError=null;
+      await idbPutSession(s);
+      ok++;
+    }catch(e){
+      s.status='error'; s.lastError=e.message;
+      await idbPutSession(s);
+      fail++;
+    }
+    syncProgress.current++;
+    renderEstadoPill();
+  }
+  sincronizandoLocalId = null;
+  syncProgress = null;
+  // Reintenta fotos que quedaron pendientes de sesiones ya sincronizadas anteriormente
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
+  if(url){
+    const yaSincronizadas = list.filter(s=>s.status==='synced' && s.odooId);
+    for(const s of yaSincronizadas){
+      await subirFotosDeSesion(s.localId, s.odooId, url, key);
+    }
+  }
+  if(pendientes.length===0 && fail===0){ toast('No hay evaluaciones pendientes'); }
+  else toast(fail===0 ? `${ok} evaluación(es) enviadas a Odoo ✔` : `${ok} enviadas, ${fail} con error`, fail>0);
+  renderHome();
+}
+async function intentarSincronizarSilencioso(){
+  if(!navigator.onLine) return;
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  if(!url) return;
+  sincronizarTodo();
+}
+
+/* =========================================================================
+   CONECTIVIDAD Y PILL DE ESTADO (spatial)
+   ========================================================================= */
+async function renderEstadoPill(){
+  const pill = document.getElementById('estadoPill');
+  const iconoEl = document.getElementById('pillIcon');
+  const t1 = document.getElementById('pillT1');
+  const t2 = document.getElementById('pillT2');
+  const online = navigator.onLine;
+
+  let barra = pill.querySelector('.barra-progreso');
+
+  if(syncProgress){
+    pill.className = 'estado-pill';
+    iconoEl.innerHTML = '<div class="ring-sync"></div>';
+    t1.textContent = 'Sincronizando…';
+    t2.textContent = `${syncProgress.current} de ${syncProgress.total} evaluaciones enviadas`;
+    if(!barra){
+      pill.insertAdjacentHTML('beforeend', '<div class="barra-progreso"><div class="fill"></div></div>');
+      barra = pill.querySelector('.barra-progreso');
+    }
+    barra.querySelector('.fill').style.width = Math.round((syncProgress.current/syncProgress.total)*100)+'%';
+    return;
+  }
+  if(barra) barra.remove();
+
+  if(!online){
+    pill.className = 'estado-pill offline';
+    iconoEl.innerHTML = '<span style="font-size:17px;">📡</span>';
+    t1.textContent = 'Sin conexión';
+    t2.textContent = 'Se guarda en el dispositivo, se envía solo al volver la señal';
+    return;
+  }
+
+  const list = await idbGetAllSessions();
+  const errores = list.filter(s=>s.status==='error').length;
+  const pendientes = list.filter(s=>s.status==='pending_sync').length;
+
+  if(errores>0){
+    pill.className = 'estado-pill error';
+    iconoEl.innerHTML = '<span style="font-size:17px;">⚠️</span>';
+    t1.textContent = `${errores} evaluación(es) con error`;
+    t2.textContent = 'Toca Ajustes → Sincronizar ahora para reintentar';
+    return;
+  }
+  if(pendientes>0){
+    pill.className = 'estado-pill';
+    iconoEl.innerHTML = '<div class="dot-live"></div>';
+    t1.textContent = 'En línea';
+    t2.textContent = `${pendientes} evaluación(es) por enviar`;
+    return;
+  }
+  pill.className = 'estado-pill';
+  iconoEl.innerHTML = '<div class="dot-live"></div>';
+  t1.textContent = 'En línea';
+  t2.textContent = 'Todo sincronizado';
+}
+function updateOnlineUI(){ renderEstadoPill(); }
+window.addEventListener('online', ()=>{ updateOnlineUI(); toast('Conexión recuperada — sincronizando…'); intentarSincronizarSilencioso(); });
+window.addEventListener('offline', updateOnlineUI);
+document.getElementById('estadoPill')?.addEventListener('click', ()=> goScreen('screen-config'));
+
+/* =========================================================================
+   CONFIG SCREEN
+   ========================================================================= */
+async function renderConfig(){
+  const list = await idbGetAllSessions();
+  const pending = list.filter(s=>s.status==='pending_sync'||s.status==='error').length;
+  document.getElementById('cfgPendingCount').textContent = pending;
+  const lastSync = await kvGet('catalog_updated_at', null);
+  document.getElementById('catalogoInfo').textContent = lastSync
+    ? `Última actualización: ${new Date(lastSync).toLocaleString()} · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`
+    : `Usando catálogo de fábrica (sembrado) · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`;
+}
+async function refrescarCatalogos(silencioso){
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  if(!url || !navigator.onLine) return;
+  try{
+    const base = url.replace(/\/recuentos\/?$/, '');
+    const res = await fetch(base + '/catalogos-recuentos');
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const data = await res.json();
+    if(data.sectores) SECTORES = data.sectores;
+    if(data.companias) COMPANIAS = data.companias;
+    if(data.fincas) FINCAS = data.fincas;
+    if(data.lotes) LOTES = data.lotes;
+    if(data.ciclos) CICLOS = data.ciclos;
+    await kvSet('sectores', SECTORES); await kvSet('companias', COMPANIAS);
+    await kvSet('fincas', FINCAS); await kvSet('lotes', LOTES); await kvSet('ciclos', CICLOS);
+    await kvSet('catalog_updated_at', new Date().toISOString());
+    if(!silencioso) toast('Catálogos actualizados ✔');
+    if(document.getElementById('screen-config').classList.contains('active')) renderConfig();
+    if(document.getElementById('screen-form').classList.contains('active')) poblarSelects();
+  }catch(e){
+    if(!silencioso) toast('No se pudo actualizar: '+e.message, true);
+  }
+}
+
+/* =========================================================================
+   INIT
+   ========================================================================= */
+async function init(){
+  const savedS = await kvGet('sectores', null); if(savedS) SECTORES = savedS;
+  const savedCo = await kvGet('companias', null); if(savedCo) COMPANIAS = savedCo;
+  const savedF = await kvGet('fincas', null); if(savedF) FINCAS = savedF;
+  const savedL = await kvGet('lotes', null); if(savedL) LOTES = savedL;
+  const savedC = await kvGet('ciclos', null); if(savedC) CICLOS = savedC;
+
+  document.querySelector('#screen-home').insertAdjacentHTML('beforeend','');
+  updateOnlineUI();
+  renderHome();
+
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  }
+
+  // Fincas/lotes/ciclos son livianos: se refrescan solos en segundo plano si hay señal,
+  // sin bloquear el arranque de la app ni pedirle nada al técnico.
+  if(navigator.onLine){
+    refrescarCatalogos(true).catch(()=>{});
+  }
+}
+init();
+</script>
+
+<button class="btn btn-primary fab" onclick="nuevaEvaluacionClick()" id="fabNuevo" aria-label="Nueva evaluación" title="Nueva evaluación">＋</button>
+<script>
+// El FAB solo se muestra en la pantalla de inicio
+const observer = new MutationObserver(()=>{
+  document.getElementById('fabNuevo').style.display =
+    document.getElementById('screen-home').classList.contains('active') ? 'flex' : 'none';
+});
+observer.observe(document.getElementById('screen-home'), {attributes:true});
+</script>
+</body>
+</html>
