@@ -1203,6 +1203,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
           id: r.id,
           orden: ordenArr[1] || "—",
           compaia: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[1] : (r.x_studio_compaia || "Sin Compañía"),
+          compaia_id: Array.isArray(r.x_studio_compaia) ? r.x_studio_compaia[0] : null,
           proveedor: Array.isArray(r.x_studio_proveedor_del_servicio) ? r.x_studio_proveedor_del_servicio[1] : (r.x_studio_proveedor_del_servicio || "Sin Proveedor"),
           sector: Array.isArray(r.x_studio_sector_1) ? r.x_studio_sector_1[1] : (r.x_studio_sector_1 || "Sin Sector"),
           ciclo: Array.isArray(r.x_studio_ciclo) ? r.x_studio_ciclo[1] : (r.x_studio_ciclo || "Sin Ciclo"),
@@ -2693,7 +2694,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         if(!row.finca || !row.grupo) return;
         const key = claveFincaGrupo(row.finca, row.grupo);
         cfg[key]  = { diasF1: row.dias_f1, diasEntre: row.dias_entre };
-        meta[key] = { finca_id: row.finca_id, ciclo_id: row.ciclo_id, record_id: row.id };
+        meta[key] = { finca_id: row.finca_id, ciclo_id: row.ciclo_id, compania_id: row.compania_id, record_id: row.id };
         if(row.ajustes && Object.keys(row.ajustes).length){
           ajustes[key] = {};
           Object.entries(row.ajustes).forEach(([corto, fecha]) => {
@@ -2749,26 +2750,26 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
 
     const [finca, grupo] = fgKey.split('|||');
     const meta = CONFIG_PROGRAMACION_META[fgKey] || {};
-    let fincaId = meta.finca_id, cicloId = meta.ciclo_id;
+    let fincaId = meta.finca_id, cicloId = meta.ciclo_id, companiaId = meta.compania_id;
     // Si esta Finca+Grupo todavía no tenía ningún registro de programación guardado,
-    // buscamos el finca_id/ciclo_id en los datos ya cargados de Odoo.
+    // buscamos el finca_id/ciclo_id/compania_id en los datos ya cargados de Odoo.
     if(!fincaId){
       const ejemplo = filasBaseCA().find(r => r.finca===finca &&
         ((r.grupo_siembra||'Sin Grupo')===grupo));
-      if(ejemplo){ fincaId = ejemplo.finca_id; cicloId = ejemplo.ciclo_id; }
+      if(ejemplo){ fincaId = ejemplo.finca_id; cicloId = ejemplo.ciclo_id; companiaId = ejemplo.compaia_id; }
     }
     if(!fincaId){ alert('No se pudo identificar la finca en Odoo para guardar el ajuste.'); return; }
 
     try {
       const r = await fetch(`${WORKER}/programacion-fungicida-config/ajuste`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ finca_id: fincaId, ciclo_id: cicloId, grupo, etapa: idxEtapa, fecha: fechaDestino })
+        body: JSON.stringify({ finca_id: fincaId, ciclo_id: cicloId, compania_id: companiaId, grupo, etapa: idxEtapa, fecha: fechaDestino })
       });
       const d = await r.json();
       if(!d.ok) throw new Error(d.error || 'Error desconocido');
       CONFIG_AJUSTES[fgKey] = CONFIG_AJUSTES[fgKey] || {};
       CONFIG_AJUSTES[fgKey][ETAPAS_FUNGICIDA[idxEtapa-1]] = fechaDestino;
-      CONFIG_PROGRAMACION_META[fgKey] = { finca_id: fincaId, ciclo_id: cicloId, record_id: d.id };
+      CONFIG_PROGRAMACION_META[fgKey] = { finca_id: fincaId, ciclo_id: cicloId, compania_id: companiaId, record_id: d.id };
       refrescarTabsFungicidasSiVisibles();
     } catch(e) {
       alert('No se pudo guardar el ajuste en Odoo: ' + e.message);
@@ -2791,7 +2792,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     filas.forEach(r=>{
       const grupo = (r.grupo_siembra && r.grupo_siembra !== 'Sin Grupo') ? r.grupo_siembra : 'Sin Grupo';
       const key = claveFincaGrupo(r.finca, grupo);
-      if(!vistos[key]) vistos[key] = { finca: r.finca, finca_id: r.finca_id, ciclo_id: r.ciclo_id, grupo, sigla: grupo==='Sin Grupo' ? '—' : siglaGrupoCA(grupo) };
+      if(!vistos[key]) vistos[key] = { finca: r.finca, finca_id: r.finca_id, ciclo_id: r.ciclo_id, compania_id: r.compaia_id, grupo, sigla: grupo==='Sin Grupo' ? '—' : siglaGrupoCA(grupo) };
     });
     return Object.values(vistos).sort((a,b)=> a.finca.localeCompare(b.finca) || a.grupo.localeCompare(b.grupo));
   }
@@ -2811,7 +2812,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       const cfg = CONFIG_PROGRAMACION[claveFincaGrupo(fg.finca, fg.grupo)] || {};
       const valF1 = (cfg.diasF1 != null && cfg.diasF1 !== '') ? cfg.diasF1 : DIAS_DEFECTO.diasF1;
       const valEntre = (cfg.diasEntre != null && cfg.diasEntre !== '') ? cfg.diasEntre : DIAS_DEFECTO.diasEntre;
-      return `<tr data-finca="${fg.finca.replace(/"/g,'&quot;')}" data-finca-id="${fg.finca_id||''}" data-ciclo-id="${fg.ciclo_id||''}" data-grupo="${fg.grupo.replace(/"/g,'&quot;')}">
+      return `<tr data-finca="${fg.finca.replace(/"/g,'&quot;')}" data-finca-id="${fg.finca_id||''}" data-ciclo-id="${fg.ciclo_id||''}" data-compania-id="${fg.compania_id||''}" data-grupo="${fg.grupo.replace(/"/g,'&quot;')}">
         <td>${fg.finca}</td>
         <td>${fg.sigla}</td>
         <td style="text-align:center;"><input type="number" min="1" max="90" class="input-dias-f1" value="${valF1}" style="width:64px; text-align:center; padding:4px; border:1px solid rgba(163,177,198,0.5); border-radius:6px;"></td>
@@ -2839,6 +2840,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       const finca = tr.dataset.finca, grupo = tr.dataset.grupo;
       const fincaId = tr.dataset.fincaId ? Number(tr.dataset.fincaId) : null;
       const cicloId = tr.dataset.cicloId ? Number(tr.dataset.cicloId) : null;
+      const companiaId = tr.dataset.companiaId ? Number(tr.dataset.companiaId) : null;
       const diasF1 = tr.querySelector('.input-dias-f1').value;
       const diasEntre = tr.querySelector('.input-dias-entre').value;
       const key = claveFincaGrupo(finca, grupo);
@@ -2848,12 +2850,12 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       try {
         const r = await fetch(`${WORKER}/programacion-fungicida-config/write`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ finca_id: fincaId, ciclo_id: cicloId, grupo, dias_f1: diasF1, dias_entre: diasEntre })
+          body: JSON.stringify({ finca_id: fincaId, ciclo_id: cicloId, compania_id: companiaId, grupo, dias_f1: diasF1, dias_entre: diasEntre })
         });
         const d = await r.json();
         if(!d.ok) throw new Error(d.error || 'Error desconocido');
         CONFIG_PROGRAMACION[key] = { diasF1, diasEntre };
-        CONFIG_PROGRAMACION_META[key] = { finca_id: fincaId, ciclo_id: cicloId, record_id: d.id };
+        CONFIG_PROGRAMACION_META[key] = { finca_id: fincaId, ciclo_id: cicloId, compania_id: companiaId, record_id: d.id };
       } catch(e) {
         console.log(`Error guardando ${finca} / ${grupo}:`, e.message);
         errores++;
