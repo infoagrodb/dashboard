@@ -347,11 +347,12 @@
         </div>
         <div class="field">
           <label>Lote</label>
-          <select id="f_lote"></select>
+          <select id="f_lote" onchange="onLoteChange()"></select>
         </div>
         <div class="field">
           <label>Edad del cultivo (días)</label>
           <input type="number" id="f_edad">
+          <div id="edadAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
         </div>
         <div class="field">
           <label>Área evaluada (mzn)</label>
@@ -359,11 +360,22 @@
         </div>
         <div class="field">
           <label>Aplicación reciente (opcional)</label>
-          <input type="text" id="f_aplicacion" placeholder="Ej. Fungicida I">
+          <select id="f_aplicacion">
+            <option value="">— Ninguna —</option>
+            <option value="Fungicida I">Fungicida I</option>
+            <option value="Fungicida II">Fungicida II</option>
+            <option value="Fungicida III">Fungicida III</option>
+            <option value="Fungicida IV">Fungicida IV</option>
+            <option value="Fungicida V">Fungicida V</option>
+            <option value="Fungicida VI">Fungicida VI</option>
+            <option value="Fungicida VII">Fungicida VII</option>
+            <option value="Fungicida VIII">Fungicida VIII</option>
+          </select>
         </div>
         <div class="field">
           <label>Población plantas/m</label>
           <input type="number" step="0.01" id="f_poblacion">
+          <div id="poblacionAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
         </div>
         <div class="field">
           <label>Elaborado por</label>
@@ -1066,17 +1078,27 @@ async function abrirSesion(localId){
    FORM HEADER
    ========================================================================= */
 function poblarSelects(){
-  const cSel = document.getElementById('f_ciclo');
-  cSel.innerHTML = CICLOS.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
   const sSel = document.getElementById('f_sector');
   sSel.innerHTML = SECTORES.map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
   onSectorChange();
+}
+// Cada Sector pertenece a una sola Compañía en la práctica (así están cargadas las fincas
+// hoy) — la derivamos de las fincas en vez de mantenerla por separado, para no duplicar datos.
+function companiaDeSector(sectorId){
+  const finca = FINCAS.find(f=>f.sector===sectorId);
+  return finca ? finca.company : null;
 }
 function onSectorChange(){
   const sectorId = parseInt(document.getElementById('f_sector').value);
   const fSel = document.getElementById('f_finca');
   const fincas = FINCAS.filter(f=>f.sector===sectorId);
   fSel.innerHTML = fincas.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
+
+  const companyId = companiaDeSector(sectorId);
+  const cSel = document.getElementById('f_ciclo');
+  const ciclos = companyId ? CICLOS.filter(c=>c.company===companyId) : CICLOS;
+  cSel.innerHTML = ciclos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+
   onFincaChange();
 }
 function onFincaChange(){
@@ -1089,14 +1111,55 @@ function onFincaChange(){
   const badge = document.getElementById('companiaHeaderBadge');
   if(compania){ badge.textContent = '🏢 ' + compania.nombre; badge.style.display='inline-flex'; }
   else{ badge.style.display='none'; }
+  onLoteChange();
+}
+/** Al tener Ciclo+Finca+Lote completos y señal, trae de Odoo la fecha de siembra
+ *  (x_orden_campo_line_b660b, actividad "Siembra") para calcular Edad del cultivo, y la
+ *  población de plantas/m (x_germinaciones, prefiere DDS=15; si no hay, usa el único que
+ *  encuentre). Nunca sobreescribe un valor que el técnico ya haya escrito a mano, y si no
+ *  hay señal simplemente no hace nada (los campos se quedan manuales, como siempre).
+ */
+async function onLoteChange(){
+  const notaEdad = document.getElementById('edadAutoNota');
+  const notaPob = document.getElementById('poblacionAutoNota');
+  notaEdad.textContent = ''; notaPob.textContent = '';
+  const cicloId = parseInt(document.getElementById('f_ciclo').value) || null;
+  const fincaId = parseInt(document.getElementById('f_finca').value) || null;
+  const loteId = parseInt(document.getElementById('f_lote').value) || null;
+  if(!cicloId || !fincaId || !loteId || !navigator.onLine) return;
+
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  if(!url) return;
+  try{
+    const base = url.replace(/\/recuentos\/?$/, '');
+    const res = await fetch(`${base}/siembra-datos?ciclo_id=${cicloId}&finca_id=${fincaId}&lote_id=${loteId}`);
+    if(!res.ok) return;
+    const data = await res.json();
+
+    const fEdad = document.getElementById('f_edad');
+    if(data.fecha_siembra && !fEdad.value){
+      const dias = Math.round((new Date() - new Date(data.fecha_siembra+'T00:00:00')) / 86400000);
+      fEdad.value = dias;
+      notaEdad.textContent = `📅 Calculado: siembra ${data.fecha_siembra} (${dias} días)`;
+    }
+    const fPob = document.getElementById('f_poblacion');
+    if(data.poblacion_plantas_m != null && !fPob.value){
+      fPob.value = data.poblacion_plantas_m;
+      notaPob.textContent = data.poblacion_dds_usado === 15
+        ? `🌱 Tomado de germinación a los 15 DDS`
+        : `🌱 Tomado de germinación (${data.poblacion_dds_usado} DDS — no había registro de 15 DDS)`;
+    }
+  }catch(e){
+    // silencioso: si falla, los campos se quedan para llenado manual
+  }
 }
 function poblarFormularioDesdeSesion(){
   poblarSelects();
   const h = sesionActual.header;
   document.getElementById('f_fecha').value = h.fecha || new Date().toISOString().slice(0,10);
-  if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
   if(h.sector) document.getElementById('f_sector').value = h.sector;
   onSectorChange();
+  if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
   if(h.finca) document.getElementById('f_finca').value = h.finca;
   onFincaChange();
   if(h.lote) document.getElementById('f_lote').value = h.lote;
