@@ -784,6 +784,26 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         <select id="filterHeaderCompaia" class="ms-dropdown-select" onchange="onHeaderCompaiaChange()"></select>
       </div>
 
+      <div class="tf-campo campo-periodo-ins campo-solo-insumos" style="display:none;">
+        <label>Período</label>
+        <select id="filterFechaTipoIns" class="ms-dropdown-select" onchange="toggleFechaInputsIns()">
+          <option value="all">Histórico</option>
+          <option value="este_mes" selected>Este Mes</option>
+          <option value="mes_pasado">Mes Pasado</option>
+          <option value="ano_curso">Año Curso</option>
+          <option value="personalizada">Rango...</option>
+        </select>
+      </div>
+
+      <div id="customDateInputsIns" class="tf-campo campo-solo-insumos" style="display:none;">
+        <label>Rango de fechas</label>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="date" id="filterFechaDesdeIns" class="ms-date" onchange="onCustomDateChangeIns()">
+          <span style="font-size:11px; color:var(--tx-2, #8a9690);">a</span>
+          <input type="date" id="filterFechaHastaIns" class="ms-date" onchange="onCustomDateChangeIns()">
+        </div>
+      </div>
+
       <div class="tf-campo campo-sector">
         <label>Sector</label>
         <div class="ms-dropdown" id="dropSector" onclick="toggleMsGantt(event,'sector')">Todos</div>
@@ -912,21 +932,6 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   <!-- /tabPanelActividades -->
 
   <div class="tab-panel" id="tabPanelInsumos" style="display:none;">
-
-  <!-- Período de Insumos es distinto al de Actividades (fechas propias del modelo de
-       insumos) — vive oculto aquí y se muestra/oculta en la fila unificada de arriba
-       según la pestaña activa (ver JS: mostrarCamposSegunTab). -->
-  <div style="display:none;">
-    <select id="filterFechaTipoIns" onchange="toggleFechaInputsIns()">
-      <option value="all">Histórico</option>
-      <option value="este_mes" selected>Este Mes</option>
-      <option value="mes_pasado">Mes Pasado</option>
-      <option value="ano_curso">Año Curso</option>
-      <option value="personalizada">Rango...</option>
-    </select>
-    <input type="date" id="filterFechaDesdeIns" onchange="onCustomDateChangeIns()">
-    <input type="date" id="filterFechaHastaIns" onchange="onCustomDateChangeIns()">
-  </div>
 
   <div class="table-toolbar">
     <div class="d-flex align-items-center gap-2 flex-wrap">
@@ -1144,6 +1149,12 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       const selPeriodo = document.getElementById('filterFechaTipo');
       const customInputs = document.getElementById('customDateInputs');
       if(selPeriodo && customInputs) customInputs.style.display = (selPeriodo.value === 'personalizada') ? 'flex' : 'none';
+    }
+    // Mismo problema, mismo arreglo, para el rango de fechas propio de Insumos.
+    if(tab==='insumos'){
+      const selPeriodoIns = document.getElementById('filterFechaTipoIns');
+      const customInputsIns = document.getElementById('customDateInputsIns');
+      if(selPeriodoIns && customInputsIns) customInputsIns.style.display = (selPeriodoIns.value === 'personalizada') ? 'flex' : 'none';
     }
   }
 
@@ -1388,9 +1399,17 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   function getOptionsFor(prop) {
     const esCompartido = CAMPOS_COMPARTIDOS.includes(prop);
     const esSoloIns = CAMPOS_SOLO_INS.includes(prop);
-    const fuente = esSoloIns ? DB_INSUMOS : DB_RAW;
-    const seleccionRef = esSoloIns ? SELECCIONES_INS : SELECCIONES;
-    const fFechaTipoId = esSoloIns ? "filterFechaTipoIns" : "filterFechaTipo";
+    // Sector/Ciclo/Finca son campos COMPARTIDOS entre Actividades e Insumos — antes esta
+    // función siempre usaba los datos y el filtro de fecha de Actividades sin importar
+    // desde qué pestaña se llamara, así que el desplegable de Ciclo en Insumos ignoraba
+    // por completo el Período/Rango de fechas propio de Insumos (ej. no mostraba ciclos
+    // 2025 aunque el rango los incluyera). Ahora, para campos compartidos, se usa la
+    // fuente y el filtro de fecha de la pestaña que esté visible en este momento.
+    const tabInsumosActiva = document.getElementById('tabPanelInsumos')?.style.display !== 'none';
+    const usarDatosIns = esSoloIns || (esCompartido && tabInsumosActiva);
+    const fuente = usarDatosIns ? DB_INSUMOS : DB_RAW;
+    const seleccionRef = usarDatosIns ? SELECCIONES_INS : SELECCIONES;
+    const fFechaTipoId = usarDatosIns ? "filterFechaTipoIns" : "filterFechaTipo";
     const fFechaTipo = document.getElementById(fFechaTipoId).value;
     const hoy = new Date();
     const curYear = hoy.getFullYear();
@@ -1404,8 +1423,8 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         if(parts.length === 3) {
           const rYear = parseInt(parts[0], 10);
           const rMonth = parseInt(parts[1], 10) - 1;
-          const idDesde = esSoloIns ? "filterFechaDesdeIns" : "filterFechaDesde";
-          const idHasta = esSoloIns ? "filterFechaHastaIns" : "filterFechaHasta";
+          const idDesde = usarDatosIns ? "filterFechaDesdeIns" : "filterFechaDesde";
+          const idHasta = usarDatosIns ? "filterFechaHastaIns" : "filterFechaHasta";
           if(fFechaTipo === "este_mes") {
             if(rYear !== curYear || rMonth !== curMonth) return false;
           } else if(fFechaTipo === "mes_pasado") {
@@ -1567,9 +1586,18 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   // ===== FILTROS EN CASCADA — TAB INSUMOS =====
 
   function toggleFechaInputsIns() {
-    // El "Rango..." de Insumos usa los mismos inputs visibles que Actividades
-    // (filterFechaDesde/filterFechaHasta) — Período no es un campo compartido, cada
-    // pestaña guarda su propio tipo (filterFechaTipo vs filterFechaTipoIns).
+    const tipo = document.getElementById("filterFechaTipoIns").value;
+    document.getElementById("customDateInputsIns").style.display = (tipo === "personalizada") ? "flex" : "none";
+    // Ciclo por defecto queda fijo en el más reciente (ej. Mani 2026) — si el usuario
+    // elige un período que no sea "Este Mes" está señalando que quiere mirar más allá
+    // de la campaña actual (un ciclo pasado, histórico, etc.), así que soltamos esa
+    // restricción de Ciclo para que el rango de fechas realmente traiga esos datos en
+    // vez de quedar tapados por el ciclo. Ciclo es compartido con Actividades, así que
+    // se limpia en los dos lados.
+    if(tipo !== 'este_mes'){
+      SELECCIONES_INS.ciclo = [];
+      SELECCIONES.ciclo = [];
+    }
     construirFiltrosGantt();
     renderMatrixIns();
   }
