@@ -162,7 +162,7 @@
         <thead><tr>
           <th>Sector</th><th>Finca</th><th>Grupo</th><th>Próxima Etapa</th><th>Fecha Programada</th>
           <th class="center">Días</th><th class="center">Estado</th><th class="center">Etapas Cumplidas</th>
-          <th class="num">Área Sembrada (mzn)</th><th class="num">Área Última Etapa (mzn)</th><th class="num">% Cubierto</th>
+          <th class="num">Área Sembrada (mzn)</th><th class="num">Área Última Etapa (mzn)</th><th class="num">% Cubierto</th><th class="center">Detalle</th>
         </tr></thead>
         <tbody id="tbodyAlertas"></tbody>
       </table>
@@ -224,6 +224,32 @@
     </div>
   </div>
 
+</div>
+
+<div id="modalDetalleLoteOverlay" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.55); z-index:200; align-items:center; justify-content:center; padding:16px;" onclick="if(event.target===this) cerrarModalDetalleLote()">
+  <div style="background:var(--card-bg); border-radius:14px; box-shadow:var(--shadow-md); width:min(820px,96vw); max-height:88vh; display:flex; flex-direction:column; overflow:hidden;">
+    <div style="background:var(--grad-header); color:#fff; padding:14px 18px; display:flex; justify-content:space-between; align-items:flex-start; flex-shrink:0;">
+      <div>
+        <div style="font-weight:800; font-size:14px;">📋 Detalle de Siembra por Lote</div>
+        <div style="font-size:11px; opacity:.9; margin-top:2px;" id="subtituloModalDetalleLote"></div>
+      </div>
+      <button onclick="cerrarModalDetalleLote()" style="background:none; border:none; color:#fff; font-size:16px; cursor:pointer; line-height:1;">✕</button>
+    </div>
+    <div style="padding:12px 16px; overflow:auto; flex:1; min-height:0;">
+      <table class="tabla-datos" id="tablaDetalleLote" style="width:100%;">
+        <thead><tr>
+          <th>Lote</th><th>Fecha</th><th>Turno</th><th>Producto</th>
+          <th class="num">Cantidad</th><th>UM</th><th class="num">Área (mzn)</th><th>Productor</th>
+        </tr></thead>
+        <tbody id="tbodyDetalleLote"></tbody>
+        <tfoot><tr class="fila-total"><td colspan="6" style="text-align:right;">Total área:</td><td id="totalDetalleLote" class="num">0.00</td><td></td></tr></tfoot>
+      </table>
+    </div>
+    <div style="padding:10px 16px; border-top:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; gap:10px; flex-shrink:0;">
+      <span style="font-size:10.5px; color:var(--text-muted);">Fuente: Consumo de Insumos (x_orden_campo_line_662d7) — filtrado por Finca+Ciclo (ese modelo no guarda Grupo de Siembra).</span>
+      <button class="tf-icon tf-icon-excel" onclick="exportarDetalleLoteAExcel()">⬇︎ Exportar Excel</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -316,15 +342,26 @@ async function cargarConsumoReal(){
     json = await fetchJson(`${WORKER}/query?base=info&model=x_orden_campo_line_662d7`);
   }
   const records = Array.isArray(json) ? json : (json?.result || []);
-  CONSUMO_REAL = records.map(r => ({
-    compaia: m2o(r.x_studio_compaia)[1] || 'Sin Compañía',
-    ciclo: m2o(r.x_studio_ciclo)[1] || 'Sin Ciclo',
-    finca: m2o(r.x_studio_keyfincainsumo)[1] || 'Sin Finca',
-    producto: m2o(r.x_studio_insumo_utilizado)[1] || 'Sin Producto',
-    cantidad: Number(r.x_studio_cantidad_gastada || 0),
-    dosisXMzn: Number(r.x_studio_dosis_x_mzn || 0),
-    fecha: r.x_studio_fecha || '',
-  })).filter(r => r.fecha);
+  CONSUMO_REAL = records.map(r => {
+    const ordenArr = m2o(r.x_orden_campo_id);
+    return {
+      compaia: m2o(r.x_studio_compaia)[1] || 'Sin Compañía',
+      ciclo: m2o(r.x_studio_ciclo)[1] || 'Sin Ciclo',
+      sector: m2o(r.x_studio_sector_1)[1] || 'Sin Sector',
+      finca: m2o(r.x_studio_keyfincainsumo)[1] || 'Sin Finca',
+      lote: m2o(r.x_studio_lote_agricola)[1] || 'Sin Lote',
+      orden: ordenArr[1] || '—',
+      actividad: m2o(r.x_studio_actividad_realizada)[1] || 'Sin Actividad',
+      producto: m2o(r.x_studio_insumo_utilizado)[1] || 'Sin Producto',
+      cantidad: Number(r.x_studio_cantidad_gastada || 0),
+      area: Number(r.x_studio_area_mzn_aplicada || 0),
+      um: r.x_studio_um || '',
+      dosisXMzn: Number(r.x_studio_dosis_x_mzn || 0),
+      turno: (r.x_studio_related_field_4fc_1jq37tged === 'Noche') ? 'Noche' : 'Dia',
+      productor: r.x_studio_productor || '',
+      fecha: r.x_studio_fecha || '',
+    };
+  }).filter(r => r.fecha);
 }
 
 // Estado real de los ciclos (Abierto/Cerrado) — para poder defaultear el filtro Ciclo
@@ -510,6 +547,61 @@ function ordenarTabla(tablaId, colIdx){
 
 function filtrarTabla(tablaId){ aplicarFiltroYOrden(tablaId); }
 
+// ===================== DETALLE DE SIEMBRA POR LOTE =====================
+// Mismo criterio que el modal del GANTT: fuente x_orden_campo_line_662d7 (Consumo de
+// Insumos), que no guarda "Grupo de Siembra" como campo propio — se filtra por
+// Finca+Ciclo (el Ciclo toma el que esté elegido en el filtro de arriba). El área se
+// deduplica por Orden de Trabajo+Lote, no por nombre de lote solo: dos registros del
+// mismo lote pueden ser aplicaciones distintas con área propia.
+function abrirModalDetalleLote(finca, sector, grupo){
+  const ciclo = document.getElementById('filtroCiclo').value;
+  document.getElementById('subtituloModalDetalleLote').textContent =
+    `${finca} · ${sector} · ${(grupo||'').replace('GRUPO DE SIEMBRA ','Grupo ')}${ciclo ? ' · '+ciclo : ''}`;
+
+  const filas = CONSUMO_REAL.filter(r =>
+    r.finca===finca && (!ciclo || r.ciclo===ciclo) && normTxt(r.actividad)===normTxt('Siembra')
+  ).sort((a,b)=> a.fecha.localeCompare(b.fecha) || a.lote.localeCompare(b.lote));
+
+  const tbody = document.getElementById('tbodyDetalleLote');
+  if(!filas.length){
+    tbody.innerHTML = `<tr><td colspan="8" class="vacio">No hay registros de insumos para Siembra en esta Finca/Ciclo.</td></tr>`;
+    document.getElementById('totalDetalleLote').textContent = '0.00';
+  } else {
+    let totalArea = 0;
+    const clavesContadas = new Set();
+    filas.forEach(r=>{
+      const clave = `${r.orden}|||${r.lote}`;
+      if(!clavesContadas.has(clave)){ totalArea += r.area; clavesContadas.add(clave); }
+    });
+
+    tbody.innerHTML = filas.map(r => `<tr>
+      <td><strong>${r.lote}</strong></td>
+      <td>${fmtFecha(r.fecha)}</td>
+      <td>${r.turno==='Noche' ? 'Noche' : 'Día'}</td>
+      <td>${r.producto}</td>
+      <td class="num">${r.cantidad.toFixed(2)}</td>
+      <td>${r.um}</td>
+      <td class="num">${r.area.toFixed(2)}</td>
+      <td>${r.productor || '—'}</td>
+    </tr>`).join('');
+    document.getElementById('totalDetalleLote').textContent = totalArea.toFixed(2);
+  }
+
+  document.getElementById('modalDetalleLoteOverlay').style.display = 'flex';
+  activarTablaInteractiva('tablaDetalleLote');
+}
+
+function cerrarModalDetalleLote(){
+  document.getElementById('modalDetalleLoteOverlay').style.display = 'none';
+}
+
+function exportarDetalleLoteAExcel(){
+  const table = document.getElementById('tablaDetalleLote');
+  if(!table) return;
+  const wb = XLSX.utils.table_to_book(table, { raw: true });
+  XLSX.writeFile(wb, `INFOAGRO_Detalle_Siembra_Lote_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 // ===================== ALERTAS =====================
 // Por cada Sector+Finca+Grupo con Siembra registrada: calcula la cascada de fechas
 // (F.I = siembra + días configurados, F.II en adelante = +días desde la aplicación
@@ -619,7 +711,7 @@ function renderAlertas(){
   document.getElementById('alertCardTotal').textContent = lista.length;
 
   const tbody = document.getElementById('tbodyAlertas');
-  if(!lista.length){ tbody.innerHTML = `<tr><td colspan="11" class="vacio">No hay lotes sembrados con los filtros actuales.</td></tr>`; return; }
+  if(!lista.length){ tbody.innerHTML = `<tr><td colspan="12" class="vacio">No hay lotes sembrados con los filtros actuales.</td></tr>`; return; }
 
   const BADGES = {
     atrasada: '<span class="badge-danger">Atrasada</span>',
@@ -638,6 +730,7 @@ function renderAlertas(){
     <td class="num">${r.areaSembrada.toFixed(2)}</td>
     <td class="num">${r.areaUltimaEtapa.toFixed(2)}</td>
     <td class="num">${r.pctCubierto.toFixed(0)}%</td>
+    <td class="center"><button onclick="abrirModalDetalleLote('${r.finca.replace(/'/g,"\\'")}','${(r.sector||'').replace(/'/g,"\\'")}','${(r.grupo||'').replace(/'/g,"\\'")}')" style="background:#1b4332; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:10.5px; cursor:pointer; font-weight:700;">Ver lotes</button></td>
   </tr>`).join('');
   activarTablaInteractiva('tablaAlertas');
 }
