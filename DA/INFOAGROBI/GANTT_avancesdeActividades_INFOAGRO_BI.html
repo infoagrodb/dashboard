@@ -3176,8 +3176,15 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       // El área viene repetida por cada producto del mismo lote/fecha — se suma una
       // sola vez por lote para no inflar el total.
       let totalArea = 0;
-      const lotesContados = new Set();
-      filas.forEach(r=>{ if(!lotesContados.has(r.lote)){ totalArea += r.area; lotesContados.add(r.lote); } });
+      // Deduplicar por Orden de Trabajo + Lote (no por nombre de lote solo): varias
+      // líneas de producto bajo la MISMA orden comparten la misma área (se repite por
+      // producto), pero dos registros del mismo lote con distinta Orden son aplicaciones
+      // separadas y su área se suma aparte — antes se perdía área acá.
+      const clavesContadas = new Set();
+      filas.forEach(r=>{
+        const clave = `${r.orden}|||${r.lote}`;
+        if(!clavesContadas.has(clave)){ totalArea += r.area; clavesContadas.add(clave); }
+      });
 
       tbody.innerHTML = filas.map(r => `<tr>
         <td><strong>${r.lote}</strong></td>
