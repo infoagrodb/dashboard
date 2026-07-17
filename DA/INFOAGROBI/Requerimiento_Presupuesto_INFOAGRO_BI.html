@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Requerimiento y Presupuesto de Insumos</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg-organic: #f4f7f5;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --card-bg: #ffffff;
+    --border-color: rgba(163,177,198,0.35);
+    --grad-header: linear-gradient(135deg, #1b4332 0%, #2d6a4f 50%, #40916c 100%);
+    --grad-verde: linear-gradient(135deg, #2d6a4f 0%, #52b788 100%);
+    --grad-naranja: linear-gradient(135deg, #e76f51 0%, #f4a261 100%);
+    --shadow-sm: 0 4px 20px -2px rgba(45, 106, 79, 0.05);
+    --shadow-md: 0 10px 30px -5px rgba(27, 67, 50, 0.08);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg-organic);color:var(--text-main);}
+  .app{display:flex;flex-direction:column;height:100vh;overflow:hidden;padding:14px;gap:12px;}
+
+  .toolbar-una-fila{
+    display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+    background:var(--card-bg); border:1px solid var(--border-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,.06); padding:10px 16px; border-radius:12px; flex-shrink:0;
+  }
+  .tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-start; padding-top:2px;}
+  .tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:#1B4332; line-height:1.2; white-space:nowrap;}
+  .tf-titulo span{font-size:10.5px; color:var(--text-muted); font-weight:600;}
+  .tf-campo{display:flex; flex-direction:column; gap:4px; min-width:150px; flex:1;}
+  .tf-campo label{font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted);}
+  .tf-select{height:32px; padding:0 8px; border-radius:6px; border:1px solid var(--border-color); font-size:12px; font-family:inherit; background:#fff;}
+  .tf-acciones{display:flex; align-items:center; gap:6px; margin-left:auto;}
+  .tf-icon{
+    height:32px; padding:0 12px; border-radius:7px; border:1px solid var(--border-color);
+    background:#fff; cursor:pointer; display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+  }
+  .tf-icon:hover{background:#F1F4F1;}
+  .tf-icon-verde{background:#1b4332; color:#fff; border-color:#1b4332;}
+  .tf-icon-excel{background:#1a9448; color:#fff; border-color:#1a9448;}
+
+  .tabs-switch-container{display:flex; gap:6px; flex-shrink:0; overflow-x:auto;}
+  .tab-switch-btn{
+    background:#fff; border:1px solid var(--border-color); color:var(--text-muted);
+    font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px 3px 8px 3px; cursor:pointer; white-space:nowrap;
+  }
+  .tab-switch-btn.active{background:var(--grad-header); color:#fff; border-color:transparent;}
+
+  .panel{flex:1; min-height:0; display:none; flex-direction:column; gap:10px;}
+  .panel.activo{display:flex;}
+
+  .card-resumen{display:flex; gap:12px; flex-wrap:wrap; flex-shrink:0;}
+  .card-resumen .card{
+    background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px;
+    padding:12px 18px; box-shadow:var(--shadow-sm); min-width:160px;
+  }
+  .card-resumen .card .lbl{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); font-weight:700;}
+  .card-resumen .card .val{font-size:20px; font-weight:800; color:#1b4332; margin-top:2px;}
+
+  .tabla-wrap{flex:1; min-height:0; overflow:auto; background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; box-shadow:var(--shadow-sm);}
+  table.tabla-datos{width:100%; border-collapse:collapse; font-size:12px;}
+  table.tabla-datos thead th{
+    position:sticky; top:0; z-index:5; background:#1b4332; color:#fff; padding:9px 12px; text-align:left;
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;
+  }
+  table.tabla-datos td{padding:7px 12px; border-bottom:1px solid #f1f5f9; white-space:nowrap;}
+  table.tabla-datos tbody tr:hover{background:#f8fafc;}
+  .num{text-align:right; font-variant-numeric:tabular-nums;}
+  .center{text-align:center;}
+  .badge-ok{background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700;}
+  .badge-warn{background:#fef3c7; color:#92400e; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700;}
+  .badge-danger{background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700;}
+  .fila-total td{background:#f0fdf4; font-weight:800; border-top:2px solid #1b4332;}
+  .vacio{padding:40px; text-align:center; color:#94a3b8; font-size:13px;}
+  .th-sort-ind{opacity:.6; font-size:9px; margin-left:3px;}
+  table.tabla-datos thead th{white-space:nowrap;}
+  tr.fila-filtro-columna th{position:sticky; top:28px; z-index:4; background:#eef2f0; padding:4px 8px !important;}
+  .input-filtro-col{width:100%; box-sizing:border-box; font-size:10.5px; padding:3px 6px; border:1px solid rgba(163,177,198,0.5); border-radius:5px; font-weight:400; text-transform:none; letter-spacing:normal; color:#334155; background:#fff;}
+  .input-filtro-col::placeholder{color:#94a3b8;}
+
+  /* ---------- Responsive: nunca perder esto de vista al seguir agregando cosas ---------- */
+  @media (max-width: 900px){
+    .app{padding:8px; gap:8px;}
+    .toolbar-una-fila{padding:8px 10px; gap:8px;}
+    .tf-titulo h1{font-size:13px;}
+    .tf-campo{min-width:120px; flex:1 1 120px;}
+    .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px;}
+    .tab-switch-btn{padding:7px 12px; font-size:11px;}
+    .card-resumen{gap:8px;}
+    .card-resumen .card{min-width:110px; padding:10px 12px; flex:1 1 110px;}
+    .card-resumen .card .val{font-size:16px;}
+    table.tabla-datos{font-size:11px;}
+    table.tabla-datos td, table.tabla-datos thead th{padding:6px 8px;}
+  }
+  @media (max-width: 520px){
+    .tf-campo{min-width:100%;}
+    .card-resumen .card{min-width:47%; flex:1 1 47%;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="toolbar-una-fila">
+    <div class="tf-titulo">
+      <h1>Requerimiento y Presupuesto</h1>
+      <span>Insumos para Fungicidas · Ciclo Mani</span>
+    </div>
+    <div class="tf-campo">
+      <label>Compañía</label>
+      <select id="filtroCompania" class="tf-select" onchange="alCambiarFiltro('compania')"></select>
+    </div>
+    <div class="tf-campo">
+      <label>Sector</label>
+      <select id="filtroSector" class="tf-select" onchange="alCambiarFiltro('sector')"></select>
+    </div>
+    <div class="tf-campo">
+      <label>Ciclo</label>
+      <select id="filtroCiclo" class="tf-select" onchange="alCambiarFiltro('ciclo')"></select>
+    </div>
+    <div class="tf-campo">
+      <label>Finca</label>
+      <select id="filtroFinca" class="tf-select" onchange="alCambiarFiltro('finca')"></select>
+    </div>
+    <div class="tf-campo">
+      <label>Horizonte (Requerimiento)</label>
+      <select id="filtroHorizonte" class="tf-select" onchange="alCambiarFiltro()">
+        <option value="15">Próximos 15 días</option>
+        <option value="30" selected>Próximos 30 días</option>
+        <option value="60">Próximos 60 días</option>
+        <option value="9999">Todo lo programado (futuro)</option>
+      </select>
+    </div>
+    <div class="tf-acciones">
+      <button class="tf-icon" onclick="cargarTodo()">↻ Actualizar</button>
+      <button class="tf-icon tf-icon-excel" onclick="exportarTablaActivaAExcel()">⬇︎ Exportar Excel</button>
+    </div>
+  </div>
+
+  <div class="tabs-switch-container">
+    <button class="tab-switch-btn active" id="tabBtnAlertas" onclick="cambiarTab('alertas')">🚨 Alertas</button>
+    <button class="tab-switch-btn" id="tabBtnRequerimiento" onclick="cambiarTab('requerimiento')">📋 Requerimiento</button>
+    <button class="tab-switch-btn" id="tabBtnPresupuesto" onclick="cambiarTab('presupuesto')">💰 Presupuesto</button>
+    <button class="tab-switch-btn" id="tabBtnSeguimiento" onclick="cambiarTab('seguimiento')">📊 Seguimiento (dosis aplicada)</button>
+  </div>
+
+  <!-- ================= ALERTAS ================= -->
+  <div class="panel activo" id="panelAlertas">
+    <div class="card-resumen">
+      <div class="card" style="border-left:4px solid #dc2626;"><div class="lbl">Atrasadas</div><div class="val" id="alertCardAtrasadas" style="color:#dc2626;">—</div></div>
+      <div class="card" style="border-left:4px solid #d97706;"><div class="lbl">Próximas (≤5 días)</div><div class="val" id="alertCardProximas" style="color:#d97706;">—</div></div>
+      <div class="card" style="border-left:4px solid #16a34a;"><div class="lbl">Al día (esperando en rango óptimo)</div><div class="val" id="alertCardAlDia" style="color:#16a34a;">—</div></div>
+      <div class="card" style="border-left:4px solid #2563eb;"><div class="lbl">Ciclo completo</div><div class="val" id="alertCardCompletas" style="color:#2563eb;">—</div></div>
+      <div class="card"><div class="lbl">Grupos con siembra</div><div class="val" id="alertCardTotal">—</div></div>
+    </div>
+    <div class="tabla-wrap">
+      <table class="tabla-datos" id="tablaAlertas">
+        <thead><tr>
+          <th>Sector</th><th>Finca</th><th>Grupo</th><th>Próxima Etapa</th><th>Fecha Programada</th>
+          <th class="center">Días</th><th class="center">Estado</th><th class="center">Etapas Cumplidas</th>
+          <th class="num">Área Sembrada (mzn)</th><th class="num">Área Última Etapa (mzn)</th><th class="num">% Cubierto</th>
+        </tr></thead>
+        <tbody id="tbodyAlertas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= REQUERIMIENTO ================= -->
+  <div class="panel" id="panelRequerimiento">
+    <div class="card-resumen">
+      <div class="card"><div class="lbl">Productos distintos</div><div class="val" id="reqCardProductos">—</div></div>
+      <div class="card"><div class="lbl">Aplicaciones programadas</div><div class="val" id="reqCardAplicaciones">—</div></div>
+      <div class="card"><div class="lbl">Fincas involucradas</div><div class="val" id="reqCardFincas">—</div></div>
+    </div>
+    <div class="tabla-wrap">
+      <table class="tabla-datos" id="tablaRequerimiento">
+        <thead><tr>
+          <th>Producto</th><th>Categoría</th><th>UM</th>
+          <th class="num">Cantidad Requerida</th><th class="center">Aplicaciones</th><th>Fincas</th><th>Próxima Fecha</th>
+        </tr></thead>
+        <tbody id="tbodyRequerimiento"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= PRESUPUESTO ================= -->
+  <div class="panel" id="panelPresupuesto">
+    <div class="card-resumen">
+      <div class="card"><div class="lbl">Presupuesto total estimado</div><div class="val" id="presCardTotal">—</div></div>
+      <div class="card"><div class="lbl">Producto más costoso</div><div class="val" id="presCardTop" style="font-size:13px;">—</div></div>
+    </div>
+    <div style="font-size:11px; color:var(--text-muted); padding:2px 4px;">💡 El precio es un estimado del catálogo de insumos (última compra / promedio / sugerido) — no se valida con la misma exactitud que la dosis aplicada en campo. Para el control real de cumplimiento, mirá la pestaña <b>Seguimiento</b>.</div>
+    <div class="tabla-wrap">
+      <table class="tabla-datos" id="tablaPresupuesto">
+        <thead><tr>
+          <th>Producto</th><th>Finca</th><th>UM</th>
+          <th class="num">Cantidad</th><th class="num">Precio Unit.</th><th class="num">Subtotal</th>
+        </tr></thead>
+        <tbody id="tbodyPresupuesto"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ================= SEGUIMIENTO ================= -->
+  <div class="panel" id="panelSeguimiento">
+    <div class="card-resumen">
+      <div class="card"><div class="lbl">Aplicaciones con seguimiento</div><div class="val" id="segCardTotal">—</div></div>
+      <div class="card"><div class="lbl">Cumplidas (≥95% de lo planificado)</div><div class="val" id="segCardOk">—</div></div>
+      <div class="card"><div class="lbl">Con desvío</div><div class="val" id="segCardDesvio">—</div></div>
+    </div>
+    <div class="tabla-wrap">
+      <table class="tabla-datos" id="tablaSeguimiento">
+        <thead><tr>
+          <th>Finca</th><th>Grupo</th><th>Etapa</th><th>Producto</th>
+          <th class="num">Planificado</th><th class="num">Real Aplicado</th><th class="num">Diferencia</th>
+          <th class="num">Dosis Real (x Mzn)</th><th class="center">Estado</th>
+        </tr></thead>
+        <tbody id="tbodySeguimiento"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+
+let ASIGNACIONES = [];   // x_asignacion_insumo_ap (planificado)
+let CATALOGO = [];       // x_insumosagricolas (precios)
+let CONSUMO_REAL = [];   // x_orden_campo_line_662d7 (real aplicado, dosis)
+let ACTIVIDADES_RAW = []; // x_orden_campo_line_b660b (Siembra + Fungicida I..VIII) — para Alertas
+let PROGRAMACION_CFG = {}; // clave "finca|||grupo" -> { diasF1, diasEntre, ajustes:{F1:fecha,...} }
+let TAB_ACTIVO = 'alertas';
+
+const ETAPAS_FUNGICIDA = ['Fungicida I','Fungicida II','Fungicida III','Fungicida IV','Fungicida V','Fungicida VI','Fungicida VII','Fungicida VIII'];
+const DIAS_DEFECTO_F1 = 30, DIAS_DEFECTO_ENTRE = 13;
+
+function normTxt(s){ return String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim(); }
+function m2o(v){ return Array.isArray(v) ? v : [null, v]; }
+function claveFG(finca, grupo){ return `${finca}|||${grupo}`; }
+function addDias(fechaStr, dias){
+  const d = new Date(fechaStr + 'T00:00:00');
+  d.setDate(d.getDate() + dias);
+  return d.toISOString().split('T')[0];
+}
+
+async function fetchJson(url){
+  try { const r = await fetch(url); return await r.json(); } catch(e){ console.log('Error fetch', url, e.message); return null; }
+}
+
+async function cargarAsignaciones(){
+  const d = await fetchJson(`${WORKER}/asignacion-insumos-config`);
+  ASIGNACIONES = (d && d.asignaciones) || [];
+}
+
+async function cargarCatalogo(){
+  const d = await fetchJson(`${WORKER}/insumos-catalogo`);
+  CATALOGO = (d && d.catalogo) || [];
+}
+
+async function cargarProgramacionConfig(){
+  const d = await fetchJson(`${WORKER}/programacion-fungicida-config`);
+  const cfg = {};
+  (d && d.programacion || []).forEach(row => {
+    if(!row.finca || !row.grupo) return;
+    const ajustes = {};
+    Object.entries(row.ajustes || {}).forEach(([corto, fecha]) => {
+      const idx = parseInt(corto.slice(1), 10);
+      if(idx>=1 && idx<=8) ajustes[ETAPAS_FUNGICIDA[idx-1]] = fecha;
+    });
+    cfg[claveFG(row.finca, row.grupo)] = { diasF1: row.dias_f1, diasEntre: row.dias_entre, ajustes };
+  });
+  PROGRAMACION_CFG = cfg;
+}
+
+// Actividades crudas (Siembra + Fungicida I..VIII) — misma fuente que usa el GANTT
+// (x_orden_campo_line_b660b), para calcular la cascada de "cuándo le toca cada
+// Fungicida" y "cuánta área ya se cubrió" por Sector/Finca/Grupo.
+async function cargarActividadesRaw(){
+  const GITHUB_ACT = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_AvancesActividades.json";
+  let json;
+  try {
+    const r = await fetch(GITHUB_ACT + "?cache=" + Date.now());
+    if(r.ok) json = await r.json();
+  } catch(e){}
+  if(!json){
+    json = await fetchJson(`${WORKER}/query?base=info&model=x_orden_campo_line_b660b`);
+  }
+  const records = Array.isArray(json) ? json : (json?.result || []);
+  ACTIVIDADES_RAW = records.map(r => ({
+    compaia: m2o(r.x_studio_compaia)[1] || 'Sin Compañía',
+    sector: m2o(r.x_studio_sector_1)[1] || 'Sin Sector',
+    ciclo: m2o(r.x_studio_ciclo)[1] || 'Sin Ciclo',
+    finca: m2o(r.x_studio_finca)[1] || 'Sin Finca',
+    actividad: m2o(r.x_studio_activiadad_realizada)[1] || '',
+    grupo: r.x_studio_grupo_de_siembra || 'Sin Grupo',
+    avance: Number(r.x_studio_avance_mzn || 0),
+    fecha: r.x_studio_fecha || '',
+  })).filter(r => r.fecha && (r.actividad==='Siembra' || ETAPAS_FUNGICIDA.includes(r.actividad)));
+}
+
+// Consumo real de insumos (mismo modelo que usa Consumo de Insumos en el GANTT) — para
+// comparar Planificado vs Real en Seguimiento.
+async function cargarConsumoReal(){
+  const GITHUB_INS = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Insumos_Consumo.json";
+  let json;
+  try {
+    const r = await fetch(GITHUB_INS + "?cache=" + Date.now());
+    if(r.ok) json = await r.json();
+  } catch(e){}
+  if(!json){
+    json = await fetchJson(`${WORKER}/query?base=info&model=x_orden_campo_line_662d7`);
+  }
+  const records = Array.isArray(json) ? json : (json?.result || []);
+  CONSUMO_REAL = records.map(r => ({
+    compaia: m2o(r.x_studio_compaia)[1] || 'Sin Compañía',
+    ciclo: m2o(r.x_studio_ciclo)[1] || 'Sin Ciclo',
+    finca: m2o(r.x_studio_keyfincainsumo)[1] || 'Sin Finca',
+    producto: m2o(r.x_studio_insumo_utilizado)[1] || 'Sin Producto',
+    cantidad: Number(r.x_studio_cantidad_gastada || 0),
+    dosisXMzn: Number(r.x_studio_dosis_x_mzn || 0),
+    fecha: r.x_studio_fecha || '',
+  })).filter(r => r.fecha);
+}
+
+// Estado real de los ciclos (Abierto/Cerrado) — para poder defaultear el filtro Ciclo
+// al que esté efectivamente abierto (ej. "Mani 2026"), no solo al más reciente por nombre.
+let CICLOS_ESTADO = []; // [{nombre, estado, compania}]
+async function cargarCiclosEstado(){
+  const d = await fetchJson(`${WORKER}/ciclos-config`);
+  CICLOS_ESTADO = (d && d.ciclos || []).map(c => ({ nombre: c.nombre, estado: c.estado, compania: c.compania }));
+}
+
+// Finca -> Sector, derivado de Actividades (ASIGNACIONES no trae sector propio) — para
+// poder filtrar por Sector también en Requerimiento/Presupuesto/Seguimiento.
+function sectorDeFinca(finca){
+  const r = ACTIVIDADES_RAW.find(a => a.finca === finca);
+  return r ? r.sector : 'Sin Sector';
+}
+
+// Filtros en cascada: Compañía -> Sector -> Ciclo -> Finca. Cada nivel solo muestra las
+// opciones que existen dado lo elegido en los niveles anteriores (no en los de después,
+// así el usuario puede ir de general a específico sin quedar trabado).
+function poblarFiltros(nivelCambiado){
+  const cia = document.getElementById('filtroCompania').value;
+  const sector = document.getElementById('filtroSector').value;
+  const cicloVal = document.getElementById('filtroCiclo').value;
+
+  const todos = [
+    ...ACTIVIDADES_RAW.map(a => ({ compania:a.compaia, sector:a.sector, ciclo:a.ciclo, finca:a.finca })),
+    ...ASIGNACIONES.map(a => ({ compania:a.compania, sector:sectorDeFinca(a.finca), ciclo:a.ciclo, finca:a.finca })),
+  ];
+
+  const companias = [...new Set(todos.map(r=>r.compania).filter(Boolean))].sort();
+  const sectores  = [...new Set(todos.filter(r=>!cia || r.compania===cia).map(r=>r.sector).filter(Boolean))].sort();
+  const ciclos    = [...new Set(todos.filter(r=>(!cia || r.compania===cia) && (!sector || r.sector===sector)).map(r=>r.ciclo).filter(Boolean))].sort().reverse();
+  const fincas    = [...new Set(todos.filter(r=>(!cia || r.compania===cia) && (!sector || r.sector===sector) && (!cicloVal || r.ciclo===cicloVal)).map(r=>r.finca).filter(Boolean))].sort();
+
+  const selCia = document.getElementById('filtroCompania');
+  const selSector = document.getElementById('filtroSector');
+  const selCiclo = document.getElementById('filtroCiclo');
+  const selFinca = document.getElementById('filtroFinca');
+
+  function reconstruir(select, opciones, etiquetaTodos, valorPrevio){
+    select.innerHTML = `<option value="">${etiquetaTodos}</option>` + opciones.map(o=>`<option value="${o}">${o}</option>`).join('');
+    // Mantiene la selección previa si sigue siendo válida tras el cambio en cascada.
+    if(valorPrevio && opciones.includes(valorPrevio)) select.value = valorPrevio;
+  }
+
+  if(!selCia.options.length) reconstruir(selCia, companias, 'Todas', cia);
+  reconstruir(selSector, sectores, 'Todos', nivelCambiado==='compania' ? '' : sector);
+  reconstruir(selFinca, fincas, 'Todas', document.getElementById('filtroFinca').value);
+
+  // Ciclo: si el usuario no lo tocó y no hay valor previo válido, defaultea al ciclo
+  // ABIERTO más reciente (prioriza nombre "Mani"); si no hay ninguno abierto, cae al
+  // más reciente por nombre entre los disponibles.
+  const cicloPrevioValido = cicloVal && ciclos.includes(cicloVal);
+  reconstruir(selCiclo, ciclos, 'Todos', cicloPrevioValido ? cicloVal : '');
+  if(!selCiclo.value && ciclos.length){
+    const abiertos = ciclos.filter(nombre => {
+      const c = CICLOS_ESTADO.find(x => x.nombre === nombre && (!cia || x.compania===cia));
+      return c && normTxt(c.estado) === 'abierto';
+    });
+    const candidatosMani = (abiertos.length ? abiertos : ciclos).filter(n => /^mani/i.test(n.trim()));
+    const elegido = (candidatosMani.length ? candidatosMani : (abiertos.length ? abiertos : ciclos)).sort().pop();
+    if(elegido) selCiclo.value = elegido;
+  }
+}
+
+function asignacionesFiltradas(){
+  const cia = document.getElementById('filtroCompania').value;
+  const sector = document.getElementById('filtroSector').value;
+  const ciclo = document.getElementById('filtroCiclo').value;
+  const finca = document.getElementById('filtroFinca').value;
+  return ASIGNACIONES.filter(a =>
+    (!cia || a.compania===cia) && (!sector || sectorDeFinca(a.finca)===sector) &&
+    (!ciclo || a.ciclo===ciclo) && (!finca || a.finca===finca) && a.cantidad > 0
+  );
+}
+
+function precioDeProducto(nombreProducto, productoId){
+  const p = CATALOGO.find(p => (productoId && p.id===productoId) || p.nombre===nombreProducto);
+  return p ? (p.precio || 0) : 0;
+}
+function categoriaDeProducto(nombreProducto, productoId){
+  const p = CATALOGO.find(p => (productoId && p.id===productoId) || p.nombre===nombreProducto);
+  return p ? (p.categoria || '—') : '—';
+}
+function umDeProducto(nombreProducto, productoId){
+  const p = CATALOGO.find(p => (productoId && p.id===productoId) || p.nombre===nombreProducto);
+  return p ? (p.um || '') : '';
+}
+
+function fmtFecha(f){
+  if(!f) return '—';
+  const p = String(f).split('-');
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  return p.length===3 ? `${p[2]}-${meses[parseInt(p[1],10)-1]}-${p[0]}` : f;
+}
+function fmtMoneda(v){ return '$' + Number(v||0).toLocaleString('es-NI', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+
+// ===================== TABLAS: ordenar y filtrar por columna =====================
+// Genérico y reutilizable en las 4 tablas — se activa llamando a
+// activarTablaInteractiva('idDeLaTabla') justo después de que el render de turno
+// terminó de llenar el tbody con TODAS las filas (sin filtrar).
+const TABLA_MASTER = {};      // tablaId -> [{html, cells:[texto normalizado,...]}]
+const TABLA_TOTAL_HTML = {};  // tablaId -> outerHTML de la fila .fila-total, si la tabla tiene una
+const TABLA_ORDEN = {};       // tablaId -> {col: idx, dir: 1|-1}
+
+function activarTablaInteractiva(tablaId){
+  const tabla = document.getElementById(tablaId);
+  if(!tabla) return;
+  const thead = tabla.querySelector('thead');
+  const tbody = tabla.querySelector('tbody');
+  if(!thead || !tbody) return;
+
+  const filaTotal = tbody.querySelector('tr.fila-total');
+  TABLA_TOTAL_HTML[tablaId] = filaTotal ? filaTotal.outerHTML : null;
+
+  const filas = [...tbody.querySelectorAll('tr')].filter(tr => !tr.querySelector('.vacio') && !tr.classList.contains('fila-total'));
+  TABLA_MASTER[tablaId] = filas.map(tr => ({
+    html: tr.outerHTML,
+    cells: [...tr.children].map(td => normTxt(td.textContent)),
+  }));
+
+  const headerRow = thead.querySelector('tr:not(.fila-filtro-columna)');
+  if(headerRow && !headerRow.dataset.wired){
+    headerRow.dataset.wired = '1';
+    [...headerRow.children].forEach((th, idx) => {
+      const texto = th.textContent.trim();
+      th.innerHTML = `<span class="th-click" style="cursor:pointer; user-select:none;">${texto}<span class="th-sort-ind">↕</span></span>`;
+      th.querySelector('.th-click').addEventListener('click', () => ordenarTabla(tablaId, idx));
+    });
+    const filaFiltro = document.createElement('tr');
+    filaFiltro.className = 'fila-filtro-columna';
+    filaFiltro.innerHTML = [...headerRow.children].map((th, idx) =>
+      `<th><input type="text" class="input-filtro-col" placeholder="Filtrar…" oninput="filtrarTabla('${tablaId}')"></th>`
+    ).join('');
+    thead.appendChild(filaFiltro);
+  }
+
+  aplicarFiltroYOrden(tablaId);
+}
+
+function aplicarFiltroYOrden(tablaId){
+  const tabla = document.getElementById(tablaId);
+  if(!tabla) return;
+  const tbody = tabla.querySelector('tbody');
+  let filas = TABLA_MASTER[tablaId] || [];
+
+  const inputs = [...tabla.querySelectorAll('.input-filtro-col')];
+  const filtros = inputs.map((inp, idx) => ({ idx, v: normTxt(inp.value) })).filter(f => f.v);
+  if(filtros.length){
+    filas = filas.filter(f => filtros.every(flt => (f.cells[flt.idx]||'').includes(flt.v)));
+  }
+
+  const orden = TABLA_ORDEN[tablaId];
+  if(orden){
+    filas = [...filas].sort((a,b) => {
+      const va = a.cells[orden.col] || '', vb = b.cells[orden.col] || '';
+      const na = parseFloat(va.replace(/,/g,'').replace(/[^0-9.\-]/g,''));
+      const nb = parseFloat(vb.replace(/,/g,'').replace(/[^0-9.\-]/g,''));
+      const esNumerico = va.replace(/[\s$%.,\-0-9]/g,'') === '' && vb.replace(/[\s$%.,\-0-9]/g,'') === '' && !isNaN(na) && !isNaN(nb);
+      const cmp = esNumerico ? (na - nb) : va.localeCompare(vb, 'es');
+      return cmp * orden.dir;
+    });
+  }
+
+  const colspan = tabla.querySelectorAll('thead th').length / 2; // header + fila-filtro cuentan doble los th totales
+  if(!filas.length){
+    tbody.innerHTML = `<tr><td colspan="${colspan}" class="vacio">Sin resultados con el filtro de columna actual.</td></tr>`;
+  } else {
+    tbody.innerHTML = filas.map(f=>f.html).join('') + (TABLA_TOTAL_HTML[tablaId] || '');
+  }
+}
+
+function ordenarTabla(tablaId, colIdx){
+  const actual = TABLA_ORDEN[tablaId];
+  const dir = (actual && actual.col===colIdx) ? actual.dir * -1 : 1;
+  TABLA_ORDEN[tablaId] = { col: colIdx, dir };
+  document.getElementById(tablaId).querySelectorAll('.th-sort-ind').forEach((el,idx)=>{
+    el.textContent = idx===colIdx ? (dir===1 ? ' ▲' : ' ▼') : ' ↕';
+  });
+  aplicarFiltroYOrden(tablaId);
+}
+
+function filtrarTabla(tablaId){ aplicarFiltroYOrden(tablaId); }
+
+// ===================== ALERTAS =====================
+// Por cada Sector+Finca+Grupo con Siembra registrada: calcula la cascada de fechas
+// (F.I = siembra + días configurados, F.II en adelante = +días desde la aplicación
+// real anterior o su ajuste puntual), encuentra la primera etapa SIN aplicar todavía
+// y evalúa si está atrasada/próxima/al día. "Cuánto se ha realizado" se mide en área
+// (mzn) cubierta, que es lo que se registra en Actividades — el detalle de dosis de
+// producto por mzn se valida en la pestaña Seguimiento.
+function calcularAlertas(){
+  const cia = document.getElementById('filtroCompania').value;
+  const sector = document.getElementById('filtroSector').value;
+  const ciclo = document.getElementById('filtroCiclo').value;
+  const finca = document.getElementById('filtroFinca').value;
+
+  const filas = ACTIVIDADES_RAW.filter(r =>
+    (!cia || r.compaia===cia) && (!sector || r.sector===sector) && (!ciclo || r.ciclo===ciclo) && (!finca || r.finca===finca)
+  );
+  const siembra = filas.filter(r => r.actividad==='Siembra');
+  if(!siembra.length) return [];
+
+  // Índice de aplicaciones reales por Finca+Grupo+Etapa, fecha más temprana + área acumulada
+  const indiceReal = {};
+  filas.forEach(r => {
+    if(!ETAPAS_FUNGICIDA.includes(r.actividad)) return;
+    const key = `${claveFG(r.finca, r.grupo)}|||${r.actividad}`;
+    if(!indiceReal[key]) indiceReal[key] = { fechaMin: r.fecha, area: 0 };
+    if(r.fecha < indiceReal[key].fechaMin) indiceReal[key].fechaMin = r.fecha;
+    indiceReal[key].area += r.avance;
+  });
+
+  // Fecha base de siembra + área sembrada por Finca+Grupo (agrupa Sector también)
+  const base = {};
+  siembra.forEach(r => {
+    const key = claveFG(r.finca, r.grupo);
+    if(!base[key]) base[key] = { sector:r.sector, finca:r.finca, grupo:r.grupo, fechaMin:r.fecha, area:0 };
+    if(r.fecha < base[key].fechaMin) base[key].fechaMin = r.fecha;
+    base[key].area += r.avance;
+  });
+
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const resultado = [];
+
+  Object.values(base).forEach(fg => {
+    const key = claveFG(fg.finca, fg.grupo);
+    const cfg = PROGRAMACION_CFG[key] || {};
+    let fechaBase = fg.fechaMin;
+    let etapaPendiente = null, fechaProgPendiente = null;
+    let etapasCumplidas = 0;
+    let areaUltimaEtapa = fg.area; // si no hay ninguna etapa aplicada, la "última etapa" de referencia es la propia siembra
+
+    for(let i=0; i<ETAPAS_FUNGICIDA.length; i++){
+      const etapa = ETAPAS_FUNGICIDA[i];
+      const ajuste = (cfg.ajustes && cfg.ajustes[etapa]) || null;
+      const salto = i===0 ? (cfg.diasF1 ?? DIAS_DEFECTO_F1) : (cfg.diasEntre ?? DIAS_DEFECTO_ENTRE);
+      const fechaProg = ajuste || addDias(fechaBase, salto);
+      const real = indiceReal[`${key}|||${etapa}`];
+
+      if(real){
+        etapasCumplidas++;
+        areaUltimaEtapa = real.area;
+        fechaBase = real.fechaMin;
+      } else {
+        etapaPendiente = etapa;
+        fechaProgPendiente = fechaProg;
+        break; // primera etapa sin aplicar = la próxima a vigilar
+      }
+    }
+
+    let estado = 'al-dia', dias = null;
+    if(etapaPendiente){
+      const fProg = new Date(fechaProgPendiente + 'T00:00:00');
+      dias = Math.round((fProg - hoy) / 86400000);
+      if(dias < 0) estado = 'atrasada';
+      else if(dias <= 5) estado = 'proxima';
+      else estado = 'pendiente';
+    } else {
+      estado = 'completo'; // las 8 etapas ya se aplicaron
+    }
+
+    resultado.push({
+      sector: fg.sector, finca: fg.finca, grupo: fg.grupo,
+      etapaPendiente: etapaPendiente || '— (ciclo completo)',
+      fechaProgramada: fechaProgPendiente,
+      dias, estado, etapasCumplidas,
+      areaSembrada: fg.area, areaUltimaEtapa,
+      pctCubierto: fg.area>0 ? (areaUltimaEtapa/fg.area)*100 : 0,
+    });
+  });
+
+  return resultado.sort((a,b) => {
+    const orden = { atrasada:0, proxima:1, pendiente:2, completo:3, 'al-dia':2 };
+    return (orden[a.estado]-orden[b.estado]) || (a.dias??999) - (b.dias??999);
+  });
+}
+
+function renderAlertas(){
+  const lista = calcularAlertas();
+
+  const atrasadas = lista.filter(r=>r.estado==='atrasada').length;
+  const proximas = lista.filter(r=>r.estado==='proxima').length;
+  const alDia = lista.filter(r=>r.estado==='pendiente').length; // rango óptimo: falta más de 5 días, todavía no urge
+  const completas = lista.filter(r=>r.estado==='completo').length; // las 8 etapas ya se cumplieron
+
+  document.getElementById('alertCardAtrasadas').textContent = atrasadas;
+  document.getElementById('alertCardProximas').textContent = proximas;
+  document.getElementById('alertCardAlDia').textContent = alDia;
+  document.getElementById('alertCardCompletas').textContent = completas;
+  document.getElementById('alertCardTotal').textContent = lista.length;
+
+  const tbody = document.getElementById('tbodyAlertas');
+  if(!lista.length){ tbody.innerHTML = `<tr><td colspan="11" class="vacio">No hay lotes sembrados con los filtros actuales.</td></tr>`; return; }
+
+  const BADGES = {
+    atrasada: '<span class="badge-danger">Atrasada</span>',
+    proxima: '<span class="badge-warn">Próxima</span>',
+    pendiente: '<span class="badge-ok">Al día</span>',
+    completo: '<span class="badge-ok">Ciclo completo</span>',
+  };
+
+  tbody.innerHTML = lista.map(r => `<tr>
+    <td>${r.sector}</td><td><strong>${r.finca}</strong></td><td>${(r.grupo||'').replace('GRUPO DE SIEMBRA ','G')}</td>
+    <td>${r.etapaPendiente}</td>
+    <td>${fmtFecha(r.fechaProgramada)}</td>
+    <td class="center">${r.dias!=null ? (r.dias<0 ? `${Math.abs(r.dias)}d atrás` : `en ${r.dias}d`) : '—'}</td>
+    <td class="center">${BADGES[r.estado]}</td>
+    <td class="center">${r.etapasCumplidas}/8</td>
+    <td class="num">${r.areaSembrada.toFixed(2)}</td>
+    <td class="num">${r.areaUltimaEtapa.toFixed(2)}</td>
+    <td class="num">${r.pctCubierto.toFixed(0)}%</td>
+  </tr>`).join('');
+  activarTablaInteractiva('tablaAlertas');
+}
+
+// ===================== REQUERIMIENTO =====================
+function renderRequerimiento(){
+  const horizonte = Number(document.getElementById('filtroHorizonte').value);
+  const hoy = new Date(); hoy.setHours(0,0,0,0);
+  const limite = new Date(hoy); limite.setDate(limite.getDate() + horizonte);
+
+  const filas = asignacionesFiltradas().filter(a => {
+    if(!a.fecha_programada) return true; // sin fecha, se incluye igual (mejor mostrar que ocultar)
+    const f = new Date(a.fecha_programada + 'T00:00:00');
+    return f >= hoy && f <= limite;
+  });
+
+  const porProducto = {};
+  filas.forEach(a => {
+    const key = a.producto || 'Sin Producto';
+    if(!porProducto[key]) porProducto[key] = { producto: key, productoId: a.producto_id, cantidad: 0, aplicaciones: 0, fincas: new Set(), fechaMin: null };
+    porProducto[key].cantidad += a.cantidad;
+    porProducto[key].aplicaciones += 1;
+    porProducto[key].fincas.add(a.finca);
+    if(a.fecha_programada && (!porProducto[key].fechaMin || a.fecha_programada < porProducto[key].fechaMin)) porProducto[key].fechaMin = a.fecha_programada;
+  });
+
+  const lista = Object.values(porProducto).sort((a,b)=> (a.fechaMin||'9999').localeCompare(b.fechaMin||'9999'));
+
+  document.getElementById('reqCardProductos').textContent = lista.length;
+  document.getElementById('reqCardAplicaciones').textContent = filas.length;
+  document.getElementById('reqCardFincas').textContent = new Set(filas.map(a=>a.finca)).size;
+
+  const tbody = document.getElementById('tbodyRequerimiento');
+  if(!lista.length){ tbody.innerHTML = `<tr><td colspan="7" class="vacio">No hay insumos asignados en este horizonte. Asignalos desde el calendario de Control de Aplicaciones.</td></tr>`; return; }
+
+  tbody.innerHTML = lista.map(p => `<tr>
+    <td><strong>${p.producto}</strong></td>
+    <td>${categoriaDeProducto(p.producto, p.productoId)}</td>
+    <td>${umDeProducto(p.producto, p.productoId)}</td>
+    <td class="num">${p.cantidad.toFixed(2)}</td>
+    <td class="center">${p.aplicaciones}</td>
+    <td>${[...p.fincas].join(', ')}</td>
+    <td>${fmtFecha(p.fechaMin)}</td>
+  </tr>`).join('');
+  activarTablaInteractiva('tablaRequerimiento');
+}
+
+// ===================== PRESUPUESTO =====================
+function renderPresupuesto(){
+  const filas = asignacionesFiltradas();
+  let total = 0;
+  const porProducto = {};
+
+  const filasCalc = filas.map(a => {
+    const precio = precioDeProducto(a.producto, a.producto_id);
+    const subtotal = a.cantidad * precio;
+    total += subtotal;
+    porProducto[a.producto] = (porProducto[a.producto]||0) + subtotal;
+    return { ...a, precio, subtotal, um: umDeProducto(a.producto, a.producto_id) };
+  }).sort((a,b)=> b.subtotal - a.subtotal);
+
+  document.getElementById('presCardTotal').textContent = fmtMoneda(total);
+  const topProducto = Object.entries(porProducto).sort((a,b)=>b[1]-a[1])[0];
+  document.getElementById('presCardTop').textContent = topProducto ? `${topProducto[0]} (${fmtMoneda(topProducto[1])})` : '—';
+
+  const tbody = document.getElementById('tbodyPresupuesto');
+  if(!filasCalc.length){ tbody.innerHTML = `<tr><td colspan="6" class="vacio">Sin insumos asignados todavía.</td></tr>`; return; }
+
+  tbody.innerHTML = filasCalc.map(a => `<tr>
+    <td>${a.producto}</td><td>${a.finca}</td><td>${a.um}</td>
+    <td class="num">${a.cantidad.toFixed(2)}</td>
+    <td class="num">${fmtMoneda(a.precio)}</td>
+    <td class="num">${fmtMoneda(a.subtotal)}</td>
+  </tr>`).join('') + `<tr class="fila-total"><td colspan="5">TOTAL ESTIMADO</td><td class="num">${fmtMoneda(total)}</td></tr>`;
+  activarTablaInteractiva('tablaPresupuesto');
+}
+
+// ===================== SEGUIMIENTO =====================
+// Compara lo planificado (x_asignacion_insumo_ap) contra lo realmente aplicado
+// (x_orden_campo_line_662d7), agrupando por Finca+Producto dentro del mismo Ciclo —
+// no se compara por fecha exacta porque la aplicación real puede caer unos días
+// después de la programada.
+function renderSeguimiento(){
+  const filas = asignacionesFiltradas();
+  const porClave = {};
+  filas.forEach(a => {
+    const key = `${a.finca}|||${a.grupo}|||${a.etapa}|||${a.producto}`;
+    if(!porClave[key]) porClave[key] = { finca:a.finca, grupo:a.grupo, etapa:a.etapa, producto:a.producto, productoId:a.producto_id, ciclo:a.ciclo, planificado:0 };
+    porClave[key].planificado += a.cantidad;
+  });
+
+  const cia = document.getElementById('filtroCompania').value;
+  Object.values(porClave).forEach(row => {
+    const registrosReales = CONSUMO_REAL.filter(r =>
+      r.finca===row.finca && r.producto===row.producto && r.ciclo===row.ciclo && (!cia || r.compaia===cia)
+    );
+    row.real = registrosReales.reduce((a,r)=>a+r.cantidad, 0);
+    row.diferencia = row.real - row.planificado;
+    const dosisValidas = registrosReales.map(r=>r.dosisXMzn).filter(v=>v>0);
+    row.dosisPromedio = dosisValidas.length ? dosisValidas.reduce((a,b)=>a+b,0)/dosisValidas.length : null;
+  });
+
+  const lista = Object.values(porClave).sort((a,b)=> a.finca.localeCompare(b.finca));
+
+  let ok = 0, desvio = 0;
+  lista.forEach(r => {
+    const pct = r.planificado>0 ? (r.real/r.planificado) : (r.real>0?1:0);
+    if(pct >= 0.95) ok++; else desvio++;
+  });
+  document.getElementById('segCardTotal').textContent = lista.length;
+  document.getElementById('segCardOk').textContent = ok;
+  document.getElementById('segCardDesvio').textContent = desvio;
+
+  const tbody = document.getElementById('tbodySeguimiento');
+  if(!lista.length){ tbody.innerHTML = `<tr><td colspan="9" class="vacio">Sin insumos asignados todavía.</td></tr>`; return; }
+
+  tbody.innerHTML = lista.map(r => {
+    const pct = r.planificado>0 ? (r.real/r.planificado) : (r.real>0?1:0);
+    const badge = pct>=0.95 ? `<span class="badge-ok">Cumplido</span>` : pct>=0.5 ? `<span class="badge-warn">Parcial</span>` : `<span class="badge-danger">Sin aplicar</span>`;
+    return `<tr>
+      <td>${r.finca}</td><td>${(r.grupo||'').replace('GRUPO DE SIEMBRA ','G')}</td><td>${r.etapa}</td><td>${r.producto}</td>
+      <td class="num">${r.planificado.toFixed(2)}</td>
+      <td class="num">${r.real.toFixed(2)}</td>
+      <td class="num" style="color:${r.diferencia<0?'#dc2626':'#16a34a'};">${r.diferencia>=0?'+':''}${r.diferencia.toFixed(2)}</td>
+      <td class="num"><strong>${r.dosisPromedio!=null ? r.dosisPromedio.toFixed(3) : '—'}</strong></td>
+      <td class="center">${badge}</td>
+    </tr>`;
+  }).join('');
+  activarTablaInteractiva('tablaSeguimiento');
+}
+
+function renderTodo(){
+  renderAlertas();
+  renderRequerimiento();
+  renderPresupuesto();
+  renderSeguimiento();
+}
+
+function cambiarTab(tab){
+  TAB_ACTIVO = tab;
+  ['alertas','requerimiento','presupuesto','seguimiento'].forEach(t=>{
+    document.getElementById('panel'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('activo', t===tab);
+    document.getElementById('tabBtn'+t.charAt(0).toUpperCase()+t.slice(1)).classList.toggle('active', t===tab);
+  });
+}
+
+function alCambiarFiltro(nivel){ poblarFiltros(nivel); renderTodo(); }
+
+function exportarTablaActivaAExcel(){
+  const idTabla = { alertas:'tablaAlertas', requerimiento:'tablaRequerimiento', presupuesto:'tablaPresupuesto', seguimiento:'tablaSeguimiento' }[TAB_ACTIVO];
+  const table = document.getElementById(idTabla);
+  if(!table) return;
+  const wb = XLSX.utils.table_to_book(table, { raw: true });
+  XLSX.writeFile(wb, `INFOAGRO_${TAB_ACTIVO}_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+async function cargarTodo(){
+  await Promise.all([cargarAsignaciones(), cargarCatalogo(), cargarConsumoReal(), cargarActividadesRaw(), cargarProgramacionConfig(), cargarCiclosEstado()]);
+  poblarFiltros();
+  renderTodo();
+}
+
+cargarTodo();
+</script>
+
+</body>
+</html>
