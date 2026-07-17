@@ -1117,6 +1117,44 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   </div>
 </div>
 
+<div class="modal-overlay-ins" id="modalDetalleSiembraOverlay" onclick="if(event.target === this) cerrarModalDetalleSiembra()">
+  <div class="modal-box-ins" style="width:min(760px, 94vw);">
+    <div class="modal-hdr-ins">
+      <div>
+        <div class="modal-title-ins">📋 Detalle de Siembra por Lote</div>
+        <div class="modal-subtitle-ins" id="subtituloModalDetalleSiembra"></div>
+      </div>
+      <button class="modal-close-ins" onclick="cerrarModalDetalleSiembra()">✕</button>
+    </div>
+    <div class="modal-body-ins" style="padding:12px 16px;">
+      <table class="modal-table-ins" id="tablaModalDetalleSiembra" style="width:100%;">
+        <thead><tr>
+          <th style="text-align:left;">Lote</th>
+          <th>Fecha</th>
+          <th>Turno</th>
+          <th>Producto</th>
+          <th>Cantidad</th>
+          <th>UM</th>
+          <th>Área (mzn)</th>
+          <th>Productor</th>
+        </tr></thead>
+        <tbody id="tbodyModalDetalleSiembra"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" style="text-align:right; font-weight:700;">Total área:</td>
+            <td id="totalModalDetalleSiembra" style="font-weight:700; text-align:right;">0.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+    <div class="modal-footer-ins">
+      <span class="text-muted" style="font-size:11px;" id="footerModalDetalleSiembra"></span>
+      <button class="btn-organic-action excel" onclick="exportarDetalleSiembraAExcel()">⬇︎ Exportar Excel</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
@@ -1366,6 +1404,8 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
           cantidad: cantidadVal,
           area: areaVal,
           dosis: dosisVal,
+          turno: (r.x_studio_related_field_4fc_1jq37tged === 'Noche') ? 'Noche' : 'Dia',
+          productor: r.x_studio_productor || "",
           fecha: r.x_studio_fecha || ""
         };
       }).filter(r => r.fecha !== "");
@@ -3111,6 +3151,61 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     refrescarTabsFungicidasSiVisibles();
   }
 
+  // ===================================================================
+  // MODAL "DETALLE DE SIEMBRA POR LOTE" — abre desde la celda verde de Siembra del
+  // calendario. Fuente: x_orden_campo_line_662d7 (Consumo de Insumos), donde quedan
+  // registrados los productos aplicados por lote/fecha (no x_orden_campo_line_b660b,
+  // que solo trae el área agregada por Finca+Grupo). Ese modelo no tiene "Grupo de
+  // Siembra" como campo propio, así que el filtro es por Finca+Fecha (Turno se muestra
+  // si está disponible, pero el export histórico de GitHub no lo trae — ver nota en
+  // el pie del modal).
+  function abrirModalDetalleSiembra(fgKey, turno, fecha){
+    const [finca, grupo] = fgKey.split('|||');
+    document.getElementById('subtituloModalDetalleSiembra').textContent =
+      `${finca} · ${(grupo||'').replace('GRUPO DE SIEMBRA ','Grupo ')} · ${formatFechaLargaCA(fecha)}`;
+    document.getElementById('footerModalDetalleSiembra').textContent =
+      'Fuente: Consumo de Insumos (x_orden_campo_line_662d7) — ese modelo no guarda "Grupo de Siembra", así que el filtro es por Finca+Fecha. El Turno puede no verse si el registro viene del export histórico.';
+
+    const filas = DB_INSUMOS.filter(r => r.finca===finca && r.fecha===fecha && normTxtCA(r.actividad)===normTxtCA('Siembra'));
+
+    const tbody = document.getElementById('tbodyModalDetalleSiembra');
+    if(!filas.length){
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#94a3b8; padding:16px;">No hay registros de insumos para Siembra en esta Finca/Fecha (el área pudo haberse cargado en Actividades sin insumos asociados todavía).</td></tr>`;
+      document.getElementById('totalModalDetalleSiembra').textContent = '0.00';
+    } else {
+      // El área viene repetida por cada producto del mismo lote/fecha — se suma una
+      // sola vez por lote para no inflar el total.
+      let totalArea = 0;
+      const lotesContados = new Set();
+      filas.forEach(r=>{ if(!lotesContados.has(r.lote)){ totalArea += r.area; lotesContados.add(r.lote); } });
+
+      tbody.innerHTML = filas.map(r => `<tr>
+        <td><strong>${r.lote}</strong></td>
+        <td>${formatFechaLargaCA(r.fecha)}</td>
+        <td>${r.turno==='Noche' ? 'Noche' : 'Día'}</td>
+        <td>${r.producto}</td>
+        <td style="text-align:right;">${r.cantidad.toFixed(2)}</td>
+        <td>${r.um}</td>
+        <td style="text-align:right;">${r.area.toFixed(2)}</td>
+        <td>${r.productor || '—'}</td>
+      </tr>`).join('');
+      document.getElementById('totalModalDetalleSiembra').textContent = totalArea.toFixed(2);
+    }
+
+    document.getElementById('modalDetalleSiembraOverlay').classList.add('show');
+  }
+
+  function cerrarModalDetalleSiembra(){
+    document.getElementById('modalDetalleSiembraOverlay').classList.remove('show');
+  }
+
+  function exportarDetalleSiembraAExcel(){
+    const table = document.getElementById('tablaModalDetalleSiembra');
+    if(!table) return;
+    const wb = XLSX.utils.table_to_book(table.cloneNode(true), { raw: true });
+    XLSX.writeFile(wb, `INFOAGRO_Detalle_Siembra_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
   let _controlAplicacionesData = [];
 
   // Estos dos tabs ahora respetan los mismos filtros del toolbar de arriba (Compañía,
@@ -3509,7 +3604,12 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         columnas.forEach(c=>{
           if(etapa==='Siembra'){
             const val = (matrizSiembra[f] && matrizSiembra[f][c.key]) || 0;
-            if(val>0){ fila += `<td class="ca-cal-valor">${fmtVal(val)}</td>`; return; }
+            if(val>0){
+              const fgKeyJs = `${c.finca}|||${c.grupo}`.replace(/'/g,"\\'");
+              const turnoJs = c.turno.replace(/'/g,"\\'");
+              fila += `<td class="ca-cal-valor" style="cursor:pointer;" onclick="abrirModalDetalleSiembra('${fgKeyJs}','${turnoJs}','${f}')" title="Clic para ver el detalle por lote">${fmtVal(val)}</td>`;
+              return;
+            }
             // Vista previa dentro de la misma columna de Siembra: si esta fecha es cuando
             // le toca la evaluación de algún Fungicida (I al VIII, y todavía no se aplicó),
             // se marca "FI".."FVIII" aquí mismo, sin agregar columnas nuevas — el bloque de
