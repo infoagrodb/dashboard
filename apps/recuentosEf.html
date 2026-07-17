@@ -956,12 +956,11 @@ function folioTemporalDeSesion(sesion){
 }
 
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
-const DEFAULT_SYNC_KEY   = "PON_AQUI_LA_MISMA_CLAVE_QUE_PUSISTE_EN_RECUENTOS_SYNC_KEY";
+const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
-// Fotos por planta requieren R2 en el Worker (ver NOTAS_recuentos_campo.md). Mientras no esté
-// activo, se oculta el botón para no generar fotos que nunca lograrán sincronizarse.
-// Para reactivar cuando actives R2: cambia esto a true.
-const FOTOS_HABILITADAS = false;
+// Fotos por planta: se adjuntan directo al chatter del recuento en Odoo (base64, igual que el
+// PDF) — ya NO dependen de R2. Si algún día quieres volver a ocultar el botón, pon esto en false.
+const FOTOS_HABILITADAS = true;
 
 const FAMILIAS_ORDEN = ["Poblacionales","Enfermedades Foliares","Enfermedades basales","Plaga","Desarrollo fenológico","Daños productivos"];
 
@@ -1460,6 +1459,7 @@ async function renderHome(){
         <div class="meta">
           <div class="t1">${fincaName||'Finca sin definir'} · ${loteName||'Lote sin definir'}</div>
           <div class="t2">${s.header.fecha||'sin fecha'} · Planta ${s.currentStation}/${s.header.estaciones}</div>
+          ${s.status==='error' && s.lastError ? `<div class="t2" style="color:var(--rojo);margin-top:2px;">⚠️ ${s.lastError}</div>` : ''}
         </div>
         <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
       `;
@@ -2156,12 +2156,12 @@ function dibujarEscala(doc, scX, scY, metros, colorTexto){
 /** Construye el documento PDF completo (cabecera, datos generales, tabla de 34 tipos,
  *  firmas y, si hay puntos GPS, una segunda página con el mapa). Devuelve el objeto
  *  jsPDF y el folio usado (real o temporal). */
-async function construirDocPDF(){
-  const h = sesionActual.header;
+async function construirDocPDF(sesion){
+  const h = sesion.header;
   const est = h.estaciones;
   const brand = brandingDeCompania(h.company);
   const folioEsProvisional = !h.folio;
-  const folio = h.folio || folioTemporalDeSesion(sesionActual);
+  const folio = h.folio || folioTemporalDeSesion(sesion);
 
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'letter', orientation:'portrait' });
@@ -2174,7 +2174,7 @@ async function construirDocPDF(){
   doc.text(brand.nombreLegal, marginX, y);
   doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(91,95,82);
   doc.text(brand.lugar, marginX, y+5);
-  const gpsCount = Object.keys(sesionActual.gpsPorPlanta || {}).length;
+  const gpsCount = Object.keys(sesion.gpsPorPlanta || {}).length;
   doc.setFontSize(7);
   doc.text(`Hoja de Recuentos  ·  GPS: ${gpsCount}/${est} plantas georreferenciadas`, marginX, y+9.5);
 
@@ -2232,7 +2232,7 @@ async function construirDocPDF(){
     body.push([{ content: fam, colSpan: 4+MAX_PLANTAS_PDF+2,
       styles:{ fontStyle:'bold', fillColor:[242,239,228], halign:'left', textColor:[0,0,0] } }]);
     CATALOGO.filter(t=>t.familia===fam).forEach(t=>{
-      const l = sesionActual.lines[t.id];
+      const l = sesion.lines[t.id];
       const esPct = (t.calc==='pct_base'||t.calc==='pct_poblacion');
       const resultado = esPct ? fmtPct(l.porcentaje) : fmtNumeroPDF(l.avg);
       const celdas = [];
@@ -2272,7 +2272,7 @@ async function construirDocPDF(){
   // ---- Página 2: ubicación GPS (si se capturó al menos una planta) ----
   if(gpsCount > 0){
     doc.addPage();
-    await dibujarPaginaGPS(doc, sesionActual.gpsPorPlanta, folio, marginX, pageW);
+    await dibujarPaginaGPS(doc, sesion.gpsPorPlanta, folio, marginX, pageW);
   }
 
   return { doc, folio };
@@ -2364,8 +2364,8 @@ async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
   doc.text(nota, marginX, y);
 }
 
-async function generarPDFBlob(){
-  const { doc, folio } = await construirDocPDF();
+async function generarPDFBlob(sesion){
+  const { doc, folio } = await construirDocPDF(sesion || sesionActual);
   return { blob: doc.output('blob'), folio };
 }
 
@@ -2451,7 +2451,29 @@ async function sincronizarSesion(s){
   const data = await res.json();
   if(data.folio){ s.header.folio = data.folio; await idbPutSession(s); }
   await subirFotosDeSesion(s.localId, data.odoo_id, url, key);
+  await subirPDFAdjunto(s, data.odoo_id, url, key);
   return data.odoo_id;
+}
+/** Genera el mismo PDF (Hoja de Recuentos) y lo adjunta al chatter del registro en Odoo,
+ *  para que quede el respaldo del reporte de campo pegado directo al recuento — incluso si
+ *  se imprimió con el folio temporal (offline) antes de sincronizar. No usa R2: Odoo guarda
+ *  el archivo él mismo (ir.attachment con datas en base64), así que funciona sin depender de
+ *  que actives R2 (a diferencia de las fotos). Si falla, no bloquea la sincronización — el
+ *  dato ya quedó guardado en Odoo de todas formas, solo faltaría el adjunto.
+ */
+async function subirPDFAdjunto(sesion, odooId, recuentosUrl, key){
+  try{
+    const { blob, folio } = await generarPDFBlob(sesion);
+    const pdfUrl = recuentosUrl.replace(/\/recuentos\/?$/, '/recuentos/pdf');
+    const form = new FormData();
+    form.append('file', blob, `${folio}.pdf`);
+    form.append('odoo_id', odooId);
+    form.append('filename', `${folio}.pdf`);
+    const res = await fetch(pdfUrl, { method:'POST', headers:{'X-Sync-Key': key||''}, body: form });
+    if(!res.ok) console.warn('No se pudo adjuntar el PDF al chatter: HTTP '+res.status);
+  }catch(e){
+    console.warn('No se pudo adjuntar el PDF al chatter:', e.message);
+  }
 }
 async function subirFotosDeSesion(sessionLocalId, odooId, recuentosUrl, key){
   if(!FOTOS_HABILITADAS) return;
@@ -2461,13 +2483,13 @@ async function subirFotosDeSesion(sessionLocalId, odooId, recuentosUrl, key){
   for(const p of fotos){
     try{
       const form = new FormData();
-      form.append('file', p.blob, `planta${p.station}.jpg`);
+      form.append('file', p.blob, `E${p.station}.jpg`);
       form.append('odoo_id', odooId);
       form.append('station', p.station);
       const res = await fetch(fotoUrl, { method:'POST', headers:{'X-Sync-Key': key||''}, body: form });
       if(!res.ok) throw new Error('HTTP '+res.status);
       const data = await res.json();
-      p.synced = true; p.url = data.url;
+      p.synced = true; p.attachmentId = data.attachment_id || null;
       await idbUpdatePhoto(p);
     }catch(e){
       // se reintenta en la próxima sincronización; no bloquea el resto
