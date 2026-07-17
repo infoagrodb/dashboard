@@ -587,6 +587,7 @@
       const btnCambiar = document.getElementById('presenciaCambiar');
       if(btnCambiar) btnCambiar.addEventListener('click', (e)=>{
         e.stopPropagation();
+        if(window._salirPresencia) window._salirPresencia();
         limpiarIdentidad();
         panelEl.classList.remove('abierto');
         cont.style.display = 'none';
@@ -611,6 +612,16 @@
     refrescarActivos();
     setInterval(enviarPing, 20000);
     setInterval(refrescarActivos, 15000);
+
+    // Aviso inmediato al cerrar/recargar la pestaña — no depende del TTL de KV
+    function salirPresencia(){
+      if(!usuario) return;
+      const datos = new Blob([JSON.stringify({ usuario })], { type: 'application/json' });
+      navigator.sendBeacon(URL_PRESENCIA + '/presencia/salir', datos);
+    }
+    window.addEventListener('pagehide', salirPresencia);
+    window.addEventListener('beforeunload', salirPresencia);
+    window._salirPresencia = salirPresencia; // usado también por "Cambiar usuario"
   }
 })();
 </script>
