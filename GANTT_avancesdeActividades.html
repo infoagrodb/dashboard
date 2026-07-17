@@ -1080,6 +1080,43 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   </div>
 </div>
 
+<div class="modal-overlay-ins" id="modalAsignarInsumosOverlay" onclick="if(event.target === this) cerrarModalAsignarInsumos()">
+  <div class="modal-box-ins" style="width:min(760px, 94vw);">
+    <div class="modal-hdr-ins">
+      <div>
+        <div class="modal-title-ins">🧪 Asignar Insumos</div>
+        <div class="modal-subtitle-ins" id="subtituloModalAsignarInsumos"></div>
+      </div>
+      <button class="modal-close-ins" onclick="cerrarModalAsignarInsumos()">✕</button>
+    </div>
+    <div class="modal-body-ins" style="padding:12px 16px;">
+      <table class="modal-table-ins" id="tablaModalAsignarInsumos" style="width:100%;">
+        <thead><tr>
+          <th style="text-align:left;">Producto</th>
+          <th>UM</th>
+          <th>Cantidad</th>
+          <th>Precio unit.</th>
+          <th>Subtotal</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="tbodyModalAsignarInsumos"></tbody>
+        <tfoot>
+          <tr>
+            <td colspan="4" style="text-align:right; font-weight:700;">Total estimado:</td>
+            <td id="totalModalAsignarInsumos" style="font-weight:700; text-align:right;">$0.00</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      <button class="btn-organic-action" style="background:#fff; border:1px solid rgba(163,177,198,0.4); color:#334155; margin-top:10px;" onclick="agregarFilaAsignarInsumos()">+ Agregar producto</button>
+    </div>
+    <div class="modal-footer-ins">
+      <span class="text-muted" style="font-size:11px;">Precio tomado del catálogo de insumos (última compra / promedio / sugerido) — editable por fila.</span>
+      <button class="btn-organic-action excel" onclick="guardarAsignacionInsumosDesdeModal()">💾 Guardar Asignación</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
 <script>
@@ -2711,6 +2748,46 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   let CONFIG_AJUSTES = {};            // clave "finca|||grupo" -> { 'Fungicida I': 'YYYY-MM-DD', ... }
   let programacionCargada = false;
 
+  // ===================================================================
+  // ASIGNACIÓN DE INSUMOS POR APLICACIÓN — qué producto(s) y cuánta cantidad se
+  // asignan a cada Fungicida programado de una Finca+Grupo, guardado en Odoo
+  // (modelo x_asignacion_insumo_ap vía Worker). Alimenta Requerimiento, Presupuesto
+  // y Seguimiento en el HTML aparte.
+  // ===================================================================
+  let CATALOGO_INSUMOS = [];             // [{id, nombre, categoria, um, precio, ...}]
+  let ASIGNACIONES_INSUMOS = {};         // clave "finca|||grupo|||etapa" -> [{id, producto_id, producto, cantidad, um, precio}]
+  let catalogoInsumosCargado = false;
+
+  function claveFincaGrupoEtapa(finca, grupo, etapa){ return `${finca}|||${grupo}|||${etapa}`; }
+
+  async function cargarCatalogoInsumosRemoto(){
+    try {
+      const r = await fetch(`${WORKER}/insumos-catalogo`);
+      const d = await r.json();
+      CATALOGO_INSUMOS = (d.catalogo || []).filter(p => !COMPAIA_SELECCIONADA || !p.compania_id || p.compania === COMPAIA_SELECCIONADA);
+    } catch(e) {
+      console.log('No se pudo cargar el catálogo de insumos:', e.message);
+    } finally {
+      catalogoInsumosCargado = true;
+    }
+  }
+
+  async function cargarAsignacionesInsumosRemoto(){
+    try {
+      const r = await fetch(`${WORKER}/asignacion-insumos-config`);
+      const d = await r.json();
+      const porClave = {};
+      (d.asignaciones || []).forEach(a => {
+        if(!a.finca || !a.grupo || !a.etapa) return;
+        const key = claveFincaGrupoEtapa(a.finca, a.grupo, a.etapa);
+        (porClave[key] = porClave[key] || []).push(a);
+      });
+      ASIGNACIONES_INSUMOS = porClave;
+    } catch(e) {
+      console.log('No se pudieron cargar las asignaciones de insumos:', e.message);
+    }
+  }
+
   function claveFincaGrupo(finca, grupo){ return `${finca}|||${grupo}`; }
 
   async function cargarConfigProgramacionRemota(){
@@ -2901,6 +2978,137 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   function restablecerProgramacionDefecto(){
     document.querySelectorAll('#tbodyModalProgramacion .input-dias-f1').forEach(el=> el.value = DIAS_DEFECTO.diasF1);
     document.querySelectorAll('#tbodyModalProgramacion .input-dias-entre').forEach(el=> el.value = DIAS_DEFECTO.diasEntre);
+  }
+
+  // ===================================================================
+  // MODAL "ASIGNAR INSUMOS" — qué producto(s) y cantidad van en cada Fungicida
+  // programado. Se abre desde el marcador de la celda en el calendario.
+  // ===================================================================
+  let _contextoModalInsumos = null; // { finca, grupo, etapa, fecha, fincaId, cicloId, companiaId }
+
+  function optionsProductosHtml(seleccionadoId){
+    const disponibles = [...CATALOGO_INSUMOS].sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
+    return `<option value="">— Elegir producto —</option>` + disponibles.map(p =>
+      `<option value="${p.id}" data-um="${p.um||''}" data-precio="${p.precio||0}" ${String(p.id)===String(seleccionadoId)?'selected':''}>${p.nombre}</option>`
+    ).join('');
+  }
+
+  function filaAsignarInsumosHtml(asignacion){
+    const a = asignacion || {};
+    const cantidad = a.cantidad != null ? a.cantidad : '';
+    const productoEnCatalogo = CATALOGO_INSUMOS.find(p => String(p.id)===String(a.producto_id));
+    const um = productoEnCatalogo ? (productoEnCatalogo.um||'') : (a.um||'');
+    const precio = a.precio != null ? a.precio : (productoEnCatalogo ? productoEnCatalogo.precio : 0);
+    return `<tr data-record-id="${a.id||''}">
+      <td><select class="sel-producto" onchange="onCambioProductoFilaInsumo(this)">${optionsProductosHtml(a.producto_id)}</select></td>
+      <td class="celda-um" style="text-align:center; font-size:11px; color:#64748b;">${um}</td>
+      <td><input type="number" class="input-cantidad" min="0" step="0.01" value="${cantidad}" style="width:80px; text-align:center; padding:4px; border:1px solid rgba(163,177,198,0.5); border-radius:6px;" onchange="recalcularTotalModalInsumos()"></td>
+      <td><input type="number" class="input-precio" min="0" step="0.01" value="${Number(precio||0).toFixed(2)}" style="width:90px; text-align:center; padding:4px; border:1px solid rgba(163,177,198,0.5); border-radius:6px;" onchange="recalcularTotalModalInsumos()"></td>
+      <td class="celda-subtotal" style="text-align:right; font-weight:600;">$0.00</td>
+      <td><button type="button" onclick="this.closest('tr').remove(); recalcularTotalModalInsumos();" style="background:none; border:none; cursor:pointer; font-size:14px;" title="Quitar">🗑️</button></td>
+    </tr>`;
+  }
+
+  function onCambioProductoFilaInsumo(select){
+    const opt = select.selectedOptions[0];
+    const tr = select.closest('tr');
+    tr.querySelector('.celda-um').textContent = opt?.dataset.um || '';
+    const inputPrecio = tr.querySelector('.input-precio');
+    if(opt?.dataset.precio) inputPrecio.value = Number(opt.dataset.precio).toFixed(2);
+    recalcularTotalModalInsumos();
+  }
+
+  function agregarFilaAsignarInsumos(){
+    document.getElementById('tbodyModalAsignarInsumos').insertAdjacentHTML('beforeend', filaAsignarInsumosHtml(null));
+  }
+
+  function recalcularTotalModalInsumos(){
+    let total = 0;
+    document.querySelectorAll('#tbodyModalAsignarInsumos tr').forEach(tr=>{
+      const cant = parseFloat(tr.querySelector('.input-cantidad').value) || 0;
+      const precio = parseFloat(tr.querySelector('.input-precio').value) || 0;
+      const subtotal = cant * precio;
+      tr.querySelector('.celda-subtotal').textContent = '$' + subtotal.toFixed(2);
+      total += subtotal;
+    });
+    document.getElementById('totalModalAsignarInsumos').textContent = '$' + total.toFixed(2);
+  }
+
+  async function abrirModalAsignarInsumos(fgKey, idxEtapa, fecha){
+    const [finca, grupo] = fgKey.split('|||');
+    const etapa = ETAPAS_FUNGICIDA[idxEtapa-1];
+    _contextoModalInsumos = { finca, grupo, etapa, fecha };
+
+    document.getElementById('subtituloModalAsignarInsumos').textContent =
+      `${finca} · Grupo ${grupo.replace('GRUPO DE SIEMBRA ','')} · ${etapa} · Programado: ${formatFechaLargaCA(fecha)}`;
+
+    const tbody = document.getElementById('tbodyModalAsignarInsumos');
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">Cargando…</td></tr>`;
+    document.getElementById('modalAsignarInsumosOverlay').classList.add('show');
+
+    if(!catalogoInsumosCargado) await cargarCatalogoInsumosRemoto();
+
+    const existentes = ASIGNACIONES_INSUMOS[claveFincaGrupoEtapa(finca, grupo, etapa)] || [];
+    tbody.innerHTML = existentes.length
+      ? existentes.map(a => filaAsignarInsumosHtml(a)).join('')
+      : filaAsignarInsumosHtml(null);
+    recalcularTotalModalInsumos();
+  }
+
+  function cerrarModalAsignarInsumos(){
+    document.getElementById('modalAsignarInsumosOverlay').classList.remove('show');
+    _contextoModalInsumos = null;
+  }
+
+  async function guardarAsignacionInsumosDesdeModal(){
+    if(!_contextoModalInsumos) return;
+    const { finca, grupo, etapa, fecha } = _contextoModalInsumos;
+
+    let fincaId = null, cicloId = null, companiaId = null;
+    const ejemplo = filasBaseCA().find(r => r.finca===finca && ((r.grupo_siembra||'Sin Grupo')===grupo));
+    if(ejemplo){ fincaId = ejemplo.finca_id; cicloId = ejemplo.ciclo_id; companiaId = ejemplo.compaia_id; }
+    if(!fincaId){ alert('No se pudo identificar la finca en Odoo para guardar la asignación.'); return; }
+
+    const btn = document.querySelector('#modalAsignarInsumosOverlay .btn-organic-action.excel');
+    const textoOriginal = btn ? btn.textContent : '';
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Guardando en Odoo...'; }
+
+    const filas = [...document.querySelectorAll('#tbodyModalAsignarInsumos tr')];
+    let errores = 0;
+    const guardadas = [];
+    for(const tr of filas){
+      const productoId = tr.querySelector('.sel-producto')?.value;
+      if(!productoId) continue; // fila vacía, se ignora
+      const cantidad = tr.querySelector('.input-cantidad').value;
+      const recordId = tr.dataset.recordId || null;
+      const productoNombre = tr.querySelector('.sel-producto').selectedOptions[0]?.textContent;
+
+      try {
+        const r = await fetch(`${WORKER}/asignacion-insumos-config/write`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            finca_id: fincaId, ciclo_id: cicloId, compania_id: companiaId,
+            grupo, etapa, fecha_programada: fecha,
+            producto_id: Number(productoId), cantidad,
+            descripcion: `${_contextoModalInsumos.finca} · ${etapa} · ${productoNombre||''}`,
+            record_id: recordId ? Number(recordId) : undefined,
+          })
+        });
+        const d = await r.json();
+        if(!d.ok) throw new Error(d.error || 'Error desconocido');
+        guardadas.push({ id: d.id, producto_id: Number(productoId), producto: productoNombre, cantidad: Number(cantidad)||0 });
+      } catch(e) {
+        console.log('Error guardando fila de insumo:', e.message);
+        errores++;
+      }
+    }
+
+    ASIGNACIONES_INSUMOS[claveFincaGrupoEtapa(finca, grupo, etapa)] = guardadas;
+
+    if(btn){ btn.disabled = false; btn.textContent = textoOriginal; }
+    if(errores) alert(`Se guardó, pero ${errores} fila(s) tuvieron un error (revisá la consola).`);
+    cerrarModalAsignarInsumos();
+    refrescarTabsFungicidasSiVisibles();
   }
 
   let _controlAplicacionesData = [];
@@ -3342,12 +3550,16 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
             if(esProgramado){
               const colE = PALETA_ETAPA[etapa];
               const tipoAjuste = info.esAjusteManual ? ' (reprogramado a mano)' : '';
-              fila += `<td class="ca-cal-programado" style="background:${colE.bgLight}; color:${colE.text}; cursor:grab;"
+              const claveInsumos = claveFincaGrupoEtapa(c.finca, c.grupo, etapa);
+              const tieneInsumos = (ASIGNACIONES_INSUMOS[claveInsumos] || []).length > 0;
+              const badgeInsumos = tieneInsumos ? '<span style="position:absolute; top:-2px; right:-1px; font-size:8px;">🧪</span>' : '';
+              fila += `<td class="ca-cal-programado" style="background:${colE.bgLight}; color:${colE.text}; cursor:pointer; position:relative;"
                 draggable="true"
                 ondragstart="dragStartProgramado(event,'${fgKeyJs}',${idxEtapa})"
                 ondragover="dragOverCeldaProgramada(event,'${fgKeyJs}',${idxEtapa})"
                 ondrop="dropProgramado(event,'${fgKeyJs}',${idxEtapa},'${f}')"
-                title="Programado: ${etapa}${tipoAjuste} · Arrastrá verticalmente a otro día para reprogramar">●</td>`;
+                onclick="abrirModalAsignarInsumos('${fgKeyJs}',${idxEtapa},'${f}')"
+                title="Programado: ${etapa}${tipoAjuste}${tieneInsumos ? ' · Insumos asignados' : ' · Clic para asignar insumos'} · Arrastrá verticalmente a otro día para reprogramar">●${badgeInsumos}</td>`;
             } else if(esColumnaArrastrable){
               // Celda vacía dentro de la columna Día de este Fungicida: también es zona
               // válida para soltar el marcador que se esté arrastrando en esta misma columna.
@@ -3382,7 +3594,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   async function initAll() {
     await loadData();
     buildAreaIndex();
-    await Promise.all([loadDataInsumos(), loadDataCombustible(), cargarConfigProgramacionRemota()]);
+    await Promise.all([loadDataInsumos(), loadDataCombustible(), cargarConfigProgramacionRemota(), cargarCatalogoInsumosRemoto(), cargarAsignacionesInsumosRemoto()]);
     renderMatrixIns();
     mostrarCamposSegunTab('actividades'); // arranca en la pestaña Actividades
     actualizarColapsoResponsivoFiltros();
