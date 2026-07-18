@@ -1542,21 +1542,51 @@ function companiaDeSector(sectorId){
 }
 function onSectorChange(){
   const sectorId = parseInt(document.getElementById('f_sector').value);
-  const fSel = document.getElementById('f_finca');
-  const fincas = FINCAS.filter(f=>f.sector===sectorId);
-  fSel.innerHTML = fincas.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
-
   const companyId = companiaDeSector(sectorId);
   const cSel = document.getElementById('f_ciclo');
   const ciclos = companyId ? CICLOS.filter(c=>c.company===companyId) : CICLOS;
   cSel.innerHTML = ciclos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 
-  onFincaChange();
+  filtrarFincasPorSiembra();
 }
-/** Si cambian el Ciclo después de ya tener Finca elegida (por ejemplo, para corregirlo),
- *  hay que volver a filtrar el Lote — la Siembra registrada depende de ambos. */
+/** Si cambian el Ciclo después de ya tener Sector/Finca elegidos (por ejemplo, para
+ *  corregirlo), hay que volver a filtrar Finca y Lote — ambos dependen del Ciclo. */
 function onCicloChange(){
+  filtrarFincasPorSiembra();
+}
+/** La Finca solo debe mostrar las que de verdad tuvieron Siembra registrada en este Ciclo —
+ *  mismo motivo y mismo patrón de respaldo que filtrarLotesPorSiembra: arranca con todas las
+ *  fincas del sector (catálogo local, funciona sin señal) y, si hay conexión, las reduce a las
+ *  que sí tienen Siembra en Odoo para este Ciclo. Si no encuentra ninguna, se queda con la
+ *  lista completa como respaldo. */
+async function filtrarFincasPorSiembra(){
+  const sectorId = parseInt(document.getElementById('f_sector').value) || null;
+  const cicloId = parseInt(document.getElementById('f_ciclo').value) || null;
+  const fSel = document.getElementById('f_finca');
+  const fincasSector = FINCAS.filter(f=>f.sector===sectorId);
+  fSel.innerHTML = fincasSector.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
   onFincaChange();
+
+  if(!cicloId || !sectorId) return;
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  if(!url) return;
+  try{
+    const base = url.replace(/\/recuentos\/?$/, '');
+    const res = await fetch(`${base}/fincas-sembradas?ciclo_id=${cicloId}`);
+    if(!res.ok) return;
+    const data = await res.json();
+    const sembradas = new Set(data.finca_ids || []);
+    const filtradas = fincasSector.filter(f=>sembradas.has(f.id));
+    if(filtradas.length > 0){
+      const valorPrevio = fSel.value;
+      fSel.innerHTML = filtradas.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
+      if(filtradas.some(f=>String(f.id)===valorPrevio)) fSel.value = valorPrevio;
+      onFincaChange();
+    }
+    // si no hay ninguna sembrada detectada, se queda con la lista completa de respaldo
+  }catch(e){
+    // silencioso: sin señal o falla el Worker, se queda con la lista completa ya cargada
+  }
 }
 function onFincaChange(){
   const fincaId = parseInt(document.getElementById('f_finca').value);
