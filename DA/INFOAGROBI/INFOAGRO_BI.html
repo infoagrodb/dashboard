@@ -533,22 +533,17 @@
   function iniciarPresencia(){
     pintarMiCuenta(); // se ve de inmediato, sin depender de que el Worker responda
 
-    async function enviarPing(){
+    async function sincronizar(){
       try{
-        await fetch(URL_PRESENCIA + '/presencia/ping', {
+        const r = await fetch(URL_PRESENCIA + '/presencia/sync', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
+          cache: 'no-store',
           body: JSON.stringify({
             usuario, nombre: nombreCompleto || usuario, iniciales: inic,
             seccion: (window.archivoActivo || '')
           })
         });
-      }catch(e){ /* silencioso */ }
-    }
-
-    async function refrescarActivos(){
-      try{
-        const r = await fetch(URL_PRESENCIA + '/presencia/activos', { cache: 'no-store' });
         const lista = await r.json();
         renderizar(Array.isArray(lista) ? lista : []);
       }catch(e){ /* silencioso */ }
@@ -608,10 +603,10 @@
       }
     });
 
-    enviarPing();
-    refrescarActivos();
-    setInterval(enviarPing, 20000);
-    setInterval(refrescarActivos, 15000);
+    // 1 sola llamada (1 read + 1 write en el Worker) cada 45s en vez de dos
+    // llamadas separadas cada 15-20s — cuida la cuota gratuita de Cloudflare KV.
+    sincronizar();
+    setInterval(sincronizar, 45000);
 
     // Aviso inmediato al cerrar/recargar la pestaña — no depende del TTL de KV
     function salirPresencia(){
