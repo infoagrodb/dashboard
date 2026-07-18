@@ -2216,7 +2216,7 @@ function tileTieneImagenReal(img){
     let suma=0, sumaCuad=0, n=0;
     for(let i=0;i<data.length;i+=4){ const b=(data[i]+data[i+1]+data[i+2])/3; suma+=b; sumaCuad+=b*b; n++; }
     const media = suma/n, varianza = (sumaCuad/n)-(media*media);
-    return varianza > 12;
+    return varianza > 4;
   }catch(e){ return true; } // si el canvas ya está "manchado" no se puede revisar, se asume válido
 }
 
@@ -2225,7 +2225,8 @@ function tileTieneImagenReal(img){
  *  { dataUrl, proyectado[{est,fx,fy}], metros } o null si no hay señal / falla / sin cobertura
  *  a este zoom — en ese caso el llamador debe usar el mapa vectorial de respaldo. */
 async function construirMosaicoSatelital(puntos, pxSize){
-  if(!navigator.onLine || puntos.length===0) return null;
+  if(puntos.length===0) return null;
+  const log = (motivo)=>{ window.__ultimoMotivoMapaFallback = motivo; console.warn('[mapa satelital] respaldo vectorial. Motivo:', motivo); };
 
   const lats = puntos.map(p=>p.lat), lngs = puntos.map(p=>p.lng);
   let minLat=Math.min(...lats), maxLat=Math.max(...lats), minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
@@ -2248,21 +2249,33 @@ async function construirMosaicoSatelital(puntos, pxSize){
   const tiles = [];
   for(let tx=tileMinX; tx<=tileMaxX; tx++) for(let ty=tileMinY; ty<=tileMaxY; ty++)
     tiles.push({ tx, ty, left: tx*256-originPxX, top: ty*256-originPxY });
-  if(tiles.length===0 || tiles.length>25) return null;
+  if(tiles.length===0){ log('0 tiles calculados (puntos sin rango válido)'); return null; }
+  if(tiles.length>25){ log(`demasiados tiles necesarios (${tiles.length}), puntos muy dispersos`); return null; }
 
+  console.log(`[mapa satelital] pidiendo ${tiles.length} tile(s) en zoom ${zoom}…`);
   const imgs = await Promise.all(tiles.map(t=>
-    cargarImagenCORS(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${t.ty}/${t.tx}`, 5000)
+    cargarImagenCORS(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${t.ty}/${t.tx}`, 12000)
   ));
-  if(imgs.some(img=>!img || !tileTieneImagenReal(img))) return null;
+  const cargados = imgs.filter(Boolean).length;
+  console.log(`[mapa satelital] ${cargados}/${imgs.length} tile(s) cargaron`);
+  const validos = imgs.map(img => img && tileTieneImagenReal(img));
+  const cantidadValidos = validos.filter(Boolean).length;
+  if(cantidadValidos < imgs.length*0.5){
+    log(`solo ${cantidadValidos}/${imgs.length} tiles válidos (¿sin señal, tiles lentos, o sin cobertura en esta zona?)`);
+    return null;
+  }
 
   const canvas = document.createElement('canvas');
   canvas.width = Math.ceil(contW); canvas.height = Math.ceil(contH);
   const ctx = canvas.getContext('2d');
-  tiles.forEach((t,i)=> ctx.drawImage(imgs[i], t.left, t.top));
+  tiles.forEach((t,i)=>{ if(imgs[i]) ctx.drawImage(imgs[i], t.left, t.top); });
 
   let dataUrl;
   try{ dataUrl = canvas.toDataURL('image/jpeg', 0.82); }
-  catch(e){ return null; } // canvas "manchado" por CORS -> no se puede exportar, usar respaldo
+  catch(e){
+    log('el navegador bloqueó exportar la imagen (restricción de origen/CORS): ' + e.message);
+    return null;
+  }
 
   const proyectado = puntos.map(p=>({
     est: p.est,
@@ -2270,6 +2283,7 @@ async function construirMosaicoSatelital(puntos, pxSize){
     fy: (latATileY(p.lat,zoom)*256 - originPxY) / contH,
   }));
   const metros = ((maxLat-minLat) * 111320);
+  console.log('[mapa satelital] OK, imagen real generada.');
   return { dataUrl, proyectado, metros };
 }
 
@@ -2519,7 +2533,8 @@ async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
 
     dibujarBrujula(doc, mapX+size-9, y+9);
     dibujarEscala(doc, mapX+6, y+size-6, rLat*111320, [255,255,255]);
-    notaTexto = 'Vista relativa (sin señal o sin cobertura satelital al generar el PDF, no es imagen real): ubica cada evaluación a escala entre sí, conectadas en el orden en que se recorrieron — sirve para confirmar que el muestreo cubrió el lote y no se concentró en un solo punto. Coordenadas en formato decimal (WGS84).';
+    const motivo = window.__ultimoMotivoMapaFallback || 'sin señal o sin cobertura satelital';
+    notaTexto = `Vista relativa (no es imagen real — motivo: ${motivo}): ubica cada evaluación a escala entre sí, conectadas en el orden en que se recorrieron — sirve para confirmar que el muestreo cubrió el lote y no se concentró en un solo punto. Coordenadas en formato decimal (WGS84).`;
   }
 
   y += size + 8;
