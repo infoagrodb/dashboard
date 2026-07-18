@@ -603,11 +603,6 @@
       }
     });
 
-    // 1 sola llamada (1 read + 1 write en el Worker) cada 45s en vez de dos
-    // llamadas separadas cada 15-20s — cuida la cuota gratuita de Cloudflare KV.
-    sincronizar();
-    setInterval(sincronizar, 45000);
-
     // Aviso inmediato al cerrar/recargar la pestaña — no depende del TTL de KV
     function salirPresencia(){
       if(!usuario) return;
@@ -617,6 +612,33 @@
     window.addEventListener('pagehide', salirPresencia);
     window.addEventListener('beforeunload', salirPresencia);
     window._salirPresencia = salirPresencia; // usado también por "Cambiar usuario"
+
+    // ---- Retiro automático por inactividad ----
+    // Si dejan la pestaña abierta sin tocar nada (mouse, teclado, scroll, touch)
+    // durante INACTIVIDAD_MS, se retira de la lista de "conectados" — así
+    // solamente aparece quien de verdad está usando el panel, y de paso se
+    // dejan de mandar sync (menos consumo de cuota de KV). En cuanto vuelve a
+    // interactuar, se reincorpora en el siguiente ciclo automáticamente.
+    const INACTIVIDAD_MS = 5 * 60 * 1000; // 5 minutos
+    let ultimaActividad = Date.now();
+    let ausente = false;
+    ['mousemove','mousedown','keydown','scroll','touchstart','click'].forEach(evt=>{
+      document.addEventListener(evt, ()=>{ ultimaActividad = Date.now(); }, { passive: true });
+    });
+
+    async function tickPresencia(){
+      const inactivo = (Date.now() - ultimaActividad) > INACTIVIDAD_MS;
+      if(inactivo){
+        if(!ausente){ salirPresencia(); ausente = true; }
+        // mientras esté inactivo no se sigue sincronizando (ahorra cuota)
+      } else {
+        ausente = false;
+        await sincronizar();
+      }
+    }
+
+    tickPresencia();
+    setInterval(tickPresencia, 45000);
   }
 })();
 </script>
