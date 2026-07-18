@@ -51,6 +51,16 @@
   header.topbar .leaf{font-size:1.3rem;}
   header.topbar .title{flex:1;}
   header.topbar .title small{display:block;color:#c9dcc0;font-size:0.7rem;font-weight:normal;}
+  .topbar-modo{display:flex;align-items:center;gap:10px;flex:1;min-width:0;}
+  .topbar-back-combo{
+    display:flex;align-items:center;gap:8px;background:var(--verde-claro);border:none;
+    padding:6px 16px 6px 10px;border-radius:99px;flex-shrink:1;min-width:0;
+  }
+  .topbar-back-combo:active{filter:brightness(0.94);}
+  .topbar-back-arrow{color:var(--verde-oscuro);font-size:1.5rem;line-height:1;flex-shrink:0;}
+  .topbar-back-title{
+    font-size:1rem;font-weight:700;color:var(--verde-oscuro);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
   .topbar-icon-btn{
     background:rgba(255,255,255,0.12);border:none;width:38px;height:38px;border-radius:50%;
     font-size:1.15rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0;
@@ -174,9 +184,45 @@
 
   /* progress */
   .progress-wrap{margin-bottom:14px;}
-  .progress-label{display:flex;justify-content:space-between;font-size:0.82rem;color:var(--texto-suave);margin-bottom:6px;}
+  .progress-label{display:flex;justify-content:space-between;align-items:center;font-size:0.82rem;color:var(--texto);font-weight:600;margin-bottom:6px;}
+  .planta-lote-grande{font-size:0.95rem;font-weight:700;color:var(--texto);}
+  .btn-quitar-eval{
+    display:block;width:100%;background:var(--rojo);border:none;color:#fff;font-size:0.88rem;font-weight:700;
+    padding:11px;margin-top:8px;border-radius:12px;
+  }
   .progress-bar{height:8px;background:var(--verde-pastel);border-radius:99px;overflow:hidden;}
   .progress-fill{height:100%;background:var(--verde);border-radius:99px;transition:width .2s;}
+
+  .gps-chip{
+    display:flex;align-items:center;gap:5px;flex-shrink:0;
+    padding:6px 12px;border-radius:99px;border:1.5px solid transparent;background:rgba(255,255,255,0.14);
+    font-size:0.78rem;font-weight:600;color:#fff;
+  }
+  .gps-chip.capturando{background:var(--ambar-bg);color:#8a5c15;}
+  .gps-chip.capturando .gps-chip-icono{display:inline-block;animation:spin 1s linear infinite;}
+  .gps-chip.ok{background:var(--verde-pastel);color:var(--verde-oscuro);}
+  .gps-chip.error{background:var(--rojo-bg);color:var(--rojo);}
+  .foto-chip-btn{
+    position:relative;flex-shrink:0;width:38px;height:38px;border-radius:50%;
+    border:1.5px solid var(--borde);background:var(--blanco);font-size:1.1rem;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .foto-chip-badge{
+    position:absolute;top:-4px;right:-4px;background:var(--verde);color:#fff;font-size:0.6rem;font-weight:700;
+    border-radius:50%;width:17px;height:17px;display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--blanco);
+  }
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(17,24,39,0.55);z-index:60;
+    display:flex;align-items:center;justify-content:center;padding:16px;
+  }
+  .modal-box{
+    background:var(--blanco);border-radius:18px;padding:16px;width:100%;max-width:460px;
+    max-height:80vh;overflow-y:auto;
+  }
+  .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .modal-close-btn{background:var(--crema);border:none;width:30px;height:30px;border-radius:50%;font-size:0.95rem;color:var(--texto-suave);}
 
   /* familia sections */
   .familia{margin-bottom:10px;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#fff;}
@@ -234,7 +280,7 @@
   }
   .badge-compania{
     display:inline-flex;align-items:center;gap:6px;background:var(--verde-pastel);color:var(--verde-oscuro);
-    font-weight:700;font-size:0.82rem;padding:6px 14px;border-radius:99px;margin-bottom:8px;
+    font-weight:700;font-size:0.78rem;padding:6px 14px;border-radius:99px;flex-shrink:0;
   }
   .info-icon-btn{
     width:22px;height:22px;border-radius:50%;border:1.5px solid var(--verde);color:var(--verde);
@@ -278,10 +324,23 @@
 <body>
 <div id="app">
   <header class="topbar">
-    <span class="leaf">🌱</span>
-    <div class="title">Recuentos de Campo
-      <small>División Agrícola Comasa · Infoagro</small>
+    <div id="topbarHome" class="topbar-modo">
+      <span class="leaf">🌱</span>
+      <div class="title">Recuentos de Campo
+        <small>División Agrícola Comasa · Infoagro</small>
+      </div>
     </div>
+    <div id="topbarBack" class="topbar-modo" style="display:none;">
+      <button class="topbar-back-combo" id="topbarBackBtn" aria-label="Volver">
+        <span class="topbar-back-arrow">←</span>
+        <span class="topbar-back-title" id="topbarBackTitle">Título</span>
+      </button>
+    </div>
+    <button class="gps-chip" id="btnGpsPlanta" onclick="capturarGPSPlanta()" style="display:none;">
+      <span id="gpsChipIcono" class="gps-chip-icono">📍</span>
+      <span id="gpsChipTexto">Capturando…</span>
+    </button>
+    <div id="companiaHeaderBadge" class="badge-compania" style="display:none;"></div>
     <button class="topbar-icon-btn estado-btn-compacto" id="estadoBtnCompacto" onclick="goScreen('screen-config')" aria-label="Estado de sincronización" title="Estado de sincronización">
       <span class="estado-dot-compacto" id="estadoDotCompacto"></span>
       <span class="estado-badge-count" id="estadoBadgeCount" style="display:none;"></span>
@@ -294,56 +353,61 @@
     <!-- ============ HOME ============ -->
     <section id="screen-home" class="screen active">
 
-      <h2>Evaluaciones</h2>
+      <h2>Reportes</h2>
       <div id="sessionList"></div>
       <div id="emptyState" class="empty" style="display:none;">
         <div class="big">🌿</div>
-        <p>Todavía no hay evaluaciones. Toca "Nueva evaluación" para empezar un recuento en el lote.</p>
+        <p>Todavía no hay reportes. Toca "Nuevo reporte" para empezar uno en el lote.</p>
       </div>
     </section>
 
     <!-- ============ FORM HEADER ============ -->
     <section id="screen-form" class="screen">
-      <button class="backlink" onclick="goScreen('screen-home')">← Evaluaciones</button>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <h2 style="margin:0;">Nueva evaluación</h2>
-        <button class="info-icon-btn" onclick="toast('Datos generales del recuento: estos campos se copian en cada planta evaluada.')" aria-label="Información" title="Información">ⓘ</button>
-      </div>
-      <div id="companiaHeaderBadge" class="badge-compania" style="display:none;"></div>
       <div class="card">
         <div class="field">
-          <label>Fecha</label>
-          <input type="date" id="f_fecha">
+          <label>Sector *</label>
+          <select id="f_sector" onchange="onSectorChange()" required></select>
         </div>
         <div class="field">
-          <label>Sector</label>
-          <select id="f_sector" onchange="onSectorChange()"></select>
+          <label>Fecha *</label>
+          <input type="date" id="f_fecha" required>
         </div>
         <div class="field">
-          <label>Ciclo</label>
-          <select id="f_ciclo"></select>
+          <label>Ciclo *</label>
+          <select id="f_ciclo" onchange="onCicloChange()" required></select>
         </div>
         <div class="field">
-          <label>Finca</label>
-          <select id="f_finca" onchange="onFincaChange()"></select>
+          <label>Finca *</label>
+          <select id="f_finca" onchange="onFincaChange()" required></select>
         </div>
         <div class="field">
-          <label>Lote</label>
-          <select id="f_lote" onchange="onLoteChange()"></select>
+          <label>Lote *</label>
+          <select id="f_lote" onchange="onLoteChange()" required></select>
         </div>
         <div class="field">
-          <label>Edad del cultivo (días)</label>
-          <input type="number" id="f_edad" oninput="this.dataset.autofilled='false'">
+          <label>Edad del cultivo (días) *</label>
+          <input type="number" id="f_edad" oninput="this.dataset.autofilled='false'" required>
           <div id="edadAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
         </div>
         <div class="field">
-          <label>Área evaluada (mzn)</label>
-          <input type="number" step="0.01" id="f_area">
+          <label>Área evaluada (mzn) *</label>
+          <input type="number" step="0.01" id="f_area" required>
         </div>
         <div class="field">
-          <label>Aplicación reciente (opcional)</label>
-          <select id="f_aplicacion">
+          <label>Población plantas/m *</label>
+          <input type="number" step="0.01" id="f_poblacion" oninput="this.dataset.autofilled='false'" required>
+          <div id="poblacionAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
+        </div>
+        <div class="field">
+          <label>Estado fenológico *</label>
+          <input type="text" id="f_estado_fenologico" placeholder="Ej. Reproductivo" required>
+        </div>
+        <div class="field">
+          <label>Aplicación *</label>
+          <select id="f_aplicacion" required>
             <option value="">— Ninguna —</option>
+            <option value="Sello">Sello</option>
+            <option value="Post emergente">Post emergente</option>
             <option value="Fungicida I">Fungicida I</option>
             <option value="Fungicida II">Fungicida II</option>
             <option value="Fungicida III">Fungicida III</option>
@@ -355,74 +419,58 @@
           </select>
         </div>
         <div class="field">
-          <label>Población plantas/m</label>
-          <input type="number" step="0.01" id="f_poblacion" oninput="this.dataset.autofilled='false'">
-          <div id="poblacionAutoNota" style="font-size:0.72rem;color:var(--texto-suave);margin-top:4px;"></div>
+          <label>Fecha aplicación</label>
+          <input type="date" id="f_fecha_aplicacion">
         </div>
         <div class="field">
-          <label>Elaborado por</label>
-          <input type="text" id="f_tecnico" placeholder="Nombre del técnico">
-        </div>
-        <div class="field">
-          <label>Estado fenológico</label>
-          <input type="text" id="f_estado_fenologico" placeholder="Ej. Reproductivo">
+          <label>Elaborado por *</label>
+          <input type="text" id="f_tecnico" placeholder="Nombre del técnico" required>
         </div>
         <div class="field">
           <label>Observación</label>
           <textarea id="f_observacion" placeholder="Notas de campo…"></textarea>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="iniciarEvaluacion()">Iniciar evaluación planta por planta →</button>
+      <button class="btn btn-primary" id="btnIniciarReporte" onclick="iniciarEvaluacion()">Iniciar reporte, evaluación por evaluación →</button>
     </section>
 
     <!-- ============ PLANTA (modal por estación) ============ -->
     <section id="screen-planta" class="screen">
-      <button class="backlink" onclick="volverAFormulario()">← Editar datos generales (finca, lote, ciclo...)</button>
       <div class="progress-wrap">
         <div class="progress-label">
           <span style="display:flex;align-items:center;gap:6px;">
-            <span id="plantaLabel">Planta 1 de 7</span>
-            <button class="info-icon-btn" onclick="toast('Registra lo que observas en esta planta. Los campos que no apliquen quedan en 0.')" aria-label="Información" title="Información">ⓘ</button>
+            <span id="plantaLabel">Evaluación 1 de 7</span>
+            <button class="info-icon-btn" onclick="toast('Registra lo que observas en esta evaluación. Los campos que no apliquen quedan en 0.')" aria-label="Información" title="Información">ⓘ</button>
           </span>
-          <span id="plantaLote"></span>
+          <span style="display:flex;align-items:center;gap:8px;">
+            <button class="foto-chip-btn" id="btnFotoChip" onclick="abrirModalFotos()" style="display:none;" aria-label="Fotos de esta evaluación" title="Fotos de esta evaluación">
+              📷<span id="fotoChipBadge" class="foto-chip-badge" style="display:none;">0</span>
+            </button>
+            <span id="plantaLote" class="planta-lote-grande"></span>
+          </span>
         </div>
         <div class="progress-bar"><div id="plantaFill" class="progress-fill" style="width:14%;"></div></div>
       </div>
 
-      <div class="card" style="padding:12px 14px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">📍 Ubicación de esta planta</h3>
-          <button class="btn btn-ghost btn-sm" id="btnGpsPlanta" onclick="capturarGPSPlanta()">Actualizar</button>
-        </div>
-        <div id="gpsPlantaResult" style="font-size:0.78rem;color:var(--texto-suave);margin-top:6px;"></div>
-      </div>
-
-      <div class="card" id="cardFotos" style="padding:12px 14px;display:none;">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <h3 style="margin:0;">📷 Fotos de esta planta</h3>
-          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('fotoInput').click()">+ Agregar foto</button>
-        </div>
-        <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none;" onchange="onFotoSeleccionada(event)">
-        <div id="fotoThumbs" class="foto-thumbs"></div>
-      </div>
+      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none;" onchange="onFotoSeleccionada(event)">
 
       <div id="familiaContainer"></div>
       <div class="btn-row" style="margin-top:14px;">
         <button class="btn btn-ghost" id="btnPlantaPrev" onclick="cambiarPlanta(-1)">← Anterior</button>
         <button class="btn btn-primary" id="btnPlantaNext" onclick="cambiarPlanta(1)">+ Agregar planta</button>
       </div>
+      <button class="btn-quitar-eval" id="btnQuitarEval" onclick="quitarEvaluacionActual()" style="display:none;">🗑 Quitar esta evaluación</button>
+      <div style="height:10px;"></div>
+      <button class="btn btn-amber" onclick="terminarEvaluacion()">✔ Terminar reporte (<span id="totalPlantasBtn">1</span> evaluaciones)</button>
       <div style="height:8px;"></div>
-      <button class="btn btn-amber" onclick="terminarEvaluacion()">✔ Terminar evaluación (<span id="totalPlantasBtn">1</span> planta)</button>
-      <div style="height:8px;"></div>
-      <button class="btn btn-ghost" onclick="verResumenParcial()">📄 Ver resumen / imprimir PDF</button>
-      <div style="height:8px;"></div>
-      <button class="btn btn-ghost" onclick="goScreen('screen-home')">Guardar borrador y salir</button>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="verResumenParcial()">📄 Ver resumen</button>
+        <button class="btn btn-ghost" onclick="goScreen('screen-home')">Guardar y salir</button>
+      </div>
     </section>
 
     <!-- ============ RESUMEN ============ -->
     <section id="screen-resumen" class="screen">
-      <button class="backlink" onclick="goScreen('screen-planta')">← Volver a plantas</button>
-      <h2>Resumen del recuento</h2>
       <p id="resumenSub"></p>
       <div id="resumenTablas"></div>
 
@@ -448,14 +496,11 @@
       <div style="height:8px;"></div>
       <button class="btn btn-ghost" onclick="compartirPDF()">📤 Compartir PDF (WhatsApp, correo…)</button>
       <div style="height:8px;"></div>
-      <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar evaluación en este dispositivo</button>
+      <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar reporte en este dispositivo</button>
     </section>
 
     <!-- ============ CONFIG ============ -->
     <section id="screen-config" class="screen">
-      <button class="backlink" onclick="goScreen('screen-home')">← Evaluaciones</button>
-      <h2>Sincronización</h2>
-
       <div class="estado-pill" id="estadoPill">
         <div class="icono-wrap" id="pillIconWrap"><span id="pillIcon"><div class="dot-live"></div></span></div>
         <div class="txt">
@@ -481,7 +526,18 @@
 
   <div id="toast" class="toast"></div>
 
-  <div id="printArea"></div>
+  <div id="modalFotos" class="modal-overlay" style="display:none;" onclick="if(event.target===this) cerrarModalFotos()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="margin:0;">📷 Fotos de esta evaluación</h3>
+        <button class="modal-close-btn" onclick="cerrarModalFotos()" aria-label="Cerrar">✕</button>
+      </div>
+      <div id="fotoThumbs" class="foto-thumbs"></div>
+      <button class="btn btn-primary" id="btnAgregarFoto" onclick="document.getElementById('fotoInput').click()">+ Agregar foto</button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-ghost" onclick="cerrarModalFotos()">✔ Terminar de subir</button>
+    </div>
+  </div>
 </div>
 
 <!-- jsPDF + autoTable embebidos localmente (sin CDN) para generar el PDF real dentro
@@ -1375,11 +1431,30 @@ let sesionActual = null;
 /* =========================================================================
    NAVEGACIÓN
    ========================================================================= */
+// Título y acción de "volver" que muestra el topbar en cada pantalla (excepto Home, que
+// muestra el logo normal). Mismo patrón que apps como WhatsApp: una sola barra con flecha
+// + título, en vez de un botón de volver separado más un encabezado grande debajo.
+const TOPBAR_CONFIG = {
+  'screen-form':    { titulo:'Reportes', volver:()=>goScreen('screen-home') },
+  'screen-planta':  { titulo:'Evaluación',    volver:()=>volverAFormulario() },
+  'screen-resumen': { titulo:'Resumen',       volver:()=>goScreen('screen-planta') },
+  'screen-config':  { titulo:'Sincronización',volver:()=>goScreen('screen-home') },
+};
 function goScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(id==='screen-home') renderHome();
   if(id==='screen-config') renderConfig();
+
+  const cfg = TOPBAR_CONFIG[id];
+  document.getElementById('topbarHome').style.display = cfg ? 'none' : 'flex';
+  document.getElementById('topbarBack').style.display = cfg ? 'flex' : 'none';
+  if(cfg){
+    document.getElementById('topbarBackTitle').textContent = cfg.titulo;
+    document.getElementById('topbarBackBtn').onclick = cfg.volver;
+  }
+  document.getElementById('btnGpsPlanta').style.display = (id==='screen-planta') ? 'flex' : 'none';
+  if(id!=='screen-form') document.getElementById('companiaHeaderBadge').style.display = 'none';
   window.scrollTo(0,0);
 }
 
@@ -1417,7 +1492,7 @@ async function renderHome(){
       div.innerHTML = `
         <div class="meta">
           <div class="t1">${fincaName||'Finca sin definir'} · ${loteName||'Lote sin definir'}</div>
-          <div class="t2">${s.header.fecha||'sin fecha'} · Planta ${s.currentStation}/${s.header.estaciones}</div>
+          <div class="t2">${s.header.fecha||'sin fecha'} · Evaluación ${s.currentStation}/${s.header.estaciones}</div>
           ${s.status==='error' && s.lastError ? `<div class="t2" style="color:var(--rojo);margin-top:2px;">⚠️ ${s.lastError}</div>` : ''}
         </div>
         <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
@@ -1478,17 +1553,56 @@ function onSectorChange(){
 
   onFincaChange();
 }
+/** Si cambian el Ciclo después de ya tener Finca elegida (por ejemplo, para corregirlo),
+ *  hay que volver a filtrar el Lote — la Siembra registrada depende de ambos. */
+function onCicloChange(){
+  onFincaChange();
+}
 function onFincaChange(){
   const fincaId = parseInt(document.getElementById('f_finca').value);
-  const lSel = document.getElementById('f_lote');
-  const lotes = LOTES.filter(l=>l.finca===fincaId);
-  lSel.innerHTML = lotes.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
   const finca = FINCAS.find(f=>f.id===fincaId);
   const compania = finca ? COMPANIAS.find(c=>c.id===finca.company) : null;
   const badge = document.getElementById('companiaHeaderBadge');
   if(compania){ badge.textContent = '🏢 ' + compania.nombre; badge.style.display='inline-flex'; }
   else{ badge.style.display='none'; }
+  filtrarLotesPorSiembra();
+}
+/** El Lote solo debe mostrar los lotes donde de verdad se sembró en este Ciclo — así se evita
+ *  elegir por error un lote que nunca se sembró en este ciclo (y con eso, datos de Edad del
+ *  cultivo/Población sin base real). Arranca siempre con TODOS los lotes de la finca (catálogo
+ *  local, funciona sin señal) y, si hay conexión, los reduce a los que sí tienen Siembra
+ *  registrada en Odoo para este Ciclo+Finca. Si no hay señal, o la consulta no encuentra
+ *  ninguno (por ejemplo, un dato mal cargado), se queda con la lista completa como respaldo —
+ *  nunca deja al técnico sin poder elegir nada.
+ */
+async function filtrarLotesPorSiembra(){
+  const fincaId = parseInt(document.getElementById('f_finca').value) || null;
+  const cicloId = parseInt(document.getElementById('f_ciclo').value) || null;
+  const lSel = document.getElementById('f_lote');
+  const lotesFinca = LOTES.filter(l=>l.finca===fincaId);
+  lSel.innerHTML = lotesFinca.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
   onLoteChange();
+
+  if(!cicloId || !fincaId || !navigator.onLine) return;
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  if(!url) return;
+  try{
+    const base = url.replace(/\/recuentos\/?$/, '');
+    const res = await fetch(`${base}/lotes-sembrados?ciclo_id=${cicloId}&finca_id=${fincaId}`);
+    if(!res.ok) return;
+    const data = await res.json();
+    const sembrados = new Set(data.lote_ids || []);
+    const filtrados = lotesFinca.filter(l=>sembrados.has(l.id));
+    if(filtrados.length > 0){
+      const valorPrevio = lSel.value;
+      lSel.innerHTML = filtrados.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
+      if(filtrados.some(l=>String(l.id)===valorPrevio)) lSel.value = valorPrevio;
+      onLoteChange();
+    }
+    // si no hay ninguno sembrado detectado, se queda con la lista completa de respaldo
+  }catch(e){
+    // silencioso: sin señal o falla el Worker, se queda con la lista completa ya cargada
+  }
 }
 /** Al tener Ciclo+Finca+Lote completos y señal, trae de Odoo la fecha de siembra
  *  (x_orden_campo_line_b660b, actividad "Siembra") para calcular Edad del cultivo, y la
@@ -1535,6 +1649,26 @@ async function onLoteChange(){
     // silencioso: si falla, los campos se quedan para llenado manual
   }
 }
+/** Si el reporte ya tiene algo capturado (valores, GPS o fotos en cualquier evaluación), el
+ *  botón dice "Continuar" en vez de "Iniciar" — evita que el técnico crea que va a perder lo
+ *  que ya llenó y que empieza de cero otra vez. */
+function haySesionConDatos(sesion){
+  if(!sesion) return false;
+  const tieneValores = CATALOGO.some(t=>{
+    const l = sesion.lines[t.id];
+    if(!l) return false;
+    for(let i=1;i<=10;i++){ if(l['e'+i]) return true; }
+    return false;
+  });
+  const tieneGps = Object.keys(sesion.gpsPorPlanta||{}).length>0;
+  return tieneValores || tieneGps;
+}
+function actualizarBotonIniciar(){
+  const btn = document.getElementById('btnIniciarReporte');
+  btn.textContent = haySesionConDatos(sesionActual)
+    ? 'Continuar reporte, evaluación por evaluación →'
+    : 'Iniciar reporte, evaluación por evaluación →';
+}
 function poblarFormularioDesdeSesion(){
   poblarSelects();
   const h = sesionActual.header;
@@ -1549,9 +1683,11 @@ function poblarFormularioDesdeSesion(){
   document.getElementById('f_edad').value = h.edad_cultivo ?? ''; document.getElementById('f_edad').dataset.autofilled='false';
   document.getElementById('f_poblacion').value = h.poblacion_plantas ?? ''; document.getElementById('f_poblacion').dataset.autofilled='false';
   document.getElementById('f_aplicacion').value = h.aplicacion ?? '';
+  document.getElementById('f_fecha_aplicacion').value = h.fecha_aplicacion ?? '';
   document.getElementById('f_tecnico').value = h.tecnico ?? '';
   document.getElementById('f_estado_fenologico').value = h.estado_fenologico ?? '';
   document.getElementById('f_observacion').value = h.observacion ?? '';
+  actualizarBotonIniciar();
 }
 async function nuevaEvaluacionClick(){
   sesionActual = nuevaSesion();
@@ -1561,24 +1697,30 @@ async function nuevaEvaluacionClick(){
   document.getElementById('f_edad').value=''; document.getElementById('f_edad').dataset.autofilled='false';
   document.getElementById('f_poblacion').value=''; document.getElementById('f_poblacion').dataset.autofilled='false';
   document.getElementById('f_aplicacion').value='';
+  document.getElementById('f_fecha_aplicacion').value='';
   document.getElementById('f_tecnico').value = await kvGet('ultimo_tecnico','');
   document.getElementById('f_estado_fenologico').value='';
   document.getElementById('f_observacion').value='';
+  actualizarBotonIniciar();
   goScreen('screen-form');
 }
-function pintarGpsPlanta(estado){
-  const el = document.getElementById('gpsPlantaResult');
-  if(!el) return;
-  el.textContent = estado;
+function pintarGpsPlanta(tipo, texto){
+  const chip = document.getElementById('btnGpsPlanta');
+  const icono = document.getElementById('gpsChipIcono');
+  const txt = document.getElementById('gpsChipTexto');
+  if(!chip) return;
+  chip.className = 'gps-chip ' + tipo;
+  icono.textContent = tipo==='capturando' ? '⏳' : tipo==='error' ? '⚠️' : '📍';
+  txt.textContent = texto;
 }
 function capturarGPSPlanta(silencioso){
   if(!navigator.geolocation){
-    pintarGpsPlanta('GPS no disponible en este navegador');
+    pintarGpsPlanta('error', 'GPS no disponible');
     if(!silencioso) toast('GPS no disponible en este dispositivo', true);
     return;
   }
   const i = sesionActual.currentStation;
-  if(!silencioso) pintarGpsPlanta('Buscando señal GPS…');
+  pintarGpsPlanta('capturando', 'Capturando…');
   navigator.geolocation.getCurrentPosition(pos=>{
     const {latitude:lat, longitude:lng, accuracy:acc} = pos.coords;
     sesionActual.gpsPorPlanta[i] = {lat, lng, acc, timestamp: new Date().toISOString()};
@@ -1586,21 +1728,21 @@ function capturarGPSPlanta(silencioso){
     if(sesionActual.currentStation === i) renderGpsPlanta();
   }, err=>{
     const motivos = {
-      1: 'Permiso de ubicación denegado — actívalo en Ajustes del navegador/app',
-      2: 'No se pudo determinar la posición (revisa que el GPS del celular esté activado)',
-      3: 'Se agotó el tiempo esperando señal GPS',
+      1: 'Permiso denegado',
+      2: 'Sin señal GPS',
+      3: 'Tiempo agotado',
     };
-    pintarGpsPlanta('⚠️ ' + (motivos[err.code] || 'No se pudo obtener ubicación') + ' — toca Actualizar para reintentar');
+    pintarGpsPlanta('error', (motivos[err.code] || 'Error') + ' — toca para reintentar');
   }, {enableHighAccuracy:true, timeout:12000, maximumAge:15000});
 }
 function renderGpsPlanta(){
   const i = sesionActual.currentStation;
   const p = sesionActual.gpsPorPlanta[i];
   if(p){
-    const precision = p.acc ? ` (±${Math.round(p.acc)}m)` : '';
-    pintarGpsPlanta(`📍 ${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}${precision}`);
+    const precision = p.acc ? `±${Math.round(p.acc)}m` : 'ubicada';
+    pintarGpsPlanta('ok', precision);
   } else {
-    pintarGpsPlanta('Buscando señal GPS…');
+    pintarGpsPlanta('capturando', 'Capturando…');
     capturarGPSPlanta(true);
   }
 }
@@ -1617,6 +1759,7 @@ function leerFormularioHeader(){
   h.edad_cultivo = parseInt(document.getElementById('f_edad').value) || null;
   h.poblacion_plantas = parseFloat(document.getElementById('f_poblacion').value) || null;
   h.aplicacion = document.getElementById('f_aplicacion').value;
+  h.fecha_aplicacion = document.getElementById('f_fecha_aplicacion').value || null;
   h.tecnico = document.getElementById('f_tecnico').value;
   h.estado_fenologico = document.getElementById('f_estado_fenologico').value;
   h.observacion = document.getElementById('f_observacion').value;
@@ -1624,8 +1767,21 @@ function leerFormularioHeader(){
 }
 async function iniciarEvaluacion(){
   leerFormularioHeader();
-  if(!sesionActual.header.finca || !sesionActual.header.lote || !sesionActual.header.fecha){
-    toast('Completa fecha, finca y lote para continuar', true); return;
+  const h = sesionActual.header;
+  const faltantes = [];
+  if(!h.sector) faltantes.push('Sector');
+  if(!h.fecha) faltantes.push('Fecha');
+  if(!h.ciclo) faltantes.push('Ciclo');
+  if(!h.finca) faltantes.push('Finca');
+  if(!h.lote) faltantes.push('Lote');
+  if(h.edad_cultivo===null || h.edad_cultivo===undefined) faltantes.push('Edad del cultivo');
+  if(h.area_evaluada===null || h.area_evaluada===undefined) faltantes.push('Área evaluada');
+  if(h.poblacion_plantas===null || h.poblacion_plantas===undefined) faltantes.push('Población plantas/m');
+  if(!h.estado_fenologico) faltantes.push('Estado fenológico');
+  if(!h.aplicacion) faltantes.push('Aplicación');
+  if(!h.tecnico) faltantes.push('Elaborado por');
+  if(faltantes.length){
+    toast('Completa: ' + faltantes.join(', '), true); return;
   }
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
@@ -1663,7 +1819,7 @@ function nombreParaCaptura(nombre){
 function renderPlanta(){
   const n = sesionActual.header.estaciones;
   const i = sesionActual.currentStation;
-  document.getElementById('plantaLabel').textContent = `Planta ${i} de ${n}`;
+  document.getElementById('plantaLabel').textContent = `Evaluación ${i} de ${n}`;
   document.getElementById('plantaLote').textContent = `${fincaNombre(sesionActual.header.finca)||''} · ${loteNombre(sesionActual.header.lote)||''}`;
   document.getElementById('plantaFill').style.width = Math.round((n/10)*100)+'%';
   document.getElementById('btnPlantaPrev').disabled = (i<=1);
@@ -1671,7 +1827,8 @@ function renderPlanta(){
   if(i>=n){ btnNext.textContent = '+ Agregar planta'; btnNext.disabled = (n>=10); }
   else{ btnNext.textContent = 'Siguiente →'; btnNext.disabled = false; }
   document.getElementById('totalPlantasBtn').textContent = n;
-  document.getElementById('cardFotos').style.display = FOTOS_HABILITADAS ? 'block' : 'none';
+  document.getElementById('btnQuitarEval').style.display = (i===n && n>1) ? 'block' : 'none';
+  document.getElementById('btnFotoChip').style.display = FOTOS_HABILITADAS ? 'flex' : 'none';
   if(FOTOS_HABILITADAS) renderFotosPlanta();
   renderGpsPlanta();
 
@@ -1757,6 +1914,13 @@ async function onFotoSeleccionada(event){
     toast('No se pudo guardar la foto: '+e.message, true);
   }
 }
+function abrirModalFotos(){
+  document.getElementById('modalFotos').style.display = 'flex';
+  renderFotosPlanta();
+}
+function cerrarModalFotos(){
+  document.getElementById('modalFotos').style.display = 'none';
+}
 async function renderFotosPlanta(){
   const cont = document.getElementById('fotoThumbs');
   cont.innerHTML = '';
@@ -1770,6 +1934,10 @@ async function renderFotosPlanta(){
       ${p.synced?'<span class="badge-sync">✔</span>':''}`;
     cont.appendChild(div);
   });
+  const badge = document.getElementById('fotoChipBadge');
+  if(fotos.length>0){ badge.textContent = fotos.length; badge.style.display='flex'; }
+  else{ badge.style.display='none'; }
+  document.getElementById('btnAgregarFoto').textContent = fotos.length>0 ? '+ Agregar otra foto' : '+ Agregar foto';
 }
 async function eliminarFoto(id){
   await idbDeletePhoto(id);
@@ -1781,7 +1949,7 @@ async function cambiarPlanta(delta){
   const i = sesionActual.currentStation;
   if(delta>0){
     if(i>=n){
-      if(n>=10){ toast('Máximo 10 plantas por evaluación', true); return; }
+      if(n>=10){ toast('Máximo 10 evaluaciones por reporte', true); return; }
       // Agregar una planta nueva (crea el siguiente número de estación)
       sesionActual.header.estaciones = n+1;
       sesionActual.currentStation = n+1;
@@ -1796,9 +1964,31 @@ async function cambiarPlanta(delta){
   renderPlanta();
   window.scrollTo(0,0);
 }
+/** Deshace la última evaluación agregada por error (ej. tocaron "+ Agregar planta" de más).
+ *  Solo se puede quitar la que está en la punta (la más reciente) — no una de en medio, para
+ *  no desordenar la numeración de las que ya se llenaron. Borra sus valores, su GPS y sus
+ *  fotos, y deja al técnico parado en la evaluación anterior. */
+async function quitarEvaluacionActual(){
+  const n = sesionActual.header.estaciones;
+  const i = sesionActual.currentStation;
+  if(i !== n || n <= 1) return;
+  if(!confirm(`¿Quitar la evaluación ${i}? Se perderán los datos, la ubicación y las fotos capturadas en ella.`)) return;
+
+  CATALOGO.forEach(t=>{ sesionActual.lines[t.id]['e'+i] = 0; });
+  delete sesionActual.gpsPorPlanta[i];
+  const fotos = (await idbGetPhotosForSession(sesionActual.localId)).filter(p=>p.station===i);
+  for(const f of fotos) await idbDeletePhoto(f.id);
+
+  sesionActual.header.estaciones = n-1;
+  sesionActual.currentStation = n-1;
+  sesionActual.updatedAt = new Date().toISOString();
+  await idbPutSession(sesionActual);
+  renderPlanta();
+  toast('Evaluación quitada ✔');
+}
 async function terminarEvaluacion(){
   const n = sesionActual.header.estaciones;
-  if(!confirm(`¿Terminar la evaluación con ${n} planta${n===1?'':'s'}? Podrás seguir editando antes de guardarla si hace falta.`)) return;
+  if(!confirm(`¿Terminar el reporte con ${n} evaluación${n===1?'':'es'}? Podrás seguir editando antes de guardarlo si hace falta.`)) return;
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
   calcularResultados();
@@ -1866,7 +2056,7 @@ function renderResumen(readOnly){
   const h = sesionActual.header;
   const gpsCount = Object.keys(sesionActual.gpsPorPlanta || {}).length;
   document.getElementById('resumenSub').textContent =
-    `${sectorNombre(h.sector)||''} · ${fincaNombre(h.finca)||''} · ${loteNombre(h.lote)||''} · ${h.fecha} · ${h.estaciones} estaciones · 📍 ${gpsCount}/${h.estaciones} georreferenciadas`;
+    `${sectorNombre(h.sector)||''} · ${fincaNombre(h.finca)||''} · ${loteNombre(h.lote)||''} · ${h.fecha} · ${h.estaciones} evaluaciones · 📍 ${gpsCount}/${h.estaciones} georreferenciadas`;
   const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
   const cont = document.getElementById('resumenTablas');
   cont.innerHTML='';
@@ -2085,6 +2275,28 @@ async function construirMosaicoSatelital(puntos, pxSize){
 
 /** Marcador de planta: círculo blanco con número en negro, grande y centrado — más "realce"
  *  y legible tanto sobre foto satelital como sobre el mapa vectorial de respaldo. */
+/** Cuando dos o más evaluaciones quedan casi en el mismo lugar (coordenadas muy parecidas),
+ *  dibujarlas superpuestas hace que solo se vea la última — las demás quedan tapadas debajo.
+ *  Esto las agrupa por cercanía y las separa en un pequeño abanico alrededor del mismo punto,
+ *  para que todas queden visibles sin alejarlas del lugar real que representan. */
+function separarPuntosSuperpuestos(pts, minDist){
+  const grupos = [];
+  pts.forEach(p=>{
+    let grupo = grupos.find(g => Math.hypot(g.cx-p.x, g.cy-p.y) < minDist);
+    if(!grupo){ grupo = { cx:p.x, cy:p.y, items:[] }; grupos.push(grupo); }
+    grupo.items.push(p);
+  });
+  grupos.forEach(g=>{
+    if(g.items.length===1) return;
+    const n = g.items.length;
+    const radio = minDist*0.62;
+    g.items.forEach((p,i)=>{
+      const angulo = (2*Math.PI*i/n) - Math.PI/2;
+      p.x = g.cx + radio*Math.cos(angulo);
+      p.y = g.cy + radio*Math.sin(angulo);
+    });
+  });
+}
 function dibujarMarcadorPlanta(doc, x, y, numero){
   doc.setFillColor(255,255,255); doc.setDrawColor(0,0,0); doc.setLineWidth(0.5);
   doc.circle(x, y, 3.6, 'FD');
@@ -2106,7 +2318,7 @@ function dibujarEscala(doc, scX, scY, metros, colorTexto){
   doc.line(scX, scY-1, scX, scY+1);
   doc.line(scX+14, scY-1, scX+14, scY+1);
   doc.setFontSize(5); doc.setTextColor(...colorTexto); doc.setFont('helvetica','bold');
-  doc.text('≈ '+texto, scX+7, scY-1.5, { align:'center' });
+  doc.text('~ '+texto, scX+7, scY-1.5, { align:'center' });
 }
 
 /** Página de ubicación GPS. Intenta primero la imagen satelital real (Esri World Imagery,
@@ -2135,7 +2347,7 @@ async function construirDocPDF(sesion){
   doc.text(brand.lugar, marginX, y+5);
   const gpsCount = Object.keys(sesion.gpsPorPlanta || {}).length;
   doc.setFontSize(7);
-  doc.text(`Hoja de Recuentos  ·  GPS: ${gpsCount}/${est} plantas georreferenciadas`, marginX, y+9.5);
+  doc.text(`Hoja de Recuentos  ·  GPS: ${gpsCount}/${est} evaluaciones georreferenciadas`, marginX, y+9.5);
 
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
   doc.text(folio, pageW-marginX, y, {align:'right'});
@@ -2150,6 +2362,7 @@ async function construirDocPDF(sesion){
   // ---- Datos generales (grid de 3 columnas) ----
   const campos = [
     ['Sector', sectorNombre(h.sector)||''],
+    ['Ciclo', CICLOS.find(c=>c.id===h.ciclo)?.nombre || ''],
     ['Finca', fincaNombre(h.finca)||''],
     ['Lote', loteNombre(h.lote)||''],
     ['Área evaluada (Mzn)', h.area_evaluada!=null ? fmtNumeroPDF(h.area_evaluada) : ''],
@@ -2158,7 +2371,6 @@ async function construirDocPDF(sesion){
     ['Elaborado por', h.tecnico||''],
     ['Edad del cultivo', h.edad_cultivo!=null ? h.edad_cultivo+' días' : ''],
     ['Estado fenológico', h.estado_fenologico||''],
-    ['Ciclo', CICLOS.find(c=>c.id===h.ciclo)?.nombre || ''],
     ['Aplicación', h.aplicacion||''],
     ['Fecha aplicación', fmtFechaPDF(h.fecha_aplicacion)],
   ];
@@ -2204,9 +2416,16 @@ async function construirDocPDF(sesion){
     startY: y,
     head, body,
     margin: { left: marginX, right: marginX, bottom: 8 },
-    styles: { fontSize: 5.3, cellPadding: 0.5, lineColor:[170,170,170], lineWidth:0.1, valign:'middle', minCellHeight: 0, textColor:[0,0,0] },
-    headStyles: { fillColor:[231,239,221], textColor:[0,0,0], fontSize:5.3, cellPadding:0.6 },
-    columnStyles: { 1: { halign:'left', cellWidth: 32 } },
+    styles: { fontSize: 6.3, cellPadding: 0.5, lineColor:[170,170,170], lineWidth:0.1, valign:'middle', halign:'center', minCellHeight: 0, textColor:[0,0,0] },
+    headStyles: { fillColor:[231,239,221], textColor:[0,0,0], fontSize:5.9, halign:'center', cellPadding:0.6 },
+    columnStyles: {
+      0:  { cellWidth: 5,  halign:'center' },              // N°  (~2 caracteres)
+      1:  { cellWidth: 30, halign:'left', fontSize: 4.6 },   // Descripción angosta con letra más chica (los textos de Odoo son largos)
+      2:  { cellWidth: 6,  halign:'center' },               // T.M. angosta
+      3:  { cellWidth: 8,  halign:'center' },               // U/M ajustada
+      14: { fontSize: 7.2, fontStyle:'bold', halign:'center' }, // Total, más grande
+      15: { fontSize: 7.2, fontStyle:'bold', halign:'center' }, // Resultado, más grande
+    },
     theme: 'grid',
     pageBreak: 'avoid',
     rowPageBreak: 'avoid',
@@ -2240,7 +2459,7 @@ async function construirDocPDF(sesion){
 async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
   let y = 18;
   doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
-  doc.text(`Ubicación de las plantas evaluadas — ${folio}`, marginX, y);
+  doc.text(`Ubicación de las evaluaciones — ${folio}`, marginX, y);
   y += 8;
 
   const puntos = Object.entries(gpsPorPlanta).map(([est,p])=>({est:parseInt(est), ...p})).sort((a,b)=>a.est-b.est);
@@ -2257,9 +2476,11 @@ async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
     doc.setDrawColor(74,93,56); doc.setLineWidth(0.7);
     doc.rect(mapX, y, size, size);
 
-    satelital.proyectado.forEach(p=>{
-      dibujarMarcadorPlanta(doc, mapX + p.fx*size, y + p.fy*size, p.est);
-    });
+    const puntosAbs = satelital.proyectado.map(p=>({ est: p.est, x: mapX+p.fx*size, y: y+p.fy*size }));
+    separarPuntosSuperpuestos(puntosAbs, 7.5);
+    doc.setDrawColor(255,255,255); doc.setLineWidth(0.7);
+    for(let i=1;i<puntosAbs.length;i++) doc.line(puntosAbs[i-1].x, puntosAbs[i-1].y, puntosAbs[i].x, puntosAbs[i].y);
+    puntosAbs.forEach(p=> dibujarMarcadorPlanta(doc, p.x, p.y, p.est));
     dibujarBrujula(doc, mapX+size-9, y+9);
     dibujarEscala(doc, mapX+6, y+size-6, satelital.metros, [255,255,255]);
     doc.setFontSize(5.5); doc.setTextColor(255,255,255); doc.setFont('helvetica','normal');
@@ -2291,13 +2512,14 @@ async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
       x: mapX + ((p.lng-(minLng-padLng))/rLng)*size,
       y: y+size - ((p.lat-(minLat-padLat))/rLat)*size,
     }));
+    separarPuntosSuperpuestos(proyectado, 7.5);
     doc.setDrawColor(255,255,255); doc.setLineWidth(0.7);
     for(let i=1;i<proyectado.length;i++) doc.line(proyectado[i-1].x, proyectado[i-1].y, proyectado[i].x, proyectado[i].y);
     proyectado.forEach(p=> dibujarMarcadorPlanta(doc, p.x, p.y, p.est));
 
     dibujarBrujula(doc, mapX+size-9, y+9);
     dibujarEscala(doc, mapX+6, y+size-6, rLat*111320, [255,255,255]);
-    notaTexto = 'Vista relativa (sin señal o sin cobertura satelital al generar el PDF, no es imagen real): ubica cada planta a escala entre sí, conectadas en el orden en que se recorrieron — sirve para confirmar que el muestreo cubrió el lote y no se concentró en un solo punto. Coordenadas en formato decimal (WGS84).';
+    notaTexto = 'Vista relativa (sin señal o sin cobertura satelital al generar el PDF, no es imagen real): ubica cada evaluación a escala entre sí, conectadas en el orden en que se recorrieron — sirve para confirmar que el muestreo cubrió el lote y no se concentró en un solo punto. Coordenadas en formato decimal (WGS84).';
   }
 
   y += size + 8;
@@ -2309,7 +2531,7 @@ async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
   ]);
   doc.autoTable({
     startY: y,
-    head: [['Planta','Latitud','Longitud','Precisión','Hora']],
+    head: [['Evaluación','Latitud','Longitud','Precisión','Hora']],
     body: filas,
     margin: { left: marginX, right: marginX },
     styles: { fontSize: 7.5, textColor:[0,0,0] },
@@ -2371,7 +2593,7 @@ async function guardarEvaluacionFinal(){
   sesionActual.status = 'pending_sync';
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
-  toast('Evaluación guardada en el dispositivo ✔');
+  toast('Reporte guardado en el dispositivo ✔');
   goScreen('screen-home');
   intentarSincronizarSilencioso();
 }
@@ -2643,7 +2865,7 @@ async function init(){
 init();
 </script>
 
-<button class="btn btn-primary fab" onclick="nuevaEvaluacionClick()" id="fabNuevo" aria-label="Nueva evaluación" title="Nueva evaluación">＋</button>
+<button class="btn btn-primary fab" onclick="nuevaEvaluacionClick()" id="fabNuevo" aria-label="Nuevo reporte" title="Nuevo reporte">＋</button>
 <script>
 // El FAB solo se muestra en la pantalla de inicio
 const observer = new MutationObserver(()=>{
