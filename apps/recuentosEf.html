@@ -190,6 +190,10 @@
     display:block;width:100%;background:var(--rojo);border:none;color:#fff;font-size:0.88rem;font-weight:700;
     padding:11px;margin-top:8px;border-radius:12px;
   }
+  .banner-solo-lectura{
+    background:var(--ambar-bg);color:#8a5c15;border:1.5px solid var(--ambar);border-radius:12px;
+    padding:11px 14px;font-size:0.85rem;font-weight:600;margin-bottom:14px;
+  }
   .progress-bar{height:8px;background:var(--verde-pastel);border-radius:99px;overflow:hidden;}
   .progress-fill{height:100%;background:var(--verde);border-radius:99px;transition:width .2s;}
 
@@ -461,11 +465,11 @@
       </div>
       <button class="btn-quitar-eval" id="btnQuitarEval" onclick="quitarEvaluacionActual()" style="display:none;">🗑 Quitar esta evaluación</button>
       <div style="height:10px;"></div>
-      <button class="btn btn-amber" onclick="terminarEvaluacion()">✔ Terminar reporte (<span id="totalPlantasBtn">1</span> evaluaciones)</button>
+      <button class="btn btn-amber" id="btnTerminarReporte" onclick="terminarEvaluacion()">✔ Terminar reporte (<span id="totalPlantasBtn">1</span> evaluaciones)</button>
       <div style="height:8px;"></div>
       <div class="btn-row">
         <button class="btn btn-ghost" onclick="verResumenParcial()">📄 Ver resumen</button>
-        <button class="btn btn-ghost" onclick="goScreen('screen-home')">Guardar y salir</button>
+        <button class="btn btn-ghost" id="btnGuardarSalir" onclick="goScreen('screen-home')">Guardar y salir</button>
       </div>
     </section>
 
@@ -1510,19 +1514,27 @@ function loteNombre(id){ const l = LOTES.find(x=>x.id===id); return l?l.nombre:n
 function sectorNombre(id){ const s = SECTORES.find(x=>x.id===id); return s?s.nombre:null; }
 function companiaNombre(id){ const c = COMPANIAS.find(x=>x.id===id); return c?c.nombre:null; }
 
+/** Un reporte que ya se sincronizó con Odoo ('synced') queda en solo lectura en el celular.
+ *  Si necesitan corregir algo, se hace directo en Odoo — así los dos lados nunca se
+ *  desincronizan (si el celular lo reenvía después de un cambio local, se perdería la
+ *  consistencia con lo que ya quedó guardado como fuente de verdad). */
+function esSoloLectura(){
+  return !!(sesionActual && sesionActual.status === 'synced');
+}
+
 async function abrirSesion(localId){
   const list = await idbGetAllSessions();
   const s = list.find(x=>x.localId===localId);
   if(!s) return;
   sesionActual = s;
   if(!sesionActual.gpsPorPlanta) sesionActual.gpsPorPlanta = {}; // compatibilidad con evaluaciones creadas antes de este cambio
-  if(s.status==='draft'){
+  if(s.status==='synced'){
+    renderResumen(true);
+    goScreen('screen-resumen');
+  } else {
     poblarFormularioDesdeSesion();
     renderPlanta();
     goScreen('screen-planta');
-  } else {
-    renderResumen(true);
-    goScreen('screen-resumen');
   }
 }
 
@@ -1718,6 +1730,19 @@ function poblarFormularioDesdeSesion(){
   document.getElementById('f_estado_fenologico').value = h.estado_fenologico ?? '';
   document.getElementById('f_observacion').value = h.observacion ?? '';
   actualizarBotonIniciar();
+
+  const soloLectura = esSoloLectura();
+  document.querySelectorAll('#screen-form input, #screen-form select, #screen-form textarea')
+    .forEach(el => el.disabled = soloLectura);
+  document.getElementById('btnIniciarReporte').style.display = soloLectura ? 'none' : 'block';
+  document.getElementById('bannerSoloLecturaForm')?.remove();
+  if(soloLectura){
+    const banner = document.createElement('div');
+    banner.id = 'bannerSoloLecturaForm';
+    banner.className = 'banner-solo-lectura';
+    banner.innerHTML = '🔒 Este reporte ya se envió. Quedó en solo lectura — para hacer cambios llama a Yorlene, para que te lo libere de nuevo y puedas edítarlo.';
+    document.querySelector('#screen-form').insertAdjacentElement('afterbegin', banner);
+  }
 }
 async function nuevaEvaluacionClick(){
   sesionActual = nuevaSesion();
@@ -1744,6 +1769,7 @@ function pintarGpsPlanta(tipo, texto){
   txt.textContent = texto;
 }
 function capturarGPSPlanta(silencioso){
+  if(esSoloLectura()) return;
   if(!navigator.geolocation){
     pintarGpsPlanta('error', 'GPS no disponible');
     if(!silencioso) toast('GPS no disponible en este dispositivo', true);
@@ -1796,6 +1822,7 @@ function leerFormularioHeader(){
   if(h.tecnico) kvSet('ultimo_tecnico', h.tecnico);
 }
 async function iniciarEvaluacion(){
+  if(esSoloLectura()) return;
   leerFormularioHeader();
   const h = sesionActual.header;
   const faltantes = [];
@@ -1849,18 +1876,37 @@ function nombreParaCaptura(nombre){
 function renderPlanta(){
   const n = sesionActual.header.estaciones;
   const i = sesionActual.currentStation;
+  const soloLectura = esSoloLectura();
   document.getElementById('plantaLabel').textContent = `Evaluación ${i} de ${n}`;
   document.getElementById('plantaLote').textContent = `${fincaNombre(sesionActual.header.finca)||''} · ${loteNombre(sesionActual.header.lote)||''}`;
   document.getElementById('plantaFill').style.width = Math.round((n/10)*100)+'%';
   document.getElementById('btnPlantaPrev').disabled = (i<=1);
   const btnNext = document.getElementById('btnPlantaNext');
-  if(i>=n){ btnNext.textContent = '+ Agregar planta'; btnNext.disabled = (n>=10); }
-  else{ btnNext.textContent = 'Siguiente →'; btnNext.disabled = false; }
+  if(soloLectura){
+    btnNext.style.display = 'none';
+  } else {
+    btnNext.style.display = '';
+    if(i>=n){ btnNext.textContent = '+ Agregar planta'; btnNext.disabled = (n>=10); }
+    else{ btnNext.textContent = 'Siguiente →'; btnNext.disabled = false; }
+  }
   document.getElementById('totalPlantasBtn').textContent = n;
-  document.getElementById('btnQuitarEval').style.display = (i===n && n>1) ? 'block' : 'none';
+  document.getElementById('btnQuitarEval').style.display = (!soloLectura && i===n && n>1) ? 'block' : 'none';
   document.getElementById('btnFotoChip').style.display = FOTOS_HABILITADAS ? 'flex' : 'none';
+  document.getElementById('btnTerminarReporte').style.display = soloLectura ? 'none' : '';
+  document.getElementById('btnGuardarSalir').textContent = soloLectura ? 'Volver a Reportes' : 'Guardar y salir';
+  document.getElementById('btnGpsPlanta').style.pointerEvents = soloLectura ? 'none' : '';
+  document.getElementById('btnGpsPlanta').style.opacity = soloLectura ? '0.55' : '1';
   if(FOTOS_HABILITADAS) renderFotosPlanta();
   renderGpsPlanta();
+
+  document.getElementById('bannerSoloLectura')?.remove();
+  if(soloLectura){
+    const banner = document.createElement('div');
+    banner.id = 'bannerSoloLectura';
+    banner.className = 'banner-solo-lectura';
+    banner.innerHTML = '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
+    document.querySelector('#screen-planta .progress-wrap').insertAdjacentElement('afterend', banner);
+  }
 
   const cont = document.getElementById('familiaContainer');
   cont.innerHTML='';
@@ -1883,6 +1929,7 @@ function renderPlanta(){
         <input type="number" step="any" inputmode="decimal"
                data-idr="${t.id}" value="${val!==0?val:''}" placeholder="0"
                class="${val!==0?'touched':''}"
+               ${soloLectura?'disabled':''}
                onchange="onCampoPlanta(this, ${t.id})">
       `;
       filas.appendChild(fila);
@@ -1892,6 +1939,7 @@ function renderPlanta(){
   });
 }
 function onCampoPlanta(input, idr){
+  if(esSoloLectura()) return;
   const i = sesionActual.currentStation;
   const v = parseFloat(input.value);
   sesionActual.lines[idr]['e'+i] = isNaN(v) ? 0 : v;
@@ -1921,6 +1969,7 @@ function comprimirImagen(file, maxW=1280, calidad=0.72){
   });
 }
 async function onFotoSeleccionada(event){
+  if(esSoloLectura()) return;
   const file = event.target.files[0];
   event.target.value = ''; // permite volver a elegir el mismo archivo después
   if(!file) return;
@@ -1967,6 +2016,7 @@ async function renderFotosPlanta(){
   const badge = document.getElementById('fotoChipBadge');
   if(fotos.length>0){ badge.textContent = fotos.length; badge.style.display='flex'; }
   else{ badge.style.display='none'; }
+  document.getElementById('btnAgregarFoto').style.display = esSoloLectura() ? 'none' : 'block';
   document.getElementById('btnAgregarFoto').textContent = fotos.length>0 ? '+ Agregar otra foto' : '+ Agregar foto';
 }
 async function eliminarFoto(id){
@@ -1999,6 +2049,7 @@ async function cambiarPlanta(delta){
  *  no desordenar la numeración de las que ya se llenaron. Borra sus valores, su GPS y sus
  *  fotos, y deja al técnico parado en la evaluación anterior. */
 async function quitarEvaluacionActual(){
+  if(esSoloLectura()) return;
   const n = sesionActual.header.estaciones;
   const i = sesionActual.currentStation;
   if(i !== n || n <= 1) return;
@@ -2017,6 +2068,7 @@ async function quitarEvaluacionActual(){
   toast('Evaluación quitada ✔');
 }
 async function terminarEvaluacion(){
+  if(esSoloLectura()){ toast('Este reporte ya se envió a Odoo — para cambios, edítalo directo ahí.', true); return; }
   const n = sesionActual.header.estaciones;
   if(!confirm(`¿Terminar el reporte con ${n} evaluación${n===1?'':'es'}? Podrás seguir editando antes de guardarlo si hace falta.`)) return;
   sesionActual.updatedAt = new Date().toISOString();
@@ -2109,6 +2161,14 @@ function renderResumen(readOnly){
     cont.appendChild(wrap);
   });
   document.querySelector('#screen-resumen .btn-primary').style.display = readOnly ? 'none' : 'block';
+  document.getElementById('bannerSoloLecturaResumen')?.remove();
+  if(readOnly){
+    const banner = document.createElement('div');
+    banner.id = 'bannerSoloLecturaResumen';
+    banner.className = 'banner-solo-lectura';
+    banner.innerHTML = '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
+    document.getElementById('resumenSub').insertAdjacentElement('afterend', banner);
+  }
   restaurarFirmas();
 }
 
@@ -2635,6 +2695,7 @@ async function compartirPDF(){
 }
 
 async function guardarEvaluacionFinal(){
+  if(esSoloLectura()){ toast('Este reporte ya se envió a Odoo — para cambios, edítalo directo ahí.', true); goScreen('screen-home'); return; }
   sesionActual.status = 'pending_sync';
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
