@@ -1,4 +1,4 @@
-const CACHE_NAME = 'recuentos-campo-v2'; // subir este número obliga a refrescar el caché entero
+const CACHE_NAME = 'recuentos-campo-v3'; // subir este número obliga a refrescar el caché entero
 const APP_SHELL = [
   './recuentosEf.html',
   './manifest.json'
