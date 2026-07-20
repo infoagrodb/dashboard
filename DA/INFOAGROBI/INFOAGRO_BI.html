@@ -261,6 +261,26 @@
     padding:10px;font-size:13.5px;font-weight:600;cursor:pointer;
   }
   .modal-id-btn:disabled{opacity:.6;cursor:default;}
+
+  .modal-orden-tarjeta{max-width:380px;}
+  .lista-orden{display:flex;flex-direction:column;gap:6px;margin:14px 0;max-height:340px;overflow-y:auto;}
+  .fila-orden{
+    display:flex;align-items:center;gap:10px;padding:9px 11px;
+    border:1px solid var(--borde);border-radius:9px;background:#fbfbf9;font-size:13px;
+  }
+  .fila-orden i.bi{color:var(--verde-oscuro);font-size:15px;flex-shrink:0;width:16px;text-align:center;}
+  .fila-orden span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--texto);}
+  .fila-orden .flechas{display:flex;flex-direction:column;gap:3px;}
+  .fila-orden .flechas button{
+    border:none;background:var(--verde-oscuro);color:#fff;width:22px;height:17px;border-radius:4px;
+    cursor:pointer;font-size:9px;line-height:1;display:flex;align-items:center;justify-content:center;
+  }
+  .fila-orden .flechas button:hover{background:var(--verde-medio);}
+  .fila-orden .flechas button:disabled{opacity:.3;cursor:default;background:#a8b3ac;}
+  .modal-orden-acciones{display:flex;gap:8px;margin-top:4px;}
+  .modal-orden-acciones .modal-id-btn{flex:1;margin:0;}
+  .modal-id-btn.secundario{background:#fff;color:var(--verde-oscuro);border:1px solid var(--borde);}
+  .modal-id-btn.secundario:hover{background:var(--fondo);}
   .presencia-cambiar{
     display:block;text-align:center;font-size:11px;color:#8a9690;
     padding:6px 4px 2px;cursor:pointer;border-top:1px solid var(--borde);margin-top:4px;
@@ -299,9 +319,12 @@
     </div>
 
     <div class="sidebar-nav" id="sidebarNav">
-      <div class="sidebar-seccion-titulo">Clima</div>
-      <button class="item activo" data-archivo="DbPluviosidad_INFOAGRO_BI.html" data-vista="Pluviosidad" data-sub="Análisis histórico">
-        <i class="bi bi-cloud-rain"></i><span>Pluviosidad</span>
+      <div class="sidebar-seccion-titulo">Campo</div>
+      <button class="item activo" data-archivo="DbSiembrayGerminacion_INFOAGRO_BI.html" data-vista="Siembra y Germinación" data-sub="Maní">
+        <i class="bi bi-flower2"></i><span>Siembra y Germinación</span>
+      </button>
+      <button class="item" data-archivo="Recuentos_INFOAGRO_BI.html" data-vista="Recuentos de Enfermedades" data-sub="Fitosanitario · 2012-2026">
+        <i class="bi bi-clipboard2-pulse"></i><span>Recuentos de Enfermedades</span>
       </button>
 
       <div class="sidebar-seccion-titulo">Operaciones</div>
@@ -312,12 +335,9 @@
         <i class="bi bi-cart-check"></i><span>Requerimiento y Presupuesto</span>
       </button>
 
-      <div class="sidebar-seccion-titulo">Campo</div>
-      <button class="item" data-archivo="DbSiembrayGerminacion_INFOAGRO_BI.html" data-vista="Siembra y Germinación" data-sub="Maní">
-        <i class="bi bi-flower2"></i><span>Siembra y Germinación</span>
-      </button>
-      <button class="item" data-archivo="Recuentos_INFOAGRO_BI.html" data-vista="Recuentos de Enfermedades" data-sub="Fitosanitario · 2012-2026">
-        <i class="bi bi-clipboard2-pulse"></i><span>Recuentos de Enfermedades</span>
+      <div class="sidebar-seccion-titulo">Clima</div>
+      <button class="item" data-archivo="DbPluviosidad_INFOAGRO_BI.html" data-vista="Pluviosidad" data-sub="Análisis histórico">
+        <i class="bi bi-cloud-rain"></i><span>Pluviosidad</span>
       </button>
 
       <div class="sidebar-seccion-titulo">Mapeo</div>
@@ -327,7 +347,7 @@
     </div>
 
     <div class="sidebar-inferior">
-      <button class="item" type="button"><i class="bi bi-gear"></i><span>Configuración</span></button>
+      <button class="item" type="button" id="btnConfigOrden"><i class="bi bi-gear"></i><span>Configuración</span></button>
       <button class="item" type="button"><i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span></button>
     </div>
   </nav>
@@ -354,6 +374,18 @@
     </div>
   </div>
 
+  <div class="modal-id-overlay" id="modalOrdenOverlay">
+    <div class="modal-id-tarjeta modal-orden-tarjeta">
+      <h3>Orden del menú</h3>
+      <p>Ordena las secciones como prefieras. La primera de la lista es la que se carga al abrir el panel.</p>
+      <div class="lista-orden" id="listaOrdenSecciones"></div>
+      <div class="modal-orden-acciones">
+        <button class="modal-id-btn secundario" id="btnRestablecerOrden" type="button">Por defecto</button>
+        <button class="modal-id-btn" id="btnGuardarOrden" type="button">Guardar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="principal">
     <div class="topbar">
       <button class="btn-menu-movil" id="btnAbrirSidebar" type="button" title="Abrir menú">
@@ -363,7 +395,7 @@
 
     <div class="contenido">
       <div class="estado-carga" id="estadoCarga"><span class="spinner"></span> Cargando sección…</div>
-      <iframe class="panel-iframe" id="frameSeccion" src="DbPluviosidad_INFOAGRO_BI.html"></iframe>
+      <iframe class="panel-iframe" id="frameSeccion" src="DbSiembrayGerminacion_INFOAGRO_BI.html"></iframe>
     </div>
   </div>
 
@@ -390,7 +422,7 @@
   // El shell ya NO maneja filtros: cada sección tiene su propio panel de filtros
   // (Compañía/Sector/Ciclo/Finca), visible dentro de su propio iframe, tal como
   // funcionaba antes de intentar centralizarlo aquí.
-  let archivoActivo = null;
+  let archivoActivo = 'DbSiembrayGerminacion_INFOAGRO_BI.html';
 
   items.forEach((item) => {
     item.addEventListener('click', (e) => {
@@ -408,13 +440,185 @@
     window.archivoActivo = archivo;
     estadoCarga.classList.remove('oculto');
     frame.src = archivo;
+    document.dispatchEvent(new CustomEvent('infoagro:seccion', { detail: { archivo } }));
   }
   window.archivoActivo = archivoActivo;
+  window._cambiarSeccion = cambiarSeccion; // usado por el módulo de "orden del menú"
+  window._itemsSidebar = items;            // idem
 
   frame.addEventListener('load', () => {
     estadoCarga.classList.add('oculto');
   });
 
+})();
+
+// ============ ORDEN PERSONALIZADO DEL MENÚ ============
+(function(){
+  const URL_PRESENCIA = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+  const sidebarNav   = document.getElementById('sidebarNav');
+  const btnConfig    = document.getElementById('btnConfigOrden');
+  const overlay      = document.getElementById('modalOrdenOverlay');
+  const lista        = document.getElementById('listaOrdenSecciones');
+  const btnGuardar   = document.getElementById('btnGuardarOrden');
+  const btnReset     = document.getElementById('btnRestablecerOrden');
+  if(!sidebarNav || !btnConfig) return;
+
+  // Orden por defecto = el orden con el que quedó el HTML (fuente de verdad si
+  // el usuario nunca configuró nada, o si le da "Por defecto").
+  const ORDEN_DEFECTO = [...sidebarNav.querySelectorAll('.item[data-archivo]')].map(b => b.dataset.archivo);
+
+  const botones = () => [...sidebarNav.querySelectorAll('.item[data-archivo]')];
+
+  function aplicarOrden(orden){
+    if(!orden || !orden.length) return;
+    const porArchivo = {};
+    botones().forEach(b => { porArchivo[b.dataset.archivo] = b; });
+
+    // Los títulos de sección (Campo/Operaciones/Clima/Mapeo) asumen el orden
+    // por defecto — con un orden personalizado ya no aplican, se quitan.
+    sidebarNav.querySelectorAll('.sidebar-seccion-titulo').forEach(t => t.remove());
+
+    orden.forEach(archivo => { if(porArchivo[archivo]) sidebarNav.appendChild(porArchivo[archivo]); });
+    // Si el sistema agrega una sección nueva que el usuario no tenía guardada,
+    // se agrega al final en vez de desaparecer.
+    botones().forEach(b => { if(!orden.includes(b.dataset.archivo)) sidebarNav.appendChild(b); });
+
+    const primero = sidebarNav.querySelector('.item[data-archivo]');
+    if(primero && window._cambiarSeccion){
+      botones().forEach(b => b.classList.remove('activo'));
+      primero.classList.add('activo');
+      window._cambiarSeccion(primero.dataset.archivo);
+    }
+  }
+
+  async function cargarPreferencia(usuario){
+    try{
+      const r = await fetch(`${URL_PRESENCIA}/preferencias?usuario=${encodeURIComponent(usuario)}`, { cache: 'no-store' });
+      const data = await r.json();
+      if(data.ok && data.orden && data.orden.length) aplicarOrden(data.orden);
+    }catch(e){ /* silencioso: si falla, se queda con el orden por defecto */ }
+  }
+
+  document.addEventListener('infoagro:identificado', (e) => cargarPreferencia(e.detail.usuario));
+  const usuarioGuardado = localStorage.getItem('ib_usuario');
+  if(usuarioGuardado) cargarPreferencia(usuarioGuardado); // cubre recargas normales
+
+  // ---- Modal de configuración (flechas ▲▼, sin depender de drag & drop) ----
+  let ordenTemporal = [];
+
+  function renderLista(){
+    lista.innerHTML = ordenTemporal.map((archivo, idx) => {
+      const b = botones().find(x => x.dataset.archivo === archivo);
+      if(!b) return '';
+      const icono = b.querySelector('i.bi')?.className || 'bi bi-circle';
+      const texto = b.querySelector('span')?.textContent || b.dataset.vista || archivo;
+      return `
+        <div class="fila-orden" data-archivo="${archivo}">
+          <i class="${icono}"></i><span>${texto}</span>
+          <div class="flechas">
+            <button type="button" data-dir="-1" ${idx===0?'disabled':''}>▲</button>
+            <button type="button" data-dir="1" ${idx===ordenTemporal.length-1?'disabled':''}>▼</button>
+          </div>
+        </div>`;
+    }).join('');
+
+    lista.querySelectorAll('button[data-dir]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const fila = btn.closest('.fila-orden');
+        const idx  = ordenTemporal.indexOf(fila.dataset.archivo);
+        const destino = idx + parseInt(btn.dataset.dir);
+        if(destino < 0 || destino >= ordenTemporal.length) return;
+        [ordenTemporal[idx], ordenTemporal[destino]] = [ordenTemporal[destino], ordenTemporal[idx]];
+        renderLista();
+      });
+    });
+  }
+
+  btnConfig.addEventListener('click', () => {
+    ordenTemporal = botones().map(b => b.dataset.archivo); // el orden actual como punto de partida
+    renderLista();
+    overlay.classList.add('activo');
+  });
+  overlay.addEventListener('click', (e) => { if(e.target === overlay) overlay.classList.remove('activo'); });
+
+  async function guardarEnServidor(orden){
+    const usuario = window._usuarioActual || localStorage.getItem('ib_usuario');
+    if(!usuario) return; // se aplica localmente, pero no hay a quién ligarlo en el servidor
+    try{
+      await fetch(`${URL_PRESENCIA}/preferencias`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ usuario, orden })
+      });
+    }catch(e){ /* silencioso */ }
+  }
+
+  btnGuardar.addEventListener('click', () => {
+    aplicarOrden(ordenTemporal);
+    overlay.classList.remove('activo');
+    guardarEnServidor(ordenTemporal);
+  });
+
+  btnReset.addEventListener('click', () => {
+    aplicarOrden(ORDEN_DEFECTO);
+    overlay.classList.remove('activo');
+    guardarEnServidor(null);
+  });
+})();
+
+// ============ MÉTRICAS DE USO (adopción real, no presencia en vivo) ============
+// No usa KV: acumula eventos en localStorage y los manda en lotes al Worker,
+// que los agrega a data/metricas_uso.json en GitHub — mismo patrón que ya usa
+// el Worker para muestreo_gps.json. Un commit por hora como mucho, no por evento.
+(function(){
+  const URL_PRESENCIA      = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+  const CLAVE_BUFFER       = 'ib_metricas_buffer';
+  const INTERVALO_ENVIO_MS = 60 * 60 * 1000; // 1 hora
+
+  function leerBuffer(){
+    try{ return JSON.parse(localStorage.getItem(CLAVE_BUFFER) || '[]'); }catch(e){ return []; }
+  }
+  function guardarBuffer(buf){
+    try{ localStorage.setItem(CLAVE_BUFFER, JSON.stringify(buf)); }catch(e){}
+  }
+
+  function registrarEvento(evento, archivo){
+    const usuario = window._usuarioActual || localStorage.getItem('ib_usuario');
+    if(!usuario) return; // sin identidad no se registra nada
+    const buf = leerBuffer();
+    buf.push({
+      usuario,
+      nombre:  localStorage.getItem('ib_nombre') || usuario,
+      evento,                                            // 'inicio' | 'vista'
+      seccion: (archivo || '').replace('_INFOAGRO_BI.html', ''),
+      fecha:   new Date().toISOString(),
+    });
+    guardarBuffer(buf);
+  }
+
+  function enviarBuffer(usarBeacon){
+    const buf = leerBuffer();
+    if(!buf.length) return;
+    const payload = JSON.stringify({ eventos: buf });
+    if(usarBeacon){
+      const enviado = navigator.sendBeacon(
+        URL_PRESENCIA + '/metricas/registrar',
+        new Blob([payload], { type: 'application/json' })
+      );
+      if(enviado) guardarBuffer([]);
+    } else {
+      fetch(URL_PRESENCIA + '/metricas/registrar', {
+        method: 'POST', headers: {'Content-Type':'application/json'}, body: payload,
+      }).then(()=> guardarBuffer([])).catch(()=>{});
+    }
+  }
+
+  document.addEventListener('infoagro:identificado', () => registrarEvento('inicio', window.archivoActivo));
+  document.addEventListener('infoagro:seccion', (e) => registrarEvento('vista', e.detail.archivo));
+
+  setInterval(() => enviarBuffer(false), INTERVALO_ENVIO_MS);
+  window.addEventListener('pagehide', () => enviarBuffer(true));
+  window.addEventListener('beforeunload', () => enviarBuffer(true));
 })();
 
 // ============ PRESENCIA DE USUARIOS CONECTADOS ============
@@ -448,6 +652,8 @@
     usuario = u; nombreCompleto = n; inic = iniciales(n, u);
     localStorage.setItem('ib_usuario', u);
     localStorage.setItem('ib_nombre', n || u);
+    window._usuarioActual = u;
+    document.dispatchEvent(new CustomEvent('infoagro:identificado', { detail: { usuario: u, nombre: n } }));
   }
 
   function limpiarIdentidad(){
@@ -638,9 +844,10 @@
     }
 
     tickPresencia();
-    setInterval(tickPresencia, 45000);
+    setInterval(tickPresencia, 180000); // cada 3 minutos (antes 45s) — cuida la cuota de KV
   }
 })();
+
 </script>
 
 </body>
