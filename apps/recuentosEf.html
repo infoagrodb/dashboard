@@ -190,6 +190,15 @@
     display:block;width:100%;background:var(--rojo);border:none;color:#fff;font-size:0.88rem;font-weight:700;
     padding:11px;margin-top:8px;border-radius:12px;
   }
+  .banner-actualizacion{
+    background:var(--verde-oscuro); color:#fff; padding:10px 14px;
+    display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+    font-size:0.85rem; font-weight:600;
+  }
+  .banner-actualizacion button{
+    background:var(--verde-claro); color:var(--verde-oscuro); border:none; padding:7px 16px;
+    border-radius:99px; font-weight:700; font-size:0.8rem; flex-shrink:0;
+  }
   .banner-solo-lectura{
     background:var(--ambar-bg);color:#8a5c15;border:1.5px solid var(--ambar);border-radius:12px;
     padding:11px 14px;font-size:0.85rem;font-weight:600;margin-bottom:14px;
@@ -524,6 +533,10 @@
         <p>Se actualizan solos cada vez que abres la app (si hay señal). No necesitas hacer nada.</p>
         <div id="catalogoInfo" style="font-size:0.78rem;color:var(--texto-suave);"></div>
       </div>
+
+      <p style="text-align:center;font-size:0.72rem;color:var(--texto-suave);margin-top:8px;">
+        Versión de la app: <span id="appVersionTxt"></span>
+      </p>
     </section>
 
   </main>
@@ -974,6 +987,9 @@ function folioTemporalDeSesion(sesion){
   return `${brand.codigo}-M-${anio}-TMP-${sufijo}`;
 }
 
+// Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
+// que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
+const APP_VERSION = "2026.07.18-1";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -1740,7 +1756,7 @@ function poblarFormularioDesdeSesion(){
     const banner = document.createElement('div');
     banner.id = 'bannerSoloLecturaForm';
     banner.className = 'banner-solo-lectura';
-    banner.innerHTML = '🔒 Este reporte ya se envió. Quedó en solo lectura — para hacer cambios llama a Yorlene, para que te lo libere de nuevo y puedas edítarlo.';
+    banner.innerHTML = '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
     document.querySelector('#screen-form').insertAdjacentElement('afterbegin', banner);
   }
 }
@@ -2458,10 +2474,10 @@ async function construirDocPDF(sesion){
   doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(91,95,82);
   doc.text(folioEsProvisional ? 'Folio provisional (offline)' : 'N° de folio', pageW-marginX, y+4, {align:'right'});
 
-  y += 11;
+  y += 9;
   doc.setDrawColor(31,61,43); doc.setLineWidth(0.6);
   doc.line(marginX, y, pageW-marginX, y);
-  y += 6;
+  y += 5;
 
   // ---- Datos generales (grid de 3 columnas) ----
   const campos = [
@@ -2489,15 +2505,6 @@ async function construirDocPDF(sesion){
     doc.text(String(c[1]||''), x, yy+4);
   });
   y += Math.ceil(campos.length/3)*8 + 3;
-
-  if(h.observacion){
-    doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(91,95,82);
-    doc.text('OBSERVACIÓN', marginX, y);
-    doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(0,0,0);
-    const obsLines = doc.splitTextToSize(h.observacion, pageW-marginX*2);
-    doc.text(obsLines, marginX, y+4);
-    y += 4 + obsLines.length*3.3 + 3;
-  }
 
   // ---- Tabla principal: 34 tipos, 10 columnas fijas (regla de la empresa) ----
   const MAX_PLANTAS_PDF = 10;
@@ -2534,10 +2541,22 @@ async function construirDocPDF(sesion){
     pageBreak: 'avoid',
     rowPageBreak: 'avoid',
   });
-  y = doc.lastAutoTable.finalY + 8;
+  y = doc.lastAutoTable.finalY + 4;
+
+  // ---- Observación (entre la tabla y las firmas) ----
+  if(h.observacion){
+    doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(91,95,82);
+    doc.text('OBSERVACIÓN', marginX, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.3); doc.setTextColor(0,0,0);
+    const obsLines = doc.splitTextToSize(h.observacion, pageW-marginX*2);
+    doc.text(obsLines, marginX, y+3);
+    y += 3 + obsLines.length*2.7 + 3.5;
+  } else {
+    y += 4;
+  }
 
   // ---- Firmas (misma hoja que la tabla; solo salta de página si de verdad no cabe) ----
-  if(y > 258){ doc.addPage(); y = 20; }
+  if(y > 267){ doc.addPage(); y = 20; }
   const firmaW = 55, firmaH = 14;
   doc.setDrawColor(100,100,100); doc.setLineWidth(0.3);
 
@@ -2711,6 +2730,7 @@ function sesionToPayload(s){
   const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
   return {
     localId: s.localId,
+    app_version: APP_VERSION,
     header: s.header,
     gpsPorPlanta: s.gpsPorPlanta || {},
     lines: Object.values(s.lines).map(l=>({
@@ -2786,45 +2806,61 @@ async function subirFotosDeSesion(sessionLocalId, odooId, recuentosUrl, key){
 }
 let syncProgress = null; // {current, total} mientras sincronizarTodo() está corriendo
 
+let syncEnCurso = false;
 async function sincronizarTodo(){
+  if(syncEnCurso){ toast('Ya hay una sincronización en curso — espera a que termine'); return; }
   if(!navigator.onLine){ toast('Sin conexión — no se puede sincronizar ahora', true); return; }
-  const list = await idbGetAllSessions();
-  const pendientes = list.filter(s=>s.status==='pending_sync'||s.status==='error');
-  let ok=0, fail=0;
-  if(pendientes.length>0){
-    syncProgress = { current:0, total:pendientes.length };
-    renderEstadoPill();
-  }
-  for(const s of pendientes){
-    sincronizandoLocalId = s.localId;
-    renderEstadoPill();
-    if(document.getElementById('screen-home').classList.contains('active')) renderHome();
-    try{
-      const odooId = await sincronizarSesion(s);
-      s.status='synced'; s.odooId=odooId; s.lastError=null;
-      await idbPutSession(s);
-      ok++;
-    }catch(e){
-      s.status='error'; s.lastError=e.message;
-      await idbPutSession(s);
-      fail++;
+  syncEnCurso = true;
+  const btn = document.querySelector("button[onclick='sincronizarTodo()']");
+  if(btn) btn.disabled = true;
+  try{
+    const list = await idbGetAllSessions();
+    const pendientes = list.filter(s=>s.status==='pending_sync'||s.status==='error');
+    let ok=0, fail=0;
+    if(pendientes.length>0){
+      syncProgress = { current:0, total:pendientes.length };
+      renderEstadoPill();
     }
-    syncProgress.current++;
-    renderEstadoPill();
-  }
-  sincronizandoLocalId = null;
-  syncProgress = null;
-  // Reintenta fotos que quedaron pendientes de sesiones ya sincronizadas anteriormente
-  const url = await kvGet('worker_url', DEFAULT_WORKER_URL); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
-  if(url){
-    const yaSincronizadas = list.filter(s=>s.status==='synced' && s.odooId);
-    for(const s of yaSincronizadas){
-      await subirFotosDeSesion(s.localId, s.odooId, url, key);
+    for(const s of pendientes){
+      // Re-lee el estado más reciente de esta sesión por si otra pasada la marcó 'synced'
+      // mientras esta pasada esperaba su turno (defensa extra, aunque el candado de arriba
+      // ya debería evitar que esto ocurra).
+      const fresca = (await idbGetAllSessions()).find(x=>x.localId===s.localId);
+      if(!fresca || fresca.status==='synced'){ continue; }
+
+      sincronizandoLocalId = s.localId;
+      renderEstadoPill();
+      if(document.getElementById('screen-home').classList.contains('active')) renderHome();
+      try{
+        const odooId = await sincronizarSesion(fresca);
+        fresca.status='synced'; fresca.odooId=odooId; fresca.lastError=null;
+        await idbPutSession(fresca);
+        ok++;
+      }catch(e){
+        fresca.status='error'; fresca.lastError=e.message;
+        await idbPutSession(fresca);
+        fail++;
+      }
+      syncProgress.current++;
+      renderEstadoPill();
     }
+    sincronizandoLocalId = null;
+    syncProgress = null;
+    // Reintenta fotos que quedaron pendientes de sesiones ya sincronizadas anteriormente
+    const url = await kvGet('worker_url', DEFAULT_WORKER_URL); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
+    if(url){
+      const yaSincronizadas = list.filter(s=>s.status==='synced' && s.odooId);
+      for(const s of yaSincronizadas){
+        await subirFotosDeSesion(s.localId, s.odooId, url, key);
+      }
+    }
+    if(pendientes.length===0 && fail===0){ toast('No hay evaluaciones pendientes'); }
+    else toast(fail===0 ? `${ok} evaluación(es) enviadas a Odoo ✔` : `${ok} enviadas, ${fail} con error`, fail>0);
+    renderHome();
+  } finally {
+    syncEnCurso = false;
+    if(btn) btn.disabled = false;
   }
-  if(pendientes.length===0 && fail===0){ toast('No hay evaluaciones pendientes'); }
-  else toast(fail===0 ? `${ok} evaluación(es) enviadas a Odoo ✔` : `${ok} enviadas, ${fail} con error`, fail>0);
-  renderHome();
 }
 async function intentarSincronizarSilencioso(){
   if(!navigator.onLine) return;
@@ -2947,7 +2983,22 @@ async function refrescarCatalogos(silencioso){
 /* =========================================================================
    INIT
    ========================================================================= */
+/** Aviso fijo arriba de todo: hay una versión nueva instalada en segundo plano, esperando
+ *  a que el técnico recargue para verla. No desaparece solo — se queda hasta que toquen
+ *  "Actualizar ahora", para no perder de vista el aviso en medio de una captura. */
+function mostrarBannerActualizacion(){
+  if(document.getElementById('bannerActualizacion')) return;
+  const banner = document.createElement('div');
+  banner.id = 'bannerActualizacion';
+  banner.className = 'banner-actualizacion';
+  banner.innerHTML = `
+    <span>🔄 Hay una nueva versión de la app lista.</span>
+    <button onclick="window.location.reload()">Actualizar ahora</button>
+  `;
+  document.body.insertAdjacentElement('afterbegin', banner);
+}
 async function init(){
+  document.getElementById('appVersionTxt').textContent = APP_VERSION;
   const savedS = await kvGet('sectores', null); if(savedS) SECTORES = savedS;
   const savedCo = await kvGet('companias', null); if(savedCo) COMPANIAS = savedCo;
   const savedF = await kvGet('fincas', null); if(savedF) FINCAS = savedF;
@@ -2959,7 +3010,23 @@ async function init(){
   renderHome();
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('sw.js').catch(()=>{});
+    navigator.serviceWorker.register('sw.js').then(reg=>{
+      // 'updatefound' se dispara cuando el navegador detecta un sw.js distinto al que ya
+      // tenía — es decir, cuando de verdad subiste un cambio nuevo (y le subiste el número
+      // a CACHE_NAME). Como el propio sw.js ya hace skipWaiting() automático, la versión
+      // nueva queda lista en segundo plano, pero la pestaña abierta se sigue viendo con el
+      // JS viejo hasta que recargue — por eso avisamos aquí, en vez de dejar que se entere
+      // por su cuenta (o no se entere nunca, si no vuelve a cerrar la app).
+      reg.addEventListener('updatefound', ()=>{
+        const nuevoSW = reg.installing;
+        if(!nuevoSW) return;
+        nuevoSW.addEventListener('statechange', ()=>{
+          if(nuevoSW.state==='installed' && navigator.serviceWorker.controller){
+            mostrarBannerActualizacion();
+          }
+        });
+      });
+    }).catch(()=>{});
   }
 
   // Fincas/lotes/ciclos son livianos: se refrescan solos en segundo plano si hay señal,
