@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Actualizar Datos — Panel de Control</title>
+<style>
+:root {
+  --bg:         #f0f4f8;
+  --panel:      #ffffff;
+  --panel2:     #f8fafc;
+  --line:       #e2e8f0;
+  --red:        #dc2626;
+  --green:      #16a34a;
+  --blue:       #1e40af;
+  --muted:      #64748b;
+  --accent1:    #2563eb;
+  --white:      #0f172a;
+  --shadow-sm:  0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04);
+  --shadow-md:  0 4px 6px -1px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.06);
+  --radius:     14px;
+  --radius-sm:  8px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--white);
+  padding: 24px;
+  min-height: 100vh;
+}
+.wrap { max-width: 900px; margin: 0 auto; }
+header { margin-bottom: 20px; }
+header h1 { font-size: 22px; font-weight: 700; }
+header p { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.token-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.token-row input[type="password"], .token-row input[type="text"] {
+  flex: 1 1 280px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  background: var(--panel2);
+}
+.token-row label.chk { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.hint { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.hint a { color: var(--accent1); }
+
+.btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: filter .15s, transform .1s;
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-primary { background: var(--accent1); color: #fff; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
+.btn-ghost { background: var(--panel2); color: var(--white); border: 1px solid var(--line); }
+.btn-ghost:hover:not(:disabled) { background: #eef2f7; }
+.btn-sm { padding: 6px 12px; font-size: 12px; }
+
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 4px; }
+.toolbar h2 { font-size: 15px; font-weight: 700; }
+
+.list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+}
+.row .name { font-size: 13.5px; font-weight: 600; }
+.row .file { font-size: 11.5px; color: var(--muted); font-family: monospace; }
+.row .right { display: flex; align-items: center; gap: 10px; }
+
+.status { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.status.idle    { background: #eef2f7; color: var(--muted); }
+.status.queued  { background: #fef3c7; color: #92400e; }
+.status.running { background: #dbeafe; color: var(--blue); }
+.status.success { background: #dcfce7; color: var(--green); }
+.status.failure { background: #fee2e2; color: var(--red); }
+
+footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 18px; }
+footer a { color: var(--accent1); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Actualizar Datos</h1>
+    <p>Dispara manualmente los workflows de GitHub Actions que sincronizan los datos de Odoo.</p>
+  </header>
+
+  <div class="card">
+    <div class="token-row">
+      <input type="password" id="tokenInput" placeholder="Token de acceso personal de GitHub (ghp_...)">
+      <label class="chk"><input type="checkbox" id="saveToken"> Recordar en este navegador</label>
+      <button class="btn btn-ghost btn-sm" id="clearToken">Borrar token</button>
+    </div>
+    <div class="hint">
+      Necesitas un <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">token de acceso personal (fine-grained)</a>
+      del repositorio <strong>infoagrodb/dashboard</strong> con permiso <strong>Actions: Read and write</strong>.
+      El token solo se usa en tu navegador para llamar a la API de GitHub y, si marcas la casilla, se guarda únicamente en
+      <code>localStorage</code> de este dispositivo — nunca se envía a ningún otro sitio ni se sube al repositorio.
+      No compartas esta página con el token guardado si el equipo es compartido.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <h2>Workflows</h2>
+      <button class="btn btn-primary" id="runAll">Actualizar todo</button>
+    </div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <footer>
+    Repositorio: <a href="https://github.com/infoagrodb/dashboard/actions" target="_blank" rel="noopener">infoagrodb/dashboard → Actions</a>
+  </footer>
+</div>
+
+<script>
+const OWNER = "infoagrodb";
+const REPO = "dashboard";
+const REF = "main";
+const API = `https://api.github.com/repos/${OWNER}/${REPO}`;
+
+// file -> etiqueta amigable
+const WORKFLOWS = [
+  ["gzp_ApuntesAnaliticos.yml",        "Apuntes Analíticos GZP"],
+  ["gzp_ApuntesContables.yml",         "Apuntes Contables GZP"],
+  ["gzp_Compras_Ordenes.yml",          "Órdenes de Compra GZP"],
+  ["gzp_Contratos.yml",                "Contratos GZP"],
+  ["gzp_Empleados.yml",                "Empleados GZP"],
+  ["gzp_ManoObra_CostosGastos.yml",    "Costos y Gastos Mano de Obra GZP"],
+  ["gzp_ManoObra_DiasHombre.yml",      "Días Hombre Mano de Obra GZP"],
+  ["gzp_MovimientosInventario.yml",    "Movimientos de Inventario GZP"],
+  ["gzp_Productos.yml",                "Productos GZP"],
+  ["gzp_ValuacionesInventario.yml",    "Valuaciones de Inventario GZP"],
+  ["info_Acopio.yml",                  "Recuento de Acopio"],
+  ["info_AvancesActividades.yml",      "Avances de Actividades"],
+  ["info_Campo_Enfermedades.yml",      "Recuentos de Enfermedades"],
+  ["info_Campo_Germinacion.yml",       "Recuentos de Germinación"],
+  ["info_Campo_MadurezyProyeccionCosecha.yml", "Madurez y Proyección de Cosecha"],
+  ["info_Campo_Siembra.yml",           "Recuentos de Siembra"],
+  ["info_Combustible_Despachos.yml",   "Despachos de Combustible"],
+  ["info_Insumos_Consumo.yml",         "Consumo de Insumos"],
+  ["info_Pluviosidad.yml",             "Pluviosidad"],
+  ["info_relacionCicloFinca.yml",      "Relación Ciclo Finca"],
+  ["odoo-proxy.yml",                   "Odoo Proxy (general)"],
+  ["odoo_DetalleDespachosCombustible.yml", "Detalle Despachos Combustible"],
+];
+
+const TOKEN_KEY = "dashboard_gh_pat";
+const tokenInput = document.getElementById("tokenInput");
+const saveToken = document.getElementById("saveToken");
+const listEl = document.getElementById("list");
+
+const stored = localStorage.getItem(TOKEN_KEY);
+if (stored) { tokenInput.value = stored; saveToken.checked = true; }
+
+tokenInput.addEventListener("input", () => {
+  if (saveToken.checked) localStorage.setItem(TOKEN_KEY, tokenInput.value.trim());
+});
+saveToken.addEventListener("change", () => {
+  if (saveToken.checked) localStorage.setItem(TOKEN_KEY, tokenInput.value.trim());
+  else localStorage.removeItem(TOKEN_KEY);
+});
+document.getElementById("clearToken").addEventListener("click", () => {
+  tokenInput.value = "";
+  saveToken.checked = false;
+  localStorage.removeItem(TOKEN_KEY);
+});
+
+function getToken() {
+  const t = tokenInput.value.trim();
+  if (!t) { alert("Ingresa primero tu token de acceso personal de GitHub."); return null; }
+  return t;
+}
+
+function ghHeaders(token) {
+  return {
+    "Accept": "application/vnd.github+json",
+    "Authorization": `Bearer ${token}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+}
+
+function setStatus(rowEl, cls, text) {
+  const badge = rowEl.querySelector(".status");
+  badge.className = `status ${cls}`;
+  badge.textContent = text;
+}
+
+async function dispatchWorkflow(file, rowEl) {
+  const token = getToken();
+  if (!token) return;
+  const btn = rowEl.querySelector(".btn");
+  btn.disabled = true;
+  setStatus(rowEl, "queued", "Disparando…");
+
+  const since = new Date().toISOString();
+  try {
+    const res = await fetch(`${API}/actions/workflows/${file}/dispatches`, {
+      method: "POST",
+      headers: { ...ghHeaders(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: REF }),
+    });
+    if (res.status !== 204) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.message || `HTTP ${res.status}`);
+    }
+    setStatus(rowEl, "queued", "En cola…");
+    await pollRun(file, rowEl, since);
+  } catch (err) {
+    setStatus(rowEl, "failure", "Error: " + err.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function pollRun(file, rowEl, since) {
+  const token = tokenInput.value.trim();
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 4000));
+    try {
+      const res = await fetch(
+        `${API}/actions/workflows/${file}/runs?event=workflow_dispatch&created=>${since}&per_page=1`,
+        { headers: ghHeaders(token) }
+      );
+      if (!res.ok) continue;
+      const data = await res.json();
+      const run = data.workflow_runs && data.workflow_runs[0];
+      if (!run) continue;
+
+      if (run.status !== "completed") {
+        setStatus(rowEl, "running", "Ejecutando…");
+        rowEl.querySelector(".status").onclick = () => window.open(run.html_url, "_blank");
+        continue;
+      }
+      if (run.conclusion === "success") {
+        setStatus(rowEl, "success", "✓ Actualizado");
+      } else {
+        setStatus(rowEl, "failure", "✗ " + run.conclusion);
+      }
+      rowEl.querySelector(".status").style.cursor = "pointer";
+      rowEl.querySelector(".status").onclick = () => window.open(run.html_url, "_blank");
+      return;
+    } catch (_) { /* reintenta en el próximo ciclo */ }
+  }
+  setStatus(rowEl, "idle", "Sin confirmar — revisa Actions");
+}
+
+function buildRow([file, label]) {
+  const row = document.createElement("div");
+  row.className = "row";
+  row.innerHTML = `
+    <div>
+      <div class="name">${label}</div>
+      <div class="file">${file}</div>
+    </div>
+    <div class="right">
+      <span class="status idle">Sin ejecutar</span>
+      <button class="btn btn-ghost btn-sm">Actualizar</button>
+    </div>
+  `;
+  row.querySelector(".btn").addEventListener("click", () => dispatchWorkflow(file, row));
+  return row;
+}
+
+WORKFLOWS.forEach(w => listEl.appendChild(buildRow(w)));
+
+document.getElementById("runAll").addEventListener("click", async () => {
+  if (!getToken()) return;
+  const rows = [...listEl.children];
+  for (const row of rows) {
+    const file = row.querySelector(".file").textContent;
+    dispatchWorkflow(file, row);
+    await new Promise(r => setTimeout(r, 600)); // evita saturar la API en ráfaga
+  }
+});
+</script>
+</body>
+</html>
