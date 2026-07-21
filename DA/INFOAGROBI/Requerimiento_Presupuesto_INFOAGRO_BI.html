@@ -75,11 +75,39 @@
   .badge-danger{background:#fee2e2; color:#991b1b; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700;}
   .fila-total td{background:#f0fdf4; font-weight:800; border-top:2px solid #1b4332;}
   .vacio{padding:40px; text-align:center; color:#94a3b8; font-size:13px;}
-  .th-sort-ind{opacity:.6; font-size:9px; margin-left:3px;}
   table.tabla-datos thead th{white-space:nowrap;}
-  tr.fila-filtro-columna th{position:sticky; top:28px; z-index:4; background:#eef2f0; padding:4px 8px !important;}
-  .input-filtro-col{width:100%; box-sizing:border-box; font-size:10.5px; padding:3px 6px; border:1px solid rgba(163,177,198,0.5); border-radius:5px; font-weight:400; text-transform:none; letter-spacing:normal; color:#334155; background:#fff;}
-  .input-filtro-col::placeholder{color:#94a3b8;}
+
+  /* ---------- Encabezado interactivo (mismo patrón que la plantilla oficial) ---------- */
+  .th-cell{display:flex; align-items:center; gap:5px;}
+  .th-label{flex:1; overflow:hidden; text-overflow:ellipsis; cursor:pointer; user-select:none;}
+  .th-orden{font-size:10px; opacity:.95; min-width:10px; text-align:center; color:#fff;}
+  .th-filtro{
+    background:rgba(255,255,255,.28); border:none; color:#fff; cursor:pointer;
+    font-size:12px; width:22px; height:22px; border-radius:50%; display:flex; align-items:center;
+    justify-content:center; line-height:1; opacity:.75; transform:scale(1);
+    box-shadow:0 1px 2px rgba(17,24,39,.15); transition:opacity .12s, transform .12s, background .12s; flex-shrink:0;
+  }
+  .th-filtro:hover{background:rgba(255,255,255,.45); opacity:1; transform:scale(1.08);}
+  .th-filtro.activo{opacity:1; transform:scale(1); background:#52b788; color:#fff;
+    box-shadow:0 0 0 2px rgba(82,183,136,.35), 0 1px 2px rgba(17,24,39,.2);}
+
+  /* ---------- Panel de filtro tipo Excel (buscador + checkboxes) ---------- */
+  .ms-panel{
+    background:#fff; border:1px solid var(--border-color); border-radius:10px;
+    box-shadow:var(--shadow-md); width:240px; max-height:340px; display:none;
+    flex-direction:column; overflow:hidden;
+  }
+  .ms-panel.abierto{display:flex;}
+  .ms-panel .ms-buscar{padding:8px; border-bottom:1px solid var(--border-color); flex-shrink:0;}
+  .ms-panel .ms-buscar input{width:100%; border:1px solid var(--border-color); border-radius:6px; padding:6px 8px; font-size:12.5px;}
+  .ms-panel .ms-todos{padding:6px 12px; border-bottom:1px solid var(--border-color); font-size:12.5px; display:flex; align-items:center; gap:8px; flex-shrink:0; color:var(--text-muted);}
+  .ms-panel .ms-lista{overflow-y:auto; flex:1; padding:4px 0;}
+  .ms-panel .ms-opcion{display:flex; align-items:center; gap:8px; padding:6px 12px; font-size:13px; cursor:pointer;}
+  .ms-panel .ms-opcion:hover{background:#f1f5f9;}
+  .ms-panel .ms-pie{display:flex; justify-content:flex-end; gap:8px; padding:8px; border-top:1px solid var(--border-color); flex-shrink:0;}
+  .ms-btn{border:1px solid var(--border-color); border-radius:6px; padding:6px 12px; font-size:12.5px; cursor:pointer; background:#fff;}
+  .ms-btn.primario{background:#1b4332; border-color:#1b4332; color:#fff;}
+  .ms-btn.primario:hover{background:#163a2a;}
 
   /* ---------- Responsive: nunca perder esto de vista al seguir agregando cosas ---------- */
   @media (max-width: 900px){
@@ -461,12 +489,16 @@ function fmtFecha(f){
 function fmtMoneda(v){ return '$' + Number(v||0).toLocaleString('es-NI', {minimumFractionDigits:2, maximumFractionDigits:2}); }
 
 // ===================== TABLAS: ordenar y filtrar por columna =====================
-// Genérico y reutilizable en las 4 tablas — se activa llamando a
-// activarTablaInteractiva('idDeLaTabla') justo después de que el render de turno
-// terminó de llenar el tbody con TODAS las filas (sin filtrar).
-const TABLA_MASTER = {};      // tablaId -> [{html, cells:[texto normalizado,...]}]
+// Mismo patrón que la plantilla oficial (PLANTILLA_Elementos_UI_Infoagro-1.html):
+// ícono ▾ flotante por columna (aparece al pasar el mouse, o siempre semi-visible en
+// touch) que abre un panel con buscador + checkboxes tipo Excel, no un simple texto.
+// Se activa llamando a activarTablaInteractiva('idDeLaTabla') justo después de que el
+// render de turno terminó de llenar el tbody con TODAS las filas (sin filtrar).
+const TABLA_MASTER = {};      // tablaId -> [{html, cells:[texto de cada celda, sin normalizar]}]
 const TABLA_TOTAL_HTML = {};  // tablaId -> outerHTML de la fila .fila-total, si la tabla tiene una
 const TABLA_ORDEN = {};       // tablaId -> {col: idx, dir: 1|-1}
+const TABLA_FILTROS = {};     // tablaId -> { colIdx: Set(valoresPermitidos) } — ausente = sin filtro = todos
+let _panelFiltroTablaActivo = null;
 
 function activarTablaInteractiva(tablaId){
   const tabla = document.getElementById(tablaId);
@@ -481,26 +513,90 @@ function activarTablaInteractiva(tablaId){
   const filas = [...tbody.querySelectorAll('tr')].filter(tr => !tr.querySelector('.vacio') && !tr.classList.contains('fila-total'));
   TABLA_MASTER[tablaId] = filas.map(tr => ({
     html: tr.outerHTML,
-    cells: [...tr.children].map(td => normTxt(td.textContent)),
+    cells: [...tr.children].map(td => td.textContent.trim()),
   }));
 
-  const headerRow = thead.querySelector('tr:not(.fila-filtro-columna)');
+  const headerRow = thead.querySelector('tr');
   if(headerRow && !headerRow.dataset.wired){
     headerRow.dataset.wired = '1';
     [...headerRow.children].forEach((th, idx) => {
       const texto = th.textContent.trim();
-      th.innerHTML = `<span class="th-click" style="cursor:pointer; user-select:none;">${texto}<span class="th-sort-ind">↕</span></span>`;
-      th.querySelector('.th-click').addEventListener('click', () => ordenarTabla(tablaId, idx));
+      th.innerHTML = `<div class="th-cell">
+        <span class="th-label" onclick="ordenarTabla('${tablaId}', ${idx})">${texto}</span>
+        <span class="th-orden" id="thOrden_${tablaId}_${idx}"></span>
+        <button type="button" class="th-filtro" id="thFiltro_${tablaId}_${idx}" title="Filtrar" onclick="event.stopPropagation(); abrirFiltroColumnaTabla('${tablaId}', ${idx}, this)">▾</button>
+      </div>`;
     });
-    const filaFiltro = document.createElement('tr');
-    filaFiltro.className = 'fila-filtro-columna';
-    filaFiltro.innerHTML = [...headerRow.children].map((th, idx) =>
-      `<th><input type="text" class="input-filtro-col" placeholder="Filtrar…" oninput="filtrarTabla('${tablaId}')"></th>`
-    ).join('');
-    thead.appendChild(filaFiltro);
   }
 
+  if(!TABLA_FILTROS[tablaId]) TABLA_FILTROS[tablaId] = {};
   aplicarFiltroYOrden(tablaId);
+}
+
+// Valores únicos disponibles para esa columna, respetando los filtros YA activos en
+// las DEMÁS columnas (cascada tipo Excel) — igual que valoresDisponibles() en la plantilla.
+function valoresDisponiblesColumnaTabla(tablaId, colIdx){
+  const master = TABLA_MASTER[tablaId] || [];
+  const filtros = TABLA_FILTROS[tablaId] || {};
+  const filas = master.filter(f =>
+    Object.entries(filtros).every(([idx, set]) => Number(idx)===colIdx || set.has(f.cells[idx]))
+  );
+  return [...new Set(filas.map(f => f.cells[colIdx]))].sort((a,b)=> a.localeCompare(b, 'es', {numeric:true}));
+}
+
+function cerrarPanelFiltroTabla(){
+  if(_panelFiltroTablaActivo){ _panelFiltroTablaActivo.remove(); _panelFiltroTablaActivo = null; }
+}
+document.addEventListener('click', cerrarPanelFiltroTabla);
+window.addEventListener('resize', cerrarPanelFiltroTabla);
+document.addEventListener('scroll', cerrarPanelFiltroTabla, true);
+
+function abrirFiltroColumnaTabla(tablaId, colIdx, btnEl){
+  const yaAbierto = _panelFiltroTablaActivo && _panelFiltroTablaActivo.dataset.owner === `${tablaId}_${colIdx}`;
+  cerrarPanelFiltroTabla();
+  if(yaAbierto) return;
+
+  const opciones = valoresDisponiblesColumnaTabla(tablaId, colIdx);
+  const seleccionActual = (TABLA_FILTROS[tablaId] && TABLA_FILTROS[tablaId][colIdx]) || new Set(opciones);
+
+  const panel = document.createElement('div');
+  panel.className = 'ms-panel abierto';
+  panel.dataset.owner = `${tablaId}_${colIdx}`;
+  panel.innerHTML = `
+    <div class="ms-buscar"><input type="text" placeholder="Buscar..."></div>
+    <div class="ms-todos"><label><input type="checkbox" class="chk-todos" ${seleccionActual.size===opciones.length?'checked':''}> Seleccionar todo</label></div>
+    <div class="ms-lista">${opciones.map(v=>`<label class="ms-opcion"><input type="checkbox" value="${(v||'').replace(/"/g,'&quot;')}" ${seleccionActual.has(v)?'checked':''}> ${v || '(vacío)'}</label>`).join('')}</div>
+    <div class="ms-pie"><button type="button" class="ms-btn cancelar">Cancelar</button><button type="button" class="ms-btn primario aceptar">Aceptar</button></div>`;
+  document.body.appendChild(panel);
+
+  const r = btnEl.getBoundingClientRect();
+  const vh = window.innerHeight, vw = window.innerWidth;
+  let top = r.bottom + 4, left = r.left;
+  if(top + 340 > vh) top = Math.max(8, r.top - 340 - 4);
+  if(left + 240 > vw) left = vw - 240 - 8;
+  panel.style.position = 'fixed'; panel.style.top = top+'px'; panel.style.left = left+'px';
+  panel.style.width = '240px'; panel.style.zIndex = 900;
+
+  panel.addEventListener('click', e => e.stopPropagation());
+  panel.querySelector('.chk-todos').addEventListener('change', e => {
+    panel.querySelectorAll('.ms-lista input').forEach(c => c.checked = e.target.checked);
+  });
+  panel.querySelector('.ms-buscar input').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    panel.querySelectorAll('.ms-opcion').forEach(op => {
+      op.style.display = op.textContent.toLowerCase().includes(q) ? 'flex' : 'none';
+    });
+  });
+  panel.querySelector('.cancelar').addEventListener('click', cerrarPanelFiltroTabla);
+  panel.querySelector('.aceptar').addEventListener('click', () => {
+    const marcados = [...panel.querySelectorAll('.ms-lista input:checked')].map(c => c.value);
+    if(!TABLA_FILTROS[tablaId]) TABLA_FILTROS[tablaId] = {};
+    if(marcados.length === opciones.length) delete TABLA_FILTROS[tablaId][colIdx];
+    else TABLA_FILTROS[tablaId][colIdx] = new Set(marcados);
+    cerrarPanelFiltroTabla();
+    aplicarFiltroYOrden(tablaId);
+  });
+  _panelFiltroTablaActivo = panel;
 }
 
 function aplicarFiltroYOrden(tablaId){
@@ -509,10 +605,10 @@ function aplicarFiltroYOrden(tablaId){
   const tbody = tabla.querySelector('tbody');
   let filas = TABLA_MASTER[tablaId] || [];
 
-  const inputs = [...tabla.querySelectorAll('.input-filtro-col')];
-  const filtros = inputs.map((inp, idx) => ({ idx, v: normTxt(inp.value) })).filter(f => f.v);
-  if(filtros.length){
-    filas = filas.filter(f => filtros.every(flt => (f.cells[flt.idx]||'').includes(flt.v)));
+  const filtros = TABLA_FILTROS[tablaId] || {};
+  const entradasFiltro = Object.entries(filtros);
+  if(entradasFiltro.length){
+    filas = filas.filter(f => entradasFiltro.every(([idx, set]) => set.has(f.cells[idx])));
   }
 
   const orden = TABLA_ORDEN[tablaId];
@@ -527,9 +623,14 @@ function aplicarFiltroYOrden(tablaId){
     });
   }
 
-  const colspan = tabla.querySelectorAll('thead th').length / 2; // header + fila-filtro cuentan doble los th totales
+  // Marca visualmente qué columnas tienen filtro activo (ícono sólido, como la plantilla)
+  tabla.querySelectorAll('thead th .th-filtro').forEach((btn, idx) => {
+    btn.classList.toggle('activo', !!filtros[idx]);
+  });
+
+  const colspan = tabla.querySelectorAll('thead th').length;
   if(!filas.length){
-    tbody.innerHTML = `<tr><td colspan="${colspan}" class="vacio">Sin resultados con el filtro de columna actual.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colspan}" class="vacio">Sin resultados con los filtros de columna actuales.</td></tr>`;
   } else {
     tbody.innerHTML = filas.map(f=>f.html).join('') + (TABLA_TOTAL_HTML[tablaId] || '');
   }
@@ -539,13 +640,11 @@ function ordenarTabla(tablaId, colIdx){
   const actual = TABLA_ORDEN[tablaId];
   const dir = (actual && actual.col===colIdx) ? actual.dir * -1 : 1;
   TABLA_ORDEN[tablaId] = { col: colIdx, dir };
-  document.getElementById(tablaId).querySelectorAll('.th-sort-ind').forEach((el,idx)=>{
-    el.textContent = idx===colIdx ? (dir===1 ? ' ▲' : ' ▼') : ' ↕';
+  document.getElementById(tablaId).querySelectorAll('.th-orden').forEach((el,idx)=>{
+    el.textContent = idx===colIdx ? (dir===1 ? '↑' : '↓') : '';
   });
   aplicarFiltroYOrden(tablaId);
 }
-
-function filtrarTabla(tablaId){ aplicarFiltroYOrden(tablaId); }
 
 // ===================== DETALLE DE SIEMBRA POR LOTE =====================
 // Mismo criterio que el modal del GANTT: fuente x_orden_campo_line_662d7 (Consumo de
