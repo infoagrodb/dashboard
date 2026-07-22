@@ -812,9 +812,15 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     position:fixed; top:0; left:0; right:0; bottom:0; z-index:590;
     background:#ffffff; max-height:none !important; opacity:1 !important;
     overflow-y:auto; padding:64px 16px 90px !important; flex-direction:column; align-items:stretch;
-    box-shadow:0 0 0 100vmax rgba(15,23,42,.4);
+    box-shadow:0 0 0 100vmax rgba(15,23,42,.4); gap:16px !important;
   }
-  .tf-campos-grupo.filters-wrapper:not(.collapsed) .tf-campo{ min-width:100%; }
+  /* flex:1 1 130px (heredado de la fila en escritorio) hace que cada campo se estire
+     para ocupar una porción IGUAL de todo el alto disponible al pasar a columna — de
+     ahí huecos enormes entre Compañía/Sector/Ciclo/Finca. Cada campo debe medir solo
+     lo que necesita su contenido. */
+  .tf-campos-grupo.filters-wrapper:not(.collapsed) .tf-campo{
+    min-width:100%; max-width:100%; width:100%; flex:0 0 auto;
+  }
 }
 
 </style>
@@ -1210,6 +1216,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
 
 <script>
   let DB_RAW = [];
+  let CICLO_ACTIVO_GANTT = null; // ciclo detectado como "activo" (ej. Mani 2026) — usado para extender el rango de fechas de Avance de Actividades hasta hoy
   let TOOLTIP_REGISTRY = {};
   let SELECCIONES = { proveedor: [], sector: [], ciclo: [], finca: [], actividad: [] };
   let COMPAIA_SELECCIONADA = "Division Agricola Comasa"; 
@@ -1367,7 +1374,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         const ciclosMani = ciclosDetectados.filter(c => /^mani/i.test(c.trim()));
         const candidatos = ciclosMani.length ? ciclosMani : ciclosDetectados;
         const cicloActivo = candidatos.sort().pop(); // mayor alfabéticamente = más reciente (Mani 2026 > Mani 2025)
-        if (cicloActivo) { SELECCIONES.ciclo = [cicloActivo]; SELECCIONES_INS.ciclo = [cicloActivo]; }
+        if (cicloActivo) { SELECCIONES.ciclo = [cicloActivo]; SELECCIONES_INS.ciclo = [cicloActivo]; CICLO_ACTIVO_GANTT = cicloActivo; }
       }
 
       buildHeaderCompaiaOptions();
@@ -1633,9 +1640,33 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     const panel = document.getElementById(idPanel);
     const abierto = panel.classList.contains('show');
     document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show'));
-    if(!abierto) panel.classList.add('show');
+    if(!abierto){
+      panel.classList.add('show');
+      posicionarMsPanelGantt(panel, ev.currentTarget);
+    }
   };
   document.addEventListener('click', ()=>document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show')));
+
+  // Mismo motivo que en Recuentos: en celular el toolbar de filtros pasa a ser un
+  // overlay de pantalla completa con su propio scroll, y el panel "position:absolute"
+  // por CSS puede terminar fuera de lo visible (botón Aceptar inalcanzable). Se calcula
+  // como position:fixed relativo al viewport en vez de al contenedor scrolleable.
+  function posicionarMsPanelGantt(panel, disparador){
+    const r = disparador.getBoundingClientRect();
+    const vh = window.innerHeight, vw = window.innerWidth;
+    const anchoPanel = Math.max(r.width, 220);
+    const alturaPanel = Math.min(280, vh - 24);
+    let top = r.bottom + 4, left = r.left;
+    if(top + alturaPanel > vh) top = Math.max(8, r.top - alturaPanel - 4);
+    if(left + anchoPanel > vw) left = Math.max(8, vw - anchoPanel - 8);
+    panel.style.position = 'fixed';
+    panel.style.top = top + 'px';
+    panel.style.left = left + 'px';
+    panel.style.right = 'auto';
+    panel.style.marginTop = '0';
+    panel.style.width = anchoPanel + 'px';
+    panel.style.maxHeight = alturaPanel + 'px';
+  }
 
   window.actualizarSelectAllGantt = function(campo){
     const { panel: idPanel } = idsMsGantt(campo);
@@ -2241,8 +2272,9 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     if(_panelFiltroResumenActivo){ _panelFiltroResumenActivo.remove(); _panelFiltroResumenActivo = null; }
   }
   document.addEventListener('click', cerrarPanelFiltroResumen);
-  window.addEventListener('resize', cerrarPanelFiltroResumen);
-  document.addEventListener('scroll', cerrarPanelFiltroResumen, true);
+  // Nota: antes también se cerraba con 'resize' y 'scroll' — en celular, el teclado
+  // virtual al tocar el buscador dispara esos mismos eventos y cerraba el panel antes
+  // de poder marcar nada. Se deja únicamente el cierre por clic afuera.
 
   function abrirFiltroColumnaResumen(col, btnEl){
     const yaAbierto = _panelFiltroResumenActivo && _panelFiltroResumenActivo.dataset.owner === col;
@@ -2727,8 +2759,18 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     // el rango día por día entre la primera y la última fecha con datos, para no perder
     // ninguna fecha — las celdas de un día sin actividad ya muestran "-" correctamente.
     const fechasConDatos = [...new Set(filtered.map(r => r.fecha))].sort();
+    let fechaFinRango = fechasConDatos[fechasConDatos.length-1];
+    // Si el único ciclo filtrado es el ciclo ACTIVO (ej. Mani 2026, todavía en curso),
+    // el rango se extiende hasta HOY aunque el último avance registrado sea de días
+    // atrás — así no "desaparecen" los días recientes sin avance, se ven con "-".
+    // Para un ciclo cerrado/histórico esto no aplica (ahí sí tiene sentido cortar en
+    // la última fecha real).
+    if (CICLO_ACTIVO_GANTT && SELECCIONES.ciclo.length === 1 && SELECCIONES.ciclo[0] === CICLO_ACTIVO_GANTT) {
+      const hoyStr = new Date().toISOString().split('T')[0];
+      if (hoyStr > fechaFinRango) fechaFinRango = hoyStr;
+    }
     const listaFechasBase = [];
-    for(let d=new Date(fechasConDatos[0]+'T00:00:00'); d<=new Date(fechasConDatos[fechasConDatos.length-1]+'T00:00:00'); d.setDate(d.getDate()+1)){
+    for(let d=new Date(fechasConDatos[0]+'T00:00:00'); d<=new Date(fechaFinRango+'T00:00:00'); d.setDate(d.getDate()+1)){
       listaFechasBase.push(d.toISOString().split('T')[0]);
     }
     const columnasMapeadas = {}; 
