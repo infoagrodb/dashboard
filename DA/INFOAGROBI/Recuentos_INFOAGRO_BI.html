@@ -64,11 +64,12 @@
   .tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
   .tf-campo{ display:flex; flex-direction:column; gap:4px; min-width:170px; flex:1; position:relative; }
   .campo-dds{ max-width:110px; min-width:90px; flex:0 0 auto; }
+  .campo-fincas-historicas{ min-width:130px; max-width:150px; flex:0 0 auto; }
   .toggle-fincas-historicas{
-    display:flex; align-items:center; gap:5px; font-size:9.5px; color:var(--text-muted);
-    margin-top:2px; cursor:pointer; white-space:nowrap;
+    display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text-muted);
+    cursor:pointer; white-space:nowrap; height:36px; border:1px solid transparent;
   }
-  .toggle-fincas-historicas input{ accent-color:var(--primary); cursor:pointer; }
+  .toggle-fincas-historicas input{ accent-color:var(--primary); cursor:pointer; flex-shrink:0; }
   .tf-campo label{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
   .ms-dropdown {
     padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:#fff;
@@ -120,9 +121,11 @@
     .campo-sector{ order:2; }
     .campo-ciclo{ order:3; }
     .campo-finca{ order:4; }
-    .campo-familia{ order:5; }
-    .campo-recuento{ order:6; }
-    .campo-dds{ order:7; }
+    .campo-lote{ order:5; }
+    .campo-fincas-historicas{ order:6; }
+    .campo-familia{ order:7; }
+    .campo-recuento{ order:8; }
+    .campo-dds{ order:9; }
   }
 
   .nota-fuentes { font-size:11px; color:var(--text-muted); margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap; }
@@ -312,8 +315,16 @@
       <label>Finca</label>
       <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
       <div class="ms-panel" id="msFinca"></div>
+    </div>
+    <div class="tf-campo campo-lote">
+      <label>Lote de la Finca</label>
+      <div class="ms-dropdown" id="dropLote" onclick="toggleMs(event,'lote')">Todos</div>
+      <div class="ms-panel" id="msLote"></div>
+    </div>
+    <div class="tf-campo campo-fincas-historicas">
+      <label>&nbsp;</label>
       <label class="toggle-fincas-historicas" title="Por defecto solo se muestran las fincas con Siembra registrada en el ciclo actual — activá esto para sumar también las que no participan este ciclo.">
-        <input type="checkbox" id="chkFincasHistoricas" onchange="toggleIncluirFincasHistoricas(this.checked)"> Incluir fincas históricas
+        <input type="checkbox" id="chkFincasHistoricas" onchange="toggleIncluirFincasHistoricas(this.checked)"> Incluir históricas
       </label>
     </div>
     <div class="tf-campo campo-familia">
@@ -777,15 +788,15 @@ window.toggleIncluirFincasHistoricas = function(marcado){
   refrescarTabPorCicloSiVisible();
 };
 
-const ORDEN_FILTROS = ['compania','sector','ciclo','finca','familia','recuento','dds'];
-let seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] }; // vacío = todos
+const ORDEN_FILTROS = ['compania','sector','ciclo','finca','lote','familia','recuento','dds'];
+let seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], lote:[], familia:[], recuento:[], dds:[] }; // vacío = todos
 
 function universoPropio(){
   // Cascada real: cada campo se acota por lo ya elegido en los campos ANTERIORES de
   // ORDEN_FILTROS (Compañía condiciona Sector, Sector condiciona Ciclo, etc.), igual
   // que el resto de INFOAGRO BI.
   let base = RAW;
-  const camposRaw = { compania:'co', sector:'se', ciclo:'ci', finca:'fi', familia:'fa', recuento:'re' };
+  const camposRaw = { compania:'co', sector:'se', ciclo:'ci', finca:'fi', lote:'lo', familia:'fa', recuento:'re' };
   const universos = {};
 
   ORDEN_FILTROS.forEach(clave=>{
@@ -923,7 +934,7 @@ function actualizarTextoDropPropio(clave, totalUniverso){
 }
 
 function limpiarFiltrosPropios(){
-  seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] };
+  seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], lote:[], familia:[], recuento:[], dds:[] };
   construirFiltrosPropios();
   render();
   refrescarTabPorCicloSiVisible();
@@ -1014,6 +1025,7 @@ function datosFiltrados(){
   d = d.filter(r => !seleccionPropia.sector.length   || seleccionPropia.sector.includes(r.se));
   d = d.filter(r => !seleccionPropia.ciclo.length    || seleccionPropia.ciclo.includes(r.ci));
   d = d.filter(r => !seleccionPropia.finca.length    || seleccionPropia.finca.includes(r.fi));
+  d = d.filter(r => !seleccionPropia.lote.length      || seleccionPropia.lote.includes(r.lo));
   d = d.filter(r => !seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa));
   d = d.filter(r => !seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re));
   d = d.filter(r => !seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds));
