@@ -6,6 +6,8 @@
 <title>Recuentos de Enfermedades</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --bg-main: #FAFAF8;
@@ -62,6 +64,11 @@
   .tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
   .tf-campo{ display:flex; flex-direction:column; gap:4px; min-width:170px; flex:1; position:relative; }
   .campo-dds{ max-width:110px; min-width:90px; flex:0 0 auto; }
+  .toggle-fincas-historicas{
+    display:flex; align-items:center; gap:5px; font-size:9.5px; color:var(--text-muted);
+    margin-top:2px; cursor:pointer; white-space:nowrap;
+  }
+  .toggle-fincas-historicas input{ accent-color:var(--primary); cursor:pointer; }
   .tf-campo label{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
   .ms-dropdown {
     padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:#fff;
@@ -106,11 +113,13 @@
     .campo-dds{ max-width:none; }
     .tf-acciones{ width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px; }
     .tf-titulo{ width:100%; align-self:flex-start; margin-bottom:2px; }
-    /* Jerarquía en móvil: Compañía → Sector → Finca → resto de campos propios */
+    /* Jerarquía en móvil: igual orden que la cascada real (Compañía → Sector → Ciclo →
+       Finca → resto) — antes Finca aparecía antes que Ciclo, aunque Ciclo es el que
+       acota las opciones de Finca. */
     .campo-compania{ order:1; }
     .campo-sector{ order:2; }
-    .campo-finca{ order:3; }
-    .campo-ciclo{ order:4; }
+    .campo-ciclo{ order:3; }
+    .campo-finca{ order:4; }
     .campo-familia{ order:5; }
     .campo-recuento{ order:6; }
     .campo-dds{ order:7; }
@@ -123,9 +132,8 @@
   .kpi-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; margin-bottom:22px; }
   .kpi-card {
     background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:14px 16px;
-    cursor:pointer; box-shadow:var(--shadow-sm); border-left:4px solid var(--border-color); position:relative;
+    box-shadow:var(--shadow-sm); border-left:4px solid var(--border-color); position:relative;
   }
-  .kpi-card:hover { box-shadow:var(--shadow-md); transform:translateY(-1px); }
   .kpi-card.activa { border-color:var(--primary); box-shadow:0 0 0 2px var(--primary-light); }
   .kpi-card.est-ok { border-left-color:var(--ok); }
   .kpi-card.est-warn { border-left-color:var(--warn); }
@@ -137,12 +145,20 @@
   .kpi-badge { position:absolute; top:10px; right:10px; font-size:9px; font-weight:800; padding:2px 6px; border-radius:999px; }
   .kpi-badge.est-ok { background:#E4F0E8; color:var(--ok); }
   .kpi-badge.est-warn { background:#FBF0DC; color:var(--warn); }
+  .btn-ver-detalle{
+    display:block; width:100%; margin-top:10px; padding:7px 10px; border-radius:8px; border:1px solid var(--border-color);
+    background:var(--bg-page,#F7F8F6); color:var(--primary); font-size:11px; font-weight:800; cursor:pointer;
+  }
+  .btn-ver-detalle:hover{ background:var(--primary-light); border-color:var(--primary); }
+  .kpi-card.activa .btn-ver-detalle{ background:var(--primary); color:#fff; border-color:var(--primary); }
   .kpi-badge.est-danger { background:#F9E3E1; color:var(--danger); }
   .kpi-sub { font-size:10.5px; color:var(--text-muted); margin-top:4px; }
 
   /* ---------- Panel de detalle (gráfico + tabla) del recuento seleccionado ---------- */
-  .panel-detalle { background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px; box-shadow:var(--shadow-sm); display:none; }
-  .panel-detalle.show { display:block; }
+  .panel-detalle { background:var(--card-bg); border:1px solid var(--border-color); border-left:4px solid var(--border-color); border-radius:12px; padding:18px; box-shadow:var(--shadow-sm); margin-bottom:16px; }
+  .panel-detalle.est-ok { border-left-color:var(--ok); }
+  .panel-detalle.est-warn { border-left-color:var(--warn); }
+  .panel-detalle.est-danger { border-left-color:var(--danger); }
   .detalle-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
   .detalle-titulo { font-size:16px; font-weight:800; color:var(--primary); }
   .detalle-familia { font-size:11px; color:var(--text-muted); margin-top:2px; }
@@ -158,12 +174,112 @@
   table.tabla-detalle td { padding:7px 10px; border-bottom:1px solid var(--border-color); }
   table.tabla-detalle td.num { text-align:right; font-variant-numeric:tabular-nums; }
   .tabla-scroll { max-height:400px; overflow-y:auto; border:1px solid var(--border-color); border-radius:8px; }
+  .kpi-mini-grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:10px; margin-bottom:16px; }
+  .kpi-mini-card{ background:var(--bg-page,#F7F8F6); border:1px solid var(--border-color); border-radius:10px; padding:9px 12px; }
+  .kpi-mini-card .lbl{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); }
+  .kpi-mini-card .val{ font-size:17px; font-weight:800; color:var(--text-main); margin-top:2px; }
+  .kpi-mini-card.estado .val{ font-size:13px; }
+  .btn-toggle-tabla{
+    display:block; width:100%; padding:10px; margin-top:6px; border-radius:8px; border:1px dashed var(--border-color);
+    background:#fff; color:var(--primary); font-size:12.5px; font-weight:800; cursor:pointer;
+  }
+  .btn-toggle-tabla:hover{ background:var(--primary-light); }
 
   .pill-origen { font-size:9px; font-weight:800; padding:2px 6px; border-radius:999px; }
   .pill-origen.vivo { background:#E4F0E8; color:var(--ok); }
   .pill-origen.hist { background:#EFEDE6; color:#8a7550; }
 
   .vacio { text-align:center; padding:40px; color:var(--text-muted); font-size:13px; }
+
+  /* ---------- Tabs (mismo patrón del resto de INFOAGRO BI) ---------- */
+  .tabs-switch-container{ display:flex; gap:6px; overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px; }
+  .tab-switch-btn{
+    background:#fff; border:1px solid var(--border-color); color:var(--text-muted);
+    font-size:12px; font-weight:700; padding:8px 16px; border-radius:8px 3px 8px 3px; cursor:pointer; white-space:nowrap;
+    flex-shrink:0;
+  }
+  .tab-switch-btn.active{ background:var(--primary); color:#fff; border-color:var(--primary); }
+  .tab-panel-recuentos{ display:none; }
+  .tab-panel-recuentos.activo{ display:block; }
+
+  /* ---------- Tabla "Resultado por Ciclo" ---------- */
+  .table-toolbar-recuentos{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; flex-wrap:wrap; }
+  .nota-tabla-por-ciclo{ font-size:11px; color:var(--text-muted); max-width:720px; }
+  table.tabla-datos-recuentos{ width:100%; border-collapse:collapse; font-size:12px; }
+  table.tabla-datos-recuentos thead th{
+    position:sticky; top:0; z-index:5; background:var(--primary); color:#fff; padding:9px 12px; text-align:left;
+    font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;
+  }
+  table.tabla-datos-recuentos td{ padding:7px 12px; border-bottom:1px solid var(--border-color); white-space:nowrap; }
+  table.tabla-datos-recuentos td.num, table.tabla-datos-recuentos th.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  table.tabla-datos-recuentos tbody tr:hover{ background:var(--bg-hover,#f8fafc); }
+
+  /* Encabezado interactivo (orden + filtro por columna), mismo patrón que el resto */
+  .th-cell{ display:flex; align-items:center; gap:5px; }
+  .th-label{ flex:1; overflow:hidden; text-overflow:ellipsis; cursor:pointer; user-select:none; }
+  .th-orden{ font-size:10px; opacity:.95; min-width:10px; text-align:center; color:#fff; }
+  .th-filtro{
+    background:rgba(255,255,255,.28); border:none; color:#fff; cursor:pointer;
+    font-size:12px; width:22px; height:22px; border-radius:50%; display:inline-flex; align-items:center;
+    justify-content:center; line-height:1; opacity:.75; transform:scale(1); flex-shrink:0;
+    box-shadow:0 1px 2px rgba(17,24,39,.15); transition:opacity .12s, transform .12s, background .12s;
+  }
+  .th-filtro:hover{ background:rgba(255,255,255,.45); opacity:1; transform:scale(1.08); }
+  .th-filtro.activo{ opacity:1; transform:scale(1); background:#52b788; color:#fff;
+    box-shadow:0 0 0 2px rgba(82,183,136,.35), 0 1px 2px rgba(17,24,39,.2); }
+
+  /* ---------- Comparación Ciclo Actual vs Histórico ---------- */
+  .seccion-comparacion{ margin-top:28px; padding-top:20px; border-top:2px solid var(--border-color); }
+  .titulo-comparacion{ font-size:15px; font-weight:800; color:var(--text-main); margin:0 0 12px; }
+  .titulo-rango{ font-size:13px; font-weight:800; color:var(--text-main); margin:22px 0 10px; }
+  .kpi-comparacion-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:12px; margin-bottom:18px; }
+  .kpi-comp-card{ background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:12px 14px; box-shadow:var(--shadow-sm); border-left:4px solid var(--border-color); }
+  .kpi-comp-card.est-ok{ border-left-color:var(--ok); }
+  .kpi-comp-card.est-warn{ border-left-color:var(--warn); }
+  .kpi-comp-card.est-danger{ border-left-color:var(--danger); }
+  .kpi-comp-nombre{ font-size:11px; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.03em; margin-bottom:6px; }
+  .kpi-comp-filas{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:12px; margin-top:2px; }
+  .kpi-comp-filas b{ font-size:16px; color:var(--text-main); }
+  .kpi-comp-delta{ font-size:11.5px; font-weight:800; margin-top:6px; }
+  .kpi-comp-delta.pos{ color:var(--danger); }
+  .kpi-comp-delta.neg{ color:var(--ok); }
+  .kpi-comp-delta.neutro{ color:var(--text-muted); }
+  .chart-comparacion-wrap{ height:280px; margin-bottom:6px; }
+  .badge-rango{ font-size:10.5px; font-weight:800; padding:3px 9px; border-radius:999px; display:inline-block; }
+  .badge-rango.bajo{ background:#FEF3C7; color:#92400E; }
+  .badge-rango.normal{ background:#DCFCE7; color:#166534; }
+  .badge-rango.alto{ background:#FEE2E2; color:#991B1B; }
+  .badge-rango.sindato{ background:#F1F5F9; color:#64748B; }
+  .reporte-controles{ display:flex; align-items:flex-end; gap:14px; margin:14px 0; flex-wrap:wrap; }
+  .reporte-estado{ font-size:12px; color:var(--text-muted); margin-top:6px; }
+  .reporte-estado.error{ color:var(--danger); font-weight:700; }
+
+  /* ---------- Botón flotante de filtros (celular) — mismo patrón que el resto de
+     INFOAGRO BI: en pantallas angostas arranca colapsado y se abre con un FAB fijo. ---------- */
+  .fab-filtros{ display:none; }
+  @media (max-width: 820px){
+    #btnToggleFiltrosExtra{ display:none; }
+    .fab-filtros{
+      display:flex; position:fixed; bottom:18px; right:18px; z-index:600;
+      width:52px; height:52px; border-radius:50%; background:var(--primary); color:#fff;
+      align-items:center; justify-content:center; font-size:21px; border:none;
+      box-shadow:0 6px 18px rgba(0,0,0,.32); cursor:pointer;
+    }
+    .fab-filtros:active{ transform:scale(0.94); }
+    .tf-campos-grupo.filters-wrapper:not(.collapsed){
+      position:fixed; inset:0; z-index:590; background:#fff; overflow-y:auto;
+      padding:64px 16px 90px !important; flex-direction:column; align-items:stretch;
+      box-shadow:0 0 0 100vmax rgba(15,23,42,.4); max-height:none !important; opacity:1 !important;
+      gap:16px !important;
+    }
+    /* flex:1 (heredado de la fila en escritorio) hace que cada campo se estire para
+       ocupar una porción IGUAL de todo el alto disponible al pasar a columna — de ahí
+       los huecos enormes entre Compañía/Sector/Ciclo/Finca. Cada campo debe medir solo
+       lo que necesita su contenido. */
+    .tf-campos-grupo.filters-wrapper:not(.collapsed) .tf-campo{
+      min-width:100%; max-width:100%; width:100%; flex:0 0 auto;
+    }
+  }
 </style>
 </head>
 <body>
@@ -196,6 +312,9 @@
       <label>Finca</label>
       <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
       <div class="ms-panel" id="msFinca"></div>
+      <label class="toggle-fincas-historicas" title="Por defecto solo se muestran las fincas con Siembra registrada en el ciclo actual — activá esto para sumar también las que no participan este ciclo.">
+        <input type="checkbox" id="chkFincasHistoricas" onchange="toggleIncluirFincasHistoricas(this.checked)"> Incluir fincas históricas
+      </label>
     </div>
     <div class="tf-campo campo-familia">
       <label>Familia de Recuento</label>
@@ -245,29 +364,76 @@
   <div class="estado-carga" id="estadoCarga"><span class="spinner"></span> Cargando recuentos (Odoo + histórico DA + histórico GZP)…</div>
 
   <div id="contenido" style="display:none;">
-    <div class="kpi-grid" id="kpiGrid"></div>
-    <div class="vacio" id="vacioMsg" style="display:none;">No hay recuentos que coincidan con los filtros seleccionados.</div>
 
-    <div class="panel-detalle" id="panelDetalle">
-      <div class="detalle-header">
-        <div>
-          <div class="detalle-titulo" id="detalleTitulo">—</div>
-          <div class="detalle-familia" id="detalleFamilia">—</div>
-        </div>
-        <div class="detalle-acciones">
-          <button class="btn-accion sec" onclick="cerrarDetalle()">✕ Cerrar</button>
-          <button class="btn-accion" onclick="exportarDetalleExcel()">📥 Exportar Excel</button>
-        </div>
+    <div class="tabs-switch-container">
+      <button class="tab-switch-btn active" id="tabBtnKpis" onclick="cambiarTabRecuentos('kpis')">📊 Recuentos</button>
+      <button class="tab-switch-btn" id="tabBtnPorCiclo" onclick="cambiarTabRecuentos('porciclo')">📋 Resultado por Ciclo</button>
+      <button class="tab-switch-btn" id="tabBtnReporte" onclick="cambiarTabRecuentos('reporte')">📄 Reporte de Crecimiento</button>
+    </div>
+
+    <div class="tab-panel-recuentos activo" id="panelKpis">
+      <div class="vacio" id="vacioMsg" style="display:none;">No hay recuentos que coincidan con los filtros seleccionados.</div>
+      <div id="listaDetalles"></div>
+    </div>
+
+    <div class="tab-panel-recuentos" id="panelPorCiclo" style="display:none;">
+      <div class="table-toolbar-recuentos">
+        <span class="nota-tabla-por-ciclo">Promedio del resultado por Finca · Lote · DDS, con un ciclo por columna. Respeta los filtros de arriba (Familia/Tipo de Recuento incluidos) — si dejás varios tipos de recuento activos a la vez, la celda promedia todo junto.</span>
+        <button class="tf-icon tf-icon-excel" onclick="exportarTablaPorCicloExcel()" title="Exportar a Excel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+            <line x1="9" y1="13" x2="15" y2="19"/><line x1="15" y1="13" x2="9" y2="19"/>
+          </svg>
+        </button>
       </div>
-      <div class="chart-wrap"><canvas id="chartDetalle"></canvas></div>
-      <div class="nota-ventana-dds" id="notaVentanaDds" style="font-size:10.5px;color:var(--text-muted);margin:-10px 0 14px;"></div>
       <div class="tabla-scroll">
-        <table class="tabla-detalle" id="tablaDetalle">
-          <thead><tr><th>Finca</th><th>Lote</th><th>Sector</th><th>Ciclo</th><th>DDS</th><th>Fecha</th><th style="text-align:right">Resultado</th><th>Observación</th><th>Fuente</th></tr></thead>
-          <tbody id="tablaDetalleBody"></tbody>
+        <table class="tabla-datos-recuentos" id="tablaPorCiclo">
+          <thead><tr id="theadPorCicloRow"></tr></thead>
+          <tbody id="tbodyPorCiclo"></tbody>
         </table>
       </div>
+
+      <div class="seccion-comparacion" id="seccionComparacion">
+        <h2 class="titulo-comparacion">📈 Ciclo Actual vs Histórico</h2>
+        <div class="kpi-comparacion-grid" id="kpiComparacionGrid"></div>
+        <div class="chart-comparacion-wrap"><canvas id="chartComparacion"></canvas></div>
+        <h3 class="titulo-rango">🧪 Rango de referencia histórico (estilo análisis clínico)</h3>
+        <div class="tabla-scroll">
+          <table class="tabla-datos-recuentos" id="tablaRangoClinico">
+            <thead><tr>
+              <th>Tipo de Recuento</th><th>Familia</th>
+              <th class="num">Mínimo Histórico</th><th class="num">Mediana Histórica</th><th class="num">Máximo Histórico</th>
+              <th class="num">Ciclo Actual</th><th class="center">Estado</th>
+            </tr></thead>
+            <tbody id="tbodyRangoClinico"></tbody>
+          </table>
+        </div>
+      </div>
     </div>
+
+    <div class="tab-panel-recuentos" id="panelReporte" style="display:none;">
+      <div class="table-toolbar-recuentos">
+        <span class="nota-tabla-por-ciclo">
+          📄 Reporte tipo análisis clínico: la curva de crecimiento del ciclo actual (DDS = edad del cultivo) contra el rango histórico de <b>esa misma Finca</b> (mínimo/mediana/máximo), en cada Tipo de Recuento. Incluye el resumen de la Finca y el detalle por cada Lote.
+        </span>
+      </div>
+      <div class="reporte-controles">
+        <div class="tf-campo" style="min-width:220px;">
+          <label>Finca para el reporte</label>
+          <select id="selFincaReporte" class="ms-dropdown-select" onchange="poblarSelectorLoteReporte()"></select>
+        </div>
+        <div class="tf-campo" style="min-width:180px;">
+          <label>Lote (opcional)</label>
+          <select id="selLoteReporte" class="ms-dropdown-select">
+            <option value="">Todos los lotes</option>
+          </select>
+        </div>
+        <button class="btn-accion" id="btnGenerarReporte" onclick="generarReportePDF()">📄 Generar PDF</button>
+      </div>
+      <div class="reporte-estado" id="reporteEstado"></div>
+    </div>
+
   </div>
 
 </div>
@@ -542,16 +708,19 @@ async function cargarPluviosidad(){
 }
 
 async function cargarTodo(){
-  const [vivo, histDA, histGZP, fungicidas, lluvia] = await Promise.all([
+  const [vivo, histDA, histGZP, fungicidas, lluvia, fincasSiembra] = await Promise.all([
     cargarOdoo(),
     cargarHistorico(GITHUB_DA, 'hist'),
     cargarHistorico(GITHUB_GZP, 'hist'),
     cargarFungicidas(),
-    cargarPluviosidad()
+    cargarPluviosidad(),
+    cargarFincasConSiembra()
   ]);
   RAW = [...vivo, ...histDA, ...histGZP];
   FUNGICIDAS_POR_CLAVE = fungicidas;
   LLUVIA_POR_FINCA_FECHA = lluvia;
+  FINCAS_SIEMBRA_POR_CICLO = fincasSiembra;
+  CICLO_ACTUAL_NOMBRE = ordenarCiclosDesc([...new Set(RAW.map(r=>r.ci).filter(Boolean))])[0] || null;
   CARGA_LISTA = true;
 
   document.getElementById('estadoCarga').style.display = 'none';
@@ -559,10 +728,12 @@ async function cargarTodo(){
   document.getElementById('notaFuentes').innerHTML =
     `<span><b>${vivo.length.toLocaleString()}</b> registros en vivo (Odoo)</span>` +
     `<span><b>${(histDA.length+histGZP.length).toLocaleString()}</b> registros históricos (Excel 2012-2024)</span>` +
-    `<span><b>${RAW.length.toLocaleString()}</b> total combinado</span>`;
+    `<span><b>${RAW.length.toLocaleString()}</b> total combinado</span>` +
+    (CICLO_ACTUAL_NOMBRE ? `<span>Fincas activas: <b>${CICLO_ACTUAL_NOMBRE}</b> (desmarcá "Incluir fincas históricas" para verlas todas)</span>` : '');
 
   construirFiltrosPropios();
   render();
+  actualizarColapsoResponsivoFiltrosRec();
 }
 
 // ===================================================================
@@ -571,6 +742,41 @@ async function cargarTodo(){
 // Esta sección combina 3 fuentes (Odoo + histórico DA + histórico GZP), así que
 // todos sus filtros son propios — no depende de un panel de filtros del shell.
 // ===================================================================
+// --- Fincas con Siembra registrada, por Ciclo (x_orden_campo_line_b660b) ---
+// Se usa para NO mezclar por defecto fincas que no participan del ciclo actual (ej.
+// Mani 2026) con las que sí — evita comparar recuentos de una finca activa contra una
+// finca histórica que ese ciclo ni sembró. El usuario puede optar por incluirlas con
+// el checkbox "Incluir fincas históricas".
+let FINCAS_SIEMBRA_POR_CICLO = {}; // ciclo -> Set(fincas)
+let CICLO_ACTUAL_NOMBRE = null;
+let incluirFincasHistoricas = false;
+
+async function cargarFincasConSiembra(){
+  try{
+    const domain = encodeURIComponent(JSON.stringify([['x_studio_activiadad_realizada.x_name','=','Siembra']]));
+    const r = await fetch(`${WORKER}/query?base=info&model=x_orden_campo_line_b660b&fields=x_studio_finca,x_studio_ciclo&domain=${domain}&limit=5000`);
+    const j = await r.json();
+    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const mapa = {};
+    recs.forEach(rec=>{
+      const finca = Array.isArray(rec.x_studio_finca) ? rec.x_studio_finca[1] : rec.x_studio_finca;
+      const ciclo = Array.isArray(rec.x_studio_ciclo) ? rec.x_studio_ciclo[1] : rec.x_studio_ciclo;
+      if(!finca || !ciclo) return;
+      if(!mapa[ciclo]) mapa[ciclo] = new Set();
+      mapa[ciclo].add(finca);
+    });
+    return mapa;
+  }catch(e){ console.error('No se pudo cargar fincas con siembra por ciclo:', e); return {}; }
+}
+
+window.toggleIncluirFincasHistoricas = function(marcado){
+  incluirFincasHistoricas = marcado;
+  seleccionPropia.finca = []; // vuelve a "Todas" dentro del universo que corresponda, para no arrastrar una selección que ya no tenga sentido
+  construirFiltrosPropios();
+  render();
+  refrescarTabPorCicloSiVisible();
+};
+
 const ORDEN_FILTROS = ['compania','sector','ciclo','finca','familia','recuento','dds'];
 let seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] }; // vacío = todos
 
@@ -588,7 +794,12 @@ function universoPropio(){
       return;
     }
     const campo = camposRaw[clave];
-    universos[clave] = [...new Set(base.map(r=>r[campo]).filter(Boolean))].sort();
+    let opcionesFinca = [...new Set(base.map(r=>r[campo]).filter(Boolean))].sort();
+    if(clave==='finca' && !incluirFincasHistoricas && CICLO_ACTUAL_NOMBRE){
+      const fincasActivas = FINCAS_SIEMBRA_POR_CICLO[CICLO_ACTUAL_NOMBRE];
+      if(fincasActivas && fincasActivas.size) opcionesFinca = opcionesFinca.filter(f => fincasActivas.has(f));
+    }
+    universos[clave] = opcionesFinca;
     // Acotar "base" con la selección de este campo antes de calcular el siguiente
     const sel = seleccionPropia[clave];
     if(sel && sel.length) base = base.filter(r => sel.includes(r[campo]));
@@ -631,8 +842,34 @@ window.toggleMs = function(ev, clave){
   const panel = document.getElementById('ms'+cap(clave));
   const abierto = panel.classList.contains('show');
   document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show'));
-  if(!abierto) panel.classList.add('show');
+  if(!abierto){
+    panel.classList.add('show');
+    posicionarMsPanel(panel, ev.currentTarget);
+  }
 };
+
+// El panel normalmente se posiciona con CSS (position:absolute; top:100%, relativo al
+// campo). Eso se rompe en celular: el toolbar de filtros pasa a ser un overlay de
+// pantalla completa CON SU PROPIO SCROLL, así que un panel "absolute" puede terminar
+// posicionado fuera de lo visible — el botón Aceptar quedaba inalcanzable sin adivinar
+// que había que scrollear más. Se calcula la posición en JS como position:fixed
+// (relativo al viewport, no al contenedor scrolleable), igual patrón que ya se usa
+// para el filtro por columna de las tablas.
+function posicionarMsPanel(panel, disparador){
+  const r = disparador.getBoundingClientRect();
+  const vh = window.innerHeight, vw = window.innerWidth;
+  const anchoPanel = Math.max(r.width, 220);
+  const alturaPanel = Math.min(320, vh - 24);
+  let top = r.bottom + 4, left = r.left;
+  if(top + alturaPanel > vh) top = Math.max(8, r.top - alturaPanel - 4);
+  if(left + anchoPanel > vw) left = Math.max(8, vw - anchoPanel - 8);
+  panel.style.position = 'fixed';
+  panel.style.top = top + 'px';
+  panel.style.left = left + 'px';
+  panel.style.right = 'auto';
+  panel.style.width = anchoPanel + 'px';
+  panel.style.maxHeight = alturaPanel + 'px';
+}
 document.addEventListener('click', ()=>document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show')));
 
 window.actualizarSelectAllPropio = function(clave){
@@ -672,6 +909,7 @@ window.aplicarMsPropio = function(clave){
   // que le siguen en el orden.
   construirFiltrosPropios();
   render();
+  refrescarTabPorCicloSiVisible();
 };
 window.cerrarMsPropio = function(clave){ document.getElementById('ms'+cap(clave)).classList.remove('show'); construirFiltrosPropios(); };
 
@@ -688,11 +926,57 @@ function limpiarFiltrosPropios(){
   seleccionPropia = { compania:[], sector:[], ciclo:[], finca:[], familia:[], recuento:[], dds:[] };
   construirFiltrosPropios();
   render();
+  refrescarTabPorCicloSiVisible();
 }
 
-function toggleFiltrosExtra(){
-  document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed');
+function refrescarTabPorCicloSiVisible(){
+  const panel = document.getElementById('panelPorCiclo');
+  if(panel && panel.classList.contains('activo')) renderTablaPorCiclo();
+  const panelRep = document.getElementById('panelReporte');
+  if(panelRep && panelRep.classList.contains('activo')) poblarSelectorFincaReporte();
 }
+
+// El toolbar tiene position:sticky (para quedar fijo arriba al hacer scroll), pero eso
+// rompe el position:fixed de pantalla completa que usa el panel de filtros en celular
+// (un ancestro con position:sticky se vuelve el "contenedor" del fixed, en vez del
+// viewport). Por eso, al abrir en celular, el panel se saca temporalmente del toolbar
+// y se cuelga directo de <body> — y se devuelve a su lugar original al cerrarlo.
+let _filtrosOrigParent = null, _filtrosOrigNext = null;
+
+function toggleFiltrosExtra(){
+  const grupo = document.getElementById('panelFiltrosWrapper');
+  const esMobile = window.innerWidth < UMBRAL_COLAPSO_FILTROS_REC;
+  const seVaAAbrir = grupo.classList.contains('collapsed');
+
+  if(esMobile && seVaAAbrir && grupo.parentNode !== document.body){
+    _filtrosOrigParent = grupo.parentNode;
+    _filtrosOrigNext = grupo.nextSibling;
+    document.body.appendChild(grupo);
+  }
+
+  grupo.classList.toggle('collapsed');
+  const abierto = !grupo.classList.contains('collapsed');
+
+  if(!abierto && _filtrosOrigParent){
+    if(_filtrosOrigNext && _filtrosOrigNext.parentNode === _filtrosOrigParent) _filtrosOrigParent.insertBefore(grupo, _filtrosOrigNext);
+    else _filtrosOrigParent.appendChild(grupo);
+    _filtrosOrigParent = null; _filtrosOrigNext = null;
+  }
+
+  const icono = document.getElementById('fabFiltrosIcono');
+  if(icono) icono.textContent = abierto ? '✕' : '⚙️';
+}
+
+// Responsive: en pantallas angostas la barra de filtros arranca colapsada (el usuario
+// la abre con el botón flotante) para no comerse toda la pantalla antes de llegar a
+// los KPIs/tabla.
+const UMBRAL_COLAPSO_FILTROS_REC = 820;
+function actualizarColapsoResponsivoFiltrosRec(){
+  const grupo = document.getElementById('panelFiltrosWrapper');
+  if(!grupo) return;
+  if(window.innerWidth < UMBRAL_COLAPSO_FILTROS_REC) grupo.classList.add('collapsed');
+}
+window.addEventListener('resize', actualizarColapsoResponsivoFiltrosRec);
 
 // Exporta TODOS los registros que coinciden con los filtros activos (a diferencia de
 // exportarDetalleExcel, que exporta solo el recuento seleccionado en el panel de detalle).
@@ -721,7 +1005,8 @@ function exportarTodoExcel(){
 // ===================================================================
 // RENDER: tarjetas KPI por tipo de recuento
 // ===================================================================
-let recuentoSeleccionado = null; // idr del recuento activo en el panel de detalle
+// Cada tipo de recuento ahora se muestra directo (gráfico + KPIs), sin selección
+// previa por tarjeta — ver render() y renderBloqueDetalle().
 
 function datosFiltrados(){
   let d = RAW;
@@ -732,6 +1017,13 @@ function datosFiltrados(){
   d = d.filter(r => !seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa));
   d = d.filter(r => !seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re));
   d = d.filter(r => !seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds));
+  // Por defecto, no mezclar fincas que no participan del ciclo actual (sin Siembra
+  // registrada ahí) — salvo que el usuario haya activado "Incluir fincas históricas",
+  // o que ya haya elegido fincas puntuales a mano (ahí se respeta su elección tal cual).
+  if(!incluirFincasHistoricas && CICLO_ACTUAL_NOMBRE && !seleccionPropia.finca.length){
+    const fincasActivas = FINCAS_SIEMBRA_POR_CICLO[CICLO_ACTUAL_NOMBRE];
+    if(fincasActivas && fincasActivas.size) d = d.filter(r => fincasActivas.has(r.fi));
+  }
   return d;
 }
 
@@ -757,52 +1049,88 @@ function calcularEstado(valores, valorActual, familia){
   }
 }
 
+function hayFiltroActivo(){
+  return Object.values(seleccionPropia).some(arr => arr.length > 0);
+}
+
 function render(){
-  const datos = datosFiltrados();
-  const grid = document.getElementById('kpiGrid');
+  const lista = document.getElementById('listaDetalles');
   const vacioMsg = document.getElementById('vacioMsg');
 
-  if(!datos.length){
-    grid.innerHTML=''; vacioMsg.style.display='block';
-    cerrarDetalle();
+  // Con 83k+ registros combinados, calcular todo sin ningún filtro aplicado es lento y
+  // poco útil (mezclaría todo el histórico) — se pide elegir al menos un filtro antes.
+  if(!hayFiltroActivo()){
+    lista.innerHTML = '';
+    vacioMsg.style.display = 'block';
+    vacioMsg.innerHTML = '👆 Elegí al menos un filtro arriba (Compañía, Ciclo, Finca, Familia...) para calcular los resultados.';
     return;
   }
-  vacioMsg.style.display='none';
+
+  const datos = datosFiltrados();
+
+  if(!datos.length){
+    lista.innerHTML = '';
+    vacioMsg.style.display = 'block';
+    vacioMsg.innerHTML = 'No hay recuentos que coincidan con los filtros seleccionados.';
+    return;
+  }
+  vacioMsg.style.display = 'none';
 
   // Agrupar por (idr o nombre de recuento, cuando idr es nulo en legado)
   const grupos = {};
   datos.forEach(r=>{
     const clave = r.idr ? ('id'+r.idr) : ('nom'+normTxt(r.re));
-    if(!grupos[clave]) grupos[clave] = { familia:r.fa, nombre:r.re, esPorc:r.esPorc, valores:[], idr:r.idr };
+    if(!grupos[clave]) grupos[clave] = { familia:r.fa, nombre:r.re, esPorc:r.esPorc, valores:[], idr:r.idr, filas:[] };
     grupos[clave].valores.push(r.valor);
+    grupos[clave].filas.push(r);
   });
 
   const ordenGrupos = Object.values(grupos).sort((a,b)=>(a.idr||999)-(b.idr||999));
 
-  grid.innerHTML = ordenGrupos.map(g=>{
+  // Se guarda cada grupo por clave para que los bloques (export, tabla, etc.) no
+  // tengan que volver a filtrar datosFiltrados() cada vez.
+  _datosPorClave = {};
+  ordenGrupos.forEach(g=>{
+    const clave = g.idr ? ('id'+g.idr) : ('nom'+normTxt(g.nombre));
+    _datosPorClave[clave] = g.filas;
+  });
+
+  lista.innerHTML = ordenGrupos.map(g=>{
     const n = g.valores.length;
     const promedio = g.valores.reduce((a,b)=>a+b,0)/n;
     const estado = calcularEstado(g.valores, promedio, g.familia);
-    const valorTxt = g.esPorc ? (promedio*100).toFixed(1)+'%' : promedio.toFixed(1);
-    const claveActiva = g.idr ? ('id'+g.idr) : ('nom'+normTxt(g.nombre));
-    const activa = recuentoSeleccionado === claveActiva;
-    return `<div class="kpi-card est-${estado} ${activa?'activa':''}" onclick="abrirDetalle('${claveActiva.replace(/'/g,"\\'")}')">
-      <span class="kpi-badge est-${estado}">${estado==='danger'?'ALERTA':estado==='warn'?'ATENCIÓN':'OK'}</span>
-      <div class="kpi-familia">${g.familia||'—'}</div>
-      <div class="kpi-nombre">${g.nombre}</div>
-      <div class="kpi-valor">${valorTxt}</div>
-      <div class="kpi-sub">${n.toLocaleString()} registro${n!==1?'s':''}</div>
+    const clave = g.idr ? ('id'+g.idr) : ('nom'+normTxt(g.nombre));
+    return `<div class="panel-detalle est-${estado}" id="bloque_${clave}">
+      <div class="detalle-header">
+        <div>
+          <div class="detalle-familia">${g.familia||'—'}<span class="kpi-badge est-${estado}" style="position:static; margin-left:8px;">${estado==='danger'?'ALERTA':estado==='warn'?'ATENCIÓN':'OK'}</span></div>
+          <div class="detalle-titulo">${g.nombre}</div>
+        </div>
+        <div class="detalle-acciones">
+          <button class="btn-accion" onclick="exportarDetalleExcel('${clave}')">📥 Exportar Excel</button>
+        </div>
+      </div>
+      <div class="kpi-mini-grid" id="kpiMini_${clave}"></div>
+      <div class="chart-wrap"><canvas id="chart_${clave}"></canvas></div>
+      <div class="nota-ventana-dds" style="font-size:10.5px;color:var(--text-muted);margin:-10px 0 14px;">DDS = ventana estándar de recuento (10, 18, 28, 40… 160). Cada punto agrupa los registros cuyo DDS real cae en esa ventana; clic en un punto para ver el detalle completo por finca/lote.</div>
+      <button type="button" class="btn-toggle-tabla" id="btnTabla_${clave}" onclick="toggleTablaDetalle('${clave}')">📋 Mostrar tabla detalle</button>
+      <div class="tabla-scroll" id="wrapTabla_${clave}" style="display:none; margin-top:10px;">
+        <table class="tabla-detalle">
+          <thead><tr><th>Finca</th><th>Lote</th><th>Sector</th><th>Ciclo</th><th>DDS</th><th>Fecha</th><th style="text-align:right">Resultado</th><th>Observación</th><th>Fuente</th></tr></thead>
+          <tbody id="tbodyTabla_${clave}"></tbody>
+        </table>
+      </div>
     </div>`;
   }).join('');
 
-  if(recuentoSeleccionado){
-    const sigueExistiendo = ordenGrupos.some(g => (g.idr?('id'+g.idr):('nom'+normTxt(g.nombre))) === recuentoSeleccionado);
-    if(sigueExistiendo) renderDetalle();
-    else cerrarDetalle();
-  }
+  ordenGrupos.forEach(g=>{
+    const clave = g.idr ? ('id'+g.idr) : ('nom'+normTxt(g.nombre));
+    renderBloqueDetalle(clave, g.filas);
+  });
 }
 
-let chartDetalleInstancia = null;
+let _datosPorClave = {};
+let chartInstancias = {}; // clave -> instancia Chart.js
 
 // Modal fijo (no tooltip flotante) para el detalle de un punto del gráfico — se abre con
 // clic en el punto y sólo se cierra con el botón "Cerrar", para dar tiempo de leer
@@ -983,39 +1311,50 @@ window.cerrarModalPunto = function(){
   if(overlay) overlay.style.display = 'none';
 };
 
-window.abrirDetalle = function(clave){
-  recuentoSeleccionado = clave;
-  renderDetalle();
-  document.getElementById('panelDetalle').scrollIntoView({behavior:'smooth', block:'nearest'});
-};
-window.cerrarDetalle = function(){
-  recuentoSeleccionado = null;
-  document.getElementById('panelDetalle').classList.remove('show');
-  cerrarModalPunto();
-  render();
-};
+function renderBloqueDetalle(clave, datos){
+  if(!datos.length) return;
 
-function renderDetalle(){
-  const datos = datosFiltrados().filter(r=>{
-    const clave = r.idr ? ('id'+r.idr) : ('nom'+normTxt(r.re));
-    return clave === recuentoSeleccionado;
-  });
-  if(!datos.length){ cerrarDetalle(); return; }
+  // --- KPIs mini: Mínimo/Máximo/Media histórica + Estado actual, para este Tipo de
+  // Recuento con los filtros ya aplicados. "Histórico" = todo lo que NO sea el ciclo
+  // actual; "Actual" = el promedio del ciclo actual (o el ciclo elegido si ya hay uno
+  // puntual en el filtro de Ciclo). ---
+  const esPorc0 = datos[0].esPorc;
+  const familia0 = datos[0].fa;
+  const cicloActualDatos = CICLO_ACTUAL_NOMBRE && datos.some(d=>d.ci===CICLO_ACTUAL_NOMBRE) ? CICLO_ACTUAL_NOMBRE : null;
+  const valoresHist = (cicloActualDatos ? datos.filter(d=>d.ci!==cicloActualDatos) : datos).map(d=>d.valor);
+  const valoresActual = cicloActualDatos ? datos.filter(d=>d.ci===cicloActualDatos).map(d=>d.valor) : [];
+  const fmtMini = v => v==null ? '—' : (esPorc0 ? (v*100).toFixed(1)+'%' : v.toFixed(1));
 
-  const panel = document.getElementById('panelDetalle');
-  panel.classList.add('show');
-  document.getElementById('detalleTitulo').textContent = datos[0].re;
-  document.getElementById('detalleFamilia').textContent = datos[0].fa || '—';
+  const minH = valoresHist.length ? minArr(valoresHist) : null;
+  const maxH = valoresHist.length ? maxArr(valoresHist) : null;
+  const medH = valoresHist.length ? mediana(valoresHist) : null;
+  const promActual = valoresActual.length ? valoresActual.reduce((a,b)=>a+b,0)/valoresActual.length : null;
+
+  let estadoTxt = 'Sin datos del ciclo actual', estadoClaseKpi = 'ok';
+  if(promActual!=null && minH!=null && maxH!=null){
+    if(promActual < minH){ estadoTxt='Bajo lo histórico'; estadoClaseKpi='warn'; }
+    else if(promActual > maxH){ estadoTxt = (familia0 && !['Poblacionales','Desarrollo fenologico'].includes(familia0)) ? 'Alto — Alerta' : 'Alto (bien)'; estadoClaseKpi = (familia0 && !['Poblacionales','Desarrollo fenologico'].includes(familia0)) ? 'danger':'ok'; }
+    else { estadoTxt='Normal'; estadoClaseKpi='ok'; }
+  }
+
+  const kpiMiniEl = document.getElementById('kpiMini_'+clave);
+  if(!kpiMiniEl) return; // el bloque no está en el DOM (filtros cambiaron mientras corría)
+  kpiMiniEl.innerHTML = `
+    <div class="kpi-mini-card"><div class="lbl">Mínimo histórico</div><div class="val">${fmtMini(minH)}</div></div>
+    <div class="kpi-mini-card"><div class="lbl">Mediana histórica</div><div class="val">${fmtMini(medH)}</div></div>
+    <div class="kpi-mini-card"><div class="lbl">Máximo histórico</div><div class="val">${fmtMini(maxH)}</div></div>
+    <div class="kpi-mini-card"><div class="lbl">${cicloActualDatos||'Ciclo actual'}</div><div class="val">${fmtMini(promActual)}</div></div>
+    <div class="kpi-mini-card estado"><div class="lbl">Estado</div><div class="val badge-rango ${estadoClaseKpi==='danger'?'alto':estadoClaseKpi==='warn'?'bajo':'normal'}">${estadoTxt}</div></div>
+  `;
 
   // Gráfico: tendencia por VENTANA de DDS (no el día exacto), una línea por Ciclo.
   // Cada punto guarda el detalle de los registros reales que cayeron en esa ventana,
-  // para mostrarlos en el tooltip (Finca, Lote, DDS real, Fecha, Observación).
+  // para mostrarlos en el modal de detalle (Finca, Lote, DDS real, Fecha, Observación).
   const esPorc = datos[0].esPorc;
   const ciclos = ordenarCiclosDesc([...new Set(datos.map(d=>d.ci))]);
   const ventanasUsadas = [...new Set(datos.map(d=>ventanaDDS(d.dds)))].filter(v=>v!==null).sort((a,b)=>a-b);
   const colores = ['#1B4332','#C9963B','#2D6A4F','#B3423E','#8a7550','#5C6B63','#4A90A4','#9B5DE5'];
 
-  // detallePorPunto[cicloIdx][ventanaIdx] = array de registros reales agrupados ahí
   const detallePorPunto = ciclos.map(()=>ventanasUsadas.map(()=>[]));
 
   const datasets = ciclos.map((c,ci)=>{
@@ -1029,9 +1368,11 @@ function renderDetalle(){
     return { label:c, data:serieDatos, borderColor:colores[ci%colores.length], backgroundColor:colores[ci%colores.length], tension:.3, spanGaps:true };
   });
 
-  const ctx = document.getElementById('chartDetalle').getContext('2d');
-  if(chartDetalleInstancia) chartDetalleInstancia.destroy();
-  chartDetalleInstancia = new Chart(ctx, {
+  const canvasEl = document.getElementById('chart_'+clave);
+  if(!canvasEl) return;
+  const ctx = canvasEl.getContext('2d');
+  if(chartInstancias[clave]) chartInstancias[clave].destroy();
+  chartInstancias[clave] = new Chart(ctx, {
     type:'line',
     data:{ labels: ventanasUsadas.map(v=>'DDS '+v), datasets },
     options:{
@@ -1060,12 +1401,25 @@ function renderDetalle(){
       scales:{ y:{ beginAtZero:true, title:{display:true,text: esPorc?'%':'Promedio'} } }
     }
   });
+}
 
-  document.getElementById('notaVentanaDds').textContent =
-    'DDS = ventana estándar de recuento (10, 18, 28, 40… 160). Cada punto agrupa los registros cuyo DDS real cae en esa ventana; haz clic en un punto para ver el detalle completo por finca/lote (el detalle permanece abierto hasta que lo cierres).';
+function toggleTablaDetalle(clave){
+  const wrap = document.getElementById('wrapTabla_'+clave);
+  const btn = document.getElementById('btnTabla_'+clave);
+  const abrir = wrap.style.display === 'none';
 
-  // Tabla de detalle (limitada a 500 filas visibles por rendimiento; export trae todo)
-  const tbody = document.getElementById('tablaDetalleBody');
+  if(abrir && !btn.dataset.armada){
+    construirTablaDetalle(clave, _datosPorClave[clave] || []);
+    btn.dataset.armada = '1';
+  }
+  wrap.style.display = abrir ? 'block' : 'none';
+  btn.textContent = abrir ? '📋 Ocultar tabla detalle' : '📋 Mostrar tabla detalle';
+}
+
+// Tabla de detalle (limitada a 500 filas visibles por rendimiento; export trae todo)
+function construirTablaDetalle(clave, datos){
+  const tbody = document.getElementById('tbodyTabla_'+clave);
+  if(!tbody) return;
   const filas = datos.slice(0, 500).map(d=>{
     const val = d.esPorc ? (d.valor*100).toFixed(2)+'%' : d.valor.toFixed(2);
     const fechaTxt = formatoFecha(d.fecha) || '—';
@@ -1079,12 +1433,9 @@ function renderDetalle(){
   tbody.innerHTML = filas || '<tr><td colspan="9" style="text-align:center;padding:20px;color:var(--text-muted)">Sin datos</td></tr>';
 }
 
-function exportarDetalleExcel(){
-  if(!recuentoSeleccionado) return;
-  const datos = datosFiltrados().filter(r=>{
-    const clave = r.idr ? ('id'+r.idr) : ('nom'+normTxt(r.re));
-    return clave === recuentoSeleccionado;
-  });
+function exportarDetalleExcel(clave){
+  const datos = _datosPorClave[clave] || [];
+  if(!datos.length) return;
   const filas = datos.map(d=>({
     Finca:d.fi, Lote:d.lo, Sector:d.se, Ciclo:d.ci, DDS:d.dds,
     "Ventana DDS": ventanaDDS(d.dds),
@@ -1105,10 +1456,634 @@ function exportarDetalleExcel(){
   XLSX.writeFile(wb, `Recuentos_${nombreArchivo}_${new Date().toISOString().slice(0,10)}.xlsx`);
 }
 
+// ===================================================================
+// TABS — "Recuentos" (KPIs + detalle, ya existía) / "Resultado por Ciclo" (nuevo)
+// ===================================================================
+function cambiarTabRecuentos(tab){
+  const paneles = { kpis:'panelKpis', porciclo:'panelPorCiclo', reporte:'panelReporte' };
+  const botones = { kpis:'tabBtnKpis', porciclo:'tabBtnPorCiclo', reporte:'tabBtnReporte' };
+  Object.keys(paneles).forEach(t=>{
+    const panel = document.getElementById(paneles[t]);
+    panel.style.display = (t===tab) ? 'block' : 'none';
+    panel.classList.toggle('activo', t===tab);
+    document.getElementById(botones[t]).classList.toggle('active', t===tab);
+  });
+  if(tab==='porciclo') renderTablaPorCiclo();
+  if(tab==='reporte') poblarSelectorFincaReporte();
+}
+
+function poblarSelectorFincaReporte(){
+  const sel = document.getElementById('selFincaReporte');
+  const valorPrevio = sel.value;
+
+  // Mismos filtros del toolbar que usa datosFiltrados(), salvo Finca/DDS (acá se elige
+  // la finca puntual desde este mismo combo, no tendría sentido pre-filtrarla).
+  let base = RAW;
+  base = base.filter(r => !seleccionPropia.compania.length || seleccionPropia.compania.includes(r.co));
+  base = base.filter(r => !seleccionPropia.sector.length   || seleccionPropia.sector.includes(r.se));
+  base = base.filter(r => !seleccionPropia.ciclo.length    || seleccionPropia.ciclo.includes(r.ci));
+  base = base.filter(r => !seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa));
+  base = base.filter(r => !seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re));
+  if(!incluirFincasHistoricas && CICLO_ACTUAL_NOMBRE){
+    const fincasActivas = FINCAS_SIEMBRA_POR_CICLO[CICLO_ACTUAL_NOMBRE];
+    if(fincasActivas && fincasActivas.size) base = base.filter(r => fincasActivas.has(r.fi));
+  }
+
+  const fincas = [...new Set(base.map(r=>r.fi).filter(Boolean))].sort();
+  sel.innerHTML = fincas.map(f=>`<option value="${f.replace(/"/g,'&quot;')}">${f}</option>`).join('');
+
+  if(valorPrevio && fincas.includes(valorPrevio)){
+    sel.value = valorPrevio; // mantiene la elección si sigue siendo válida tras el cambio de filtro
+  } else if(CICLO_ACTUAL_NOMBRE && FINCAS_SIEMBRA_POR_CICLO[CICLO_ACTUAL_NOMBRE]){
+    const activa = fincas.find(f=>FINCAS_SIEMBRA_POR_CICLO[CICLO_ACTUAL_NOMBRE].has(f));
+    if(activa) sel.value = activa;
+  }
+  poblarSelectorLoteReporte();
+}
+
+// Lotes de la Finca elegida — cascada real: cambia cada vez que se cambia la Finca.
+// "Todos los lotes" (valor vacío) sigue generando el reporte completo (resumen +
+// desglose por lote, como antes); elegir un lote puntual genera SOLO ese lote.
+function poblarSelectorLoteReporte(){
+  const selFinca = document.getElementById('selFincaReporte');
+  const selLote = document.getElementById('selLoteReporte');
+  const finca = selFinca.value;
+  const valorPrevio = selLote.value;
+
+  const lotes = [...new Set(RAW.filter(r=>r.fi===finca).map(r=>r.lo).filter(Boolean))].sort();
+  selLote.innerHTML = `<option value="">Todos los lotes</option>` + lotes.map(l=>`<option value="${l.replace(/"/g,'&quot;')}">${l}</option>`).join('');
+  if(valorPrevio && lotes.includes(valorPrevio)) selLote.value = valorPrevio;
+}
+
+// ===================================================================
+// TABLA "RESULTADO POR CICLO" — filas Finca > Lote > DDS, una columna por Ciclo con
+// el promedio del resultado (%, o promedio/conteo según el tipo de recuento). Respeta
+// los mismos filtros del toolbar de arriba (Compañía/Sector/Ciclo/Finca/Familia/
+// Recuento/DDS), vía datosFiltrados().
+// ===================================================================
+function renderTablaPorCiclo(){
+  const datos = datosFiltrados();
+  const theadRow = document.getElementById('theadPorCicloRow');
+  const tbody = document.getElementById('tbodyPorCiclo');
+
+  if(!datos.length){
+    theadRow.innerHTML = '<th>Finca</th><th>Lote de la Finca</th><th>Tipo de Recuento</th><th>DDS</th>';
+    tbody.innerHTML = `<tr><td colspan="4" class="vacio">No hay recuentos que coincidan con los filtros seleccionados.</td></tr>`;
+    renderComparacionHistorica([]);
+    return;
+  }
+
+  // Ciclos únicos presentes, más reciente primero (misma función que ya usa el gráfico
+  // de detalle — extrae el año del nombre, no depende de orden alfabético).
+  const ciclos = ordenarCiclosDesc([...new Set(datos.map(r=>r.ci).filter(Boolean))]);
+
+  // Agrupar por Finca + Lote + Tipo de Recuento + DDS — el Tipo de Recuento SIEMPRE
+  // separado: mezclar "% Roya" con "Plantas/m" en el mismo promedio no sería útil.
+  const grupos = {};
+  datos.forEach(r=>{
+    const clave = `${r.fi}|||${r.lo||''}|||${r.re||''}|||${r.dds ?? ''}`;
+    if(!grupos[clave]) grupos[clave] = { fi:r.fi, lo:r.lo, re:r.re, dds:r.dds, porCiclo:{} };
+    const g = grupos[clave];
+    if(!g.porCiclo[r.ci]) g.porCiclo[r.ci] = { suma:0, n:0, esPorc:r.esPorc };
+    g.porCiclo[r.ci].suma += (r.valor||0);
+    g.porCiclo[r.ci].n++;
+  });
+
+  const filas = Object.values(grupos).sort((a,b)=>
+    (a.fi||'').localeCompare(b.fi||'') || (a.lo||'').localeCompare(b.lo||'') ||
+    (a.re||'').localeCompare(b.re||'') || ((a.dds||0)-(b.dds||0))
+  );
+
+  theadRow.innerHTML = `<th>Finca</th><th>Lote de la Finca</th><th>Tipo de Recuento</th><th class="num">DDS</th>` +
+    ciclos.map(c=>`<th class="num">${c}</th>`).join('');
+
+  tbody.innerHTML = filas.map(f=>{
+    const celdasCiclo = ciclos.map(c=>{
+      const info = f.porCiclo[c];
+      if(!info || !info.n) return `<td class="num">—</td>`;
+      const prom = info.suma / info.n;
+      const txt = info.esPorc ? (prom*100).toFixed(1)+'%' : prom.toFixed(1);
+      return `<td class="num">${txt}</td>`;
+    }).join('');
+    return `<tr><td>${f.fi||'—'}</td><td>${f.lo||'—'}</td><td>${f.re||'—'}</td><td class="num">${f.dds ?? '—'}</td>${celdasCiclo}</tr>`;
+  }).join('');
+
+  activarTablaInteractivaRecuentos('tablaPorCiclo');
+  renderComparacionHistorica(datos);
+}
+
+// ===================================================================
+// Ordenar + filtrar por columna, mismo patrón que el resto de INFOAGRO BI: ícono ▾
+// flotante en el encabezado que abre un panel de checkboxes tipo Excel (reutiliza
+// las clases .ms-panel/.ms-item/.ms-search/.ms-footer ya usadas en el toolbar).
+// ===================================================================
+const TABLA_REC_MASTER = {};
+const TABLA_REC_ORDEN = {};
+const TABLA_REC_FILTROS = {};
+let _panelFiltroRecActivo = null;
+
+function activarTablaInteractivaRecuentos(tablaId){
+  const tabla = document.getElementById(tablaId);
+  if(!tabla) return;
+  const thead = tabla.querySelector('thead');
+  const tbody = tabla.querySelector('tbody');
+  if(!thead || !tbody) return;
+
+  const filas = [...tbody.querySelectorAll('tr')].filter(tr => !tr.querySelector('.vacio'));
+  TABLA_REC_MASTER[tablaId] = filas.map(tr => ({
+    html: tr.outerHTML,
+    cells: [...tr.children].map(td => td.textContent.trim()),
+  }));
+
+  const headerRow = thead.querySelector('tr');
+  // Se reconstruye siempre (sin bandera "wired") porque las columnas de Ciclo cambian
+  // según qué haya en los datos filtrados — no es un set fijo de columnas.
+  [...headerRow.children].forEach((th, idx) => {
+    const texto = th.textContent.trim();
+    th.innerHTML = `<div class="th-cell">
+      <span class="th-label" onclick="ordenarTablaRec('${tablaId}', ${idx})">${texto}</span>
+      <span class="th-orden" id="thOrdenRec_${tablaId}_${idx}"></span>
+      <button type="button" class="th-filtro" title="Filtrar" onclick="event.stopPropagation(); abrirFiltroColumnaRec('${tablaId}', ${idx}, this)">▾</button>
+    </div>`;
+  });
+
+  if(!TABLA_REC_FILTROS[tablaId]) TABLA_REC_FILTROS[tablaId] = {};
+  aplicarFiltroYOrdenRec(tablaId);
+}
+
+function valoresDisponiblesColumnaRec(tablaId, colIdx){
+  const master = TABLA_REC_MASTER[tablaId] || [];
+  const filtros = TABLA_REC_FILTROS[tablaId] || {};
+  const filas = master.filter(f =>
+    Object.entries(filtros).every(([idx, set]) => Number(idx)===colIdx || set.has(f.cells[idx]))
+  );
+  return [...new Set(filas.map(f => f.cells[colIdx]))].sort((a,b)=> a.localeCompare(b, 'es', {numeric:true}));
+}
+
+function cerrarPanelFiltroRec(){
+  if(_panelFiltroRecActivo){ _panelFiltroRecActivo.remove(); _panelFiltroRecActivo = null; }
+}
+document.addEventListener('click', cerrarPanelFiltroRec);
+// Nota: antes también se cerraba con 'resize' y 'scroll' — en celular, el teclado
+// virtual al tocar el buscador dispara esos mismos eventos, así que el panel se
+// cerraba solo antes de poder marcar nada. Se deja únicamente el cierre por clic afuera.
+
+function abrirFiltroColumnaRec(tablaId, colIdx, btnEl){
+  const yaAbierto = _panelFiltroRecActivo && _panelFiltroRecActivo.dataset.owner === `${tablaId}_${colIdx}`;
+  cerrarPanelFiltroRec();
+  if(yaAbierto) return;
+
+  const opciones = valoresDisponiblesColumnaRec(tablaId, colIdx);
+  const seleccionActual = (TABLA_REC_FILTROS[tablaId] && TABLA_REC_FILTROS[tablaId][colIdx]) || new Set(opciones);
+
+  const panel = document.createElement('div');
+  panel.className = 'ms-panel show';
+  panel.dataset.owner = `${tablaId}_${colIdx}`;
+  panel.innerHTML = `
+    <div class="ms-search"><input type="text" placeholder="Buscar..."></div>
+    <div class="ms-item selectall"><input type="checkbox" class="chk-todos-rec"${seleccionActual.size===opciones.length?' checked':''}> <span>(Seleccionar todo)</span></div>
+    <div class="ms-items">${opciones.map(v=>`<div class="ms-item"><input type="checkbox" value="${(v||'').replace(/"/g,'&quot;')}"${seleccionActual.has(v)?' checked':''}> <span>${v || '(vacío)'}</span></div>`).join('')}</div>
+    <div class="ms-footer"><button type="button" class="cancel">Cancelar</button><button type="button" class="ok">Aceptar</button></div>`;
+  document.body.appendChild(panel);
+  panel.style.position='fixed';
+
+  const r = btnEl.getBoundingClientRect();
+  const vh = window.innerHeight, vw = window.innerWidth;
+  let top = r.bottom+4, left = r.left;
+  if(top+300>vh) top = Math.max(8, r.top-300-4);
+  if(left+220>vw) left = vw-220-8;
+  panel.style.top = top+'px'; panel.style.left = left+'px'; panel.style.width='220px'; panel.style.zIndex=1300;
+
+  panel.addEventListener('click', e=>e.stopPropagation());
+  panel.querySelector('.chk-todos-rec').addEventListener('change', e=>{
+    panel.querySelectorAll('.ms-items input[type=checkbox]').forEach(c=>c.checked=e.target.checked);
+  });
+  panel.querySelector('.ms-search input').addEventListener('input', e=>{
+    const q = e.target.value.toLowerCase();
+    panel.querySelectorAll('.ms-items .ms-item').forEach(op=>{ op.style.display = op.textContent.toLowerCase().includes(q)?'flex':'none'; });
+  });
+  panel.querySelector('.cancel').addEventListener('click', cerrarPanelFiltroRec);
+  panel.querySelector('.ok').addEventListener('click', ()=>{
+    const marcados = [...panel.querySelectorAll('.ms-items input[type=checkbox]:checked')].map(c=>c.value);
+    if(!TABLA_REC_FILTROS[tablaId]) TABLA_REC_FILTROS[tablaId] = {};
+    if(marcados.length===opciones.length) delete TABLA_REC_FILTROS[tablaId][colIdx];
+    else TABLA_REC_FILTROS[tablaId][colIdx] = new Set(marcados);
+    cerrarPanelFiltroRec();
+    aplicarFiltroYOrdenRec(tablaId);
+  });
+  _panelFiltroRecActivo = panel;
+}
+
+function aplicarFiltroYOrdenRec(tablaId){
+  const tabla = document.getElementById(tablaId);
+  if(!tabla) return;
+  const tbody = tabla.querySelector('tbody');
+  let filas = TABLA_REC_MASTER[tablaId] || [];
+
+  const filtros = TABLA_REC_FILTROS[tablaId] || {};
+  const entradas = Object.entries(filtros);
+  if(entradas.length) filas = filas.filter(f => entradas.every(([idx,set]) => set.has(f.cells[idx])));
+
+  const orden = TABLA_REC_ORDEN[tablaId];
+  if(orden){
+    filas = [...filas].sort((a,b)=>{
+      const va=a.cells[orden.col]||'', vb=b.cells[orden.col]||'';
+      const na=parseFloat(va.replace(/,/g,'').replace(/[^0-9.\-]/g,''));
+      const nb=parseFloat(vb.replace(/,/g,'').replace(/[^0-9.\-]/g,''));
+      const esNumerico = va.replace(/[\s%.,\-0-9]/g,'')==='' && vb.replace(/[\s%.,\-0-9]/g,'')==='' && !isNaN(na) && !isNaN(nb);
+      const cmp = esNumerico ? (na-nb) : va.localeCompare(vb,'es');
+      return cmp*orden.dir;
+    });
+  }
+
+  tabla.querySelectorAll('thead .th-filtro').forEach((btn, idx)=>{ btn.classList.toggle('activo', !!filtros[idx]); });
+
+  const colspan = tabla.querySelectorAll('thead th').length;
+  tbody.innerHTML = filas.length
+    ? filas.map(f=>f.html).join('')
+    : `<tr><td colspan="${colspan}" class="vacio">Sin resultados con los filtros de columna actuales.</td></tr>`;
+}
+
+function ordenarTablaRec(tablaId, colIdx){
+  const actual = TABLA_REC_ORDEN[tablaId];
+  const dir = (actual && actual.col===colIdx) ? actual.dir*-1 : 1;
+  TABLA_REC_ORDEN[tablaId] = { col:colIdx, dir };
+  document.getElementById(tablaId).querySelectorAll('.th-orden').forEach((el,idx)=>{
+    el.textContent = idx===colIdx ? (dir===1?'↑':'↓') : '';
+  });
+  aplicarFiltroYOrdenRec(tablaId);
+}
+
+// ===================================================================
+// COMPARACIÓN CICLO ACTUAL VS HISTÓRICO — usa el mismo dataset ya filtrado por el
+// toolbar (Compañía/Sector/Ciclo/Finca/Familia/Recuento/DDS). El "ciclo actual" es el
+// más reciente presente en ese dataset (misma lógica de año que ordenarCiclosDesc);
+// todo lo demás que quede en el dataset filtrado es "histórico" para la comparación.
+// Nunca mezcla Tipo de Recuento — cada fila/serie es un tipo de recuento distinto.
+// ===================================================================
+let chartComparacionInstancia = null;
+
+// Math.min(...arr)/Math.max(...arr) puede fallar con arrays grandes (el histórico
+// 2012-2026 puede acumular miles de valores para el mismo Tipo de Recuento) — arma la
+// lista de argumentos completa en memoria antes de evaluarla. Con reduce() no hay ese
+// límite, sin importar cuántos elementos tenga el array.
+function minArr(arr){ return arr.reduce((a,b)=> b<a ? b : a, arr[0]); }
+function maxArr(arr){ return arr.reduce((a,b)=> b>a ? b : a, arr[0]); }
+
+function mediana(valores){
+  const o = [...valores].sort((a,b)=>a-b);
+  const n = o.length;
+  if(!n) return 0;
+  const mid = Math.floor(n/2);
+  return n%2 ? o[mid] : (o[mid-1]+o[mid])/2;
+}
+
+function renderComparacionHistorica(datos){
+  const grid = document.getElementById('kpiComparacionGrid');
+  const tbodyRango = document.getElementById('tbodyRangoClinico');
+
+  if(!datos.length){
+    grid.innerHTML = `<div class="vacio">Sin datos para comparar.</div>`;
+    tbodyRango.innerHTML = `<tr><td colspan="7" class="vacio">Sin datos.</td></tr>`;
+    if(chartComparacionInstancia){ chartComparacionInstancia.destroy(); chartComparacionInstancia = null; }
+    return;
+  }
+
+  const ciclosPresentes = ordenarCiclosDesc([...new Set(datos.map(d=>d.ci).filter(Boolean))]);
+  const cicloActual = ciclosPresentes[0]; // más reciente = primero, tras ordenarCiclosDesc
+  const ciclosHistoricos = ciclosPresentes.slice(1);
+
+  // Agrupar por Tipo de Recuento (re) — cada uno es una métrica distinta, nunca se mezclan.
+  const porTipo = {};
+  datos.forEach(r=>{
+    const key = r.re || 'Sin tipo';
+    if(!porTipo[key]) porTipo[key] = { nombre:key, familia:r.fa, esPorc:r.esPorc, actual:[], historico:[], porCiclo:{} };
+    const g = porTipo[key];
+    if(r.ci === cicloActual) g.actual.push(r.valor);
+    else g.historico.push(r.valor);
+    if(!g.porCiclo[r.ci]) g.porCiclo[r.ci] = [];
+    g.porCiclo[r.ci].push(r.valor);
+  });
+
+  const tipos = Object.values(porTipo).sort((a,b)=> (a.nombre||'').localeCompare(b.nombre||''));
+
+  // ---------- KPI cards: ciclo actual vs promedio histórico, por tipo de recuento ----------
+  grid.innerHTML = tipos.map(t=>{
+    const promActual = t.actual.length ? t.actual.reduce((a,b)=>a+b,0)/t.actual.length : null;
+    const promHist = t.historico.length ? t.historico.reduce((a,b)=>a+b,0)/t.historico.length : null;
+    const fmt = v => v==null ? '—' : (t.esPorc ? (v*100).toFixed(1)+'%' : v.toFixed(1));
+    let deltaTxt = '—', deltaClase = 'neutro';
+    if(promActual!=null && promHist!=null && promHist!==0){
+      const deltaPct = ((promActual-promHist)/Math.abs(promHist))*100;
+      const peorEsAlto = !FAMILIAS_MEJOR_ALTO.has(t.familia);
+      deltaClase = Math.abs(deltaPct)<3 ? 'neutro' : ((deltaPct>0)===peorEsAlto ? 'pos' : 'neg'); // 'pos' = rojo (empeoró), 'neg' = verde (mejoró)
+      deltaTxt = (deltaPct>=0?'+':'')+deltaPct.toFixed(0)+'% vs histórico';
+    }
+    const estado = promActual!=null && t.historico.length ? calcularEstado(t.historico, promActual, t.familia) : 'ok';
+    return `<div class="kpi-comp-card est-${estado}">
+      <div class="kpi-comp-nombre">${t.nombre}</div>
+      <div class="kpi-comp-filas"><span>${cicloActual||'Ciclo actual'}</span><b>${fmt(promActual)}</b></div>
+      <div class="kpi-comp-filas"><span>Histórico (${ciclosHistoricos.length} ciclo${ciclosHistoricos.length!==1?'s':''})</span><b>${fmt(promHist)}</b></div>
+      <div class="kpi-comp-delta ${deltaClase}">${deltaTxt}</div>
+    </div>`;
+  }).join('');
+
+  // ---------- Gráfico: tendencia del promedio por ciclo, una línea por tipo de recuento ----------
+  const ctx = document.getElementById('chartComparacion').getContext('2d');
+  if(chartComparacionInstancia) chartComparacionInstancia.destroy();
+  const ciclosGrafico = [...ciclosPresentes].reverse(); // cronológico ascendente para leer la tendencia de izq a der
+  const colores = ['#1B4332','#C9963B','#2D6A4F','#B3423E','#8a7550','#5C6B63','#4A90A4','#9B5DE5'];
+  const datasets = tipos.map((t,i)=>({
+    label: t.nombre,
+    data: ciclosGrafico.map(c=>{
+      const vals = t.porCiclo[c];
+      if(!vals || !vals.length) return null;
+      const prom = vals.reduce((a,b)=>a+b,0)/vals.length;
+      return t.esPorc ? +(prom*100).toFixed(2) : +prom.toFixed(2);
+    }),
+    borderColor: colores[i%colores.length], backgroundColor: colores[i%colores.length],
+    tension:.3, spanGaps:true,
+  }));
+  chartComparacionInstancia = new Chart(ctx, {
+    type:'line',
+    data:{ labels: ciclosGrafico, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{boxWidth:10, font:{size:10}} } },
+      scales:{ y:{ beginAtZero:true } }
+    }
+  });
+
+  // ---------- Tabla de rango tipo análisis clínico ----------
+  tbodyRango.innerHTML = tipos.map(t=>{
+    const fmt = v => v==null ? '—' : (t.esPorc ? (v*100).toFixed(1)+'%' : v.toFixed(1));
+    if(!t.historico.length){
+      const promActual = t.actual.length ? t.actual.reduce((a,b)=>a+b,0)/t.actual.length : null;
+      return `<tr><td>${t.nombre}</td><td>${t.familia||'—'}</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
+        <td class="num">${fmt(promActual)}</td><td class="center"><span class="badge-rango sindato">Sin histórico</span></td></tr>`;
+    }
+    const min = minArr(t.historico), max = maxArr(t.historico), med = mediana(t.historico);
+    const promActual = t.actual.length ? t.actual.reduce((a,b)=>a+b,0)/t.actual.length : null;
+    let badge = `<span class="badge-rango sindato">Sin ciclo actual</span>`;
+    if(promActual!=null){
+      if(promActual < min) badge = `<span class="badge-rango bajo">Bajo</span>`;
+      else if(promActual > max) badge = `<span class="badge-rango alto">Alto</span>`;
+      else badge = `<span class="badge-rango normal">Normal</span>`;
+    }
+    return `<tr><td>${t.nombre}</td><td>${t.familia||'—'}</td>
+      <td class="num">${fmt(min)}</td><td class="num">${fmt(med)}</td><td class="num">${fmt(max)}</td>
+      <td class="num"><strong>${fmt(promActual)}</strong></td><td class="center">${badge}</td></tr>`;
+  }).join('');
+}
+
+// ===================================================================
+// REPORTE DE CRECIMIENTO (PDF) — estilo análisis clínico pediátrico: DDS = edad del
+// cultivo. Por cada Tipo de Recuento, compara la curva del ciclo actual contra el
+// rango histórico (mín/mediana/máx) de ESA MISMA FINCA en cada ventana de DDS. Primero
+// el resumen agregado de la Finca, después una sección por cada Lote.
+// ===================================================================
+async function generarReportePDF(){
+  const finca = document.getElementById('selFincaReporte').value;
+  const loteElegido = document.getElementById('selLoteReporte').value;
+  const estadoEl = document.getElementById('reporteEstado');
+  const btn = document.getElementById('btnGenerarReporte');
+  estadoEl.classList.remove('error');
+
+  if(!finca){ estadoEl.textContent = 'Elegí una finca primero.'; estadoEl.classList.add('error'); return; }
+
+  const textoOriginal = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Generando...';
+  estadoEl.textContent = 'Armando el reporte (gráficos + tablas), puede tardar unos segundos...';
+
+  try {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ orientation:'p', unit:'mm', format:'a4', compress:true });
+
+    const datosFinca = RAW.filter(r => r.fi === finca);
+    if(!datosFinca.length) throw new Error('No hay recuentos registrados para esta finca.');
+
+    const cicloActual = CICLO_ACTUAL_NOMBRE || ordenarCiclosDesc([...new Set(datosFinca.map(r=>r.ci))])[0];
+
+    let y = 18;
+    doc.setFontSize(16); doc.setTextColor(27,67,50);
+    doc.text(`Reporte de Crecimiento — ${finca}${loteElegido ? ' · Lote '+loteElegido : ''}`, 14, y);
+    y += 6;
+    doc.setFontSize(9.5); doc.setTextColor(100,100,100);
+    doc.text(`Ciclo actual: ${cicloActual||'—'}  ·  DDS = edad del cultivo (días después de siembra)  ·  Generado: ${new Date().toLocaleDateString('es-NI')}`, 14, y);
+    y += 4;
+    doc.setDrawColor(210,210,210); doc.line(14, y, 196, y);
+    y += 8;
+
+    let totalLotes = 0;
+
+    if(loteElegido){
+      // Un solo lote elegido: sin resumen de finca ni el resto de los lotes.
+      const datosLote = datosFinca.filter(r=>r.lo===loteElegido);
+      if(!datosLote.length) throw new Error(`No hay recuentos registrados para el Lote "${loteElegido}".`);
+      doc.setFontSize(13); doc.setTextColor(27,67,50);
+      doc.text(`🌱 Lote: ${loteElegido}`, 14, y);
+      y += 7;
+      y = await agregarSeccionReporte(doc, datosLote, cicloActual, y);
+      totalLotes = 1;
+    } else {
+      doc.setFontSize(13); doc.setTextColor(27,67,50);
+      doc.text('📊 Resumen de la Finca (todos los lotes)', 14, y);
+      y += 7;
+      y = await agregarSeccionReporte(doc, datosFinca, cicloActual, y);
+
+      const lotes = [...new Set(datosFinca.map(r=>r.lo).filter(Boolean))].sort();
+      totalLotes = lotes.length;
+      for(const lote of lotes){
+        if(y > 245){ doc.addPage(); y = 18; }
+        doc.setFontSize(13); doc.setTextColor(27,67,50);
+        doc.text(`🌱 Lote: ${lote}`, 14, y);
+        y += 7;
+        const datosLote = datosFinca.filter(r=>r.lo===lote);
+        y = await agregarSeccionReporte(doc, datosLote, cicloActual, y);
+      }
+    }
+
+    const sufijoArchivo = loteElegido ? `_${loteElegido.replace(/[^a-z0-9]/gi,'_')}` : '';
+    doc.save(`Reporte_Crecimiento_${finca.replace(/[^a-z0-9]/gi,'_')}${sufijoArchivo}_${new Date().toISOString().slice(0,10)}.pdf`);
+    estadoEl.textContent = loteElegido
+      ? `✅ PDF generado (Lote ${loteElegido}).`
+      : `✅ PDF generado (${totalLotes} lote${totalLotes!==1?'s':''} + resumen de finca).`;
+  } catch(e){
+    console.error('Error generando reporte:', e);
+    estadoEl.textContent = 'No se pudo generar el reporte: ' + e.message;
+    estadoEl.classList.add('error');
+  } finally {
+    btn.disabled = false; btn.textContent = textoOriginal;
+  }
+}
+
+// Arma, para un subconjunto de registros (Finca completa o un Lote puntual), una
+// sección por cada Tipo de Recuento: gráfico de crecimiento + tabla de rango. Devuelve
+// la posición Y donde continuar escribiendo.
+async function agregarSeccionReporte(doc, datos, cicloActual, y){
+  const porTipo = {};
+  datos.forEach(r=>{
+    const key = r.re || 'Sin tipo';
+    if(!porTipo[key]) porTipo[key] = { nombre:key, familia:r.fa, esPorc:r.esPorc, reporte:r.reporte, actual:[], historico:[] };
+    const item = { dds:r.dds, valor:r.valor };
+    if(r.ci === cicloActual) porTipo[key].actual.push(item);
+    else porTipo[key].historico.push(item);
+  });
+
+  // Orden real del reporte (campo "Reporte" del modelo de detalle, ej. "1","2","3"...),
+  // no alfabético por nombre — así las enfermedades salen en la secuencia acostumbrada
+  // del reporte en papel. Si algún tipo no tiene ese campo cargado, cae al final,
+  // ordenado alfabéticamente entre sí.
+  const tipos = Object.values(porTipo).filter(t=>t.actual.length).sort((a,b)=>{
+    const na = parseFloat(a.reporte), nb = parseFloat(b.reporte);
+    const aTieneNum = a.reporte!=null && a.reporte!=='' && !isNaN(na);
+    const bTieneNum = b.reporte!=null && b.reporte!=='' && !isNaN(nb);
+    if(aTieneNum && bTieneNum) return na - nb;
+    if(aTieneNum) return -1;
+    if(bTieneNum) return 1;
+    return (a.nombre||'').localeCompare(b.nombre||'');
+  });
+  if(!tipos.length){
+    doc.setFontSize(9.5); doc.setTextColor(150,150,150);
+    doc.text('Sin recuentos del ciclo actual en este nivel.', 14, y);
+    return y + 10;
+  }
+
+  for(const t of tipos){
+    if(y > 215){ doc.addPage(); y = 18; }
+
+    doc.setFontSize(10.5); doc.setTextColor(20,20,20);
+    doc.text(`${t.nombre}${t.familia ? ' ('+t.familia+')' : ''}`, 14, y);
+    y += 3;
+
+    try {
+      const ventanas = [...new Set([...t.actual, ...t.historico].map(p=>ventanaDDS(p.dds)).filter(v=>v!==null))].sort((a,b)=>a-b);
+      const histPorVentana = {}, actualPorVentana = {};
+      t.historico.forEach(p=>{ const v=ventanaDDS(p.dds); if(v===null) return; (histPorVentana[v]=histPorVentana[v]||[]).push(p.valor); });
+      t.actual.forEach(p=>{ const v=ventanaDDS(p.dds); if(v===null) return; (actualPorVentana[v]=actualPorVentana[v]||[]).push(p.valor); });
+
+      const imgData = await construirGraficoCrecimiento(ventanas, histPorVentana, actualPorVentana, t.esPorc, t.nombre);
+      const imgW = 182, imgH = 62;
+      doc.addImage(imgData, 'JPEG', 14, y, imgW, imgH);
+      y += imgH + 3;
+
+      const filasTabla = ventanas.map(v=>{
+        const histVals = histPorVentana[v]||[];
+        const actVals = actualPorVentana[v]||[];
+        const actProm = actVals.length ? actVals.reduce((a,b)=>a+b,0)/actVals.length : null;
+        const fmt = x => x==null ? '—' : (t.esPorc ? (x*100).toFixed(1)+'%' : x.toFixed(1));
+        let estado = '—';
+        if(histVals.length && actProm!=null){
+          const min = minArr(histVals), max = maxArr(histVals);
+          estado = actProm < min ? 'Bajo' : (actProm > max ? 'Alto' : 'Normal');
+        }
+        return ['DDS '+v, fmt(actProm), histVals.length?fmt(minArr(histVals)):'—', histVals.length?fmt(mediana(histVals)):'—', histVals.length?fmt(maxArr(histVals)):'—', estado];
+      });
+
+      doc.autoTable({
+        startY: y,
+        head: [['DDS','Ciclo Actual','Mín Hist.','Mediana Hist.','Máx Hist.','Estado']],
+        body: filasTabla,
+        margin: { left:14, right:14 },
+        styles: { fontSize:8, cellPadding:2 },
+        headStyles: { fillColor:[27,67,50] },
+        didParseCell: (data)=>{
+          if(data.section==='body' && data.column.index===5){
+            if(data.cell.raw==='Alto') data.cell.styles.textColor=[153,27,27];
+            else if(data.cell.raw==='Bajo') data.cell.styles.textColor=[146,64,14];
+            else if(data.cell.raw==='Normal') data.cell.styles.textColor=[22,101,52];
+          }
+        },
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    } catch(e){
+      console.error(`No se pudo armar el bloque de "${t.nombre}":`, e);
+      doc.setFontSize(9); doc.setTextColor(180,60,60);
+      doc.text(`(No se pudo generar este bloque: ${e.message})`, 14, y);
+      y += 10;
+    }
+  }
+  return y;
+}
+
+// Dibuja el gráfico de "curva de crecimiento" en un canvas fuera de pantalla (banda
+// histórica mín-máx + mediana punteada + línea del ciclo actual encima, como un
+// percentil pediátrico) y devuelve la imagen PNG lista para meter en el PDF.
+function construirGraficoCrecimiento(ventanas, histPorVentana, actualPorVentana, esPorc, titulo){
+  return new Promise((resolve)=>{
+    const canvas = document.createElement('canvas');
+    canvas.width = 640; canvas.height = 240;
+    canvas.style.position = 'fixed'; canvas.style.left = '-9999px'; canvas.style.top = '0';
+    document.body.appendChild(canvas);
+
+    const conv = v => v==null ? null : (esPorc ? +(v*100).toFixed(2) : +v.toFixed(2));
+    const minSerie = ventanas.map(v => histPorVentana[v]?.length ? conv(minArr(histPorVentana[v])) : null);
+    const maxSerie = ventanas.map(v => histPorVentana[v]?.length ? conv(maxArr(histPorVentana[v])) : null);
+    const medSerie = ventanas.map(v => histPorVentana[v]?.length ? conv(mediana(histPorVentana[v])) : null);
+    const actualSerie = ventanas.map(v => {
+      const vals = actualPorVentana[v];
+      if(!vals || !vals.length) return null;
+      return conv(vals.reduce((a,b)=>a+b,0)/vals.length);
+    });
+
+    const chart = new Chart(canvas.getContext('2d'), {
+      type:'line',
+      plugins:[{
+        id:'fondoBlancoParaJpeg',
+        beforeDraw:(c)=>{
+          const ctx = c.canvas.getContext('2d');
+          ctx.save();
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.restore();
+        }
+      }],
+      data:{
+        labels: ventanas.map(v=>'DDS '+v),
+        datasets:[
+          { label:'Máximo histórico (finca)', data:maxSerie, borderColor:'rgba(201,150,58,.4)', backgroundColor:'rgba(201,150,58,.18)', fill:'+1', pointRadius:0, borderWidth:1, tension:.3, spanGaps:true },
+          { label:'Mínimo histórico (finca)', data:minSerie, borderColor:'rgba(201,150,58,.4)', fill:false, pointRadius:0, borderWidth:1, tension:.3, spanGaps:true },
+          { label:'Mediana histórica (finca)', data:medSerie, borderColor:'#8a7550', borderDash:[6,4], pointRadius:0, borderWidth:1.5, tension:.3, spanGaps:true },
+          { label:'Ciclo actual', data:actualSerie, borderColor:'#1B4332', backgroundColor:'#1B4332', pointRadius:3, pointHoverRadius:3, borderWidth:3, tension:.3, spanGaps:true },
+        ]
+      },
+      options:{
+        responsive:false, animation:false,
+        plugins:{
+          legend:{ position:'bottom', labels:{boxWidth:10, font:{size:10}} },
+          title:{ display:true, text:titulo, font:{size:13} }
+        },
+        scales:{ y:{ beginAtZero:true, title:{display:true, text: esPorc?'%':'Promedio'} } }
+      }
+    });
+
+    // Un pequeño delay para asegurar que Chart.js terminó de pintar antes de capturar.
+    setTimeout(()=>{
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      chart.destroy();
+      canvas.remove();
+      resolve(dataUrl);
+    }, 80);
+  });
+}
+
+function exportarTablaPorCicloExcel(){
+  const table = document.getElementById('tablaPorCiclo');
+  if(!table) return;
+  const wb = XLSX.utils.table_to_book(table, { raw:true });
+  XLSX.writeFile(wb, `Recuentos_PorCiclo_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 // Los filtros Compañía/Sector/Ciclo/Finca/Familia/Recuento/DDS ahora viven todos
 // dentro de esta misma sección (barra de filtros propia, visible arriba) — ya no se
 // reciben desde un panel del shell.
 cargarTodo();
 </script>
+
+<button class="fab-filtros" id="fabFiltros" onclick="toggleFiltrosExtra()" title="Filtros">
+  <span id="fabFiltrosIcono">⚙️</span>
+</button>
+
 </body>
 </html>
