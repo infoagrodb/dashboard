@@ -718,6 +718,53 @@ async function cargarPluviosidad(){
   }catch(e){ console.error('Error cargando pluviosidad:', e); return {}; }
 }
 
+// El histórico de Excel (sobre todo Grupo ZP) trae Finca/Lote en MAYÚSCULA, mientras
+// que Odoo los trae con formato normal ("Mercedes", no "MERCEDES") — como texto son
+// distintos, la misma finca/lote termina apareciendo dos veces en los filtros y las
+// tablas. Se agrupan por nombre normalizado (minúscula + espacios colapsados) y se
+// unifica todo bajo UNA sola forma "canónica": se prefiere la versión que NO esté
+// completamente en mayúscula (la de Odoo, más prolija) sobre la que sí lo está.
+// Ojo: esto NO junta fincas que son genuinamente distintas aunque se parezcan (ej.
+// "Paraiso MR" vs "Paraiso ZP" siguen siendo dos fincas separadas, de compañías
+// distintas) — solo une cuando el nombre normalizado es EXACTAMENTE igual.
+function normalizarNombresFincaLote(raw){
+  const clave = s => String(s||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const esTodoMayus = s => s === s.toUpperCase() && s !== s.toLowerCase();
+
+  // Fincas: se normalizan a nivel global (una finca es la misma finca sin importar el lote)
+  const canonFinca = {};
+  raw.forEach(r=>{
+    if(!r.fi) return;
+    const k = clave(r.fi);
+    if(!canonFinca[k]) canonFinca[k] = r.fi;
+    else if(esTodoMayus(canonFinca[k]) && !esTodoMayus(r.fi)) canonFinca[k] = r.fi;
+  });
+
+  // Lotes: se normalizan POR FINCA (ya canónica) — "Lote 5" de una finca no es el mismo
+  // lote que "Lote 5" de otra finca, así que no se puede unificar en forma global.
+  const canonLote = {};
+  raw.forEach(r=>{
+    if(!r.fi || !r.lo) return;
+    const fincaCanon = canonFinca[clave(r.fi)] || r.fi;
+    const k = fincaCanon + '|||' + clave(r.lo);
+    if(!canonLote[k]) canonLote[k] = r.lo;
+    else if(esTodoMayus(canonLote[k]) && !esTodoMayus(r.lo)) canonLote[k] = r.lo;
+  });
+
+  raw.forEach(r=>{
+    if(r.fi){
+      const fincaCanon = canonFinca[clave(r.fi)];
+      if(fincaCanon) r.fi = fincaCanon;
+    }
+    if(r.fi && r.lo){
+      const loteCanon = canonLote[r.fi + '|||' + clave(r.lo)];
+      if(loteCanon) r.lo = loteCanon;
+    }
+  });
+
+  return raw;
+}
+
 async function cargarTodo(){
   const [vivo, histDA, histGZP, fungicidas, lluvia, fincasSiembra] = await Promise.all([
     cargarOdoo(),
@@ -728,6 +775,7 @@ async function cargarTodo(){
     cargarFincasConSiembra()
   ]);
   RAW = [...vivo, ...histDA, ...histGZP];
+  RAW = normalizarNombresFincaLote(RAW);
   FUNGICIDAS_POR_CLAVE = fungicidas;
   LLUVIA_POR_FINCA_FECHA = lluvia;
   FINCAS_SIEMBRA_POR_CICLO = fincasSiembra;
