@@ -3093,6 +3093,17 @@ async function init(){
           }
         });
       });
+
+      // El navegador revisa sw.js solo, pero de forma poco frecuente (a veces hasta 24h) —
+      // en una app instalada que se reabre sin recargar de cero, ese chequeo casi nunca se
+      // dispara por sí solo. Por eso forzamos reg.update() nosotros: al abrir la app, cada
+      // vez que vuelve a primer plano (el técnico cambia de app y regresa), y de respaldo
+      // cada 5 minutos mientras quede abierta.
+      reg.update().catch(()=>{});
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.visibilityState === 'visible') reg.update().catch(()=>{});
+      });
+      setInterval(()=> reg.update().catch(()=>{}), 5*60*1000);
     }).catch(()=>{});
   }
 
