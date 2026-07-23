@@ -534,6 +534,14 @@
         <div id="catalogoInfo" style="font-size:0.78rem;color:var(--texto-suave);"></div>
       </div>
 
+      <div class="card">
+        <h3>Nombre de este dispositivo</h3>
+        <p>Ayuda a identificar en Odoo desde qué celular se hizo cada recuento (ej. "Celular Juan Pérez"). Opcional — si lo dejas vacío, se manda un identificador genérico.</p>
+        <input type="text" id="fNombreDispositivo" placeholder="Ej. Celular Juan Pérez" style="width:100%;padding:10px 12px;border:1.5px solid var(--borde);border-radius:10px;font-size:0.9rem;">
+        <div style="height:8px;"></div>
+        <button class="btn btn-ghost" onclick="guardarNombreDispositivo()">Guardar nombre</button>
+      </div>
+
       <p style="text-align:center;font-size:0.72rem;color:var(--texto-suave);margin-top:8px;">
         Versión de la app: <span id="appVersionTxt"></span>
       </p>
@@ -1422,6 +1430,22 @@ function uuid(){
     const r=Math.random()*16|0, v = c==='x'?r:(r&0x3|0x8); return v.toString(16);
   });
 }
+/** Identificador del dispositivo donde se captura el recuento (para el campo
+ *  x_studio_dispositivo_de_captura). Se genera una sola vez por celular y queda guardado
+ *  en el dispositivo — así el mismo celular siempre manda el mismo identificador, sin
+ *  importar qué técnico lo esté usando en ese momento. Si el técnico le puso un nombre
+ *  (ej. "Celular Juan Pérez" desde Ajustes), se manda ese nombre; si no, un identificador
+ *  corto genérico con una pista del sistema (Android/iPhone/etc), para que igual sea algo
+ *  reconocible en Odoo en vez de un ID sin sentido. */
+async function obtenerIdDispositivo(){
+  let id = await kvGet('dispositivo_id', null);
+  if(!id){ id = uuid().slice(0,8); await kvSet('dispositivo_id', id); }
+  const nombre = await kvGet('dispositivo_nombre', '');
+  if(nombre && nombre.trim()) return nombre.trim();
+  const ua = navigator.userAgent || '';
+  const pista = /android/i.test(ua) ? 'Android' : /iphone|ipad/i.test(ua) ? 'iPhone' : /windows/i.test(ua) ? 'PC' : 'Dispositivo';
+  return `${pista}-${id}`;
+}
 function nuevaSesion(){
   const lines = {};
   CATALOGO.forEach(t=>{
@@ -2094,8 +2118,28 @@ async function quitarEvaluacionActual(){
   renderPlanta();
   toast('Evaluación quitada ✔');
 }
+/** Devuelve la lista de estaciones (1..n) donde TODOS los 34 tipos de recuento quedaron
+ *  en 0 — es decir, evaluaciones "fantasma" que se agregaron pero nunca se llenaron con
+ *  ningún dato real. Sirve para bloquear el envío antes de que lleguen así a Odoo. */
+function estacionesVacias(){
+  const n = sesionActual.header.estaciones;
+  const vacias = [];
+  for(let i=1; i<=n; i++){
+    const tieneAlgo = CATALOGO.some(t=>{
+      const v = sesionActual.lines[t.id]['e'+i];
+      return v !== 0 && v !== undefined && v !== null && v !== '';
+    });
+    if(!tieneAlgo) vacias.push(i);
+  }
+  return vacias;
+}
 async function terminarEvaluacion(){
   if(esSoloLectura()){ toast('Este reporte ya se envió a Odoo — para cambios, edítalo directo ahí.', true); return; }
+  const vacias = estacionesVacias();
+  if(vacias.length>0){
+    alert(`No se puede terminar el reporte: la${vacias.length===1?'':'s'} evaluación${vacias.length===1?'':'es'} ${vacias.join(', ')} ${vacias.length===1?'está':'están'} completamente en 0 (ningún tipo de recuento tiene dato). Completa al menos un dato en cada evaluación, o quítala si se agregó por error.`);
+    return;
+  }
   const n = sesionActual.header.estaciones;
   if(!confirm(`¿Terminar el reporte con ${n} evaluación${n===1?'':'es'}? Podrás seguir editando antes de guardarlo si hace falta.`)) return;
   sesionActual.updatedAt = new Date().toISOString();
@@ -2726,6 +2770,11 @@ async function compartirPDF(){
 
 async function guardarEvaluacionFinal(){
   if(esSoloLectura()){ toast('Este reporte ya se envió a Odoo — para cambios, edítalo directo ahí.', true); goScreen('screen-home'); return; }
+  const vacias = estacionesVacias();
+  if(vacias.length>0){
+    alert(`No se puede guardar/enviar el reporte: la${vacias.length===1?'':'s'} evaluación${vacias.length===1?'':'es'} ${vacias.join(', ')} ${vacias.length===1?'está':'están'} completamente en 0. Completa al menos un dato en cada evaluación, o quítala si se agregó por error.`);
+    return;
+  }
   sesionActual.status = 'pending_sync';
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
@@ -2737,11 +2786,12 @@ async function guardarEvaluacionFinal(){
 /* =========================================================================
    SINCRONIZACIÓN CON ODOO (vía Cloudflare Worker)
    ========================================================================= */
-function sesionToPayload(s){
+async function sesionToPayload(s){
   const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
   return {
     localId: s.localId,
     app_version: APP_VERSION,
+    dispositivo: await obtenerIdDispositivo(),
     header: s.header,
     gpsPorPlanta: s.gpsPorPlanta || {},
     lines: Object.values(s.lines).map(l=>({
@@ -2760,7 +2810,7 @@ async function sincronizarSesion(s){
   const res = await fetch(url, {
     method:'POST',
     headers:{'Content-Type':'application/json', 'X-Sync-Key': key||''},
-    body: JSON.stringify(sesionToPayload(s))
+    body: JSON.stringify(await sesionToPayload(s))
   });
   if(!res.ok){
     const txt = await res.text().catch(()=> '');
@@ -2966,6 +3016,12 @@ async function renderConfig(){
   document.getElementById('catalogoInfo').textContent = lastSync
     ? `Última actualización: ${new Date(lastSync).toLocaleString()} · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`
     : `Usando catálogo de fábrica (sembrado) · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`;
+  document.getElementById('fNombreDispositivo').value = await kvGet('dispositivo_nombre', '');
+}
+async function guardarNombreDispositivo(){
+  const valor = document.getElementById('fNombreDispositivo').value.trim();
+  await kvSet('dispositivo_nombre', valor);
+  toast(valor ? `Dispositivo guardado como "${valor}" ✔` : 'Nombre quitado — se usará el identificador genérico');
 }
 async function refrescarCatalogos(silencioso){
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
