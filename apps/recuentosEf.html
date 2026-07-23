@@ -236,6 +236,11 @@
   }
   .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
   .modal-close-btn{background:var(--crema);border:none;width:30px;height:30px;border-radius:50%;font-size:0.95rem;color:var(--texto-suave);}
+  .ticket-preview{
+    background:#fff;color:#000;font-family:'Courier New',monospace;font-size:0.72rem;line-height:1.35;
+    padding:14px 12px;border:1px dashed var(--borde);border-radius:6px;margin:0 0 14px;
+    white-space:pre-wrap;word-break:break-word;max-height:50vh;overflow-y:auto;
+  }
 
   /* familia sections */
   .familia{margin-bottom:10px;border:1px solid var(--borde);border-radius:12px;overflow:hidden;background:#fff;}
@@ -509,6 +514,8 @@
       <div style="height:8px;"></div>
       <button class="btn btn-ghost" onclick="compartirPDF()">📤 Compartir PDF (WhatsApp, correo…)</button>
       <div style="height:8px;"></div>
+      <button class="btn btn-ghost" onclick="mostrarVistaPreviaTicket()">🖨️ Imprimir ticket (Bluetooth)</button>
+      <div style="height:8px;"></div>
       <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar reporte en este dispositivo</button>
     </section>
 
@@ -559,6 +566,19 @@
       <button class="btn btn-primary" id="btnAgregarFoto" onclick="document.getElementById('fotoInput').click()">+ Agregar foto</button>
       <div style="height:8px;"></div>
       <button class="btn btn-ghost" onclick="cerrarModalFotos()">✔ Terminar de subir</button>
+    </div>
+  </div>
+
+  <div id="modalTicket" class="modal-overlay" style="display:none;" onclick="if(event.target===this) cerrarModalTicket()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="margin:0;">🖨️ Vista previa del ticket</h3>
+        <button class="modal-close-btn" onclick="cerrarModalTicket()" aria-label="Cerrar">✕</button>
+      </div>
+      <pre id="ticketPreviewTexto" class="ticket-preview"></pre>
+      <button class="btn btn-primary" onclick="confirmarImprimirTicket()">🖨️ Imprimir ahora</button>
+      <div style="height:8px;"></div>
+      <button class="btn btn-ghost" onclick="cerrarModalTicket()">Cancelar</button>
     </div>
   </div>
 </div>
@@ -2349,6 +2369,185 @@ function fmtHoja(n){
   if(n===undefined||n===null||isNaN(n)) return '';
   return (Math.round(n*100)/100).toString();
 }
+
+/* =========================================================================
+   TICKET PARA IMPRESORA BLUETOOTH (ESC/POS) — solo los tipos que sí tuvieron
+   dato (total !== 0), agrupados por familia, igual orden que el resumen.
+   ========================================================================= */
+const TICKET_ANCHO = 32; // caracteres por línea en una impresora de 58mm típica
+
+/** Quita acentos/ñ y cualquier caracter fuera de ASCII básico — las impresoras térmicas
+ *  baratas casi nunca traen la tabla de códigos UTF-8 activada por defecto, y mandar
+ *  tildes sin esto casi siempre sale como símbolos rotos. Es un cambio a propósito: se
+ *  pierde el acento, pero se gana que el ticket salga legible en cualquier impresora. */
+function quitarAcentosTicket(s){
+  return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x00-\x7F]/g,'');
+}
+/** Arma "Etiqueta........Valor" en el ancho del ticket; si la etiqueta no cabe en una
+ *  sola línea, la envuelve en varias y deja el valor alineado a la derecha en la última. */
+function lineaTicket(etiqueta, valor, ancho){
+  const et = quitarAcentosTicket(etiqueta);
+  const val = String(valor);
+  if(et.length + 1 + val.length <= ancho){
+    return et + ' '.repeat(ancho - et.length - val.length) + val;
+  }
+  const palabras = et.split(' ');
+  const lineas = []; let actual = '';
+  palabras.forEach(p=>{
+    if((actual+' '+p).trim().length <= ancho) actual = (actual+' '+p).trim();
+    else { lineas.push(actual); actual = p; }
+  });
+  if(actual) lineas.push(actual);
+  const ultima = lineas.pop() || '';
+  const espacios = Math.max(1, ancho - ultima.length - val.length);
+  lineas.push(ultima + ' '.repeat(espacios) + val);
+  return lineas.join('\n');
+}
+
+/** Arma el contenido del ticket como una lista de líneas con su estilo (negrita/centrado),
+ *  sin depender todavía de si se va a mostrar en pantalla o mandar a la impresora — así la
+ *  vista previa y el ticket real impreso son siempre exactamente lo mismo, letra por letra.
+ *  Solo incluye familias/tipos que de verdad se evaluaron (total !== 0); si una familia
+ *  completa quedó en 0, se omite entera. */
+function construirTicketLineas(sesion){
+  const ANCHO = TICKET_ANCHO;
+  const h = sesion.header;
+  const brand = brandingDeCompania(h.company);
+  const folio = h.folio || folioTemporalDeSesion(sesion);
+  const lineas = [];
+  const add = (texto, opts={})=> lineas.push({ texto, negrita:!!opts.negrita, centrado:!!opts.centrado });
+  const separador = ()=> add('-'.repeat(ANCHO));
+
+  add('RECUENTOS DE CAMPO', {negrita:true, centrado:true});
+  add(quitarAcentosTicket(brand.nombreLegal), {centrado:true});
+  separador();
+  add(`Folio: ${folio}`);
+  add(`Finca: ${quitarAcentosTicket(fincaNombre(h.finca)||'')}`);
+  add(`Lote: ${quitarAcentosTicket(loteNombre(h.lote)||'')}`);
+  add(`Fecha: ${fmtFechaPDF(h.fecha)}`);
+  add(`Evaluaciones: ${h.estaciones}`);
+  separador();
+
+  let huboAlgo = false;
+  FAMILIAS_ORDEN.forEach(fam=>{
+    const tipos = CATALOGO.filter(t=>t.familia===fam);
+    const filasFam = tipos.filter(t=>{
+      const l = sesion.lines[t.id];
+      return l && l.total !== 0 && l.total !== undefined;
+    });
+    if(filasFam.length===0) return;
+    huboAlgo = true;
+    add(quitarAcentosTicket(fam.toUpperCase()), {negrita:true});
+    filasFam.forEach(t=>{
+      const l = sesion.lines[t.id];
+      const esPct = (t.calc==='pct_base'||t.calc==='pct_poblacion');
+      const valor = esPct ? fmtPct(l.porcentaje) : fmtHoja(l.avg);
+      lineaTicket(t.nombre, valor, ANCHO).split('\n').forEach(li=>add(li));
+    });
+    separador();
+  });
+
+  add(`Generado: ${new Date().toLocaleString('es-NI')}`, {centrado:true});
+  return { lineas, huboAlgo, folio };
+}
+
+/** Convierte las líneas ya armadas en los bytes ESC/POS crudos que entiende casi cualquier
+ *  impresora térmica barata. */
+function construirTicketESCPOS(sesion){
+  const { lineas, huboAlgo } = construirTicketLineas(sesion);
+  const bytes = [];
+  const push = (...arr)=>bytes.push(...arr);
+  const texto = (s)=>{ for(const ch of quitarAcentosTicket(s)) push(ch.charCodeAt(0)); };
+
+  push(0x1B,0x40); // ESC @ — inicializar
+  lineas.forEach(l=>{
+    push(0x1B,0x61, l.centrado?1:0); // ESC a — alinear
+    push(0x1B,0x45, l.negrita?1:0);  // ESC E — negrita on/off
+    texto(l.texto);
+    push(0x0A);
+  });
+  push(0x1B,0x45,0, 0x1B,0x61,1);
+  push(0x0A,0x0A,0x0A);
+  return { datos: new Uint8Array(bytes), huboAlgo };
+}
+
+/** Muestra la vista previa del ticket antes de mandarlo a imprimir — usa exactamente las
+ *  mismas líneas que se van a imprimir, letra por letra, así no hay sorpresas entre lo que
+ *  se ve en pantalla y lo que sale en el papel. */
+function mostrarVistaPreviaTicket(){
+  const { lineas, huboAlgo } = construirTicketLineas(sesionActual);
+  if(!huboAlgo){ toast('No hay ningún tipo de recuento con dato para imprimir', true); return; }
+  document.getElementById('ticketPreviewTexto').textContent = lineas.map(l=>l.texto).join('\n');
+  document.getElementById('modalTicket').style.display = 'flex';
+}
+function cerrarModalTicket(){
+  document.getElementById('modalTicket').style.display = 'none';
+}
+async function confirmarImprimirTicket(){
+  cerrarModalTicket();
+  await imprimirTicketBluetooth();
+}
+
+/** Conecta con una impresora Bluetooth (BLE) y manda el ticket. No asume un modelo
+ *  específico: busca entre todos los servicios de la impresora hasta encontrar uno
+ *  con un canal de escritura, así funciona con la mayoría de impresoras térmicas
+ *  genéricas sin tener que saber de antemano el UUID exacto de cada fabricante. */
+async function imprimirTicketBluetooth(){
+  if(!navigator.bluetooth){
+    toast('Este navegador no soporta Bluetooth Web — usa Chrome en Android o PC (no funciona en iPhone/Safari)', true);
+    return;
+  }
+  if(sesionActual.header.estaciones===undefined){ toast('No hay una evaluación abierta para imprimir', true); return; }
+
+  let device;
+  try{
+    toast('Elige tu impresora en la ventana que se va a abrir…');
+    device = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: [
+        '000018f0-0000-1000-8000-00805f9b34fb',
+        '0000ffe0-0000-1000-8000-00805f9b34fb',
+        '0000ff00-0000-1000-8000-00805f9b34fb',
+        '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+      ],
+    });
+  }catch(e){
+    if(e.name==='NotFoundError') return; // el técnico cerró el selector, no es un error real
+    toast('No se pudo abrir el selector de Bluetooth: '+e.message, true);
+    return;
+  }
+
+  try{
+    toast('Conectando con '+(device.name||'la impresora')+'…');
+    const server = await device.gatt.connect();
+    const services = await server.getPrimaryServices();
+    let characteristic = null;
+    for(const service of services){
+      const chars = await service.getCharacteristics();
+      const writable = chars.find(c=>c.properties.write || c.properties.writeWithoutResponse);
+      if(writable){ characteristic = writable; break; }
+    }
+    if(!characteristic){
+      toast('Se conectó, pero esta impresora no tiene un canal de escritura compatible con Web Bluetooth', true);
+      return;
+    }
+
+    const { datos, huboAlgo } = construirTicketESCPOS(sesionActual);
+    if(!huboAlgo){ toast('No hay ningún tipo de recuento con dato para imprimir', true); return; }
+
+    const CHUNK = 100; // trozos chicos: las impresoras baratas pierden datos si se manda todo de golpe
+    for(let i=0; i<datos.length; i+=CHUNK){
+      const trozo = datos.slice(i, i+CHUNK);
+      if(characteristic.properties.writeWithoutResponse) await characteristic.writeValueWithoutResponse(trozo);
+      else await characteristic.writeValue(trozo);
+      await new Promise(r=>setTimeout(r,30));
+    }
+    toast('Ticket enviado a la impresora ✔');
+  }catch(e){
+    toast('No se pudo imprimir: '+e.message, true);
+  }
+}
+
 /** Formato para Total/Resultado en el PDF: máximo 2 decimales, separador de miles.
  *  Ej: 1430.5 -> "1,430.50"   |   6 -> "6"   |   0.5 -> "0.50" */
 function fmtNumeroPDF(n){
