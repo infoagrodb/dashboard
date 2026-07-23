@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Recuentos de Campo · Infoagro</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#111827">
+<meta name="theme-color" content="#1C3C38">
 <style>
   :root{
-    --verde-oscuro:#111827;
-    --verde:#16A34A;
-    --verde-claro:#22C55E;
-    --verde-pastel:#D1FAE5;
-    --crema:#F8FAFC;
-    --ambar:#c98a2b;
-    --ambar-bg:#fef3d8;
-    --rojo:#dc2626;
-    --rojo-bg:#fee2e2;
-    --texto:#111827;
-    --texto-suave:#5b6472;
-    --borde:#e2e8f0;
+    --verde-oscuro:#1C3C38;
+    --verde:#3C8C61;
+    --verde-claro:#80B498;
+    --verde-pastel:#E2EEE7;
+    --crema:#F4F7F6;
+    --ambar:#D5A021;
+    --ambar-bg:#FAF4E4;
+    --rojo:#C94E4E;
+    --rojo-bg:#F9EAEA;
+    --texto:#22332F;
+    --texto-suave:#70837C;
+    --borde:#D6DDDC;
     --blanco:#ffffff;
     --radio:14px;
-    --sombra:0 2px 10px rgba(17,24,39,0.08);
+    --sombra:0 2px 10px rgba(28,60,56,0.08);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;height:100%;}
@@ -339,8 +339,8 @@
   <header class="topbar">
     <div id="topbarHome" class="topbar-modo">
       <span class="leaf">🌱</span>
-      <div class="title">Recuentos de Campo
-        <small>División Agrícola Comasa · Infoagro</small>
+      <div class="title">INFOAGRO
+        <small>Recuentos de Campo</small>
       </div>
     </div>
     <div id="topbarBack" class="topbar-modo" style="display:none;">
@@ -1293,9 +1293,7 @@ const SEED_LOTES = [
   {id:692,nombre:"Santa Rosa II MR",finca:67}
 ];
 const SEED_CICLOS = [
-  {id:24,nombre:"Invest. y Des. 2026",company:2},
   {id:25,nombre:"Mani 2026",company:2},
-  {id:26,nombre:"Servicios 2026",company:2},
   {id:28,nombre:"Mani 2026",company:3}
 ];
 
@@ -1492,7 +1490,11 @@ let sincronizandoLocalId = null; // id de la evaluación que se está enviando a
 
 async function renderHome(){
   const list = await idbGetAllSessions();
-  list.sort((a,b)=> b.updatedAt.localeCompare(a.updatedAt));
+  list.sort((a,b)=>{
+    const fa = a.header.fecha || '', fb = b.header.fecha || '';
+    if(fa !== fb) return fb.localeCompare(fa); // fecha del recuento, descendente
+    return b.updatedAt.localeCompare(a.updatedAt); // desempate: última edición
+  });
   const cont = document.getElementById('sessionList');
   const empty = document.getElementById('emptyState');
   cont.innerHTML='';
@@ -1512,7 +1514,7 @@ async function renderHome(){
       div.innerHTML = `
         <div class="meta">
           <div class="t1">${fincaName||'Finca sin definir'} · ${loteName||'Lote sin definir'}</div>
-          <div class="t2">${s.header.fecha||'sin fecha'} · Evaluación ${s.currentStation}/${s.header.estaciones}</div>
+          <div class="t2">${s.header.fecha ? fmtFechaPDF(s.header.fecha) : 'sin fecha'} · Evaluación ${s.currentStation}/${s.header.estaciones}</div>
           ${s.status==='error' && s.lastError ? `<div class="t2" style="color:var(--rojo);margin-top:2px;">⚠️ ${s.lastError}</div>` : ''}
         </div>
         <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
@@ -1616,12 +1618,21 @@ async function filtrarFincasPorSiembra(){
     // silencioso: sin señal o falla el Worker, se queda con la lista completa ya cargada
   }
 }
+/** Abrevia el nombre de la compañía para que la insignia no ocupe todo el ancho del
+ *  topbar — sin importar cómo venga el nombre exacto desde Odoo. */
+function abreviarCompania(nombre){
+  if(!nombre) return '';
+  const n = nombre.trim();
+  if(/comasa/i.test(n)) return 'DA Comasa';
+  if(/grupo\s*zp/i.test(n)) return 'Grupo ZP';
+  return n;
+}
 function onFincaChange(){
   const fincaId = parseInt(document.getElementById('f_finca').value);
   const finca = FINCAS.find(f=>f.id===fincaId);
   const compania = finca ? COMPANIAS.find(c=>c.id===finca.company) : null;
   const badge = document.getElementById('companiaHeaderBadge');
-  if(compania){ badge.textContent = '🏢 ' + compania.nombre; badge.style.display='inline-flex'; }
+  if(compania){ badge.textContent = '🏢 ' + abreviarCompania(compania.nombre); badge.style.display='inline-flex'; }
   else{ badge.style.display='none'; }
   filtrarLotesPorSiembra();
 }
@@ -2154,7 +2165,7 @@ function renderResumen(readOnly){
   const h = sesionActual.header;
   const gpsCount = Object.keys(sesionActual.gpsPorPlanta || {}).length;
   document.getElementById('resumenSub').textContent =
-    `${sectorNombre(h.sector)||''} · ${fincaNombre(h.finca)||''} · ${loteNombre(h.lote)||''} · ${h.fecha} · ${h.estaciones} evaluaciones · 📍 ${gpsCount}/${h.estaciones} georreferenciadas`;
+    `${sectorNombre(h.sector)||''} · ${fincaNombre(h.finca)||''} · ${loteNombre(h.lote)||''} · ${fmtFechaPDF(h.fecha)} · ${h.estaciones} evaluaciones · 📍 ${gpsCount}/${h.estaciones} georreferenciadas`;
   const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
   const cont = document.getElementById('resumenTablas');
   cont.innerHTML='';
@@ -2202,7 +2213,7 @@ function initFirmas(){
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = 2.2;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#111827';
+    ctx.strokeStyle = '#1C3C38';
     let dibujando = false;
 
     function posDesdeEvento(e){
