@@ -535,11 +535,9 @@
       </div>
 
       <div class="card">
-        <h3>Nombre de este dispositivo</h3>
-        <p>Ayuda a identificar en Odoo desde qué celular se hizo cada recuento (ej. "Celular Juan Pérez"). Opcional — si lo dejas vacío, se manda un identificador genérico.</p>
-        <input type="text" id="fNombreDispositivo" placeholder="Ej. Celular Juan Pérez" style="width:100%;padding:10px 12px;border:1.5px solid var(--borde);border-radius:10px;font-size:0.9rem;">
-        <div style="height:8px;"></div>
-        <button class="btn btn-ghost" onclick="guardarNombreDispositivo()">Guardar nombre</button>
+        <h3>Este dispositivo</h3>
+        <p>Se identifica solo en cada recuento, combinando el modelo del celular con el último nombre puesto en "Elaborado por" — no hay nada que configurar aquí.</p>
+        <div id="dispositivoInfo" style="font-size:0.85rem;font-weight:600;color:var(--verde-oscuro);"></div>
       </div>
 
       <p style="text-align:center;font-size:0.72rem;color:var(--texto-suave);margin-top:8px;">
@@ -1437,14 +1435,37 @@ function uuid(){
  *  (ej. "Celular Juan Pérez" desde Ajustes), se manda ese nombre; si no, un identificador
  *  corto genérico con una pista del sistema (Android/iPhone/etc), para que igual sea algo
  *  reconocible en Odoo en vez de un ID sin sentido. */
+/** Modelo del celular detectado del navegador — funciona bien en Android (la mayoría
+ *  de fabricantes sí exponen el modelo real ahí, ej. "SM-A536E"). En iPhone/iPad los
+ *  navegadores no exponen el modelo por privacidad, así que queda como "iPhone" genérico
+ *  — es una limitación del navegador, no de esta app, no hay forma de evitarla desde una
+ *  página web (a diferencia de una app nativa como la cámara, que sí tiene ese permiso). */
+function modeloDispositivoDetectado(){
+  const ua = navigator.userAgent || '';
+  const m = ua.match(/Android\s[\d.]+;\s*([^)]+)\)/i);
+  if(m){
+    let modelo = m[1].split('Build/')[0].trim();
+    modelo = modelo.replace(/^[a-z]{2}-[a-z]{2};?\s*/i, ''); // quita el prefijo de idioma tipo "es-ni;" si viene
+    if(modelo) return modelo;
+  }
+  if(/ipad/i.test(ua)) return 'iPad';
+  if(/iphone/i.test(ua)) return 'iPhone';
+  if(/windows/i.test(ua)) return 'PC';
+  if(/macintosh/i.test(ua)) return 'Mac';
+  return 'Dispositivo';
+}
+/** Identificador del dispositivo para x_studio_dispositivo_de_captura — se arma solo,
+ *  sin preguntarle nada al técnico: modelo detectado + el último nombre que se puso en
+ *  "Elaborado por" en ESTE celular (ya se guardaba para el autocompletado del formulario,
+ *  aquí se reutiliza). Si todavía no hay ningún técnico registrado en este dispositivo,
+ *  se agrega un identificador corto para poder distinguirlo igual entre reportes. */
 async function obtenerIdDispositivo(){
+  const modelo = modeloDispositivoDetectado();
+  const tecnico = await kvGet('ultimo_tecnico', '');
+  if(tecnico && tecnico.trim()) return `${modelo} (${tecnico.trim()})`;
   let id = await kvGet('dispositivo_id', null);
   if(!id){ id = uuid().slice(0,8); await kvSet('dispositivo_id', id); }
-  const nombre = await kvGet('dispositivo_nombre', '');
-  if(nombre && nombre.trim()) return nombre.trim();
-  const ua = navigator.userAgent || '';
-  const pista = /android/i.test(ua) ? 'Android' : /iphone|ipad/i.test(ua) ? 'iPhone' : /windows/i.test(ua) ? 'PC' : 'Dispositivo';
-  return `${pista}-${id}`;
+  return `${modelo}-${id}`;
 }
 function nuevaSesion(){
   const lines = {};
@@ -3016,12 +3037,7 @@ async function renderConfig(){
   document.getElementById('catalogoInfo').textContent = lastSync
     ? `Última actualización: ${new Date(lastSync).toLocaleString()} · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`
     : `Usando catálogo de fábrica (sembrado) · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`;
-  document.getElementById('fNombreDispositivo').value = await kvGet('dispositivo_nombre', '');
-}
-async function guardarNombreDispositivo(){
-  const valor = document.getElementById('fNombreDispositivo').value.trim();
-  await kvSet('dispositivo_nombre', valor);
-  toast(valor ? `Dispositivo guardado como "${valor}" ✔` : 'Nombre quitado — se usará el identificador genérico');
+  document.getElementById('dispositivoInfo').textContent = await obtenerIdDispositivo();
 }
 async function refrescarCatalogos(silencioso){
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
