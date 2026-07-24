@@ -67,6 +67,20 @@
   }
   .topbar-icon-btn:active{background:rgba(255,255,255,0.22);}
 
+  .tabbar-planta{
+    display:flex;background:var(--blanco);border:1px solid var(--borde);border-radius:14px;
+    box-shadow:var(--sombra);overflow:hidden;position:sticky;bottom:10px;
+  }
+  .tabbar-item{
+    flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+    padding:10px 4px 9px;background:none;border:none;color:var(--texto-suave);
+    font-size:0.66rem;font-weight:700;line-height:1.1;
+  }
+  .tabbar-item .tabbar-icon{font-size:1.35rem;line-height:1;}
+  .tabbar-item:active{background:var(--crema);}
+  .tabbar-item-accent{background:var(--verde);color:#fff;}
+  .tabbar-item-accent:active{background:var(--verde-oscuro);}
+
   .estado-btn-compacto{position:relative;}
   .estado-dot-compacto{
     width:13px; height:13px; border-radius:50%; display:block;
@@ -255,6 +269,7 @@
   .fila-tipo{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #efece2;}
   .fila-tipo:last-child{border-bottom:none;}
   .fila-tipo .nombre{flex:1;font-size:0.86rem;line-height:1.25;}
+  .fila-tipo .nombre .muestra-tm{display:block;color:var(--texto-suave);font-size:0.72rem;font-weight:600;margin-top:2px;}
   .fila-tipo input{width:78px;text-align:center;padding:9px 4px;}
   .fila-tipo input.touched{border-color:var(--verde);background:var(--verde-pastel);}
 
@@ -353,6 +368,7 @@
         <span class="topbar-back-arrow">←</span>
         <span class="topbar-back-title" id="topbarBackTitle">Título</span>
       </button>
+      <button class="topbar-icon-btn" onclick="irAInicio()" aria-label="Ir a Reportes" title="Ir a Reportes">🏠</button>
     </div>
     <button class="gps-chip" id="btnGpsPlanta" onclick="capturarGPSPlanta()" style="display:none;">
       <span id="gpsChipIcono" class="gps-chip-icono">📍</span>
@@ -476,13 +492,21 @@
       <div id="familiaContainer"></div>
       <div class="btn-row" style="margin-top:14px;">
         <button class="btn btn-ghost" id="btnPlantaPrev" onclick="cambiarPlanta(-1)">← Anterior</button>
-        <button class="btn btn-primary" id="btnPlantaNext" onclick="cambiarPlanta(1)">+ Agregar planta</button>
+        <button class="btn btn-primary" id="btnPlantaNext" onclick="cambiarPlanta(1)">+ Agregar evaluación</button>
       </div>
       <button class="btn-quitar-eval" id="btnQuitarEval" onclick="quitarEvaluacionActual()" style="display:none;">🗑 Quitar esta evaluación</button>
       <div style="height:10px;"></div>
-      <button class="btn btn-ghost" id="btnGuardarBorrador" onclick="guardarBorrador()">💾 Guardar en borrador</button>
-      <div style="height:8px;"></div>
-      <button class="btn btn-primary" id="btnVerResumenEval" onclick="verResumenParcial()">📄 Ver resumen, para enviar a INFOAGRO ODOO</button>
+      <div class="tabbar-planta">
+        <button class="tabbar-item" onclick="irAInicio()">
+          <span class="tabbar-icon">🏠</span><span class="tabbar-label">Inicio</span>
+        </button>
+        <button class="tabbar-item" id="btnGuardarBorrador" onclick="guardarBorrador()">
+          <span class="tabbar-icon">💾</span><span class="tabbar-label">Borrador</span>
+        </button>
+        <button class="tabbar-item tabbar-item-accent" id="btnVerResumenEval" onclick="verResumenParcial()">
+          <span class="tabbar-icon">📄</span><span class="tabbar-label">Resumen y enviar</span>
+        </button>
+      </div>
     </section>
 
     <!-- ============ RESUMEN ============ -->
@@ -547,9 +571,9 @@
 
       <div class="card">
         <h3>Reportes ya enviados</h3>
-        <p>Los reportes marcados "Enviado" ya están seguros en Odoo — puedes quitarlos de este celular para que la lista de Reportes no se llene. No se borra nada de Odoo, solo la copia local que ya no hace falta.</p>
+        <p>Un reporte se borra solo de este celular en cuanto se confirma en Odoo — no hace falta hacer nada. ¿Necesitas volver a ver o reimprimir uno que ya se envió? Usa la herramienta <b>Reimprimir Recuento</b>, que trae los datos directo de Odoo por folio (no depende de este celular).</p>
         <div id="enviadosInfo" style="font-size:0.78rem;color:var(--texto-suave);margin-bottom:10px;"></div>
-        <button class="btn btn-ghost" onclick="limpiarReportesEnviados()">🧹 Limpiar reportes ya enviados de este celular</button>
+        <button class="btn btn-ghost" onclick="limpiarReportesEnviados()">🧹 Limpiar manualmente (por si algo quedó pendiente)</button>
       </div>
 
       <p style="text-align:center;font-size:0.72rem;color:var(--texto-suave);margin-top:8px;">
@@ -1020,7 +1044,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.07.24-5";
+const APP_VERSION = "2026.07.24-6";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -2020,13 +2044,13 @@ function renderPlanta(){
     btnNext.style.display = 'none';
   } else {
     btnNext.style.display = '';
-    if(i>=n){ btnNext.textContent = '+ Agregar planta'; btnNext.disabled = (n>=10); }
+    if(i>=n){ btnNext.textContent = '+ Agregar evaluación'; btnNext.disabled = (n>=10); }
     else{ btnNext.textContent = 'Siguiente →'; btnNext.disabled = false; }
   }
   document.getElementById('btnQuitarEval').style.display = (!soloLectura && i===n && n>1) ? 'block' : 'none';
   document.getElementById('btnFotoChip').style.display = FOTOS_HABILITADAS ? 'flex' : 'none';
   document.getElementById('btnGuardarBorrador').style.display = soloLectura ? 'none' : '';
-  document.getElementById('btnVerResumenEval').textContent = soloLectura ? '📄 Ver resumen' : '📄 Ver resumen, para enviar a INFOAGRO ODOO';
+  document.querySelector('#btnVerResumenEval .tabbar-label').textContent = soloLectura ? 'Ver resumen' : 'Resumen y enviar';
   document.getElementById('btnGpsPlanta').style.pointerEvents = soloLectura ? 'none' : '';
   document.getElementById('btnGpsPlanta').style.opacity = soloLectura ? '0.55' : '1';
   if(FOTOS_HABILITADAS) renderFotosPlanta();
@@ -2058,7 +2082,7 @@ function renderPlanta(){
       const fila = document.createElement('div');
       fila.className='fila-tipo';
       fila.innerHTML = `
-        <span class="nombre">${nombreParaCaptura(t.nombre)}</span>
+        <span class="nombre">${nombreParaCaptura(t.nombre)}<small class="muestra-tm">Muestra: ${t.mtrs} ${t.um}</small></span>
         <input type="number" step="any" inputmode="decimal"
                data-idr="${t.id}" value="${val!==0?val:''}" placeholder="0"
                class="${val!==0?'touched':''}"
@@ -2177,7 +2201,7 @@ async function cambiarPlanta(delta){
   renderPlanta();
   window.scrollTo(0,0);
 }
-/** Deshace la última evaluación agregada por error (ej. tocaron "+ Agregar planta" de más).
+/** Deshace la última evaluación agregada por error (ej. tocaron "+ Agregar evaluación" de más).
  *  Solo se puede quitar la que está en la punta (la más reciente) — no una de en medio, para
  *  no desordenar la numeración de las que ya se llenaron. Borra sus valores, su GPS y sus
  *  fotos, y deja al técnico parado en la evaluación anterior. */
@@ -2219,6 +2243,20 @@ function estacionesVacias(){
  *  justamente lo que hace que sea un "borrador") y regresa a Reportes. A diferencia del
  *  antiguo "Guardar y salir", que en realidad no guardaba nada si no habías cambiado de
  *  evaluación antes, este sí persiste lo que llevas escrito en la evaluación actual. */
+/** Atajo directo a Reportes desde cualquier pantalla — evita tener que ir "desandando" el
+ *  camino paso a paso (Resumen → Evaluación → Formulario → Reportes). Si hay algo editable
+ *  a medias, lo guarda de pasada para no perderlo. */
+async function irAInicio(){
+  if(sesionActual && !esSoloLectura()){
+    try{
+      if(document.getElementById('screen-form').classList.contains('active')) leerFormularioHeader();
+      sesionActual.updatedAt = new Date().toISOString();
+      await idbPutSession(sesionActual);
+    }catch(e){ /* si no había nada válido que guardar, no pasa nada */ }
+  }
+  goScreen('screen-home');
+}
+
 async function guardarBorrador(){
   if(esSoloLectura()){ toast(mensajeSoloLectura(), true); return; }
   sesionActual.updatedAt = new Date().toISOString();
@@ -2318,6 +2356,8 @@ function renderResumen(readOnly){
     banner.innerHTML = mensajeSoloLectura();
     document.getElementById('resumenSub').insertAdjacentElement('afterend', banner);
   }
+  document.querySelectorAll('#screen-resumen .firma-canvas').forEach(c=>{ c.style.opacity = readOnly ? '0.7' : '1'; c.style.touchAction = readOnly ? 'auto' : 'none'; });
+  document.querySelectorAll('#screen-resumen .firma-label button').forEach(b=> b.style.display = readOnly ? 'none' : '');
   restaurarFirmas();
 }
 
@@ -2345,6 +2385,7 @@ function initFirmas(){
       return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
     }
     function empezar(e){
+      if(esSoloLectura()) return;
       dibujando = true;
       const p = posDesdeEvento(e);
       ctx.beginPath();
@@ -2374,6 +2415,7 @@ function guardarFirma(who, canvas){
   idbPutSession(sesionActual);
 }
 function limpiarFirma(who){
+  if(esSoloLectura()){ toast(mensajeSoloLectura(), true); return; }
   const canvas = document.getElementById(FIRMA_CANVAS_IDS[who]);
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -3178,8 +3220,17 @@ async function sincronizarTodo(){
       if(document.getElementById('screen-home').classList.contains('active')) renderHome();
       try{
         const odooId = await sincronizarSesion(fresca);
-        fresca.status='synced'; fresca.odooId=odooId; fresca.lastError=null;
-        await idbPutSession(fresca);
+        // Último intento de fotos por si alguna se quedó sin subir dentro de
+        // sincronizarSesion (ej. un corte de señal a media subida) — antes de borrar todo.
+        const urlFotos = await kvGet('worker_url', DEFAULT_WORKER_URL);
+        const keyFotos = await kvGet('sync_key', DEFAULT_SYNC_KEY);
+        if(urlFotos) await subirFotosDeSesion(fresca.localId, odooId, urlFotos, keyFotos).catch(()=>{});
+
+        // El dato ya quedó seguro en Odoo — se borra del celular en vez de solo marcarlo
+        // 'synced'. Si después hace falta consultarlo o reimprimirlo, se trae directo de
+        // Odoo por folio con ReimprimirRecuento.html, que ya lee los datos confirmados.
+        for(const foto of await idbGetPhotosForSession(fresca.localId)) await idbDeletePhoto(foto.id);
+        await idbDeleteSession(fresca.localId);
         ok++;
       }catch(e){
         fresca.status='error'; fresca.lastError=e.message;
@@ -3191,13 +3242,15 @@ async function sincronizarTodo(){
     }
     sincronizandoLocalId = null;
     syncProgress = null;
-    // Reintenta fotos que quedaron pendientes de sesiones ya sincronizadas anteriormente
+    // Sesiones 'synced' que hayan quedado de ANTES de este cambio (cuando todavía no se
+    // borraban solas del celular al confirmarse en Odoo) — se les da un último intento de
+    // fotos pendientes y se limpian, para que el celular quede al día con el nuevo modelo.
     const url = await kvGet('worker_url', DEFAULT_WORKER_URL); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
-    if(url){
-      const yaSincronizadas = list.filter(s=>s.status==='synced' && s.odooId);
-      for(const s of yaSincronizadas){
-        await subirFotosDeSesion(s.localId, s.odooId, url, key);
-      }
+    const yaSincronizadas = list.filter(s=>s.status==='synced' && s.odooId);
+    for(const s of yaSincronizadas){
+      if(url) await subirFotosDeSesion(s.localId, s.odooId, url, key).catch(()=>{});
+      for(const foto of await idbGetPhotosForSession(s.localId)) await idbDeletePhoto(foto.id);
+      await idbDeleteSession(s.localId);
     }
     if(pendientes.length===0 && fail===0){ toast('No hay evaluaciones pendientes'); }
     else toast(fail===0 ? `${ok} evaluación(es) enviadas a Odoo ✔` : `${ok} enviadas, ${fail} con error`, fail>0);
