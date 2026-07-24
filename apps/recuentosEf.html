@@ -388,7 +388,8 @@
         </div>
         <div class="field">
           <label>Fecha *</label>
-          <input type="date" id="f_fecha" required>
+          <input type="date" id="f_fecha" required onchange="actualizarFechaFormateada()">
+          <div id="fechaFormateada" style="font-size:0.78rem;color:var(--verde-oscuro);font-weight:600;margin-top:4px;"></div>
         </div>
         <div class="field">
           <label>Ciclo *</label>
@@ -479,12 +480,9 @@
       </div>
       <button class="btn-quitar-eval" id="btnQuitarEval" onclick="quitarEvaluacionActual()" style="display:none;">🗑 Quitar esta evaluación</button>
       <div style="height:10px;"></div>
-      <button class="btn btn-amber" id="btnTerminarReporte" onclick="terminarEvaluacion()">✔ Terminar reporte (<span id="totalPlantasBtn">1</span> evaluaciones)</button>
+      <button class="btn btn-ghost" id="btnGuardarBorrador" onclick="guardarBorrador()">💾 Guardar en borrador</button>
       <div style="height:8px;"></div>
-      <div class="btn-row">
-        <button class="btn btn-ghost" onclick="verResumenParcial()">📄 Ver resumen</button>
-        <button class="btn btn-ghost" id="btnGuardarSalir" onclick="goScreen('screen-home')">Guardar y salir</button>
-      </div>
+      <button class="btn btn-primary" id="btnVerResumenEval" onclick="verResumenParcial()">📄 Ver resumen, para enviar a INFOAGRO ODOO</button>
     </section>
 
     <!-- ============ RESUMEN ============ -->
@@ -516,7 +514,7 @@
       <div style="height:8px;"></div>
       <button class="btn btn-ghost" onclick="mostrarVistaPreviaTicket()">🖨️ Imprimir ticket (Bluetooth)</button>
       <div style="height:8px;"></div>
-      <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar reporte en este dispositivo</button>
+      <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar y enviar a INFOAGRO ODOO</button>
     </section>
 
     <!-- ============ CONFIG ============ -->
@@ -545,6 +543,13 @@
         <h3>Este dispositivo</h3>
         <p>Se identifica solo en cada recuento, combinando el modelo del celular con el último nombre puesto en "Elaborado por" — no hay nada que configurar aquí.</p>
         <div id="dispositivoInfo" style="font-size:0.85rem;font-weight:600;color:var(--verde-oscuro);"></div>
+      </div>
+
+      <div class="card">
+        <h3>Reportes ya enviados</h3>
+        <p>Los reportes marcados "Enviado" ya están seguros en Odoo — puedes quitarlos de este celular para que la lista de Reportes no se llene. No se borra nada de Odoo, solo la copia local que ya no hace falta.</p>
+        <div id="enviadosInfo" style="font-size:0.78rem;color:var(--texto-suave);margin-bottom:10px;"></div>
+        <button class="btn btn-ghost" onclick="limpiarReportesEnviados()">🧹 Limpiar reportes ya enviados de este celular</button>
       </div>
 
       <p style="text-align:center;font-size:0.72rem;color:var(--texto-suave);margin-top:8px;">
@@ -1015,7 +1020,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.07.18-1";
+const APP_VERSION = "2026.07.24-5";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -1597,12 +1602,22 @@ function loteNombre(id){ const l = LOTES.find(x=>x.id===id); return l?l.nombre:n
 function sectorNombre(id){ const s = SECTORES.find(x=>x.id===id); return s?s.nombre:null; }
 function companiaNombre(id){ const c = COMPANIAS.find(x=>x.id===id); return c?c.nombre:null; }
 
-/** Un reporte que ya se sincronizó con Odoo ('synced') queda en solo lectura en el celular.
- *  Si necesitan corregir algo, se hace directo en Odoo — así los dos lados nunca se
- *  desincronizan (si el celular lo reenvía después de un cambio local, se perdería la
- *  consistencia con lo que ya quedó guardado como fuente de verdad). */
+/** Un reporte queda en solo lectura en el celular en dos casos: ya se sincronizó ('synced'),
+ *  o hay un envío en camino ahora mismo ('syncing'). Este segundo caso es clave: sin él,
+ *  el técnico podía seguir editando mientras el envío ya iba de salida, y cuando terminaba
+ *  de subir, esa edición se perdía o quedaba una versión distinta en el celular que en Odoo
+ *  — exactamente el problema reportado. Bloquear desde que EMPIEZA el envío (no solo cuando
+ *  termina) cierra esa ventana por completo. */
 function esSoloLectura(){
-  return !!(sesionActual && sesionActual.status === 'synced');
+  return !!(sesionActual && (sesionActual.status === 'synced' || sesionActual.status === 'syncing'));
+}
+/** Mensaje de solo lectura, distinto según si ya se envió del todo o si el envío está en
+ *  camino ahora mismo — para que quede claro qué está pasando, no solo que "no se puede". */
+function mensajeSoloLectura(){
+  if(sesionActual && sesionActual.status==='syncing'){
+    return '📡 Este reporte se está enviando a Odoo ahora mismo — espera un momento y vuelve a intentar.';
+  }
+  return '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
 }
 
 async function abrirSesion(localId){
@@ -1611,11 +1626,11 @@ async function abrirSesion(localId){
   if(!s) return;
   sesionActual = s;
   if(!sesionActual.gpsPorPlanta) sesionActual.gpsPorPlanta = {}; // compatibilidad con evaluaciones creadas antes de este cambio
-  if(s.status==='synced'){
+  if(s.status==='synced' || s.status==='syncing'){
     renderResumen(true);
     goScreen('screen-resumen');
   } else {
-    poblarFormularioDesdeSesion();
+    await poblarFormularioDesdeSesion();
     renderPlanta();
     goScreen('screen-planta');
   }
@@ -1635,19 +1650,19 @@ function companiaDeSector(sectorId){
   const finca = FINCAS.find(f=>f.sector===sectorId);
   return finca ? finca.company : null;
 }
-function onSectorChange(){
+async function onSectorChange(){
   const sectorId = parseInt(document.getElementById('f_sector').value);
   const companyId = companiaDeSector(sectorId);
   const cSel = document.getElementById('f_ciclo');
   const ciclos = companyId ? CICLOS.filter(c=>c.company===companyId) : CICLOS;
   cSel.innerHTML = ciclos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
 
-  filtrarFincasPorSiembra();
+  await filtrarFincasPorSiembra();
 }
 /** Si cambian el Ciclo después de ya tener Sector/Finca elegidos (por ejemplo, para
  *  corregirlo), hay que volver a filtrar Finca y Lote — ambos dependen del Ciclo. */
-function onCicloChange(){
-  filtrarFincasPorSiembra();
+async function onCicloChange(){
+  await filtrarFincasPorSiembra();
 }
 /** La Finca solo debe mostrar las que de verdad tuvieron Siembra registrada en este Ciclo —
  *  mismo motivo y mismo patrón de respaldo que filtrarLotesPorSiembra: arranca con todas las
@@ -1660,7 +1675,7 @@ async function filtrarFincasPorSiembra(){
   const fSel = document.getElementById('f_finca');
   const fincasSector = FINCAS.filter(f=>f.sector===sectorId);
   fSel.innerHTML = fincasSector.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
-  onFincaChange();
+  await onFincaChange();
 
   if(!cicloId || !sectorId) return;
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
@@ -1676,7 +1691,7 @@ async function filtrarFincasPorSiembra(){
       const valorPrevio = fSel.value;
       fSel.innerHTML = filtradas.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
       if(filtradas.some(f=>String(f.id)===valorPrevio)) fSel.value = valorPrevio;
-      onFincaChange();
+      await onFincaChange();
     }
     // si no hay ninguna sembrada detectada, se queda con la lista completa de respaldo
   }catch(e){
@@ -1692,14 +1707,14 @@ function abreviarCompania(nombre){
   if(/grupo\s*zp/i.test(n)) return 'Grupo ZP';
   return n;
 }
-function onFincaChange(){
+async function onFincaChange(){
   const fincaId = parseInt(document.getElementById('f_finca').value);
   const finca = FINCAS.find(f=>f.id===fincaId);
   const compania = finca ? COMPANIAS.find(c=>c.id===finca.company) : null;
   const badge = document.getElementById('companiaHeaderBadge');
   if(compania){ badge.textContent = '🏢 ' + abreviarCompania(compania.nombre); badge.style.display='inline-flex'; }
   else{ badge.style.display='none'; }
-  filtrarLotesPorSiembra();
+  await filtrarLotesPorSiembra();
 }
 /** El Lote solo debe mostrar los lotes donde de verdad se sembró en este Ciclo — así se evita
  *  elegir por error un lote que nunca se sembró en este ciclo (y con eso, datos de Edad del
@@ -1803,16 +1818,27 @@ function actualizarBotonIniciar(){
     ? 'Continuar reporte, evaluación por evaluación →'
     : 'Iniciar reporte, evaluación por evaluación →';
 }
-function poblarFormularioDesdeSesion(){
+async function poblarFormularioDesdeSesion(){
   poblarSelects();
   const h = sesionActual.header;
   document.getElementById('f_fecha').value = h.fecha || new Date().toISOString().slice(0,10);
+  actualizarFechaFormateada();
   if(h.sector) document.getElementById('f_sector').value = h.sector;
-  onSectorChange();
+  await onSectorChange(); // espera Ciclo+Finca+Lote en cascada antes de seguir — si no, un
+                          // fetch que tarda en responder puede terminar pisando el Lote que
+                          // ya habíamos restaurado más abajo (esto pasaba de verdad)
   if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
   if(h.finca) document.getElementById('f_finca').value = h.finca;
-  onFincaChange();
+  await onFincaChange(); // espera el filtrado de Lote antes de seguir
   if(h.lote) document.getElementById('f_lote').value = h.lote;
+
+  // Red de seguridad: si por algún motivo algo de arriba reconstruyó las opciones DESPUÉS
+  // de restaurar el valor, lo volvemos a poner — nunca debe quedar en pantalla algo distinto
+  // a lo que de verdad tiene guardado esta evaluación.
+  if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
+  if(h.finca) document.getElementById('f_finca').value = h.finca;
+  if(h.lote) document.getElementById('f_lote').value = h.lote;
+
   document.getElementById('f_area').value = h.area_evaluada ?? '';
   document.getElementById('f_edad').value = h.edad_cultivo ?? ''; document.getElementById('f_edad').dataset.autofilled='false';
   document.getElementById('f_poblacion').value = h.poblacion_plantas ?? ''; document.getElementById('f_poblacion').dataset.autofilled='false';
@@ -1832,7 +1858,7 @@ function poblarFormularioDesdeSesion(){
     const banner = document.createElement('div');
     banner.id = 'bannerSoloLecturaForm';
     banner.className = 'banner-solo-lectura';
-    banner.innerHTML = '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
+    banner.innerHTML = mensajeSoloLectura();
     document.querySelector('#screen-form').insertAdjacentElement('afterbegin', banner);
   }
 }
@@ -1849,6 +1875,15 @@ async function nuevaEvaluacionClick(){
   document.getElementById('f_estado_fenologico').value='';
   document.getElementById('f_observacion').value='';
   actualizarBotonIniciar();
+  actualizarFechaFormateada();
+
+  // Por si el formulario había quedado en modo solo lectura (venías de ver un reporte ya
+  // enviado): un reporte nuevo siempre es editable — limpiar ese estado, no solo la data.
+  document.getElementById('bannerSoloLecturaForm')?.remove();
+  document.querySelectorAll('#screen-form input, #screen-form select, #screen-form textarea')
+    .forEach(el => el.disabled = false);
+  document.getElementById('btnIniciarReporte').style.display = 'block';
+
   goScreen('screen-form');
 }
 function pintarGpsPlanta(tipo, texto){
@@ -1937,12 +1972,19 @@ async function iniciarEvaluacion(){
   renderPlanta();
   goScreen('screen-planta');
 }
-function volverAFormulario(){
-  poblarFormularioDesdeSesion();
+async function volverAFormulario(){
+  await poblarFormularioDesdeSesion();
   goScreen('screen-form');
 }
 async function verResumenParcial(){
+  if(esSoloLectura()){ toast(mensajeSoloLectura(), true); return; }
+  const vacias = estacionesVacias();
+  if(vacias.length>0){
+    alert(`No se puede continuar: la${vacias.length===1?'':'s'} evaluación${vacias.length===1?'':'es'} ${vacias.join(', ')} ${vacias.length===1?'está':'están'} completamente en 0 (ningún tipo de recuento tiene dato). Completa al menos un dato en cada evaluación, o quítala si se agregó por error.`);
+    return;
+  }
   leerFormularioHeader();
+  sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
   calcularResultados();
   renderResumen(false);
@@ -1981,11 +2023,10 @@ function renderPlanta(){
     if(i>=n){ btnNext.textContent = '+ Agregar planta'; btnNext.disabled = (n>=10); }
     else{ btnNext.textContent = 'Siguiente →'; btnNext.disabled = false; }
   }
-  document.getElementById('totalPlantasBtn').textContent = n;
   document.getElementById('btnQuitarEval').style.display = (!soloLectura && i===n && n>1) ? 'block' : 'none';
   document.getElementById('btnFotoChip').style.display = FOTOS_HABILITADAS ? 'flex' : 'none';
-  document.getElementById('btnTerminarReporte').style.display = soloLectura ? 'none' : '';
-  document.getElementById('btnGuardarSalir').textContent = soloLectura ? 'Volver a Reportes' : 'Guardar y salir';
+  document.getElementById('btnGuardarBorrador').style.display = soloLectura ? 'none' : '';
+  document.getElementById('btnVerResumenEval').textContent = soloLectura ? '📄 Ver resumen' : '📄 Ver resumen, para enviar a INFOAGRO ODOO';
   document.getElementById('btnGpsPlanta').style.pointerEvents = soloLectura ? 'none' : '';
   document.getElementById('btnGpsPlanta').style.opacity = soloLectura ? '0.55' : '1';
   if(FOTOS_HABILITADAS) renderFotosPlanta();
@@ -1996,7 +2037,7 @@ function renderPlanta(){
     const banner = document.createElement('div');
     banner.id = 'bannerSoloLectura';
     banner.className = 'banner-solo-lectura';
-    banner.innerHTML = '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
+    banner.innerHTML = mensajeSoloLectura();
     document.querySelector('#screen-planta .progress-wrap').insertAdjacentElement('afterend', banner);
   }
 
@@ -2174,20 +2215,16 @@ function estacionesVacias(){
   }
   return vacias;
 }
-async function terminarEvaluacion(){
-  if(esSoloLectura()){ toast('Este reporte ya se envió a Odoo — para cambios, edítalo directo ahí.', true); return; }
-  const vacias = estacionesVacias();
-  if(vacias.length>0){
-    alert(`No se puede terminar el reporte: la${vacias.length===1?'':'s'} evaluación${vacias.length===1?'':'es'} ${vacias.join(', ')} ${vacias.length===1?'está':'están'} completamente en 0 (ningún tipo de recuento tiene dato). Completa al menos un dato en cada evaluación, o quítala si se agregó por error.`);
-    return;
-  }
-  const n = sesionActual.header.estaciones;
-  if(!confirm(`¿Terminar el reporte con ${n} evaluación${n===1?'':'es'}? Podrás seguir editando antes de guardarlo si hace falta.`)) return;
+/** Guarda el progreso tal como está (sin exigir que las evaluaciones estén completas — es
+ *  justamente lo que hace que sea un "borrador") y regresa a Reportes. A diferencia del
+ *  antiguo "Guardar y salir", que en realidad no guardaba nada si no habías cambiado de
+ *  evaluación antes, este sí persiste lo que llevas escrito en la evaluación actual. */
+async function guardarBorrador(){
+  if(esSoloLectura()){ toast(mensajeSoloLectura(), true); return; }
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
-  calcularResultados();
-  renderResumen(false);
-  goScreen('screen-resumen');
+  toast('Guardado como borrador ✔ — puedes continuarlo cuando quieras');
+  goScreen('screen-home');
 }
 
 /* =========================================================================
@@ -2278,7 +2315,7 @@ function renderResumen(readOnly){
     const banner = document.createElement('div');
     banner.id = 'bannerSoloLecturaResumen';
     banner.className = 'banner-solo-lectura';
-    banner.innerHTML = '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
+    banner.innerHTML = mensajeSoloLectura();
     document.getElementById('resumenSub').insertAdjacentElement('afterend', banner);
   }
   restaurarFirmas();
@@ -2563,6 +2600,16 @@ function fmtFechaPDF(iso){
   const [yyyy,mm,dd] = iso.split('-').map(Number);
   if(!yyyy||!mm||!dd) return iso;
   return `${String(dd).padStart(2,'0')}-${MESES[mm-1]}-${yyyy}`;
+}
+/** El selector nativo de fecha del celular no se puede forzar a mostrar "01-Ene-2026" — es
+ *  el navegador el que dibuja ese control, no la app. Por eso, junto al selector se muestra
+ *  esta confirmación en el mismo formato que usa el resto de la app (PDF, lista de Reportes,
+ *  resumen), para que siempre quede claro qué fecha quedó elegida. */
+function actualizarFechaFormateada(){
+  const el = document.getElementById('fechaFormateada');
+  if(!el) return;
+  const valor = document.getElementById('f_fecha').value;
+  el.textContent = valor ? '→ ' + fmtFechaPDF(valor) : '';
 }
 
 /** Matemática estándar de slippy-map (Web Mercator) — igual que la que se usaba antes en el
@@ -2989,7 +3036,7 @@ async function compartirPDF(){
 }
 
 async function guardarEvaluacionFinal(){
-  if(esSoloLectura()){ toast('Este reporte ya se envió a Odoo — para cambios, edítalo directo ahí.', true); goScreen('screen-home'); return; }
+  if(esSoloLectura()){ toast(mensajeSoloLectura(), true); goScreen('screen-home'); return; }
   const vacias = estacionesVacias();
   if(vacias.length>0){
     alert(`No se puede guardar/enviar el reporte: la${vacias.length===1?'':'s'} evaluación${vacias.length===1?'':'es'} ${vacias.join(', ')} ${vacias.length===1?'está':'están'} completamente en 0. Completa al menos un dato en cada evaluación, o quítala si se agregó por error.`);
@@ -2998,7 +3045,9 @@ async function guardarEvaluacionFinal(){
   sesionActual.status = 'pending_sync';
   sesionActual.updatedAt = new Date().toISOString();
   await idbPutSession(sesionActual);
-  toast('Reporte guardado en el dispositivo ✔');
+  toast(navigator.onLine
+    ? 'Guardado ✔ — enviando a INFOAGRO ODOO…'
+    : 'Guardado ✔ — sin señal ahora, se enviará a INFOAGRO ODOO en cuanto la haya');
   goScreen('screen-home');
   intentarSincronizarSilencioso();
 }
@@ -3096,6 +3145,15 @@ async function sincronizarTodo(){
   if(btn) btn.disabled = true;
   try{
     const list = await idbGetAllSessions();
+
+    // Si la app se cerró justo en medio de un envío anterior, esa sesión pudo quedar
+    // atascada en 'syncing' para siempre (nunca se reintenta, y queda bloqueada). Como ya
+    // está protegido contra duplicados del lado del Worker (revisa el folio temporal antes
+    // de crear), es seguro devolverla a 'pending_sync' para que se reintente normal.
+    for(const s of list){
+      if(s.status==='syncing'){ s.status='pending_sync'; await idbPutSession(s); }
+    }
+
     const pendientes = list.filter(s=>s.status==='pending_sync'||s.status==='error');
     let ok=0, fail=0;
     if(pendientes.length>0){
@@ -3108,6 +3166,12 @@ async function sincronizarTodo(){
       // ya debería evitar que esto ocurra).
       const fresca = (await idbGetAllSessions()).find(x=>x.localId===s.localId);
       if(!fresca || fresca.status==='synced'){ continue; }
+
+      // Se marca 'syncing' y se guarda ANTES de mandarla — así, si el técnico abre esta
+      // misma evaluación mientras el envío va de salida, la ve en solo lectura de inmediato
+      // (ver esSoloLectura) en vez de poder seguir editando algo que ya está en camino.
+      fresca.status = 'syncing';
+      await idbPutSession(fresca);
 
       sincronizandoLocalId = s.localId;
       renderEstadoPill();
@@ -3237,6 +3301,24 @@ async function renderConfig(){
     ? `Última actualización: ${new Date(lastSync).toLocaleString()} · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`
     : `Usando catálogo de fábrica (sembrado) · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`;
   document.getElementById('dispositivoInfo').textContent = await obtenerIdDispositivo();
+  const enviados = list.filter(s=>s.status==='synced').length;
+  document.getElementById('enviadosInfo').textContent = enviados>0
+    ? `${enviados} reporte(s) enviado(s) guardados en este celular`
+    : 'No hay reportes enviados guardados en este celular por ahora';
+}
+/** Borra del celular (no de Odoo) los reportes que ya se enviaron — quedan seguros en Odoo,
+ *  esta copia local solo servía para el envío y para poder reimprimirlos desde aquí mismo.
+ *  Si necesitan reimprimir uno después de limpiarlo, usar ReimprimirRecuento.html (trae los
+ *  datos directo de Odoo por folio). */
+async function limpiarReportesEnviados(){
+  const list = await idbGetAllSessions();
+  const enviados = list.filter(s=>s.status==='synced');
+  if(enviados.length===0){ toast('No hay reportes enviados para limpiar'); return; }
+  if(!confirm(`¿Quitar ${enviados.length} reporte(s) ya enviado(s) de este celular? Siguen seguros en Odoo — si necesitas reimprimir alguno después, usa la herramienta de reimpresión por folio.`)) return;
+  for(const s of enviados) await idbDeleteSession(s.localId);
+  toast(`${enviados.length} reporte(s) limpiado(s) de este celular ✔`);
+  renderConfig();
+  if(document.getElementById('screen-home').classList.contains('active')) renderHome();
 }
 async function refrescarCatalogos(silencioso){
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
