@@ -32,6 +32,13 @@
   .btn-ghost{background:var(--blanco); color:var(--verde); border:1.5px solid var(--verde);}
   .btn:disabled{opacity:0.5; cursor:default;}
   .resumen-linea{display:flex; justify-content:space-between; padding:7px 0; border-bottom:1px solid var(--borde); font-size:0.9rem;}
+  .resultado-item{
+    padding:12px 10px; border-bottom:1px solid var(--borde); cursor:pointer; border-radius:8px;
+  }
+  .resultado-item:active{background:var(--verde-pastel);}
+  .resultado-item:last-child{border-bottom:none;}
+  .resultado-folio{font-weight:700; font-size:0.92rem; color:var(--verde-oscuro);}
+  .resultado-sub{font-size:0.78rem; color:var(--texto-suave); margin-top:2px;}
   .resumen-linea b{color:var(--texto-suave); font-weight:600; font-size:0.78rem;}
   .toast{
     position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
@@ -44,12 +51,21 @@
 </style>
 </head>
 <body>
+<svg style="display:none" aria-hidden="true">
+<defs>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+</defs>
+</svg>
 <header>
   <span style="font-size:1.5rem;">🌱</span>
-  <div>
+  <div style="flex:1;">
     <h1>Reimprimir Recuento</h1>
     <small>Datos confirmados desde Odoo · Infoagro</small>
   </div>
+  <button onclick="window.location.href='recuentosEf.html'" aria-label="Ir a Inicio" title="Ir a Inicio"
+    style="background:rgba(255,255,255,0.12);border:none;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;flex-shrink:0;cursor:pointer;">
+    <svg style="width:20px;height:20px;stroke:currentColor;"><use href="#ic-home"/></svg>
+  </button>
 </header>
 <main>
   <div class="aviso">
@@ -63,6 +79,28 @@
     <label>Folio del recuento</label>
     <input type="text" id="fFolio" placeholder="Ej. DA-M-2026-0001" autocapitalize="characters">
     <button class="btn btn-primary" id="btnBuscar" onclick="buscarRecuento()">🔍 Buscar en Odoo</button>
+  </div>
+
+  <div class="card">
+    <label>¿No sabes el folio? Busca por técnico o fecha</label>
+    <input type="text" id="fTecnico" placeholder="Nombre del técnico (opcional)">
+    <div style="height:8px;"></div>
+    <div style="display:flex;gap:8px;">
+      <div style="flex:1;">
+        <label style="font-size:0.7rem;">Desde</label>
+        <input type="date" id="fDesde">
+      </div>
+      <div style="flex:1;">
+        <label style="font-size:0.7rem;">Hasta</label>
+        <input type="date" id="fHasta">
+      </div>
+    </div>
+    <button class="btn btn-primary" id="btnBuscarLista" onclick="buscarPorTecnicoFecha()">🔍 Buscar</button>
+  </div>
+
+  <div class="card" id="cardListaResultados" style="display:none;">
+    <h3 style="margin-top:0;">Resultados</h3>
+    <div id="listaResultados"></div>
   </div>
 
   <div class="card" id="cardResultado" style="display:none;">
@@ -796,6 +834,18 @@ function limpiarObservacion(obs){
     .trim();
 }
 
+/** Trae el detalle de un recuento (por folio u odoo_id) y lo muestra — usado tanto por la
+ *  búsqueda directa por folio como por cada resultado tocado en la búsqueda por técnico. */
+async function cargarRecuentoDetalle(params){
+  const qs = params.folio ? `folio=${encodeURIComponent(params.folio)}` : `odoo_id=${params.odoo_id}`;
+  const res = await fetch(`${WORKER_BASE}/recuento-detalle?${qs}`);
+  const data = await res.json();
+  if(!res.ok || !data.ok) throw new Error(data.error || 'No se encontró ese recuento');
+  datosActuales = data;
+  mostrarResultado(data);
+  document.getElementById('cardResultado').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
 async function buscarRecuento(){
   const folio = document.getElementById('fFolio').value.trim();
   if(!folio){ toast('Escribe un folio para buscar', true); return; }
@@ -803,16 +853,57 @@ async function buscarRecuento(){
   btn.disabled = true; btn.textContent = 'Buscando…';
   document.getElementById('cardResultado').style.display = 'none';
   try{
-    const res = await fetch(`${WORKER_BASE}/recuento-detalle?folio=${encodeURIComponent(folio)}`);
-    const data = await res.json();
-    if(!res.ok || !data.ok){ toast(data.error || 'No se encontró ese recuento', true); return; }
-    datosActuales = data;
-    mostrarResultado(data);
+    await cargarRecuentoDetalle({ folio });
   }catch(e){
-    toast('No se pudo conectar: '+e.message, true);
+    toast(e.message, true);
   }finally{
     btn.disabled = false; btn.textContent = '🔍 Buscar en Odoo';
   }
+}
+
+/** Busca varios recuentos a la vez por técnico y/o rango de fechas (sin necesitar el folio
+ *  exacto) — útil para "¿qué reportes ha mandado Fulano esta semana?". El resultado se
+ *  muestra como una lista tocable; al tocar uno se trae su detalle completo igual que si
+ *  se hubiera buscado por folio. */
+async function buscarPorTecnicoFecha(){
+  const tecnico = document.getElementById('fTecnico').value.trim();
+  const desde = document.getElementById('fDesde').value;
+  const hasta = document.getElementById('fHasta').value;
+  if(!tecnico && !desde && !hasta){ toast('Escribe un técnico o elige alguna fecha para buscar', true); return; }
+  const btn = document.getElementById('btnBuscarLista');
+  btn.disabled = true; btn.textContent = 'Buscando…';
+  document.getElementById('cardResultado').style.display = 'none';
+  document.getElementById('cardListaResultados').style.display = 'none';
+  try{
+    const params = new URLSearchParams();
+    if(tecnico) params.set('tecnico', tecnico);
+    if(desde) params.set('desde', desde);
+    if(hasta) params.set('hasta', hasta);
+    const res = await fetch(`${WORKER_BASE}/recuentos-buscar?${params.toString()}`);
+    const data = await res.json();
+    if(!res.ok || !data.ok){ toast(data.error || 'No se pudo buscar', true); return; }
+    mostrarListaResultados(data.recuentos);
+  }catch(e){
+    toast('No se pudo conectar: '+e.message, true);
+  }finally{
+    btn.disabled = false; btn.textContent = '🔍 Buscar';
+  }
+}
+
+function mostrarListaResultados(recuentos){
+  const cont = document.getElementById('listaResultados');
+  if(recuentos.length===0){
+    cont.innerHTML = '<p style="color:var(--texto-suave);font-size:0.85rem;margin:6px 0 0;">No se encontró ningún recuento con esos filtros.</p>';
+  } else {
+    cont.innerHTML = recuentos.map(r => `
+      <div class="resultado-item" onclick='cargarRecuentoDetalle({odoo_id:${r.id}}).catch(e=>toast(e.message,true))'>
+        <div class="resultado-folio">${r.folio}</div>
+        <div class="resultado-sub">${r.finca||'—'} · ${r.lote||'—'} · ${r.fecha ? fmtFechaPDF(r.fecha) : '—'}</div>
+        <div class="resultado-sub">${r.tecnico ? '👤 '+r.tecnico : 'Técnico no registrado'}${r.compania ? ' · '+r.compania : ''}</div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('cardListaResultados').style.display = 'block';
 }
 
 function mostrarResultado(data){
@@ -821,7 +912,7 @@ function mostrarResultado(data){
   document.getElementById('resDetalle').innerHTML = `
     <div class="resumen-linea"><span><b>SECTOR</b><br>${h.sector||'—'}</span><span><b>CICLO</b><br>${h.ciclo||'—'}</span></div>
     <div class="resumen-linea"><span><b>FINCA</b><br>${h.finca||'—'}</span><span><b>LOTE</b><br>${h.lote||'—'}</span></div>
-    <div class="resumen-linea"><span><b>FECHA</b><br>${h.fecha||'—'}</span><span><b>EVALUACIONES</b><br>${h.estaciones||'—'}</span></div>
+    <div class="resumen-linea"><span><b>FECHA</b><br>${h.fecha ? fmtFechaPDF(h.fecha) : '—'}</span><span><b>EVALUACIONES</b><br>${h.estaciones||'—'}</span></div>
     <div class="resumen-linea"><span><b>PUNTOS GPS</b><br>${data.gps_points.length}</span><span><b>COMPAÑÍA</b><br>${h.compania||'—'}</span></div>
   `;
   document.getElementById('cardResultado').style.display = 'block';
