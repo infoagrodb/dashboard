@@ -288,7 +288,7 @@
   .fila-tipo{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #efece2;}
   .fila-tipo:last-child{border-bottom:none;}
   .fila-tipo .nombre{flex:1;font-size:0.86rem;line-height:1.25;}
-  .fila-tipo .nombre .muestra-tm{display:block;color:var(--texto-suave);font-size:0.72rem;font-weight:600;margin-top:2px;}
+  .fila-tipo .nombre .muestra-tm{display:block;color:#E8730D;font-size:0.72rem;font-weight:700;margin-top:2px;}
   .fila-tipo input{width:78px;text-align:center;padding:9px 4px;}
   .fila-tipo input.touched{border-color:var(--verde);background:var(--verde-pastel);}
 
@@ -2959,18 +2959,30 @@ async function construirDocPDF(sesion){
   y = doc.lastAutoTable.finalY + 4;
 
   // ---- Observación (entre la tabla y las firmas) ----
+  // Antes esto no verificaba si el texto cabía en lo que quedaba de hoja: con una
+  // observación larga, las líneas se imprimían más allá del margen inferior (se
+  // perdían/recortaban) y recién DESPUÉS se decidía si las firmas saltaban de página.
+  // Ahora se calcula el alto que va a ocupar el bloque ANTES de dibujarlo, y si no
+  // cabe junto con las firmas, se salta de página primero — así la observación
+  // completa, seguida inmediatamente de las firmas, siempre queda junta.
+  const FIRMA_H_RESERVADA = 22; // espacio que necesitan las firmas después del bloque
   if(h.observacion){
+    doc.setFont('helvetica','normal'); doc.setFontSize(6.3);
+    const obsLines = doc.splitTextToSize(h.observacion, pageW-marginX*2);
+    const obsAltura = 3 + obsLines.length*2.7 + 3.5;
+
+    if(y + obsAltura + FIRMA_H_RESERVADA > 273){ doc.addPage(); y = 20; }
+
     doc.setFont('helvetica','bold'); doc.setFontSize(5.5); doc.setTextColor(91,95,82);
     doc.text('OBSERVACIÓN', marginX, y);
     doc.setFont('helvetica','normal'); doc.setFontSize(6.3); doc.setTextColor(0,0,0);
-    const obsLines = doc.splitTextToSize(h.observacion, pageW-marginX*2);
     doc.text(obsLines, marginX, y+3);
-    y += 3 + obsLines.length*2.7 + 3.5;
+    y += obsAltura;
   } else {
     y += 4;
   }
 
-  // ---- Firmas (misma hoja que la tabla; solo salta de página si de verdad no cabe) ----
+  // ---- Firmas (misma hoja que la observación; solo salta de página si de verdad no cabe) ----
   if(y > 267){ doc.addPage(); y = 20; }
   const firmaW = 55, firmaH = 14;
   doc.setDrawColor(100,100,100); doc.setLineWidth(0.3);
@@ -2985,13 +2997,86 @@ async function construirDocPDF(sesion){
   doc.line(x2, y, x2+firmaW, y);
   doc.text('Supervisor', x2, y+4);
 
-  // ---- Página 2: ubicación GPS (si se capturó al menos una planta) ----
+  // ---- Página siguiente: ubicación GPS (si se capturó al menos una planta) ----
+  // Va inmediatamente después de las firmas, sin nada intercalado.
   if(gpsCount > 0){
     doc.addPage();
     await dibujarPaginaGPS(doc, sesion.gpsPorPlanta, folio, marginX, pageW);
   }
 
+  // ---- Fotos (si hay, justo después del mapa — o después de las firmas si no
+  //      hubo GPS —, ordenadas de dos en dos) ----
+  const pageH = doc.internal.pageSize.getHeight();
+  const fotos = await idbGetPhotosForSession(sesion.localId);
+  if(fotos.length > 0){
+    const fotosConDataUrl = [];
+    for(const f of fotos.sort((a,b)=>(a.station||0)-(b.station||0))){
+      try{ fotosConDataUrl.push({ station: f.station, dataUrl: await blobADataUrl(f.blob) }); }
+      catch(e){ /* si una foto individual falla, se omite y se sigue con el resto */ }
+    }
+    if(fotosConDataUrl.length > 0){
+      doc.addPage();
+      dibujarPaginaFotos(doc, fotosConDataUrl, folio, marginX, pageW, pageH);
+    }
+  }
+
   return { doc, folio };
+}
+
+/** Convierte un Blob de imagen a data URL (base64), formato que jsPDF necesita
+ *  para addImage(). Las fotos se guardan como Blob en IndexedDB para ahorrar
+ *  espacio; solo se convierten a data URL al momento de armar el PDF. */
+function blobADataUrl(blob){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+/** Página(s) de fotografías de la evaluación, en cuadrícula de 2 columnas,
+ *  ordenadas por número de estación/planta. Salta de página automáticamente
+ *  cuando ya no cabe otra fila. */
+function dibujarPaginaFotos(doc, fotos, folio, marginX, pageW, pageH){
+  let y = 18;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text(`Fotografías de la evaluación — ${folio}`, marginX, y);
+  y += 8;
+
+  const cols = 2;
+  const gap = 6;
+  const cellW = (pageW - marginX*2 - gap) / cols;
+  const cellH = cellW * 0.75;
+  const labelH = 6;
+  const limiteInferior = pageH - 14;
+
+  let col = 0;
+  let x = marginX;
+
+  fotos.forEach(foto=>{
+    if(y + cellH + labelH > limiteInferior){
+      doc.addPage();
+      y = 18;
+      col = 0;
+      x = marginX;
+    }
+
+    try{ doc.addImage(foto.dataUrl, 'JPEG', x, y, cellW, cellH); }catch(e){}
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
+    doc.rect(x, y, cellW, cellH);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(91,95,82);
+    doc.text(`Evaluación ${foto.station}`, x, y+cellH+4);
+
+    if(col === 0){
+      col = 1;
+      x = marginX + cellW + gap;
+    } else {
+      col = 0;
+      x = marginX;
+      y += cellH + labelH + 4;
+    }
+  });
 }
 
 async function dibujarPaginaGPS(doc, gpsPorPlanta, folio, marginX, pageW){
