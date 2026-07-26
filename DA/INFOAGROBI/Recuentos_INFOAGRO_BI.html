@@ -67,6 +67,7 @@
   .tf-campo{ display:flex; flex-direction:column; gap:3px; min-width:118px; flex:1 1 118px; position:relative; }
   .campo-dds{ max-width:90px; min-width:76px; flex:0 0 auto; }
   .campo-fincas-historicas{ min-width:118px; max-width:130px; flex:0 0 auto; }
+  .campo-dds-actual{ min-width:150px; max-width:170px; flex:0 0 auto; }
   .toggle-fincas-historicas{
     display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text-muted);
     cursor:pointer; white-space:nowrap; height:33px; border:1px solid transparent;
@@ -146,6 +147,7 @@
     .campo-familia{ order:7; }
     .campo-recuento{ order:8; }
     .campo-dds{ order:9; }
+    .campo-dds-actual{ order:10; }
   }
 
   .nota-fuentes { font-size:11px; color:var(--text-muted); margin-bottom:14px; display:flex; gap:16px; flex-wrap:wrap; }
@@ -418,6 +420,12 @@
         <div class="ms-dropdown" id="dropDds" onclick="toggleMs(event,'dds')">Todos</div>
         <div class="ms-panel" id="msDds"></div>
       </div>
+      <div class="tf-campo campo-dds-actual">
+        <label>&nbsp;</label>
+        <label class="toggle-fincas-historicas" id="lblCompararDdsActual" title="Agrupa por la misma ventana de DDS que usa el gráfico (10, 18, 28, 40...). Si tu última evaluación cae en la ventana de 28 DDS (aunque su DDS real sea 24, 26 o 29), limita también el histórico a esa ventana o anteriores — en vez de mezclar con datos de plantas mucho más desarrolladas (ej. ventana 130) que a este ciclo todavía no le tocan.">
+          <input type="checkbox" id="chkCompararDdsActual" onchange="toggleCompararDdsActual(this.checked)"> Comparar hasta DDS actual
+        </label>
+      </div>
     </div>
 
     <div class="tf-acciones" id="tfAcciones">
@@ -564,7 +572,7 @@
           <button class="btn-volver-listado" onclick="volverAlListadoReportes()">⬅ Volver al listado</button>
           <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button class="btn-ver-fotos" id="btnVerFotosReporte" onclick="abrirModalFotos()">📷 Ver fotos</button>
-            <button class="btn-reimprimir" id="btnReimprimirReporte" onclick="reimprimirReporteActual()">🖨️ Reimprimir reporte (con mapa, fotos y firmas)</button>
+            <button class="btn-reimprimir" id="btnReimprimirReporte" onclick="reimprimirReporteActual(this)">🖨️ Reimprimir reporte (con mapa, fotos y firmas)</button>
           </div>
         </div>
         <div id="detalleReporteContenido"><div class="detalle-estado-msg">Cargando…</div></div>
@@ -722,7 +730,8 @@ async function cargarOdoo(){
           area: datosPadre?.area ?? null,
           poblacion: datosPadre?.poblacion ?? null,
           estadoFeno: datosPadre?.estadoFeno ?? null,
-          aplicacion: datosPadre?.aplicacion ?? null
+          aplicacion: datosPadre?.aplicacion ?? null,
+          odooId: idPadre
         });
       });
       pagina++;
@@ -1250,6 +1259,25 @@ function exportarTodoExcel(){
 // Cada tipo de recuento ahora se muestra directo (gráfico + KPIs), sin selección
 // previa por tarjeta — ver render() y renderBloqueDetalle().
 
+let compararHastaDdsActual = false;
+
+// "DDS actual" = la VENTANA de agrupación (ventanaDDS, la misma tabla que usa el
+// gráfico: 10,18,28,40,52...) más alta entre los registros EN VIVO del CICLO ABIERTO
+// (CICLO_ACTUAL_NOMBRE — ej. "Mani 2026"), o del ciclo puntual que el usuario haya
+// elegido a mano si eligió uno solo — que ya pasaron el resto de filtros. Se ancla al
+// ciclo porque puede haber más de un ciclo con datos "en vivo" simultáneamente (otra
+// compañía, otro cultivo); sin anclar, el DDS más alto podría venir de un ciclo
+// distinto al que el usuario está mirando. Se usa la ventana y no el DDS exacto porque
+// el propio DDS real varía evaluación a evaluación (24, 26, 29...) pero todos caen
+// agrupados en la misma ventana (ej. 28) — comparar por DDS exacto dejaría afuera
+// registros que en el gráfico ya se están tratando como "la misma edad".
+function calcularDdsActual(baseData){
+  const cicloAncla = seleccionPropia.ciclo.length === 1 ? seleccionPropia.ciclo[0] : CICLO_ACTUAL_NOMBRE;
+  const vivos = baseData.filter(r => r.fuente==='vivo' && r.dds != null && r.dds !== '' && (!cicloAncla || r.ci === cicloAncla));
+  if(!vivos.length) return null;
+  return Math.max(...vivos.map(r => ventanaDDS(Number(r.dds))));
+}
+
 function datosFiltrados(){
   let d = RAW;
   d = d.filter(r => !seleccionPropia.compania.length || seleccionPropia.compania.includes(r.co));
@@ -1259,6 +1287,19 @@ function datosFiltrados(){
   d = d.filter(r => !seleccionPropia.lote.length      || seleccionPropia.lote.includes(r.lo));
   d = d.filter(r => !seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa));
   d = d.filter(r => !seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re));
+
+  // "Comparar hasta DDS actual": si la última evaluación en vivo cae en la ventana de,
+  // por ejemplo, 28 DDS (aunque su DDS real sea 24, 26 o 29), se limita TODO (incluido
+  // el histórico de otros ciclos) a esa ventana o anteriores, antes de calcular
+  // cualquier KPI/gráfico — así se compara "cómo iba la planta a esta edad" contra el
+  // propio histórico a esa MISMA etapa, en vez de mezclar con datos de plantas mucho
+  // más desarrolladas (ej. ventana 130) que todavía no le tocan a este ciclo.
+  // Si el usuario ya eligió DDS puntuales a mano, se respeta esa elección tal cual.
+  if(compararHastaDdsActual && !seleccionPropia.dds.length){
+    const ddsActual = calcularDdsActual(d);
+    if(ddsActual != null) d = d.filter(r => r.dds != null && r.dds !== '' && ventanaDDS(Number(r.dds)) <= ddsActual);
+  }
+
   d = d.filter(r => !seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds));
   // Por defecto, no mezclar fincas que no participan del ciclo actual (sin Siembra
   // registrada ahí) — salvo que el usuario haya activado "Incluir fincas históricas",
@@ -1268,6 +1309,12 @@ function datosFiltrados(){
     if(fincasActivas && fincasActivas.size) d = d.filter(r => fincasActivas.has(r.fi));
   }
   return d;
+}
+
+function toggleCompararDdsActual(checked){
+  compararHastaDdsActual = checked;
+  render();
+  refrescarTabPorCicloSiVisible();
 }
 
 // Umbrales PROVISIONALES por terciles de los propios datos filtrados (verde/ámbar/rojo).
@@ -1311,6 +1358,26 @@ function render(){
 
   const datos = datosFiltrados();
 
+  // Pista visual: si "Comparar hasta DDS actual" está activo, se muestra a qué DDS
+  // quedó acotada la comparación (o un aviso si aún no hay ningún dato en vivo).
+  const lblDdsActual = document.getElementById('lblCompararDdsActual');
+  if(lblDdsActual){
+    if(compararHastaDdsActual){
+      const ddsActual = calcularDdsActual(datos.length ? RAW.filter(r=>
+        (!seleccionPropia.compania.length || seleccionPropia.compania.includes(r.co)) &&
+        (!seleccionPropia.sector.length   || seleccionPropia.sector.includes(r.se)) &&
+        (!seleccionPropia.ciclo.length    || seleccionPropia.ciclo.includes(r.ci)) &&
+        (!seleccionPropia.finca.length    || seleccionPropia.finca.includes(r.fi)) &&
+        (!seleccionPropia.lote.length     || seleccionPropia.lote.includes(r.lo)) &&
+        (!seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa)) &&
+        (!seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re))
+      ) : []);
+      lblDdsActual.lastChild.textContent = ddsActual!=null ? ` Comparar hasta DDS actual (${ddsActual})` : ' Comparar hasta DDS actual (sin dato en vivo)';
+    } else {
+      lblDdsActual.lastChild.textContent = ' Comparar hasta DDS actual';
+    }
+  }
+
   if(!datos.length){
     lista.innerHTML = '';
     vacioMsg.style.display = 'block';
@@ -1353,6 +1420,7 @@ function render(){
           <button class="btn-accion" onclick="exportarDetalleExcel('${clave}')">📥 Exportar Excel</button>
         </div>
       </div>
+      <div class="nota-dds-actual" id="notaDds_${clave}"></div>
       <div class="kpi-mini-grid" id="kpiMini_${clave}"></div>
       <div class="chart-wrap"><canvas id="chart_${clave}"></canvas></div>
       <div class="nota-ventana-dds" style="font-size:10.5px;color:var(--text-muted);margin:-10px 0 14px;">DDS = ventana estándar de recuento (10, 18, 28, 40… 160). Cada punto agrupa los registros cuyo DDS real cae en esa ventana; clic en un punto para ver el detalle completo por finca/lote.</div>
@@ -1414,6 +1482,13 @@ function abrirModalPunto(cicloLabel, ventana, registros){
       const val = r.esPorc ? (r.valor*100).toFixed(1)+'%' : r.valor.toFixed(1);
       const fechaTxt = formatoFecha(r.fecha) || (r.fuente==='hist' ? 'Histórico' : '—');
       const obsHtml = r.obs ? `<div style="margin-top:6px;font-size:12px;color:var(--text-main);background:var(--bg-main);border-radius:8px;padding:8px 10px;line-height:1.5;">📝 ${r.obs}</div>` : '';
+
+      // Solo los registros EN VIVO (Odoo actual) tienen un reporte padre real al que
+      // volver — el histórico (Excel DA/GZP) no trae ese id, así que ahí no se muestra
+      // el botón.
+      const verReporteBtn = (r.fuente==='vivo' && r.odooId)
+        ? `<button onclick="abrirModalReporteDetalle(${r.odooId})" style="margin-top:8px;background:var(--primary-light);border:none;color:var(--primary);font-weight:700;border-radius:8px;padding:6px 12px;cursor:pointer;font-size:11.5px;">📄 Ver reporte completo (con fotos)</button>`
+        : '';
 
       // Campos del reporte padre (x_recuentos_estado_del) — sólo disponibles para registros en vivo
       const camposPadre = [];
@@ -1541,6 +1616,7 @@ function abrirModalPunto(cicloLabel, ventana, registros){
         </div>
         ${padreHtml}
         ${obsHtml}
+        ${verReporteBtn}
         ${lluviaHtml}
         ${fungicidaHtml}
       </div>`;
@@ -1582,6 +1658,20 @@ function renderBloqueDetalle(clave, datos){
 
   const kpiMiniEl = document.getElementById('kpiMini_'+clave);
   if(!kpiMiniEl) return; // el bloque no está en el DOM (filtros cambiaron mientras corría)
+
+  // Nota visible de que el filtro "Comparar hasta DDS actual" está aplicando la MISMA
+  // restricción acá que en el gráfico — se calcula sobre los MISMOS `datos` (ya
+  // restringidos) que arma Mínimo/Mediana/Máximo histórico, así que si el valor no
+  // cambió es porque, para este tipo puntual, ningún registro histórico quedó afuera
+  // de esa ventana (no porque el filtro no se haya aplicado).
+  const notaEl = document.getElementById('notaDds_'+clave);
+  if(notaEl){
+    const ventanaActiva = compararHastaDdsActual ? calcularDdsActual(datos) : null;
+    notaEl.innerHTML = ventanaActiva!=null
+      ? `<div style="font-size:10px;color:var(--primary);font-weight:800;margin-bottom:6px;">🔎 Comparando histórico solo hasta la ventana de ${ventanaActiva} DDS (edad de la última evaluación de ${cicloActualDatos||CICLO_ACTUAL_NOMBRE||'este ciclo'})</div>`
+      : '';
+  }
+
   kpiMiniEl.innerHTML = `
     <div class="kpi-mini-card"><div class="lbl">Mínimo histórico</div><div class="val">${fmtMini(minH)}</div></div>
     <div class="kpi-mini-card"><div class="lbl">Mediana histórica</div><div class="val">${fmtMini(medH)}</div></div>
@@ -2494,6 +2584,40 @@ function renderListadoReportes(){
   `).join('');
 }
 
+// Trae header + líneas + conteo de fotos de un reporte — compartida entre la vista de
+// detalle del tab Listado y el modal de detalle que se abre desde el gráfico (KPIs).
+async function cargarDetalleReporte(id){
+  const camposHeader = ['id','x_name','x_studio_fecha','x_studio_ciclo','x_studio_sector','x_studio_company_id',
+    'x_studio_finca','x_studio_lote_de_la_finca','x_studio_area_evaluada_mzn','x_studio_edad_del_cultivo',
+    'x_studio_poblacion_plantas','x_studio_cantidad_de_estaciones','x_studio_estado_fenologico',
+    'x_studio_aplicacion','x_studio_fecha_aplicacion','x_studio_observacion','x_studio_folio_temporal',
+    'x_studio_dispositivo_de_captura'];
+  const domainHeader = encodeURIComponent(JSON.stringify([['id','=',id]]));
+  const rH = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=${camposHeader.join(',')}&domain=${domainHeader}&limit=1`);
+  const headers = filasDe(await rH.json());
+  if(!headers.length) throw new Error('No se encontró el reporte en Odoo.');
+  const h = headers[0];
+
+  const camposLinea = ['x_studio_idrecuento','x_studio_recuento','x_studio_familia_del_recuento','x_studio_mtrs_muestra',
+    'x_studio_e1','x_studio_e2','x_studio_e3','x_studio_e4','x_studio_e5','x_studio_e6','x_studio_e7','x_studio_e8','x_studio_e9','x_studio_e10',
+    'x_studio_total','x_studio_resultado_avg','x_studio_resultado_porcent'];
+  const domainLineas = encodeURIComponent(JSON.stringify([['x_recuentos_estado_del_id','=',id]]));
+  const rL = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del_line_715c7&fields=${camposLinea.join(',')}&domain=${domainLineas}&limit=100`);
+  const lineas = filasDe(await rL.json()).sort((a,b)=>(a.x_studio_idrecuento||0)-(b.x_studio_idrecuento||0));
+
+  // Conteo de fotos adjuntas en Odoo — liviano (solo IDs, sin traer el binario).
+  let totalFotos = 0;
+  try{
+    const domainFotos = encodeURIComponent(JSON.stringify([
+      ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','like','image/']
+    ]));
+    const rF = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id&domain=${domainFotos}&limit=50`);
+    totalFotos = filasDe(await rF.json()).length;
+  }catch(e){ /* no crítico para mostrar el detalle */ }
+
+  return { id, folio: h.x_name || String(id), header: h, lineas, totalFotos };
+}
+
 async function abrirDetalleReporte(id){
   document.getElementById('listadoVistaLista').style.display = 'none';
   document.getElementById('listadoVistaDetalle').style.display = 'block';
@@ -2502,40 +2626,65 @@ async function abrirDetalleReporte(id){
   DETALLE_REPORTE_ACTUAL = null;
 
   try{
-    const camposHeader = ['id','x_name','x_studio_fecha','x_studio_ciclo','x_studio_sector','x_studio_company_id',
-      'x_studio_finca','x_studio_lote_de_la_finca','x_studio_area_evaluada_mzn','x_studio_edad_del_cultivo',
-      'x_studio_poblacion_plantas','x_studio_cantidad_de_estaciones','x_studio_estado_fenologico',
-      'x_studio_aplicacion','x_studio_fecha_aplicacion','x_studio_observacion','x_studio_folio_temporal',
-      'x_studio_dispositivo_de_captura'];
-    const domainHeader = encodeURIComponent(JSON.stringify([['id','=',id]]));
-    const rH = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=${camposHeader.join(',')}&domain=${domainHeader}&limit=1`);
-    const headers = filasDe(await rH.json());
-    if(!headers.length) throw new Error('No se encontró el reporte en Odoo.');
-    const h = headers[0];
-
-    const camposLinea = ['x_studio_idrecuento','x_studio_recuento','x_studio_familia_del_recuento','x_studio_mtrs_muestra',
-      'x_studio_e1','x_studio_e2','x_studio_e3','x_studio_e4','x_studio_e5','x_studio_e6','x_studio_e7','x_studio_e8','x_studio_e9','x_studio_e10',
-      'x_studio_total','x_studio_resultado_avg','x_studio_resultado_porcent'];
-    const domainLineas = encodeURIComponent(JSON.stringify([['x_recuentos_estado_del_id','=',id]]));
-    const rL = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del_line_715c7&fields=${camposLinea.join(',')}&domain=${domainLineas}&limit=100`);
-    const lineas = filasDe(await rL.json()).sort((a,b)=>(a.x_studio_idrecuento||0)-(b.x_studio_idrecuento||0));
-
-    // Conteo de fotos adjuntas en Odoo — liviano (solo IDs, sin traer el binario).
-    let totalFotos = 0;
-    try{
-      const domainFotos = encodeURIComponent(JSON.stringify([
-        ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','like','image/']
-      ]));
-      const rF = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id&domain=${domainFotos}&limit=50`);
-      totalFotos = filasDe(await rF.json()).length;
-    }catch(e){ /* no crítico para mostrar el detalle */ }
-
-    DETALLE_REPORTE_ACTUAL = { id, folio: h.x_name || String(id), header: h, lineas, totalFotos };
-    renderDetalleReporte(h, lineas, totalFotos);
+    const datos = await cargarDetalleReporte(id);
+    DETALLE_REPORTE_ACTUAL = datos;
+    renderDetalleReporte(datos.header, datos.lineas, datos.totalFotos, 'detalleReporteContenido');
   }catch(e){
     console.error('Error abriendo detalle de reporte:', e);
     cont.innerHTML = `<div class="detalle-estado-msg error">No se pudo cargar el detalle: ${e.message}</div>`;
   }
+}
+
+// Mismo detalle que abrirDetalleReporte, pero en un modal flotante en vez de cambiar de
+// tab — se usa desde el gráfico de KPIs (modal de punto → "Ver reporte completo") para
+// no perder el contexto de en qué gráfico/filtro estaba el usuario.
+async function abrirModalReporteDetalle(id){
+  let overlay = document.getElementById('overlayModalReporte');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'overlayModalReporte';
+    overlay.style.cssText = `
+      position:fixed; inset:0; background:rgba(27,67,50,.35); z-index:320;
+      display:flex; align-items:center; justify-content:center; padding:20px;`;
+    overlay.innerHTML = `<div id="modalReporte" style="
+      background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.25);
+      max-width:920px; width:100%; max-height:88vh; display:flex; flex-direction:column; overflow:hidden;">
+      <div id="modalReporteHeader" style="padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; flex-shrink:0;"></div>
+      <div id="modalReporteBody" style="padding:16px 20px; overflow-y:auto;"></div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (ev)=>{ if(ev.target===overlay) cerrarModalReporteDetalle(); });
+  }
+  overlay.style.display = 'flex';
+
+  document.getElementById('modalReporteHeader').innerHTML = `<div style="font-weight:800;color:var(--primary);font-size:15px;">Cargando reporte…</div>`;
+  document.getElementById('modalReporteBody').innerHTML = `<div class="detalle-estado-msg">Cargando…</div>`;
+  DETALLE_REPORTE_ACTUAL = null;
+
+  try{
+    const datos = await cargarDetalleReporte(id);
+    DETALLE_REPORTE_ACTUAL = datos;
+    document.getElementById('modalReporteHeader').innerHTML = `
+      <div>
+        <div style="font-weight:800;color:var(--primary);font-size:15px;">${datos.folio}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Detalle del reporte de recuento</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-ver-fotos" onclick="abrirModalFotos()">📷 Ver fotos</button>
+        <button class="btn-reimprimir" onclick="reimprimirReporteActual(this)">🖨️ Reimprimir</button>
+        <button onclick="cerrarModalReporteDetalle()" style="background:var(--primary-light); border:none; color:var(--primary); font-weight:700; border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12.5px;">✕ Cerrar</button>
+      </div>
+    `;
+    renderDetalleReporte(datos.header, datos.lineas, datos.totalFotos, 'modalReporteBody');
+  }catch(e){
+    console.error('Error abriendo modal de reporte:', e);
+    document.getElementById('modalReporteHeader').innerHTML = `<div style="font-weight:800;color:var(--primary);font-size:15px;">Error</div>`;
+    document.getElementById('modalReporteBody').innerHTML = `<div class="detalle-estado-msg error">No se pudo cargar el detalle: ${e.message}</div>`;
+  }
+}
+function cerrarModalReporteDetalle(){
+  const overlay = document.getElementById('overlayModalReporte');
+  if(overlay) overlay.style.display = 'none';
 }
 
 function volverAlListadoReportes(){
@@ -2544,8 +2693,8 @@ function volverAlListadoReportes(){
   DETALLE_REPORTE_ACTUAL = null;
 }
 
-function renderDetalleReporte(h, lineas, totalFotos){
-  const cont = document.getElementById('detalleReporteContenido');
+function renderDetalleReporte(h, lineas, totalFotos, contenedorId){
+  const cont = document.getElementById(contenedorId || 'detalleReporteContenido');
   const compania = m2oListado(h.x_studio_company_id);
 
   const campos = [
@@ -2613,9 +2762,9 @@ function renderDetalleReporte(h, lineas, totalFotos){
   `;
 }
 
-async function reimprimirReporteActual(){
+async function reimprimirReporteActual(btnEl){
   if(!DETALLE_REPORTE_ACTUAL) return;
-  await reimprimirReporte(DETALLE_REPORTE_ACTUAL.id, DETALLE_REPORTE_ACTUAL.folio);
+  await reimprimirReporte(DETALLE_REPORTE_ACTUAL.id, DETALLE_REPORTE_ACTUAL.folio, btnEl);
 }
 
 // Modal con la galería de fotos del reporte abierto — usa las mismas fotos que se
@@ -2630,7 +2779,7 @@ async function abrirModalFotos(){
     overlay = document.createElement('div');
     overlay.id = 'overlayModalFotos';
     overlay.style.cssText = `
-      position:fixed; inset:0; background:rgba(27,67,50,.35); z-index:300;
+      position:fixed; inset:0; background:rgba(27,67,50,.35); z-index:340;
       display:flex; align-items:center; justify-content:center; padding:20px;`;
     overlay.innerHTML = `<div id="modalFotos" style="
       background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.25);
@@ -2696,8 +2845,8 @@ function abrirZoomFoto(indice){
   document.body.appendChild(zoom);
 }
 
-async function reimprimirReporte(id, folio){
-  const btn = document.getElementById('btnReimprimirReporte');
+async function reimprimirReporte(id, folio, btnEl){
+  const btn = btnEl || document.getElementById('btnReimprimirReporte');
   const textoOriginal = btn.textContent;
   btn.disabled = true; btn.textContent = '⏳ Buscando el PDF original…';
 
