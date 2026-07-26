@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <style>
   :root {
     --bg-main: #FAFAF8;
@@ -49,31 +50,33 @@
   /* ---------- TOOLBAR DE UNA SOLA FILA — mismo patrón en las 5 secciones de INFOAGRO BI ---------- */
   .toolbar-una-fila{
     position: sticky; top: 0; z-index: 100;
-    display:flex; align-items:flex-end; gap:14px; flex-wrap:wrap;
+    display:flex; flex-direction:column; gap:10px;
     background:var(--card-bg); border:1px solid var(--border-color); border-bottom:1px solid var(--border-color);
     box-shadow: 0 2px 8px rgba(0,0,0,.06); padding:10px 16px; margin-bottom:16px; border-radius:12px;
   }
-  .tf-titulo{display:flex; flex-direction:column; justify-content:center; margin-right:4px; flex-shrink:0; align-self:flex-start;}
+  .tf-titulo{display:flex; flex-direction:column; justify-content:center; flex-shrink:0;}
   .tf-titulo h1{margin:0; font-size:15px; font-weight:800; color:var(--primary); line-height:1.2; white-space:nowrap;}
   .tf-titulo span{font-size:10.5px; color:var(--text-muted); font-weight:600;}
+  .tf-fila-filtros{ display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; width:100%; }
   .tf-campos-grupo{
-    display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; flex:1;
+    display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; flex:1;
     max-height:500px; overflow:visible; transition:max-height .3s cubic-bezier(.4,0,.2,1), margin-bottom .3s ease, opacity .3s ease;
-    opacity:1;
+    opacity:1; min-width:0;
   }
   .tf-campos-grupo.collapsed{ max-height:0; opacity:0; pointer-events:none; overflow:hidden; }
-  .tf-campo{ display:flex; flex-direction:column; gap:4px; min-width:170px; flex:1; position:relative; }
-  .campo-dds{ max-width:110px; min-width:90px; flex:0 0 auto; }
-  .campo-fincas-historicas{ min-width:130px; max-width:150px; flex:0 0 auto; }
+  .tf-campo{ display:flex; flex-direction:column; gap:3px; min-width:118px; flex:1 1 118px; position:relative; }
+  .campo-dds{ max-width:90px; min-width:76px; flex:0 0 auto; }
+  .campo-fincas-historicas{ min-width:118px; max-width:130px; flex:0 0 auto; }
   .toggle-fincas-historicas{
-    display:flex; align-items:center; gap:5px; font-size:10.5px; color:var(--text-muted);
-    cursor:pointer; white-space:nowrap; height:36px; border:1px solid transparent;
+    display:flex; align-items:center; gap:5px; font-size:10px; color:var(--text-muted);
+    cursor:pointer; white-space:nowrap; height:33px; border:1px solid transparent;
   }
   .toggle-fincas-historicas input{ accent-color:var(--primary); cursor:pointer; flex-shrink:0; }
-  .tf-campo label{ font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); }
+  .tf-campo label{ font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ms-dropdown {
-    padding:8px 10px; border:1px solid var(--border-color); border-radius:8px; background:#fff;
-    font-size:13px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; height:36px;
+    padding:7px 9px; border:1px solid var(--border-color); border-radius:8px; background:#fff;
+    font-size:12.5px; cursor:pointer; display:flex; justify-content:space-between; align-items:center; height:33px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .ms-dropdown:hover { border-color:var(--primary); }
   .ms-panel {
@@ -105,6 +108,23 @@
   .tf-icon-verde:hover{ opacity:.88; }
   .tf-icon-excel{ background:#1a9448; border-color:#1a9448; }
   .tf-icon-excel:hover{ opacity:.88; }
+
+  /* Botón "⋯" + panel flotante: cuando los 5 íconos de acción ya no entran en la misma
+     fila que los campos de filtro, actualizarOverflowAcciones() (JS) los saca del flujo
+     normal y los reagrupa acá — así la fila de filtros nunca salta a una 2da línea. */
+  .tf-acciones-overflow-wrap{ position:relative; flex-shrink:0; display:none; }
+  .tf-acciones-overflow-wrap.activo{ display:block; }
+  .tf-mas-btn{ font-weight:900; letter-spacing:1px; }
+  .tf-acciones-flotante{
+    display:none; position:absolute; top:calc(100% + 6px); right:0; background:var(--card-bg);
+    border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-md);
+    padding:8px; flex-direction:column; gap:6px; z-index:150; min-width:190px;
+  }
+  .tf-acciones-flotante.show{ display:flex; }
+  .tf-acciones-flotante .tf-icon{ width:100%; justify-content:flex-start; gap:9px; padding:0 10px; }
+  .tf-acciones-flotante .tf-icon span, .tf-acciones-flotante .tf-icon svg{ flex-shrink:0; }
+  .tf-acciones-flotante .tf-icon::after{ content:attr(title); font-size:12px; font-weight:700; color:var(--text-main); }
+  .tf-acciones-flotante .tf-icon-verde::after, .tf-acciones-flotante .tf-icon-excel::after{ color:var(--text-main); }
 
   /* Responsive: en pantallas chicas los campos ocupan todo el ancho disponible y las
      acciones bajan a su propia fila, en vez de comprimirse ilegibles. */
@@ -253,6 +273,60 @@
   .badge-rango.normal{ background:#DCFCE7; color:#166534; }
   .badge-rango.alto{ background:#FEE2E2; color:#991B1B; }
   .badge-rango.sindato{ background:#F1F5F9; color:#64748B; }
+
+  /* ---------- Listado de Reportes (tab nuevo) ---------- */
+  .listado-toolbar{ display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+  .listado-buscador{ flex:1; min-width:220px; max-width:360px; padding:8px 12px; border:1px solid var(--border-color); border-radius:8px; font-size:13px; font-family:inherit; }
+  .listado-buscador:focus{ outline:none; border-color:var(--primary); }
+  .listado-contador{ font-size:11.5px; color:var(--text-muted); font-weight:600; }
+  table.tabla-listado-reportes{ width:100%; border-collapse:collapse; font-size:12px; }
+  table.tabla-listado-reportes thead th{
+    position:sticky; top:0; background:var(--card-bg); text-align:left; padding:9px 12px; font-size:10.5px;
+    font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--text-muted); border-bottom:2px solid var(--border-color); white-space:nowrap;
+  }
+  table.tabla-listado-reportes td{ padding:8px 12px; border-bottom:1px solid var(--border-color); white-space:nowrap; }
+  table.tabla-listado-reportes tbody tr{ cursor:pointer; }
+  table.tabla-listado-reportes tbody tr:hover{ background:var(--primary-light); }
+  table.tabla-listado-reportes td.num{ text-align:right; font-variant-numeric:tabular-nums; }
+  .folio-link{ color:var(--primary); font-weight:800; text-decoration:none; }
+  .folio-link:hover{ text-decoration:underline; }
+  .estado-badge{ font-size:10px; font-weight:800; padding:3px 9px; border-radius:999px; display:inline-block; white-space:nowrap; }
+  .estado-badge.ok{ background:#DCFCE7; color:#166534; }
+  .estado-badge.anulado{ background:#FEE2E2; color:#991B1B; }
+  .estado-badge.pendiente{ background:#FEF3C7; color:#92400E; }
+  .estado-badge.desconocido{ background:#F1F5F9; color:#64748B; }
+
+  .detalle-reporte-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; flex-wrap:wrap; }
+  .btn-volver-listado{ background:var(--primary-light); border:none; color:var(--primary); font-weight:700; border-radius:8px; padding:8px 14px; cursor:pointer; font-size:12.5px; }
+  .btn-reimprimir{
+    background:var(--primary); color:#fff; border:none; border-radius:8px; padding:9px 16px; cursor:pointer;
+    font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:6px;
+  }
+  .btn-reimprimir:hover{ background:var(--primary-hover); }
+  .btn-reimprimir:disabled{ opacity:.6; cursor:wait; }
+  .btn-ver-fotos{
+    background:var(--primary-light); color:var(--primary); border:none; border-radius:8px; padding:9px 16px; cursor:pointer;
+    font-size:12.5px; font-weight:700; display:flex; align-items:center; gap:6px;
+  }
+  .btn-ver-fotos:hover{ background:#dfeadb; }
+  .btn-ver-fotos:disabled{ opacity:.6; cursor:wait; }
+
+  .fotos-grid-modal{ display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:12px; }
+  .fotos-grid-modal figure{ margin:0; border:1px solid var(--border-color); border-radius:10px; overflow:hidden; background:var(--bg-main); }
+  .fotos-grid-modal img{ width:100%; height:150px; object-fit:cover; display:block; cursor:zoom-in; }
+  .fotos-grid-modal figcaption{ padding:6px 8px; font-size:10.5px; color:var(--text-muted); font-weight:700; }
+  .foto-zoom-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.85); z-index:400; display:flex; align-items:center; justify-content:center; padding:24px; cursor:zoom-out; }
+  .foto-zoom-overlay img{ max-width:100%; max-height:100%; border-radius:6px; box-shadow:0 10px 40px rgba(0,0,0,.5); }
+  .detalle-reporte-card{ background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .detalle-reporte-titulo{ font-size:17px; font-weight:800; color:var(--primary); margin:0 0 2px; }
+  .detalle-reporte-sub{ font-size:11.5px; color:var(--text-muted); font-weight:600; margin-bottom:14px; }
+  .detalle-campos-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(160px,1fr)); gap:14px 18px; }
+  .detalle-campo label{ display:block; font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-bottom:2px; }
+  .detalle-campo span{ font-size:13.5px; color:var(--text-main); }
+  .detalle-observacion{ margin-top:14px; padding:10px 12px; background:var(--bg-main); border-radius:8px; font-size:12.5px; line-height:1.6; white-space:pre-wrap; }
+  .detalle-estado-msg{ text-align:center; padding:40px; color:var(--text-muted); font-size:13px; }
+  .detalle-estado-msg.error{ color:var(--danger); }
+  .gps-resumen-chip{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--primary); background:var(--primary-light); padding:4px 10px; border-radius:999px; margin-top:4px; }
   .reporte-controles{ display:flex; align-items:flex-end; gap:14px; margin:14px 0; flex-wrap:wrap; }
   .reporte-estado{ font-size:12px; color:var(--text-muted); margin-top:6px; }
   .reporte-estado.error{ color:var(--danger); font-weight:700; }
@@ -271,7 +345,7 @@
     .fab-filtros:active{ transform:scale(0.94); }
     .tf-campos-grupo.filters-wrapper:not(.collapsed){
       position:fixed; inset:0; z-index:590; background:#fff; overflow-y:auto;
-      padding:64px 16px 90px !important; flex-direction:column; align-items:stretch;
+      padding:64px 16px 90px !important; flex-direction:column; flex-wrap:nowrap; align-items:stretch;
       box-shadow:0 0 0 100vmax rgba(15,23,42,.4); max-height:none !important; opacity:1 !important;
       gap:16px !important;
     }
@@ -295,78 +369,93 @@
     <h1>Recuentos de Enfermedades</h1>
     <span>Fitosanitario · 2012-2026</span>
   </div>
-  <div class="tf-campos-grupo filters-wrapper" id="panelFiltrosWrapper">
-    <div class="tf-campo campo-compania">
-      <label>Compañía</label>
-      <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
-      <div class="ms-panel" id="msCompania"></div>
-    </div>
-    <div class="tf-campo campo-sector">
-      <label>Sector</label>
-      <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'sector')">Todos</div>
-      <div class="ms-panel" id="msSector"></div>
-    </div>
-    <div class="tf-campo campo-ciclo">
-      <label>Ciclo</label>
-      <div class="ms-dropdown" id="dropCiclo" onclick="toggleMs(event,'ciclo')">Todos</div>
-      <div class="ms-panel" id="msCiclo"></div>
-    </div>
-    <div class="tf-campo campo-finca">
-      <label>Finca</label>
-      <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
-      <div class="ms-panel" id="msFinca"></div>
-    </div>
-    <div class="tf-campo campo-lote">
-      <label>Lote de la Finca</label>
-      <div class="ms-dropdown" id="dropLote" onclick="toggleMs(event,'lote')">Todos</div>
-      <div class="ms-panel" id="msLote"></div>
-    </div>
-    <div class="tf-campo campo-fincas-historicas">
-      <label>&nbsp;</label>
-      <label class="toggle-fincas-historicas" title="Por defecto solo se muestran las fincas con Siembra registrada en el ciclo actual — activá esto para sumar también las que no participan este ciclo.">
-        <input type="checkbox" id="chkFincasHistoricas" onchange="toggleIncluirFincasHistoricas(this.checked)"> Incluir históricas
-      </label>
-    </div>
-    <div class="tf-campo campo-familia">
-      <label>Familia de Recuento</label>
-      <div class="ms-dropdown" id="dropFamilia" onclick="toggleMs(event,'familia')">Todas</div>
-      <div class="ms-panel" id="msFamilia"></div>
-    </div>
-    <div class="tf-campo campo-recuento">
-      <label>Tipo de Recuento</label>
-      <div class="ms-dropdown" id="dropRecuento" onclick="toggleMs(event,'recuento')">Todos</div>
-      <div class="ms-panel" id="msRecuento"></div>
-    </div>
-    <div class="tf-campo campo-dds">
-      <label>DDS</label>
-      <div class="ms-dropdown" id="dropDds" onclick="toggleMs(event,'dds')">Todos</div>
-      <div class="ms-panel" id="msDds"></div>
-    </div>
-  </div>
 
-  <div class="tf-acciones">
-    <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
-    </button>
-    <button class="tf-icon" onclick="limpiarFiltrosPropios()" title="Limpiar todos los filtros">
-      <span>🧹</span>
-    </button>
-    <button class="tf-icon tf-icon-excel" onclick="exportarTodoExcel()" title="Exportar a Excel">
-      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="9" y1="13" x2="15" y2="19"/>
-        <line x1="15" y1="13" x2="9" y2="19"/>
-      </svg>
-    </button>
-    <button class="tf-icon" onclick="cargarTodo()" title="Actualizar">
-      <span>↻</span>
-    </button>
-    <button class="tf-icon" onclick="window.print()" title="Imprimir">
-      <span>🖨️</span>
-    </button>
+  <div class="tf-fila-filtros">
+    <div class="tf-campos-grupo filters-wrapper" id="panelFiltrosWrapper">
+      <div class="tf-campo campo-compania">
+        <label>Compañía</label>
+        <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
+        <div class="ms-panel" id="msCompania"></div>
+      </div>
+      <div class="tf-campo campo-sector">
+        <label>Sector</label>
+        <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'sector')">Todos</div>
+        <div class="ms-panel" id="msSector"></div>
+      </div>
+      <div class="tf-campo campo-ciclo">
+        <label>Ciclo</label>
+        <div class="ms-dropdown" id="dropCiclo" onclick="toggleMs(event,'ciclo')">Todos</div>
+        <div class="ms-panel" id="msCiclo"></div>
+      </div>
+      <div class="tf-campo campo-finca">
+        <label>Finca</label>
+        <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
+        <div class="ms-panel" id="msFinca"></div>
+      </div>
+      <div class="tf-campo campo-lote">
+        <label>Lote de la Finca</label>
+        <div class="ms-dropdown" id="dropLote" onclick="toggleMs(event,'lote')">Todos</div>
+        <div class="ms-panel" id="msLote"></div>
+      </div>
+      <div class="tf-campo campo-fincas-historicas">
+        <label>&nbsp;</label>
+        <label class="toggle-fincas-historicas" title="Por defecto solo se muestran las fincas con Siembra registrada en el ciclo actual — activá esto para sumar también las que no participan este ciclo.">
+          <input type="checkbox" id="chkFincasHistoricas" onchange="toggleIncluirFincasHistoricas(this.checked)"> Incluir históricas
+        </label>
+      </div>
+      <div class="tf-campo campo-familia">
+        <label>Familia de Recuento</label>
+        <div class="ms-dropdown" id="dropFamilia" onclick="toggleMs(event,'familia')">Todas</div>
+        <div class="ms-panel" id="msFamilia"></div>
+      </div>
+      <div class="tf-campo campo-recuento">
+        <label>Tipo de Recuento</label>
+        <div class="ms-dropdown" id="dropRecuento" onclick="toggleMs(event,'recuento')">Todos</div>
+        <div class="ms-panel" id="msRecuento"></div>
+      </div>
+      <div class="tf-campo campo-dds">
+        <label>DDS</label>
+        <div class="ms-dropdown" id="dropDds" onclick="toggleMs(event,'dds')">Todos</div>
+        <div class="ms-panel" id="msDds"></div>
+      </div>
+    </div>
+
+    <div class="tf-acciones" id="tfAcciones">
+      <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
+      </button>
+      <button class="tf-icon" onclick="limpiarFiltrosPropios()" title="Limpiar todos los filtros">
+        <span>🧹</span>
+      </button>
+      <button class="tf-icon tf-icon-excel" onclick="exportarTodoExcel()" title="Exportar a Excel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="9" y1="13" x2="15" y2="19"/>
+          <line x1="15" y1="13" x2="9" y2="19"/>
+        </svg>
+      </button>
+      <button class="tf-icon" onclick="cargarTodo()" title="Actualizar">
+        <span>↻</span>
+      </button>
+      <button class="tf-icon" onclick="window.print()" title="Imprimir">
+        <span>🖨️</span>
+      </button>
+    </div>
+
+    <!-- Cuando los botones de acción ya no entran en la misma fila que los campos de
+         filtro, en vez de dejar que pasen a una 2da línea, se sacan del flujo y se
+         agrupan detrás de este botón "⋯" en un panel flotante.
+         Lo controla actualizarOverflowAcciones() en JS. -->
+    <div class="tf-acciones-overflow-wrap" id="tfAccionesOverflowWrap">
+      <button class="tf-icon tf-mas-btn" id="btnMasAcciones" onclick="toggleAccionesFlotante(event)" title="Más acciones">
+        <span>⋯</span>
+      </button>
+      <div class="tf-acciones-flotante" id="panelAccionesFlotante"></div>
+    </div>
   </div>
 </div>
+
 
 <div class="container">
 
@@ -380,6 +469,7 @@
       <button class="tab-switch-btn active" id="tabBtnKpis" onclick="cambiarTabRecuentos('kpis')">📊 Recuentos</button>
       <button class="tab-switch-btn" id="tabBtnPorCiclo" onclick="cambiarTabRecuentos('porciclo')">📋 Resultado por Ciclo</button>
       <button class="tab-switch-btn" id="tabBtnReporte" onclick="cambiarTabRecuentos('reporte')">📄 Reporte de Crecimiento</button>
+      <button class="tab-switch-btn" id="tabBtnListado" onclick="cambiarTabRecuentos('listado')">📑 Listado de Reportes</button>
     </div>
 
     <div class="tab-panel-recuentos activo" id="panelKpis">
@@ -443,6 +533,43 @@
         <button class="btn-accion" id="btnGenerarReporte" onclick="generarReportePDF()">📄 Generar PDF</button>
       </div>
       <div class="reporte-estado" id="reporteEstado"></div>
+    </div>
+
+    <div class="tab-panel-recuentos" id="panelListado" style="display:none;">
+
+      <!-- Vista de lista -->
+      <div id="listadoVistaLista">
+        <div class="listado-toolbar">
+          <input type="text" id="listadoBuscador" class="listado-buscador" placeholder="Buscar por folio, finca, lote o ciclo…" oninput="filtrarListadoReportes()">
+          <span class="listado-contador" id="listadoContador"></span>
+          <button class="tf-icon" onclick="cargarListadoReportes(true)" title="Actualizar listado"><span>↻</span></button>
+        </div>
+        <div class="tabla-scroll" style="max-height:600px;">
+          <table class="tabla-listado-reportes">
+            <thead><tr>
+              <th>Reporte</th><th>Estado</th><th>Sector</th><th>Fecha</th><th>Ciclo</th>
+              <th>Finca</th><th>Lote</th><th class="num">Edad</th><th>Aplicación</th>
+              <th class="num">Área evaluada</th><th class="num">Población Pl.</th><th class="num">Estaciones</th><th>Compañía</th>
+            </tr></thead>
+            <tbody id="tbodyListadoReportes">
+              <tr><td colspan="13" class="vacio">Cargando reportes…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vista de detalle de un reporte -->
+      <div id="listadoVistaDetalle" style="display:none;">
+        <div class="detalle-reporte-header">
+          <button class="btn-volver-listado" onclick="volverAlListadoReportes()">⬅ Volver al listado</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="btn-ver-fotos" id="btnVerFotosReporte" onclick="abrirModalFotos()">📷 Ver fotos</button>
+            <button class="btn-reimprimir" id="btnReimprimirReporte" onclick="reimprimirReporteActual()">🖨️ Reimprimir reporte (con mapa, fotos y firmas)</button>
+          </div>
+        </div>
+        <div id="detalleReporteContenido"><div class="detalle-estado-msg">Cargando…</div></div>
+      </div>
+
     </div>
 
   </div>
@@ -893,6 +1020,7 @@ function construirFiltrosPropios(){
       </div>`;
     actualizarTextoDropPropio(clave, universo.length);
   });
+  actualizarOverflowAcciones();
 }
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 
@@ -993,6 +1121,8 @@ function refrescarTabPorCicloSiVisible(){
   if(panel && panel.classList.contains('activo')) renderTablaPorCiclo();
   const panelRep = document.getElementById('panelReporte');
   if(panelRep && panelRep.classList.contains('activo')) poblarSelectorFincaReporte();
+  const panelLis = document.getElementById('panelListado');
+  if(panelLis && panelLis.classList.contains('activo') && typeof LISTADO_CARGADO !== 'undefined' && LISTADO_CARGADO) renderListadoReportes();
 }
 
 // El toolbar tiene position:sticky (para quedar fijo arriba al hacer scroll), pero eso
@@ -1024,6 +1154,7 @@ function toggleFiltrosExtra(){
 
   const icono = document.getElementById('fabFiltrosIcono');
   if(icono) icono.textContent = abierto ? '✕' : '⚙️';
+  actualizarOverflowAcciones();
 }
 
 // Responsive: en pantallas angostas la barra de filtros arranca colapsada (el usuario
@@ -1036,6 +1167,58 @@ function actualizarColapsoResponsivoFiltrosRec(){
   if(window.innerWidth < UMBRAL_COLAPSO_FILTROS_REC) grupo.classList.add('collapsed');
 }
 window.addEventListener('resize', actualizarColapsoResponsivoFiltrosRec);
+
+// ---------------------------------------------------------------------------------
+// Menú flotante "⋯" para los botones de acción (filtrar/limpiar/excel/actualizar/
+// imprimir): la fila de filtros debe quedarse SIEMPRE en una sola línea. Si los 5
+// íconos ya no entran a la par de los campos de filtro, en vez de dejar que el navegador
+// los empuje a una 2da línea (como en la captura que mandaste), se sacan del flujo y se
+// agrupan atrás de un botón "⋯" que despliega un panel flotante con los mismos botones.
+// ---------------------------------------------------------------------------------
+function restaurarAccionesEnLinea(){
+  const acciones = document.getElementById('tfAcciones');
+  const wrap = document.getElementById('tfAccionesOverflowWrap');
+  const panelFlot = document.getElementById('panelAccionesFlotante');
+  if(!acciones || !wrap || !panelFlot) return;
+  if(wrap.classList.contains('activo')){
+    Array.from(panelFlot.children).forEach(btn => acciones.appendChild(btn));
+    wrap.classList.remove('activo');
+    panelFlot.classList.remove('show');
+  }
+}
+
+function actualizarOverflowAcciones(){
+  const toolbar = document.getElementById('toolbarCompacta');
+  const acciones = document.getElementById('tfAcciones');
+  const wrap = document.getElementById('tfAccionesOverflowWrap');
+  const panelFlot = document.getElementById('panelAccionesFlotante');
+  const titulo = toolbar ? toolbar.querySelector('.tf-titulo') : null;
+  if(!toolbar || !acciones || !wrap || !panelFlot || !titulo) return;
+
+  // En celular (<900px) las acciones ya bajan solas a su propia fila de ancho completo
+  // (regla existente en @media max-width:900px) — ahí no hace falta el menú flotante,
+  // ese layout apilado ya es legible tal cual.
+  if(window.innerWidth < 900){ restaurarAccionesEnLinea(); return; }
+
+  restaurarAccionesEnLinea();
+
+  // Si el grupo de acciones quedó más abajo que el título, el navegador ya los mandó a
+  // una 2da línea por falta de espacio — ahí se mueven al panel flotante.
+  const topTitulo = titulo.getBoundingClientRect().top;
+  const topAcciones = acciones.getBoundingClientRect().top;
+  if(topAcciones - topTitulo > 5){
+    Array.from(acciones.children).forEach(btn => panelFlot.appendChild(btn));
+    wrap.classList.add('activo');
+  }
+}
+
+function toggleAccionesFlotante(ev){
+  ev.stopPropagation();
+  document.getElementById('panelAccionesFlotante')?.classList.toggle('show');
+}
+document.addEventListener('click', ()=> document.getElementById('panelAccionesFlotante')?.classList.remove('show'));
+window.addEventListener('resize', actualizarOverflowAcciones);
+window.addEventListener('load', actualizarOverflowAcciones);
 
 // Exporta TODOS los registros que coinciden con los filtros activos (a diferencia de
 // exportarDetalleExcel, que exporta solo el recuento seleccionado en el panel de detalle).
@@ -1520,8 +1703,8 @@ function exportarDetalleExcel(clave){
 // TABS — "Recuentos" (KPIs + detalle, ya existía) / "Resultado por Ciclo" (nuevo)
 // ===================================================================
 function cambiarTabRecuentos(tab){
-  const paneles = { kpis:'panelKpis', porciclo:'panelPorCiclo', reporte:'panelReporte' };
-  const botones = { kpis:'tabBtnKpis', porciclo:'tabBtnPorCiclo', reporte:'tabBtnReporte' };
+  const paneles = { kpis:'panelKpis', porciclo:'panelPorCiclo', reporte:'panelReporte', listado:'panelListado' };
+  const botones = { kpis:'tabBtnKpis', porciclo:'tabBtnPorCiclo', reporte:'tabBtnReporte', listado:'tabBtnListado' };
   Object.keys(paneles).forEach(t=>{
     const panel = document.getElementById(paneles[t]);
     panel.style.display = (t===tab) ? 'block' : 'none';
@@ -1530,6 +1713,7 @@ function cambiarTabRecuentos(tab){
   });
   if(tab==='porciclo') renderTablaPorCiclo();
   if(tab==='reporte') poblarSelectorFincaReporte();
+  if(tab==='listado') cargarListadoReportes(false);
 }
 
 function poblarSelectorFincaReporte(){
@@ -2133,6 +2317,683 @@ function exportarTablaPorCicloExcel(){
   if(!table) return;
   const wb = XLSX.utils.table_to_book(table, { raw:true });
   XLSX.writeFile(wb, `Recuentos_PorCiclo_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
+// ===================================================================
+// TAB "Listado de Reportes" — lista de recuentos (un registro por evaluación en
+// campo, x_recuentos_estado_del) con acceso al detalle de cada uno y reimpresión
+// del PDF. La reimpresión prioriza siempre el PDF ORIGINAL que la app de campo
+// subió a Odoo como adjunto al confirmar el recuento — ese archivo ya trae el
+// mapa satelital, las fotos por planta y las firmas reales del evaluador y
+// supervisor, tal cual se generaron en el celular. Sólo si no hay ningún adjunto
+// PDF (reportes muy viejos, o subidos antes de que la app incluyera fotos/mapa)
+// se arma un PDF de respaldo con los datos crudos de Odoo, dejando claro que ese
+// no lleva firmas originales.
+// ===================================================================
+let LISTADO_REPORTES = [];
+let LISTADO_CARGADO = false;
+let CAMPO_ESTADO_ODOO = null;      // nombre técnico del campo de "Estado"/etapa detectado en x_recuentos_estado_del ('' si no existe ninguno de los candidatos)
+let DETALLE_REPORTE_ACTUAL = null; // { id, folio, header, lineas, totalFotos } del reporte abierto en la vista de detalle
+
+function m2oListado(raw){
+  if(raw === undefined || raw === null || raw === false || raw === '') return null;
+  if(Array.isArray(raw)) return raw[1];
+  return String(raw);
+}
+// Lee la respuesta del Worker de forma defensiva — igual que cargarPadres()/cargarOdoo(),
+// tolera las distintas formas en que puede venir envuelto el array de resultados.
+function filasDe(j){
+  if(j && j.error) throw new Error(j.error);
+  return Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+}
+
+// Candidatos típicos que usa Odoo Studio para el campo de "Etapas" (kanban stage) de
+// un modelo custom — se prueba cada uno con una consulta liviana (1 registro) y se
+// usa el primero que responda sin error y realmente tenga ese campo. Si ninguno
+// existe, la columna "Estado" del listado queda vacía en vez de romper la carga.
+const CANDIDATOS_CAMPO_ESTADO = ['x_stage_id','x_studio_stage_id','x_studio_estado','x_studio_estado_del_registro'];
+async function detectarCampoEstado(){
+  if(CAMPO_ESTADO_ODOO !== null) return CAMPO_ESTADO_ODOO;
+  for(const candidato of CANDIDATOS_CAMPO_ESTADO){
+    try{
+      const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=id,${candidato}&limit=1`);
+      const recs = filasDe(await r.json());
+      if(recs.length && Object.prototype.hasOwnProperty.call(recs[0], candidato)){
+        CAMPO_ESTADO_ODOO = candidato;
+        return candidato;
+      }
+    }catch(e){ /* candidato no válido en este Odoo — se prueba el siguiente */ }
+  }
+  CAMPO_ESTADO_ODOO = '';
+  return '';
+}
+
+async function cargarListadoReportes(forzar){
+  const tbody = document.getElementById('tbodyListadoReportes');
+  if(LISTADO_CARGADO && !forzar){ renderListadoReportes(); return; }
+  tbody.innerHTML = `<tr><td colspan="13" class="vacio">Cargando reportes…</td></tr>`;
+
+  try{
+    const campoEstado = await detectarCampoEstado();
+    const campos = ['id','x_name','x_studio_fecha','x_studio_ciclo','x_studio_sector','x_studio_company_id',
+      'x_studio_finca','x_studio_lote_de_la_finca','x_studio_area_evaluada_mzn','x_studio_edad_del_cultivo',
+      'x_studio_poblacion_plantas','x_studio_cantidad_de_estaciones','x_studio_aplicacion'];
+    if(campoEstado) campos.push(campoEstado);
+
+    const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=${campos.join(',')}&limit=2000`);
+    const recs = filasDe(await r.json());
+
+    LISTADO_REPORTES = recs.map(rr=>({
+      id: rr.id,
+      folio: rr.x_name || String(rr.id),
+      estado: campoEstado ? m2oListado(rr[campoEstado]) : null,
+      sector: m2oListado(rr.x_studio_sector),
+      fecha: rr.x_studio_fecha || null,
+      ciclo: m2oListado(rr.x_studio_ciclo),
+      finca: m2oListado(rr.x_studio_finca),
+      lote: m2oListado(rr.x_studio_lote_de_la_finca),
+      edad: rr.x_studio_edad_del_cultivo ?? null,
+      aplicacion: m2oListado(rr.x_studio_aplicacion),
+      area: rr.x_studio_area_evaluada_mzn ?? null,
+      poblacion: rr.x_studio_poblacion_plantas ?? null,
+      estaciones: rr.x_studio_cantidad_de_estaciones ?? null,
+      compania: m2oListado(rr.x_studio_company_id),
+    })).sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.id-a.id));
+
+    LISTADO_CARGADO = true;
+    renderListadoReportes();
+  }catch(e){
+    console.error('Error cargando listado de reportes:', e);
+    tbody.innerHTML = `<tr><td colspan="13" class="vacio">No se pudo cargar el listado: ${e.message}</td></tr>`;
+  }
+}
+
+function badgeEstadoReporte(estado){
+  if(!estado) return '<span class="estado-badge desconocido">—</span>';
+  const e = normTxt(estado);
+  if(e.includes('anulad')) return `<span class="estado-badge anulado">${estado}</span>`;
+  if(e.includes('archivo') || e.includes('cerrad') || e.includes('complet') || e.includes('confirmad')) return `<span class="estado-badge ok">${estado}</span>`;
+  return `<span class="estado-badge pendiente">${estado}</span>`;
+}
+
+function filtrarListadoReportes(){ renderListadoReportes(); }
+
+// Traduce la selección actual de la barra de filtros (misma que usan los otros 3
+// tabs) a este listado de reportes (uno por evaluación completa, no por línea).
+// Compañía/Sector/Ciclo/Finca/Lote de la Finca son propiedades directas del reporte,
+// así que se filtran tal cual. Familia de Recuento/Tipo de Recuento/DDS son filtros a
+// nivel de LÍNEA (cada tipo de recuento dentro del reporte) — se traducen calculando
+// primero qué folios tienen al menos una línea que matchee esos filtros (usando RAW,
+// que ya trae 'reporte' = folio del padre), y quedándose solo con esos reportes.
+function filasListadoFiltradasPorBarra(filas){
+  let out = filas;
+  if(seleccionPropia.compania.length) out = out.filter(r => seleccionPropia.compania.includes(r.compania));
+  if(seleccionPropia.sector.length)   out = out.filter(r => seleccionPropia.sector.includes(r.sector));
+  if(seleccionPropia.ciclo.length)    out = out.filter(r => seleccionPropia.ciclo.includes(r.ciclo));
+  if(seleccionPropia.finca.length)    out = out.filter(r => seleccionPropia.finca.includes(r.finca));
+  if(seleccionPropia.lote.length)     out = out.filter(r => seleccionPropia.lote.includes(r.lote));
+
+  // Mismo criterio por defecto que datosFiltrados(): sin una finca puntual elegida,
+  // se excluyen las fincas sin Siembra en el ciclo actual — salvo "Incluir históricas".
+  if(!incluirFincasHistoricas && CICLO_ACTUAL_NOMBRE && !seleccionPropia.finca.length){
+    const fincasActivas = FINCAS_SIEMBRA_POR_CICLO[CICLO_ACTUAL_NOMBRE];
+    if(fincasActivas && fincasActivas.size) out = out.filter(r => fincasActivas.has(r.finca));
+  }
+
+  if(seleccionPropia.familia.length || seleccionPropia.recuento.length || seleccionPropia.dds.length){
+    const foliosPermitidos = new Set(
+      RAW.filter(r => r.fuente==='vivo' && r.reporte
+        && (!seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa))
+        && (!seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re))
+        && (!seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds))
+      ).map(r=>r.reporte)
+    );
+    out = out.filter(r => foliosPermitidos.has(r.folio));
+  }
+
+  return out;
+}
+
+function renderListadoReportes(){
+  const texto = normTxt(document.getElementById('listadoBuscador').value);
+  const tbody = document.getElementById('tbodyListadoReportes');
+  const contador = document.getElementById('listadoContador');
+
+  let filas = filasListadoFiltradasPorBarra(LISTADO_REPORTES);
+  if(texto){
+    filas = filas.filter(r =>
+      normTxt(r.folio).includes(texto) || normTxt(r.finca).includes(texto) ||
+      normTxt(r.lote).includes(texto)  || normTxt(r.ciclo).includes(texto) ||
+      normTxt(r.sector).includes(texto)
+    );
+  }
+
+  contador.textContent = `${filas.length} reporte${filas.length!==1?'s':''}${hayFiltroActivo() ? ' (filtrado)' : ''}`;
+
+  if(!filas.length){
+    tbody.innerHTML = `<tr><td colspan="13" class="vacio">No hay reportes que coincidan con los filtros/búsqueda.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = filas.map(r=>`
+    <tr onclick="abrirDetalleReporte(${r.id})">
+      <td><span class="folio-link">${r.folio}</span></td>
+      <td>${badgeEstadoReporte(r.estado)}</td>
+      <td>${r.sector||'—'}</td>
+      <td>${formatoFecha(r.fecha)||'—'}</td>
+      <td>${r.ciclo||'—'}</td>
+      <td>${r.finca||'—'}</td>
+      <td>${r.lote||'—'}</td>
+      <td class="num">${r.edad ?? '—'}</td>
+      <td>${r.aplicacion||'—'}</td>
+      <td class="num">${r.area!=null ? Number(r.area).toFixed(2) : '—'}</td>
+      <td class="num">${r.poblacion!=null ? Number(r.poblacion).toFixed(2) : '—'}</td>
+      <td class="num">${r.estaciones ?? '—'}</td>
+      <td>${r.compania||'—'}</td>
+    </tr>
+  `).join('');
+}
+
+async function abrirDetalleReporte(id){
+  document.getElementById('listadoVistaLista').style.display = 'none';
+  document.getElementById('listadoVistaDetalle').style.display = 'block';
+  const cont = document.getElementById('detalleReporteContenido');
+  cont.innerHTML = '<div class="detalle-estado-msg">Cargando…</div>';
+  DETALLE_REPORTE_ACTUAL = null;
+
+  try{
+    const camposHeader = ['id','x_name','x_studio_fecha','x_studio_ciclo','x_studio_sector','x_studio_company_id',
+      'x_studio_finca','x_studio_lote_de_la_finca','x_studio_area_evaluada_mzn','x_studio_edad_del_cultivo',
+      'x_studio_poblacion_plantas','x_studio_cantidad_de_estaciones','x_studio_estado_fenologico',
+      'x_studio_aplicacion','x_studio_fecha_aplicacion','x_studio_observacion','x_studio_folio_temporal',
+      'x_studio_dispositivo_de_captura'];
+    const domainHeader = encodeURIComponent(JSON.stringify([['id','=',id]]));
+    const rH = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=${camposHeader.join(',')}&domain=${domainHeader}&limit=1`);
+    const headers = filasDe(await rH.json());
+    if(!headers.length) throw new Error('No se encontró el reporte en Odoo.');
+    const h = headers[0];
+
+    const camposLinea = ['x_studio_idrecuento','x_studio_recuento','x_studio_familia_del_recuento','x_studio_mtrs_muestra',
+      'x_studio_e1','x_studio_e2','x_studio_e3','x_studio_e4','x_studio_e5','x_studio_e6','x_studio_e7','x_studio_e8','x_studio_e9','x_studio_e10',
+      'x_studio_total','x_studio_resultado_avg','x_studio_resultado_porcent'];
+    const domainLineas = encodeURIComponent(JSON.stringify([['x_recuentos_estado_del_id','=',id]]));
+    const rL = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del_line_715c7&fields=${camposLinea.join(',')}&domain=${domainLineas}&limit=100`);
+    const lineas = filasDe(await rL.json()).sort((a,b)=>(a.x_studio_idrecuento||0)-(b.x_studio_idrecuento||0));
+
+    // Conteo de fotos adjuntas en Odoo — liviano (solo IDs, sin traer el binario).
+    let totalFotos = 0;
+    try{
+      const domainFotos = encodeURIComponent(JSON.stringify([
+        ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','like','image/']
+      ]));
+      const rF = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id&domain=${domainFotos}&limit=50`);
+      totalFotos = filasDe(await rF.json()).length;
+    }catch(e){ /* no crítico para mostrar el detalle */ }
+
+    DETALLE_REPORTE_ACTUAL = { id, folio: h.x_name || String(id), header: h, lineas, totalFotos };
+    renderDetalleReporte(h, lineas, totalFotos);
+  }catch(e){
+    console.error('Error abriendo detalle de reporte:', e);
+    cont.innerHTML = `<div class="detalle-estado-msg error">No se pudo cargar el detalle: ${e.message}</div>`;
+  }
+}
+
+function volverAlListadoReportes(){
+  document.getElementById('listadoVistaDetalle').style.display = 'none';
+  document.getElementById('listadoVistaLista').style.display = 'block';
+  DETALLE_REPORTE_ACTUAL = null;
+}
+
+function renderDetalleReporte(h, lineas, totalFotos){
+  const cont = document.getElementById('detalleReporteContenido');
+  const compania = m2oListado(h.x_studio_company_id);
+
+  const campos = [
+    ['Sector', m2oListado(h.x_studio_sector)],
+    ['Fecha', formatoFecha(h.x_studio_fecha)],
+    ['Ciclo', m2oListado(h.x_studio_ciclo)],
+    ['Finca', m2oListado(h.x_studio_finca)],
+    ['Lote de la finca', m2oListado(h.x_studio_lote_de_la_finca)],
+    ['Área evaluada (Mzn)', h.x_studio_area_evaluada_mzn],
+    ['Edad del cultivo', h.x_studio_edad_del_cultivo!=null ? h.x_studio_edad_del_cultivo+' días' : null],
+    ['Población Plantas', h.x_studio_poblacion_plantas],
+    ['Estado fenológico', h.x_studio_estado_fenologico],
+    ['Aplicación', m2oListado(h.x_studio_aplicacion)],
+    ['Fecha aplicación', formatoFecha(h.x_studio_fecha_aplicacion)],
+    ['Cantidad de estaciones', h.x_studio_cantidad_de_estaciones],
+    ['Folio temporal', h.x_studio_folio_temporal],
+    ['Dispositivo de captura', h.x_studio_dispositivo_de_captura],
+    ['Compañía', compania],
+  ];
+  const camposHtml = campos.map(([label,val])=>`
+    <div class="detalle-campo"><label>${label}</label><span>${(val===null||val===undefined||val==='')?'—':val}</span></div>
+  `).join('');
+
+  const filasLineas = lineas.map(l=>{
+    const nombre = m2oListado(l.x_studio_recuento) || `Recuento ${l.x_studio_idrecuento}`;
+    const tipoCampo = CAMPO_POR_ID[l.x_studio_idrecuento] || 'avg';
+    const resultado = tipoCampo==='porcent'
+      ? (((l.x_studio_resultado_porcent||0)*100).toFixed(1)+'%')
+      : (l.x_studio_resultado_avg||0).toFixed(2);
+    const estaciones = [1,2,3,4,5,6,7,8,9,10].map(n=>{
+      const v = l['x_studio_e'+n];
+      return `<td class="num">${(v!=null && v!==false) ? v : ''}</td>`;
+    }).join('');
+    return `<tr>
+      <td class="num">${l.x_studio_idrecuento}</td>
+      <td>${nombre}</td>
+      <td class="num">${l.x_studio_mtrs_muestra ?? ''}</td>
+      ${estaciones}
+      <td class="num"><strong>${l.x_studio_total ?? 0}</strong></td>
+      <td class="num"><strong>${resultado}</strong></td>
+    </tr>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div class="detalle-reporte-card">
+      <div class="detalle-reporte-titulo">${h.x_name || ('#'+h.id)}</div>
+      <div class="detalle-reporte-sub">
+        Reporte de recuento de estado del cultivo
+        ${totalFotos>0 ? `<span class="gps-resumen-chip">📷 ${totalFotos} foto${totalFotos!==1?'s':''} adjunta${totalFotos!==1?'s':''} en Odoo</span>` : ''}
+      </div>
+      <div class="detalle-campos-grid">${camposHtml}</div>
+      ${h.x_studio_observacion ? `<div class="detalle-observacion"><b>Observación:</b><br>${h.x_studio_observacion.replace(/\n/g,'<br>')}</div>` : ''}
+    </div>
+    <div class="tabla-scroll" style="max-height:480px;">
+      <table class="tabla-datos-recuentos">
+        <thead><tr>
+          <th>N°</th><th>Recuento</th><th class="num">M.</th>
+          <th class="num">E1</th><th class="num">E2</th><th class="num">E3</th><th class="num">E4</th><th class="num">E5</th>
+          <th class="num">E6</th><th class="num">E7</th><th class="num">E8</th><th class="num">E9</th><th class="num">E10</th>
+          <th class="num">Total</th><th class="num">Result.</th>
+        </tr></thead>
+        <tbody>${filasLineas || `<tr><td colspan="15" class="vacio">Sin líneas de recuento.</td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+async function reimprimirReporteActual(){
+  if(!DETALLE_REPORTE_ACTUAL) return;
+  await reimprimirReporte(DETALLE_REPORTE_ACTUAL.id, DETALLE_REPORTE_ACTUAL.folio);
+}
+
+// Modal con la galería de fotos del reporte abierto — usa las mismas fotos que se
+// incrustan en el PDF (obtenerFotosAdjuntas), pero mostradas directamente en pantalla
+// sin tener que descargar nada. Clic en una foto la amplía en un segundo overlay.
+async function abrirModalFotos(){
+  if(!DETALLE_REPORTE_ACTUAL) return;
+  const { id, folio } = DETALLE_REPORTE_ACTUAL;
+
+  let overlay = document.getElementById('overlayModalFotos');
+  if(!overlay){
+    overlay = document.createElement('div');
+    overlay.id = 'overlayModalFotos';
+    overlay.style.cssText = `
+      position:fixed; inset:0; background:rgba(27,67,50,.35); z-index:300;
+      display:flex; align-items:center; justify-content:center; padding:20px;`;
+    overlay.innerHTML = `<div id="modalFotos" style="
+      background:#fff; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,.25);
+      max-width:900px; width:100%; max-height:85vh; display:flex; flex-direction:column; overflow:hidden;">
+      <div id="modalFotosHeader" style="padding:16px 20px; border-bottom:1px solid var(--border-color); display:flex; justify-content:space-between; align-items:center; flex-shrink:0;"></div>
+      <div id="modalFotosBody" style="padding:18px 20px; overflow-y:auto;"></div>
+    </div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click', (ev)=>{ if(ev.target===overlay) cerrarModalFotos(); });
+  }
+  overlay.style.display = 'flex';
+
+  document.getElementById('modalFotosHeader').innerHTML = `
+    <div>
+      <div style="font-weight:800;color:var(--primary);font-size:15px;">📷 Fotos del reporte ${folio}</div>
+      <div id="modalFotosContador" style="font-size:11px;color:var(--text-muted);margin-top:2px;">Cargando…</div>
+    </div>
+    <button onclick="cerrarModalFotos()" style="background:var(--primary-light); border:none; color:var(--primary); font-weight:700; border-radius:8px; padding:7px 14px; cursor:pointer; font-size:12.5px; flex-shrink:0;">✕ Cerrar</button>
+  `;
+
+  const body = document.getElementById('modalFotosBody');
+  body.innerHTML = `<div class="detalle-estado-msg">Cargando fotos…</div>`;
+
+  try{
+    const fotos = await obtenerFotosAdjuntas(id);
+    const contador = document.getElementById('modalFotosContador');
+    if(contador) contador.textContent = `${fotos.length} foto${fotos.length!==1?'s':''}`;
+
+    if(!fotos.length){
+      body.innerHTML = `<div class="detalle-estado-msg">Este reporte no tiene fotos adjuntas en Odoo.</div>`;
+      return;
+    }
+
+    body.innerHTML = `<div class="fotos-grid-modal">${fotos.map((f,i)=>`
+      <figure>
+        <img src="data:image/jpeg;base64,${f.datas}" alt="${f.name||''}" onclick="abrirZoomFoto(${i})">
+        <figcaption>${f.name || `Foto ${i+1}`}</figcaption>
+      </figure>
+    `).join('')}</div>`;
+
+    // Se guardan las fotos ya cargadas para que el zoom no tenga que volver a pedirlas.
+    window._fotosModalActual = fotos;
+  }catch(e){
+    console.error('Error cargando fotos del reporte:', e);
+    body.innerHTML = `<div class="detalle-estado-msg error">No se pudieron cargar las fotos: ${e.message}</div>`;
+  }
+}
+
+function cerrarModalFotos(){
+  const overlay = document.getElementById('overlayModalFotos');
+  if(overlay) overlay.style.display = 'none';
+}
+
+function abrirZoomFoto(indice){
+  const fotos = window._fotosModalActual || [];
+  const foto = fotos[indice];
+  if(!foto) return;
+
+  const zoom = document.createElement('div');
+  zoom.className = 'foto-zoom-overlay';
+  zoom.innerHTML = `<img src="data:image/jpeg;base64,${foto.datas}" alt="${foto.name||''}">`;
+  zoom.addEventListener('click', ()=> zoom.remove());
+  document.body.appendChild(zoom);
+}
+
+async function reimprimirReporte(id, folio){
+  const btn = document.getElementById('btnReimprimirReporte');
+  const textoOriginal = btn.textContent;
+  btn.disabled = true; btn.textContent = '⏳ Buscando el PDF original…';
+
+  try{
+    // 1) Prioridad: el PDF que la app de campo subió al confirmar (ya trae mapa, fotos y firmas).
+    const domainPdf = encodeURIComponent(JSON.stringify([
+      ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','=','application/pdf']
+    ]));
+    const rA = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id,name&domain=${domainPdf}&limit=10`);
+    const adjuntos = filasDe(await rA.json());
+
+    if(adjuntos.length){
+      const masReciente = adjuntos.sort((a,b)=>b.id-a.id)[0]; // ID más alto = subida más reciente
+      btn.textContent = '⏳ Descargando PDF original…';
+      const domainDatos = encodeURIComponent(JSON.stringify([['id','=',masReciente.id]]));
+      const rD = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=datas,name&domain=${domainDatos}&limit=1`);
+      const datosAdj = filasDe(await rD.json());
+      if(!datosAdj.length || !datosAdj[0].datas) throw new Error('El adjunto no tiene contenido descargable.');
+
+      const bytesOriginal = base64ABytes(datosAdj[0].datas);
+      let blobFinal = new Blob([bytesOriginal], { type:'application/pdf' });
+
+      // El PDF original puede no traer las fotos si el recuento se sincronizó con una
+      // versión de la app anterior a que se empezaran a incrustar dentro del PDF — si
+      // hay fotos adjuntas en Odoo, se fusionan como páginas extra al FINAL de este
+      // mismo PDF (un solo archivo, con mapa/firmas del original + fotos al final).
+      try{
+        btn.textContent = '⏳ Revisando fotos adjuntas…';
+        const fotos = await obtenerFotosAdjuntas(id);
+        if(fotos.length){
+          btn.textContent = '⏳ Uniendo fotos al PDF…';
+          const bytesFusionados = await fusionarPdfConFotos(bytesOriginal, fotos, folio);
+          blobFinal = new Blob([bytesFusionados], { type:'application/pdf' });
+        }
+      }catch(e){
+        // Si la fusión falla por algún motivo (ej. el original viene con estructura rara,
+        // o no cargó la librería pdf-lib), no se pierde nada: se descargan las fotos en
+        // un PDF aparte para que de todas formas queden accesibles.
+        console.warn('No se pudieron unir las fotos al PDF original, se descargan por separado:', e.message);
+        try{
+          const fotos = await obtenerFotosAdjuntas(id);
+          if(fotos.length){
+            const { jsPDF } = window.jspdf;
+            const docFotos = new jsPDF({ unit:'mm', format:'letter', orientation:'portrait' });
+            dibujarGridFotos(docFotos, fotos, folio, 12, docFotos.internal.pageSize.getWidth(), docFotos.internal.pageSize.getHeight());
+            docFotos.save(`${folio}_fotos.pdf`);
+          }
+        }catch(e2){ console.warn('Tampoco se pudo generar el PDF complementario de fotos:', e2.message); }
+      }
+
+      const url = URL.createObjectURL(blobFinal);
+      const a = document.createElement('a');
+      a.href = url; a.download = `${folio}.pdf`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url), 8000);
+      return;
+    }
+
+    // 2) Sin adjunto original: PDF de respaldo con los datos crudos de Odoo (sin firmas).
+    btn.textContent = '⏳ No hay PDF original — generando uno de respaldo…';
+    await generarPdfRespaldoReporte(id, folio);
+  }catch(e){
+    console.error('Error reimprimiendo reporte:', e);
+    alert('No se pudo reimprimir el reporte: '+e.message);
+  }finally{
+    btn.disabled = false; btn.textContent = textoOriginal;
+  }
+}
+
+async function generarPdfRespaldoReporte(id, folio){
+  const datos = DETALLE_REPORTE_ACTUAL;
+  if(!datos || !datos.header) throw new Error('No hay datos cargados de este reporte.');
+  const h = datos.header, lineas = datos.lineas || [];
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:'mm', format:'letter', orientation:'portrait' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginX = 12;
+  let y = 16;
+
+  doc.setFont('helvetica','bold'); doc.setFontSize(13); doc.setTextColor(0,0,0);
+  doc.text(String(folio), marginX, y);
+  doc.setFont('helvetica','normal'); doc.setFontSize(7.5); doc.setTextColor(150,60,40);
+  doc.text('PDF de respaldo — reconstruido desde Odoo (no se encontró el adjunto original).', marginX, y+5);
+  doc.text('No incluye firmas del evaluador/supervisor.', marginX, y+9);
+  y += 15;
+  doc.setDrawColor(31,61,43); doc.setLineWidth(0.6);
+  doc.line(marginX, y, pageW-marginX, y);
+  y += 6;
+
+  const campos = [
+    ['Sector', m2oListado(h.x_studio_sector)],
+    ['Ciclo', m2oListado(h.x_studio_ciclo)],
+    ['Finca', m2oListado(h.x_studio_finca)],
+    ['Lote', m2oListado(h.x_studio_lote_de_la_finca)],
+    ['Área evaluada (Mzn)', h.x_studio_area_evaluada_mzn],
+    ['Población plantas', h.x_studio_poblacion_plantas],
+    ['Fecha', formatoFecha(h.x_studio_fecha)],
+    ['Edad del cultivo', h.x_studio_edad_del_cultivo!=null ? h.x_studio_edad_del_cultivo+' días' : ''],
+    ['Estado fenológico', h.x_studio_estado_fenologico||''],
+    ['Aplicación', m2oListado(h.x_studio_aplicacion)||''],
+    ['Fecha aplicación', formatoFecha(h.x_studio_fecha_aplicacion)],
+    ['Compañía', m2oListado(h.x_studio_company_id)],
+  ];
+  const colW = (pageW-marginX*2)/3;
+  campos.forEach((c,i)=>{
+    const col=i%3, row=Math.floor(i/3);
+    const x = marginX+col*colW, yy = y+row*8;
+    doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(91,95,82);
+    doc.text(String(c[0]).toUpperCase(), x, yy);
+    doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(0,0,0);
+    doc.text(String(c[1] ?? ''), x, yy+4);
+  });
+  y += Math.ceil(campos.length/3)*8 + 4;
+
+  const head = [['N°','Recuento','M.','E1','E2','E3','E4','E5','E6','E7','E8','E9','E10','Total','Result.']];
+  const body = lineas.map(l=>{
+    const nombre = m2oListado(l.x_studio_recuento) || `Recuento ${l.x_studio_idrecuento}`;
+    const tipoCampo = CAMPO_POR_ID[l.x_studio_idrecuento] || 'avg';
+    const resultado = tipoCampo==='porcent' ? (((l.x_studio_resultado_porcent||0)*100).toFixed(1)+'%') : (l.x_studio_resultado_avg||0).toFixed(2);
+    const est = [1,2,3,4,5,6,7,8,9,10].map(n=> (l['x_studio_e'+n]!=null && l['x_studio_e'+n]!==false) ? l['x_studio_e'+n] : '');
+    return [l.x_studio_idrecuento, nombre, l.x_studio_mtrs_muestra ?? '', ...est, l.x_studio_total ?? 0, resultado];
+  });
+
+  doc.autoTable({
+    startY: y, head, body,
+    margin:{left:marginX, right:marginX},
+    styles:{ fontSize:6.5, cellPadding:1, textColor:[0,0,0] },
+    headStyles:{ fillColor:[231,239,221], textColor:[0,0,0], fontSize:6.2 },
+    columnStyles:{ 1:{cellWidth:32, halign:'left', fontSize:5.4} },
+    theme:'grid',
+  });
+  y = doc.lastAutoTable.finalY + 6;
+
+  if(h.x_studio_observacion){
+    if(y>250){ doc.addPage(); y=20; }
+    doc.setFont('helvetica','bold'); doc.setFontSize(6); doc.setTextColor(91,95,82);
+    doc.text('OBSERVACIÓN', marginX, y);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(0,0,0);
+    const obsLines = doc.splitTextToSize(h.x_studio_observacion, pageW-marginX*2);
+    doc.text(obsLines, marginX, y+4);
+    y += 4 + obsLines.length*3;
+  }
+
+  // Mapa GPS simplificado (vectorial, sin depender de internet) si hay puntos guardados.
+  try{
+    const domainGps = encodeURIComponent(JSON.stringify([['x_studio_recuento_del_cultivo','=',id]]));
+    const rG = await fetch(`${WORKER}/query?base=info&model=x_puntos_gps_recuentos&fields=x_studio_estacion,x_studio_latitud,x_studio_longitud&domain=${domainGps}&limit=20`);
+    let puntos = filasDe(await rG.json());
+    puntos = puntos.filter(p=>p.x_studio_latitud && p.x_studio_longitud);
+    if(puntos.length){
+      doc.addPage();
+      dibujarMapaVectorialSimple(doc, puntos, folio, marginX, pageW);
+    }
+  }catch(e){ console.warn('No se pudo agregar el mapa GPS al PDF de respaldo:', e.message); }
+
+  // Fotos adjuntas en Odoo (ir.attachment), ordenadas de dos en dos.
+  try{
+    const fotos = await obtenerFotosAdjuntas(id);
+    if(fotos.length){
+      doc.addPage();
+      dibujarGridFotos(doc, fotos, folio, marginX, pageW, doc.internal.pageSize.getHeight());
+    }
+  }catch(e){ console.warn('No se pudieron agregar las fotos al PDF de respaldo:', e.message); }
+
+  doc.save(`${folio}_respaldo.pdf`);
+}
+
+function dibujarMapaVectorialSimple(doc, puntos, folio, marginX, pageW){
+  let y = 18;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text(`Ubicación de las evaluaciones (aprox.) — ${folio}`, marginX, y);
+  y += 8;
+
+  const pts = puntos.map(p=>({est:p.x_studio_estacion, lat:p.x_studio_latitud, lng:p.x_studio_longitud}))
+    .sort((a,b)=>(a.est||0)-(b.est||0));
+  const size = 100;
+  const mapX = (pageW-size)/2;
+  const lats = pts.map(p=>p.lat), lngs = pts.map(p=>p.lng);
+  const minLat=Math.min(...lats), maxLat=Math.max(...lats), minLng=Math.min(...lngs), maxLng=Math.max(...lngs);
+  const padLat = Math.max((maxLat-minLat)*0.25, 0.0005), padLng = Math.max((maxLng-minLng)*0.25, 0.0005);
+  const rLat = (maxLat-minLat)+padLat*2, rLng = (maxLng-minLng)+padLng*2;
+
+  doc.setFillColor(180,205,150); doc.setDrawColor(74,93,56); doc.setLineWidth(0.7);
+  doc.rect(mapX, y, size, size, 'FD');
+
+  const proyectado = pts.map(p=>({
+    est: p.est,
+    x: mapX + ((p.lng-(minLng-padLng))/rLng)*size,
+    y: y+size - ((p.lat-(minLat-padLat))/rLat)*size,
+  }));
+  doc.setDrawColor(255,255,255); doc.setLineWidth(0.7);
+  for(let i=1;i<proyectado.length;i++) doc.line(proyectado[i-1].x, proyectado[i-1].y, proyectado[i].x, proyectado[i].y);
+  proyectado.forEach(p=>{
+    doc.setFillColor(31,61,43); doc.circle(p.x, p.y, 2.6, 'F');
+    doc.setFontSize(5.5); doc.setTextColor(255,255,255); doc.setFont('helvetica','bold');
+    doc.text(String(p.est), p.x, p.y+1, { align:'center' });
+  });
+  doc.setDrawColor(74,93,56); doc.setLineWidth(0.7);
+  doc.rect(mapX, y, size, size);
+
+  y += size + 8;
+  const filas = pts.map(p=>[p.est, p.lat.toFixed(6), p.lng.toFixed(6)]);
+  doc.autoTable({
+    startY: y, head:[['Evaluación','Latitud','Longitud']], body: filas,
+    margin:{left:marginX,right:marginX}, styles:{fontSize:7.5, textColor:[0,0,0]},
+    headStyles:{fillColor:[231,239,221], textColor:[0,0,0]}, theme:'grid',
+  });
+  y = doc.lastAutoTable.finalY + 6;
+  doc.setFont('helvetica','normal'); doc.setFontSize(6.5); doc.setTextColor(91,95,82);
+  const nota = doc.splitTextToSize('Vista relativa aproximada reconstruida desde los puntos guardados en Odoo (no es imagen satelital). Coordenadas en formato decimal (WGS84).', pageW-marginX*2);
+  doc.text(nota, marginX, y);
+}
+
+// Trae las fotos adjuntas en Odoo (ir.attachment tipo imagen) para un recuento,
+// ya con el binario en base64 listo para insertarse en un PDF con doc.addImage().
+// Se usa tanto en el PDF de respaldo como en el complementario de fotos que se
+// genera cuando el PDF original sí existe pero fue subido antes de que la app
+// empezara a incrustar las fotos dentro del propio PDF.
+async function obtenerFotosAdjuntas(id){
+  const domainFotos = encodeURIComponent(JSON.stringify([
+    ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','like','image/']
+  ]));
+  const rF = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id,name,datas&domain=${domainFotos}&limit=40`);
+  const fotos = filasDe(await rF.json()).filter(f=>f.datas);
+  // El nombre de cada foto sigue el patrón "E<estación> - <fecha>.jpg" (ver
+  // handleUploadFoto en el Worker) — se usa para ordenarlas por número de estación.
+  fotos.sort((a,b)=>{
+    const ea = parseInt((a.name||'').match(/^E(\d+)/)?.[1] || '0');
+    const eb = parseInt((b.name||'').match(/^E(\d+)/)?.[1] || '0');
+    return ea - eb;
+  });
+  return fotos;
+}
+
+// Dibuja una cuadrícula de 2 columnas con las fotos ya traídas (obtenerFotosAdjuntas),
+// saltando de página sola cuando ya no entra otra fila. Asume que el documento ya
+// está posicionado en la página donde debe empezar (el caller decide si hace
+// doc.addPage() antes de llamarla).
+function dibujarGridFotos(doc, fotos, folio, marginX, pageW, pageH){
+  let y = 18;
+  doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(0,0,0);
+  doc.text(`Fotografías de la evaluación — ${folio}`, marginX, y);
+  y += 8;
+
+  const cols = 2, gap = 6;
+  const cellW = (pageW - marginX*2 - gap) / cols;
+  const cellH = cellW * 0.75;
+  const labelH = 6;
+  const limiteInferior = pageH - 14;
+  let col = 0, x = marginX;
+
+  fotos.forEach(f=>{
+    if(y + cellH + labelH > limiteInferior){
+      doc.addPage(); y = 18; col = 0; x = marginX;
+    }
+    try{ doc.addImage(`data:image/jpeg;base64,${f.datas}`, 'JPEG', x, y, cellW, cellH); }catch(e){}
+    doc.setDrawColor(200,200,200); doc.setLineWidth(0.2);
+    doc.rect(x, y, cellW, cellH);
+    doc.setFont('helvetica','normal'); doc.setFontSize(7); doc.setTextColor(91,95,82);
+    doc.text(f.name || '', x, y+cellH+4);
+
+    if(col===0){ col=1; x = marginX+cellW+gap; }
+    else{ col=0; x = marginX; y += cellH+labelH+4; }
+  });
+}
+
+// Convierte un string base64 (como llega el campo 'datas' de ir.attachment) a
+// bytes crudos, listos para pdf-lib o para armar un Blob descargable.
+function base64ABytes(base64){
+  const bin = atob(base64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+// Fusiona el PDF original (bytes ya descargados de Odoo) con una página/páginas de
+// fotos generadas al vuelo con jsPDF, usando pdf-lib para copiar esas páginas nuevas
+// al final del documento original. Devuelve un único PDF (Uint8Array) que conserva
+// el mapa/firmas del original y agrega las fotos como páginas extra al final.
+async function fusionarPdfConFotos(bytesOriginal, fotos, folio){
+  if(typeof PDFLib === 'undefined') throw new Error('pdf-lib no está disponible (no cargó la librería)');
+  const { PDFDocument } = PDFLib;
+
+  const { jsPDF } = window.jspdf;
+  const docFotos = new jsPDF({ unit:'mm', format:'letter', orientation:'portrait' });
+  dibujarGridFotos(docFotos, fotos, folio, 12, docFotos.internal.pageSize.getWidth(), docFotos.internal.pageSize.getHeight());
+  const bytesFotos = docFotos.output('arraybuffer');
+
+  const pdfOriginal = await PDFDocument.load(bytesOriginal);
+  const pdfFotos = await PDFDocument.load(bytesFotos);
+
+  const paginasCopiadas = await pdfOriginal.copyPages(pdfFotos, pdfFotos.getPageIndices());
+  paginasCopiadas.forEach(pagina => pdfOriginal.addPage(pagina));
+
+  return await pdfOriginal.save();
 }
 
 // Los filtros Compañía/Sector/Ciclo/Finca/Familia/Recuento/DDS ahora viven todos
