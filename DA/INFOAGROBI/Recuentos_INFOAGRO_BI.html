@@ -538,6 +538,16 @@
             <option value="">Todos los lotes</option>
           </select>
         </div>
+        <div class="tf-campo" style="min-width:200px; position:relative;">
+          <label>Familia de Recuento (opcional)</label>
+          <div class="ms-dropdown" id="dropRepFamilia" onclick="toggleMsReporte(event,'familia')">Todas</div>
+          <div class="ms-panel" id="msRepFamilia"></div>
+        </div>
+        <div class="tf-campo" style="min-width:220px; position:relative;">
+          <label>Tipo de Recuento (opcional)</label>
+          <div class="ms-dropdown" id="dropRepTipo" onclick="toggleMsReporte(event,'tipo')">Todos</div>
+          <div class="ms-panel" id="msRepTipo"></div>
+        </div>
         <button class="btn-accion" id="btnGenerarReporte" onclick="generarReportePDF()">📄 Generar PDF</button>
       </div>
       <div class="reporte-estado" id="reporteEstado"></div>
@@ -902,20 +912,25 @@ function normalizarNombresFincaLote(raw){
 }
 
 async function cargarTodo(){
-  const [vivo, histDA, histGZP, fungicidas, lluvia, fincasSiembra] = await Promise.all([
+  const [vivo, histDA, histGZP, fungicidas, lluvia, fincasSiembra, cicloAbierto] = await Promise.all([
     cargarOdoo(),
     cargarHistorico(GITHUB_DA, 'hist'),
     cargarHistorico(GITHUB_GZP, 'hist'),
     cargarFungicidas(),
     cargarPluviosidad(),
-    cargarFincasConSiembra()
+    cargarFincasConSiembra(),
+    cargarCicloAbiertoOdoo()
   ]);
   RAW = [...vivo, ...histDA, ...histGZP];
   RAW = normalizarNombresFincaLote(RAW);
   FUNGICIDAS_POR_CLAVE = fungicidas;
   LLUVIA_POR_FINCA_FECHA = lluvia;
   FINCAS_SIEMBRA_POR_CICLO = fincasSiembra;
-  CICLO_ACTUAL_NOMBRE = ordenarCiclosDesc([...new Set(RAW.map(r=>r.ci).filter(Boolean))])[0] || null;
+  // Prioridad: el ciclo que Odoo marca como Abierto (x_studio_estado) de verdad — solo
+  // si esa consulta no trajo nada (ej. el campo no existe en este Odoo, o hubo un error
+  // de red) se cae al heurístico anterior (año más alto entre los nombres de ciclo
+  // presentes en los datos ya cargados).
+  CICLO_ACTUAL_NOMBRE = cicloAbierto || ordenarCiclosDesc([...new Set(RAW.map(r=>r.ci).filter(Boolean))])[0] || null;
   CARGA_LISTA = true;
 
   document.getElementById('estadoCarga').style.display = 'none';
@@ -962,6 +977,28 @@ async function cargarFincasConSiembra(){
     });
     return mapa;
   }catch(e){ console.error('No se pudo cargar fincas con siembra por ciclo:', e); return {}; }
+}
+
+// Ciclo Abierto real, consultado directo a Odoo (x_cicloagricola.x_studio_estado) en
+// vez de adivinarlo por el año más alto en los nombres de ciclo presentes en RAW —
+// ese heurístico podía fallar si en algún momento hay datos de un ciclo con año más
+// reciente pero que ya está Finalizado, o si aparece un ciclo de otro cultivo (Caña,
+// Servicios, etc. también pueden estar "Abierto" al mismo tiempo). Se filtra
+// puntualmente por Cultivo = Mani porque este dashboard es de recuentos de Maní.
+async function cargarCicloAbiertoOdoo(){
+  try{
+    const domain = encodeURIComponent(JSON.stringify([
+      ['x_studio_estado', '=', 'Abierto'], ['x_studio_cultivo.x_name', '=', 'Mani']
+    ]));
+    const r = await fetch(`${WORKER}/query?base=info&model=x_cicloagricola&fields=id,x_name&domain=${domain}&limit=10`);
+    const j = await r.json();
+    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const nombres = recs.map(rec => rec.x_name).filter(Boolean);
+    if(!nombres.length) return null;
+    // Si por algún motivo hay más de un ciclo de Maní Abierto a la vez, se queda con
+    // el de año más reciente (mismo criterio que ya usaba el heurístico anterior).
+    return ordenarCiclosDesc(nombres)[0] || null;
+  }catch(e){ console.error('No se pudo consultar el ciclo Abierto en Odoo:', e); return null; }
 }
 
 window.toggleIncluirFincasHistoricas = function(marcado){
@@ -1833,6 +1870,7 @@ function poblarSelectorFincaReporte(){
     if(activa) sel.value = activa;
   }
   poblarSelectorLoteReporte();
+  construirFiltrosReporte();
 }
 
 // Lotes de la Finca elegida — cascada real: cambia cada vez que se cambia la Finca.
@@ -1848,6 +1886,117 @@ function poblarSelectorLoteReporte(){
   selLote.innerHTML = `<option value="">Todos los lotes</option>` + lotes.map(l=>`<option value="${l.replace(/"/g,'&quot;')}">${l}</option>`).join('');
   if(valorPrevio && lotes.includes(valorPrevio)) selLote.value = valorPrevio;
 }
+
+// ---------------------------------------------------------------------------------
+// Familia de Recuento / Tipo de Recuento del tab "Reporte de Crecimiento" — multi-
+// selección con checkboxes, mismo componente visual (.ms-dropdown/.ms-panel) y mismo
+// comportamiento (buscador, "Seleccionar todo", cascada Familia→Tipo) que el toolbar
+// de filtros de arriba, pero con su propio estado independiente (seleccionReporte) ya
+// que estos dos filtros son específicos de este reporte y no tocan el resto del
+// dashboard. Array vacío = "Todas/Todos" (sin restricción).
+// ---------------------------------------------------------------------------------
+let seleccionReporte = { familia: [], tipo: [] };
+
+function universoReporte(){
+  const familias = [...new Set(RAW.map(r=>r.fa).filter(Boolean))].sort();
+  const baseTipo = seleccionReporte.familia.length ? RAW.filter(r=>seleccionReporte.familia.includes(r.fa)) : RAW;
+  const tipos = [...new Set(baseTipo.map(r=>r.re).filter(Boolean))].sort();
+  return { familia: familias, tipo: tipos };
+}
+
+function construirFiltrosReporte(){
+  const uni = universoReporte();
+  ['familia','tipo'].forEach(clave=>{
+    const universo = uni[clave];
+    // Si tras cambiar la Familia algún Tipo elegido ya no existe en el nuevo universo,
+    // se descarta (evita quedar con una selección "fantasma" que no filtra nada real).
+    seleccionReporte[clave] = seleccionReporte[clave].filter(v=>universo.includes(v));
+
+    const panelId = clave==='familia' ? 'msRepFamilia' : 'msRepTipo';
+    const panel = document.getElementById(panelId);
+    const itemsHtml = universo.map(v=>{
+      const marcado = !seleccionReporte[clave].length || seleccionReporte[clave].includes(v);
+      return `<div class="ms-item" data-val="${v}" data-texto="${normTxt(v)}">
+        <input type="checkbox" value="${v}" ${marcado?'checked':''} onchange="actualizarSelectAllReporte('${clave}')">
+        <span>${v}</span>
+      </div>`;
+    }).join('');
+    panel.onclick = (ev) => ev.stopPropagation();
+    panel.innerHTML = `
+      <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="buscarMsReporte('${clave}', this.value)"></div>
+      <div class="ms-item selectall">
+        <input type="checkbox" class="selectall-cb" checked onchange="toggleTodoReporte('${clave}', this.checked)">
+        <span>(Seleccionar todo)</span>
+      </div>
+      <div class="ms-items">${itemsHtml}</div>
+      <div class="ms-footer">
+        <button class="cancel" onclick="cerrarMsReporte('${clave}')">Cancelar</button>
+        <button class="ok" onclick="aplicarMsReporte('${clave}')">Aceptar</button>
+      </div>`;
+    actualizarTextoDropReporte(clave, universo.length);
+  });
+}
+
+function actualizarTextoDropReporte(clave, totalUniverso){
+  const drop = document.getElementById(clave==='familia' ? 'dropRepFamilia' : 'dropRepTipo');
+  const sel = seleccionReporte[clave];
+  const etiqueta = clave==='familia' ? 'familias' : 'tipos';
+  if(!sel.length) drop.textContent = clave==='familia' ? 'Todas' : 'Todos';
+  else if(sel.length===1) drop.textContent = sel[0];
+  else if(sel.length===totalUniverso) drop.textContent = clave==='familia' ? 'Todas' : 'Todos';
+  else drop.textContent = `${sel.length} ${etiqueta}`;
+}
+
+window.toggleMsReporte = function(ev, clave){
+  ev.stopPropagation();
+  const panel = document.getElementById(clave==='familia' ? 'msRepFamilia' : 'msRepTipo');
+  const abierto = panel.classList.contains('show');
+  document.querySelectorAll('.ms-panel').forEach(p=>p.classList.remove('show'));
+  if(!abierto){
+    panel.classList.add('show');
+    posicionarMsPanel(panel, ev.currentTarget);
+  }
+};
+window.actualizarSelectAllReporte = function(clave){
+  const panel = document.getElementById(clave==='familia' ? 'msRepFamilia' : 'msRepTipo');
+  const selCb = panel.querySelector('.selectall-cb');
+  const visibles = Array.from(panel.querySelectorAll('.ms-items .ms-item')).filter(el=>el.style.display!=='none');
+  const cbs = visibles.map(el=>el.querySelector('input[type=checkbox]'));
+  const marcados = cbs.filter(cb=>cb.checked).length;
+  if(!cbs.length){ selCb.checked=false; selCb.indeterminate=false; return; }
+  selCb.checked = marcados===cbs.length;
+  selCb.indeterminate = marcados>0 && marcados<cbs.length;
+};
+window.toggleTodoReporte = function(clave, marcar){
+  const panel = document.getElementById(clave==='familia' ? 'msRepFamilia' : 'msRepTipo');
+  panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+    if(el.style.display==='none') return;
+    const cb = el.querySelector('input[type=checkbox]'); if(cb) cb.checked = marcar;
+  });
+  actualizarSelectAllReporte(clave);
+};
+window.buscarMsReporte = function(clave, texto){
+  const panel = document.getElementById(clave==='familia' ? 'msRepFamilia' : 'msRepTipo');
+  const t = normTxt(texto);
+  panel.querySelectorAll('.ms-items .ms-item').forEach(el=>{
+    el.style.display = (!t || (el.getAttribute('data-texto')||'').includes(t)) ? 'flex' : 'none';
+  });
+  actualizarSelectAllReporte(clave);
+};
+window.cerrarMsReporte = function(clave){
+  document.getElementById(clave==='familia' ? 'msRepFamilia' : 'msRepTipo').classList.remove('show');
+  construirFiltrosReporte(); // descarta cambios sin aplicar, vuelve a marcar según seleccionReporte vigente
+};
+window.aplicarMsReporte = function(clave){
+  const panel = document.getElementById(clave==='familia' ? 'msRepFamilia' : 'msRepTipo');
+  const universoActual = universoReporte()[clave];
+  const marcados = Array.from(panel.querySelectorAll('.ms-items .ms-item input[type=checkbox]:checked')).map(cb=>cb.value);
+  seleccionReporte[clave] = (marcados.length && marcados.length < universoActual.length) ? marcados : [];
+  panel.classList.remove('show');
+  // Si cambió la Familia, hay que reconstruir el Tipo (cascada) — reconstruir ambos es
+  // barato (listas cortas) y más simple que distinguir cuál cambió.
+  construirFiltrosReporte();
+};
 
 // ===================================================================
 // TABLA "RESULTADO POR CICLO" — filas Finca > Lote > DDS, una columna por Ciclo con
@@ -2179,6 +2328,8 @@ function renderComparacionHistorica(datos){
 async function generarReportePDF(){
   const finca = document.getElementById('selFincaReporte').value;
   const loteElegido = document.getElementById('selLoteReporte').value;
+  const familiasElegidas = seleccionReporte.familia; // [] = todas
+  const tiposElegidos = seleccionReporte.tipo;        // [] = todos
   const estadoEl = document.getElementById('reporteEstado');
   const btn = document.getElementById('btnGenerarReporte');
   estadoEl.classList.remove('error');
@@ -2193,8 +2344,14 @@ async function generarReportePDF(){
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation:'p', unit:'mm', format:'a4', compress:true });
 
-    const datosFinca = RAW.filter(r => r.fi === finca);
-    if(!datosFinca.length) throw new Error('No hay recuentos registrados para esta finca.');
+    let datosFinca = RAW.filter(r => r.fi === finca);
+    if(familiasElegidas.length) datosFinca = datosFinca.filter(r => familiasElegidas.includes(r.fa));
+    if(tiposElegidos.length)    datosFinca = datosFinca.filter(r => tiposElegidos.includes(r.re));
+    if(!datosFinca.length) throw new Error(
+      familiasElegidas.length || tiposElegidos.length
+        ? 'No hay recuentos para esta finca con la Familia/Tipo de Recuento elegidos.'
+        : 'No hay recuentos registrados para esta finca.'
+    );
 
     const cicloActual = CICLO_ACTUAL_NOMBRE || ordenarCiclosDesc([...new Set(datosFinca.map(r=>r.ci))])[0];
 
@@ -2205,6 +2362,16 @@ async function generarReportePDF(){
     doc.setFontSize(9.5); doc.setTextColor(100,100,100);
     doc.text(`Ciclo actual: ${cicloActual||'—'}  ·  DDS = edad del cultivo (días después de siembra)  ·  Generado: ${new Date().toLocaleDateString('es-NI')}`, 14, y);
     y += 4;
+    if(familiasElegidas.length || tiposElegidos.length){
+      doc.setFontSize(9); doc.setTextColor(45,106,138);
+      const partes = [
+        familiasElegidas.length && `Familia: ${familiasElegidas.join(', ')}`,
+        tiposElegidos.length && `Tipo: ${tiposElegidos.join(', ')}`,
+      ].filter(Boolean);
+      const lineasFiltro = doc.splitTextToSize(`Filtrado por: ${partes.join('  ·  ')}`, 182);
+      doc.text(lineasFiltro, 14, y);
+      y += 4 * lineasFiltro.length;
+    }
     doc.setDrawColor(210,210,210); doc.line(14, y, 196, y);
     y += 8;
 
@@ -2237,11 +2404,18 @@ async function generarReportePDF(){
       }
     }
 
-    const sufijoArchivo = loteElegido ? `_${loteElegido.replace(/[^a-z0-9]/gi,'_')}` : '';
+    const nombreCortoSufijo = tiposElegidos.length ? tiposElegidos.join('_') : (familiasElegidas.length ? familiasElegidas.join('_') : '');
+    const sufijoArchivo = (loteElegido ? `_${loteElegido.replace(/[^a-z0-9]/gi,'_')}` : '')
+      + (nombreCortoSufijo ? `_${nombreCortoSufijo.replace(/[^a-z0-9]/gi,'_').slice(0,60)}` : '');
     doc.save(`Reporte_Crecimiento_${finca.replace(/[^a-z0-9]/gi,'_')}${sufijoArchivo}_${new Date().toISOString().slice(0,10)}.pdf`);
-    estadoEl.textContent = loteElegido
+    const sufijoMsg = [
+      familiasElegidas.length && `familia${familiasElegidas.length>1?'s':''} ${familiasElegidas.join(', ')}`,
+      tiposElegidos.length && `tipo${tiposElegidos.length>1?'s':''} ${tiposElegidos.join(', ')}`,
+    ].filter(Boolean).join(', ');
+    estadoEl.textContent = (loteElegido
       ? `✅ PDF generado (Lote ${loteElegido}).`
-      : `✅ PDF generado (${totalLotes} lote${totalLotes!==1?'s':''} + resumen de finca).`;
+      : `✅ PDF generado (${totalLotes} lote${totalLotes!==1?'s':''} + resumen de finca).`)
+      + (sufijoMsg ? ` Filtrado por ${sufijoMsg}.` : '');
   } catch(e){
     console.error('Error generando reporte:', e);
     estadoEl.textContent = 'No se pudo generar el reporte: ' + e.message;
