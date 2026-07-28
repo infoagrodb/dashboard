@@ -842,22 +842,25 @@ table.t tr.tr-tot td{background:#f0fdf4;font-weight:700;border-top:2px solid #d1
 
 <script>
 
-const SID='1JvLHhYiZ9QpF5EQg1AWdXx-D7Y6kwno_LZWsB3sagig';
-const AK='AIzaSyAzWECpeQSEq1cwVpuCf6kt_kklb5sEKf4';
+const esIntranet = window.location.hostname === '192.168.5.58' ||
+                    window.location.hostname === 'localhost' ||
+                    window.location.hostname.startsWith('192.168.');
+const API = esIntranet ? 'http://192.168.5.58:5000' : 'https://sia.comasa.com.ni/dab';
+
 const MZ26={'RANCHO PANDO':200,'LLANO VERDE':93,'LA LAGUNA':288,'MONTANA':225,'QUINTA MARIA':171,'PALO DE PAN':63,'SAN MARTIN':40,'SANTA ISABEL':117,'MIRAMAR':425,'SAN LUIS':120,'LA CONCHA':462,'FINCA SAN BLASS':1000};
 const FINCA_SECTOR={'la laguna':'Sector 1','la pistola':'Sector 1','finca las pistolas':'Sector 1','llano verde':'Sector 1','montana':'Sector 1','monte rosa':'Sector 1','palmira':'Sector 1','palo de pan':'Sector 1','quinta maria':'Sector 1','rancho pando':'Sector 1','roma':'Sector 1','hacienda roma':'Sector 1','san martin':'Sector 1','santa isabel':'Sector 1','santa rosa':'Sector 1','finca las americas':'Sector 2','hacienda la america':'Sector 2','la concha':'Sector 2','miramar':'Sector 2','san luis':'Sector 2','finca san blass':'Sector 4'};
 function getSector(finca){return FINCA_SECTOR[norm(finca)]||'Sin sector asignado';}
-const MZ_HIST={'MANI 2022':2377,'MANI 2023':2377,'MANI 2024':2377,'MANI 2025':2454};// fallback total por ciclo
+const MZ_HIST={'MANI 2022':2377,'MANI 2023':2377,'MANI 2024':2377,'MANI 2025':2454};// fallback total por ciclo, solo si no hay dato real de InfoAgro
 const ML=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MF=['01','02','03','04','05','06','07','08','09','10','11','12'];
 const PALETA=['#1a7a4a','#e74c3c','#2563eb','#f39c12','#7c3aed','#0891b2','#c026d3','#16a34a','#b45309'];
 const MES_IDX={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,set:8,oct:9,nov:10,dic:11};
 
-let RAW_C=[],RAW_DH=[],RAW_AV=[],rawCostos=[];
-let SERIE=[];// [{ciclo,finca,puesto,act,mes,costo,dh,mzn}]
+let RAW_C=[],RAW_DH=[],RAW_AV=[];
+let SERIE=[];// [{ciclo,finca,puesto,act,mes,costo,dh}]
 let CAPA=[];// agregado por ciclo+finca+puesto+act
-let MZ_REAL={};// ciclo → mzn TOTAL de siembra del ciclo (constante, independiente del puesto/finca filtrado)
-const MZ_TOT_26=Object.values(MZ26).reduce((a,b)=>a+b,0);// 3204 Mz placeholder 2026
+let MZ_REAL={};// ciclo → mzn TOTAL de siembra del ciclo (desde DW_InfoAgro_AreaSiembra)
+const MZ_TOT_26=Object.values(MZ26).reduce((a,b)=>a+b,0);// placeholder solo si 2026 no tiene AreaSiembra aún
 let metricaH='umz',vistaH='mensual';
 let chartsHist={};
 
@@ -893,8 +896,8 @@ function getMes(fechaStr){
 // Mz del ciclo = constante total de siembra, NO varía por puesto ni por finca filtrada
 function getMzCiclo(ciclo){
   const cn=norm(ciclo);
-  if(cn.includes('2026'))return MZ_TOT_26; // placeholder 3,204 Mz
-  if(MZ_REAL[cn])return MZ_REAL[cn];       // dato real de avances
+  if(MZ_REAL[cn])return MZ_REAL[cn];       // dato real de InfoAgro (AreaSiembra)
+  if(cn.includes('2026'))return MZ_TOT_26; // placeholder si 2026 aún no tiene AreaSiembra
   return MZ_HIST[cn.toUpperCase()]||0;      // fallback historico
 }
 // ignora finca intencionalmente — las Mz son del ciclo completo
@@ -966,43 +969,93 @@ function onMsChange(ns){
   else if(ns==='rsector')R_render();
 }
 
-/* ── FETCH ── */
-async function fetchTab(tab,range){
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SID}/values/${encodeURIComponent(tab+'!'+range)}?key=${AK}`;
-  const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status+' — '+tab);
-  return(await r.json()).values||[];
-}
-function toObj(vals){
-  if(!vals.length)return[];
-  const hdr=vals[0].map(h=>norm(h));
-  return vals.slice(1).map(row=>{const o={};hdr.forEach((h,i)=>{o[h]=row[i]??'';});return o;});
+/* ── FETCH DW (Exactus + InfoAgro vía DAB) ── */
+async function fetchAllPages(url){
+  let out=[],next=url,guard=0;
+  while(next&&guard<300){
+    const res=await fetch(next).then(r=>r.json());
+    out=out.concat(res.value||[]);
+    next=res.nextLink||null;
+    guard++;
+  }
+  return out;
 }
 
-/* ── CARGA Y CRUCE ── */
-async function cargar(){
-  const setS=t=>document.getElementById('loader-txt').textContent=t;
-  setS('Cargando costos de mano de obra...');
-  const [vC,vDH,vAv]=await Promise.all([
-    fetchTab('Costos dias hombres','A1:N'),
-    fetchTab('Dias hombres','A1:H'),
-    fetchTab('Avances y combustible del 2022 a la fecha','A1:M')
-  ]);
-  RAW_C=toObj(vC);
-  RAW_DH=toObj(vDH);
-  const rawAv=toObj(vAv);
-  RAW_AV=rawAv;
-
-  setS('Calculando manzanas totales de siembra por ciclo...');
-  // Mz reales = TOTAL por ciclo (no por finca) — solo actividad Siembra de Comasa
-  // Es una constante del ciclo: no cambia al filtrar por puesto o finca
-  rawAv.filter(r=>norm(get(r,'proveedor del servicio'))==='comasa'&&norm(get(r,'actividad'))==='siembra').forEach(r=>{
-    const ciclo=norm(get(r,'ciclo'));
-    const mz=toNum(get(r,'cant. avance mzn','cantidad avance mzn'));
-    if(ciclo&&mz>0) MZ_REAL[ciclo]=(MZ_REAL[ciclo]||0)+mz;
+// Lookup Centro de Costo → lista de {ciclo, ini, fin} usando DW_InfoAgro_RelacionCicloFinca
+function buildCentroCiclos(relaciones){
+  const map={};
+  relaciones.forEach(r=>{
+    const centro=r.CentroCC;
+    if(!centro)return;
+    if(!map[centro])map[centro]=[];
+    map[centro].push({ciclo:r.Ciclo, ini:parseDate(r.FechaInicioCiclo), fin:parseDate(r.FechaFinCiclo)});
   });
+  return map;
+}
+function cicloDeFecha(centro,fecha,centroCiclos){
+  const arr=centroCiclos[centro];
+  if(!arr||!fecha)return null;
+  const m=arr.find(c=>c.ini&&c.fin&&fecha>=c.ini&&fecha<=c.fin);
+  return m?m.ciclo:null;
+}
+
+/* ── CARGA Y CRUCE (DW Exactus + InfoAgro) ── */
+async function cargar(){
+  const setS=t=>{const el=document.getElementById('loader-txt');if(el)el.textContent=t;};
+  setS('Cargando relaciones ciclo ↔ finca...');
+
+  const [relaciones, areaSiembraRaw] = await Promise.all([
+    fetchAllPages(`${API}/api/DW_InfoAgro_RelacionCicloFinca?$orderby=Ciclo,Finca&$first=200`),
+    fetchAllPages(`${API}/api/DW_InfoAgro_AreaSiembra?$filter=CategoriaActividad eq 'Siembra'&$first=500`)
+  ]);
+
+  setS('Cargando registros de nómina (Exactus)...');
+  const nominaRaw = await fetchAllPages(`${API}/api/IS_DW_NominaDA?$filter=${encodeURIComponent("Clasificacion eq 'Mano de obra'")}&$first=5000`);
+
+  setS('Calculando manzanas reales de siembra por ciclo...');
+  areaSiembraRaw.forEach(r=>{
+    const ciclo=norm(r.Ciclo);
+    const mz=toNum(r.AvanceMzn);
+    if(ciclo&&mz>0)MZ_REAL[ciclo]=(MZ_REAL[ciclo]||0)+mz;
+  });
+  // Formato compatible con SEC_init / R_init (que filtran por 'proveedor del servicio'==='comasa' y 'actividad'==='siembra')
+  RAW_AV=areaSiembraRaw.map(r=>({
+    'ciclo': r.Ciclo,
+    'finca': r.Finca,
+    'cant. avance mzn': r.AvanceMzn,
+    'proveedor del servicio': 'comasa',
+    'actividad': 'siembra'
+  }));
+
+  setS('Cruzando fechas de nómina con ciclos por finca...');
+  const centroCiclos=buildCentroCiclos(relaciones);
+  const CUENTA_SALARIOS='1-01-15-001-001'; // única cuenta que cuenta como Días Hombre
+  const mapped=[];
+  nominaRaw.forEach(r=>{
+    const centro=r.Centrocc||r.CentroCosto;
+    const fecha=parseDate(r.FECHA);
+    const ciclo=cicloDeFecha(centro,fecha,centroCiclos);
+    if(!ciclo)return; // fecha fuera de cualquier ciclo conocido para ese centro
+    const esSalarios=String(r.CuentaContable||'').trim()===CUENTA_SALARIOS;
+    mapped.push({
+      'ciclo': ciclo,
+      'finca': r.CentroDesc||r.CentroCostoDescripcion||'',
+      'puesto': r.Puesto||'Sin puesto',
+      'actividad': r.ACTIVIDAD||'Sin actividad',
+      'cuentacontable': r.CuentaContable||'',
+      'cuentacontabledescripcion': r.CuentaContableDescripcion||'',
+      'fecha': r.FECHA,
+      'total u$': r.TotalActividadDolar||0,
+      'dh': esSalarios ? (r.TotalAsistenciaGrupo||0) : 0,
+      'nombreempleado': r.NombreEmpleado||''
+    });
+  });
+  // Un mismo registro trae costo (U$) y días hombre a la vez, así que sirve para ambas capas
+  RAW_C=mapped;
+  RAW_DH=mapped;
 
   setS('Consolidando costos + días hombre...');
-  // Construir SERIE desde costos — registro mensual
+  // Construir SERIE — registro por mes
   RAW_C.forEach(r=>{
     const ciclo=norm(get(r,'ciclo'));
     const finca=norm(String(get(r,'finca')||'').trim());
@@ -1013,7 +1066,7 @@ async function cargar(){
     if(!ciclo||!mes||costo<=0)return;
     SERIE.push({ciclo,finca,puesto,act,mes,costo,dh:0});
   });
-  // Añadir DH desde dias hombres
+  // Añadir DH (mismo registro, distinta métrica)
   RAW_DH.forEach(r=>{
     const ciclo=norm(get(r,'ciclo'));
     const finca=norm(String(get(r,'finca')||'').trim());
@@ -1026,7 +1079,6 @@ async function cargar(){
   });
 
   setS('Agregando datos para análisis...');
-  // CAPA: agregado por ciclo+finca+puesto+act
   const pv={};
   SERIE.forEach(s=>{
     const k=`${s.ciclo}|${s.finca}|${s.puesto}|${s.act}`;
@@ -2268,6 +2320,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
   try{
     await cargar();
     document.getElementById('loading').style.display='none';
+    document.getElementById('main-content').style.display='block';
     dot.className='dot-live ok';
     lbl.textContent='Datos actualizados · '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
   }catch(e){
@@ -2280,34 +2333,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
 });
 
 /* ════ RESUMEN EJECUTIVO ════ */
+/* R_init real está más abajo — reutiliza RAW_C/RAW_DH/RAW_AV ya cargados por cargar(), sin refetch. */
 
-async function R_init(){
-  if(window._kpiLoaded){
-    R_RC=rawCostos||[]; R_RD=rawDH||[]; R_MZ={};
-    (window._rawAv||[]).filter(r=>norm(get(r,'proveedor del servicio'))==='comasa'&&norm(get(r,'actividad'))==='siembra').forEach(r=>{
-      const c=norm(get(r,'ciclo')),m=toNum(get(r,'cant. avance mzn','cantidad avance mzn'));
-      if(c&&m>0)R_MZ[c]=(R_MZ[c]||0)+m;
-    });
-  } else {
-    const [vC,vD,vA]=await Promise.all([
-      fetchTab('Costos dias hombres','A1:N'),
-      fetchTab('Dias hombres','A1:H'),
-      fetchTab('Avances y combustible del 2022 a la fecha','A1:M')
-    ]);
-    R_RC=toObj(vC); R_RD=toObj(vD); R_MZ={};
-    toObj(vA).filter(r=>norm(get(r,'proveedor del servicio'))==='comasa'&&norm(get(r,'actividad'))==='siembra').forEach(r=>{
-      const c=norm(get(r,'ciclo')),m=toNum(get(r,'cant. avance mzn','cantidad avance mzn'));
-      if(c&&m>0)R_MZ[c]=(R_MZ[c]||0)+m;
-    });
-  }
-  R_TC=[...new Set([...R_RC,...R_RD].map(r=>norm(get(r,'ciclo'))).filter(c=>c.includes('mani')))].sort();
-  R_CA=R_TC.find(c=>c.includes('2026'))||R_TC[R_TC.length-1]||'';
-  R_EC=new Set(R_TC); R_cD=null; R_cA=null; R_cE=null;
-  R_buildChips(); R_buildEvolChips(); R_render();
-}
-
-/* SID:shared */
-/* AK:shared */
 /* MZ26:shared */
 /* MZ_TOT_26:shared */
 /* ML:shared */
@@ -2343,17 +2370,6 @@ function R_hmT(v,min,max){
   return max>min&&(v-min)/(max-min)<0.4?'#085041':'#fff';
 }
 function R_destroy(ref){if(ref){try{ref.destroy();}catch(e){}}return null;}
-
-async function fetchTab(tab,range){
-  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SID}/values/${encodeURIComponent(tab+'!'+range)}?key=${AK}`;
-  const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);
-  return(await r.json()).values||[];
-}
-function toObj(vals){
-  if(!vals.length)return[];
-  const hdr=vals[0].map(h=>norm(h));
-  return vals.slice(1).map(row=>{const o={};hdr.forEach((h,i)=>{o[h]=row[i]??'';});return o;});
-}
 
 /* ── FILTRO PRINCIPAL — selección única ── */
 function R_buildChips(){
@@ -2769,37 +2785,17 @@ function R_rEvol(){
   });
 }
 
-/* ── INIT ── */
-async function R_init(){
+/* ── INIT ──
+   Ya no vuelve a consultar el DW: reutiliza RAW_C/RAW_DH/RAW_AV/MZ_REAL
+   que cargar() (DOMContentLoaded) ya trajo una sola vez. Instantáneo al cambiar de panel. */
+function R_init(){
   const dot=document.getElementById('dot');
   const lbl=document.getElementById('sync-lbl');
-  dot.className='dot loading';lbl.textContent='Conectando...';
-  document.getElementById('main-content').style.display='none';
-  document.getElementById('loading').style.display='flex';
   try{
-    document.getElementById('loader-txt').textContent='Cargando costos y días hombre...';
-    const [vC,vDH,vAv]=await Promise.all([
-      fetchTab('Costos dias hombres','A1:N'),
-      fetchTab('Dias hombres','A1:H'),
-      fetchTab('Avances y combustible del 2022 a la fecha','A1:M')
-    ]);
-    R_RC=toObj(vC);R_RD=toObj(vDH);
-    const rawAv=toObj(vAv);
+    R_RC=RAW_C; R_RD=RAW_DH; R_MZ={...MZ_REAL};
 
-    // Mz reales por ciclo
-    rawAv.filter(r=>norm(get(r,'proveedor del servicio'))==='comasa'&&norm(get(r,'actividad'))==='siembra').forEach(r=>{
-      const ciclo=norm(get(r,'ciclo'));
-      const mz=toNum(get(r,'cant. avance mzn','cantidad avance mzn'));
-      if(ciclo&&mz>0)R_MZ[ciclo]=(R_MZ[ciclo]||0)+mz;
-    });
-
-    // Ciclos disponibles — ordenados
     R_TC=[...new Set([...R_RC,...R_RD].map(r=>norm(get(r,'ciclo'))).filter(c=>c.includes('mani')))].sort();
-
-    // Por defecto: Maní 2026 activo
     R_CA=R_TC.find(c=>c.includes('2026'))||R_TC[R_TC.length-1]||'';
-
-    // Evolución: todos los ciclos por defecto
     R_EC=new Set(R_TC);
 
     R_buildChips();
@@ -2807,22 +2803,18 @@ async function R_init(){
     const sectoresUsados=new Set([...R_RC,...R_RD].map(r=>getSector(get(r,'finca'))));
     poblarMs('rsector',[...sectoresUsados],()=>R_render());
 
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main-content').style.display='block';
-
     R_render();
 
-    dot.className='dot ok';
-    lbl.textContent='Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+    if(dot)dot.className='dot-live ok';
+    if(lbl)lbl.textContent='Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
   }catch(e){
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main-content').style.display='block';
-    document.getElementById('kpi-hero').innerHTML=`<div class="err-box" style="grid-column:1/-1;">⚠ Error: ${e.message}</div>`;
-    dot.className='dot err';lbl.textContent='Error';
+    const kh=document.getElementById('kpi-hero');
+    if(kh)kh.innerHTML=`<div class="err-box" style="grid-column:1/-1;">⚠ Error: ${e.message}</div>`;
+    if(dot)dot.className='dot-live error';
+    if(lbl)lbl.textContent='Error';
     console.error(e);
   }
 }
-/* init:deferred */
 
 /* ═══════════ MODALES DRILL-DOWN ═══════════ */
 function cerrarModal(){document.getElementById('modal-overlay').style.display='none';}
