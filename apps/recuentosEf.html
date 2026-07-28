@@ -309,11 +309,13 @@
   .tag.synced{background:var(--verde-pastel);color:var(--verde);}
   .tag.error{background:var(--rojo-bg);color:var(--rojo);}
   .tag.syncing{background:var(--verde-pastel);color:var(--verde);}
+  .tag.fotos_pendientes{background:var(--ambar-bg);color:var(--ambar);}
   .tag .mini-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
   .tag.draft .mini-dot{background:#6b6656;}
   .tag.pending_sync .mini-dot{background:var(--ambar);}
   .tag.synced .mini-dot{background:var(--verde);}
   .tag.error .mini-dot{background:var(--rojo);}
+  .tag.fotos_pendientes .mini-dot{background:var(--ambar);}
   .tag .mini-ring{width:10px;height:10px;border-radius:50%;border:2px solid rgba(63,107,63,0.25);border-top-color:var(--verde);animation:spin 0.8s linear infinite;flex-shrink:0;}
 
   .empty{text-align:center;padding:40px 16px;color:var(--texto-suave);}
@@ -1654,20 +1656,20 @@ async function renderHome(){
       div.onclick=()=>abrirSesion(s.localId);
       const enviandoAhora = sincronizandoLocalId === s.localId;
       const estadoTag = enviandoAhora ? 'syncing' : s.status;
-      const tagTxt = {draft:'Borrador', pending_sync:'Por enviar', synced:'Enviado', error:'Error', syncing:'Enviando'}[estadoTag];
+      const tagTxt = {draft:'Borrador', pending_sync:'Por enviar', synced:'Enviado', error:'Error', syncing:'Enviando', fotos_pendientes:'Fotos pendientes'}[estadoTag];
       const iconoTag = enviandoAhora ? '<span class="mini-ring"></span>' : '<span class="mini-dot"></span>';
       div.innerHTML = `
         <div class="meta">
           <div class="t1">${fincaName||'Finca sin definir'} · ${loteName||'Lote sin definir'}</div>
           <div class="t2">${s.header.fecha ? fmtFechaPDF(s.header.fecha) : 'sin fecha'} · Evaluación ${s.currentStation}/${s.header.estaciones}</div>
-          ${s.status==='error' && s.lastError ? `<div class="t2" style="color:var(--rojo);margin-top:2px;">⚠️ ${s.lastError}</div>` : ''}
+          ${(s.status==='error'||s.status==='fotos_pendientes') && s.lastError ? `<div class="t2" style="color:${s.status==='error'?'var(--rojo)':'var(--ambar)'};margin-top:2px;">${s.status==='error'?'⚠️':'📷'} ${s.lastError}</div>` : ''}
         </div>
         <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
       `;
       cont.appendChild(div);
     });
   }
-  const pending = list.filter(s=>s.status==='pending_sync'||s.status==='error').length;
+  const pending = list.filter(s=>s.status==='pending_sync'||s.status==='error'||s.status==='fotos_pendientes').length;
   document.getElementById('cfgPendingCount').textContent = pending;
   updateOnlineUI();
 }
@@ -1684,13 +1686,17 @@ function companiaNombre(id){ const c = COMPANIAS.find(x=>x.id===id); return c?c.
  *  — exactamente el problema reportado. Bloquear desde que EMPIEZA el envío (no solo cuando
  *  termina) cierra esa ventana por completo. */
 function esSoloLectura(){
-  return !!(sesionActual && (sesionActual.status === 'synced' || sesionActual.status === 'syncing'));
+  return !!(sesionActual && (sesionActual.status === 'synced' || sesionActual.status === 'syncing' || sesionActual.status === 'fotos_pendientes'));
 }
-/** Mensaje de solo lectura, distinto según si ya se envió del todo o si el envío está en
- *  camino ahora mismo — para que quede claro qué está pasando, no solo que "no se puede". */
+/** Mensaje de solo lectura, distinto según si ya se envió del todo, si el envío está en
+ *  camino ahora mismo, o si el recuento ya está en Odoo pero aún faltan fotos por
+ *  subir — para que quede claro qué está pasando, no solo que "no se puede". */
 function mensajeSoloLectura(){
   if(sesionActual && sesionActual.status==='syncing'){
     return '📡 Este reporte se está enviando a Odoo ahora mismo — espera un momento y vuelve a intentar.';
+  }
+  if(sesionActual && sesionActual.status==='fotos_pendientes'){
+    return '🔒 Este reporte ya se envió a Odoo — solo quedan fotos por subir, que se reintentan solas al sincronizar.';
   }
   return '🔒 Este reporte ya se envió a Odoo. Quedó en solo lectura — para hacer cambios, edítalo directo ahí.';
 }
@@ -1701,7 +1707,7 @@ async function abrirSesion(localId){
   if(!s) return;
   sesionActual = s;
   if(!sesionActual.gpsPorPlanta) sesionActual.gpsPorPlanta = {}; // compatibilidad con evaluaciones creadas antes de este cambio
-  if(s.status==='synced' || s.status==='syncing'){
+  if(s.status==='synced' || s.status==='syncing' || s.status==='fotos_pendientes'){
     renderResumen(true);
     goScreen('screen-resumen');
   } else {
@@ -3332,8 +3338,13 @@ async function sincronizarTodo(){
       if(s.status==='syncing'){ s.status='pending_sync'; await idbPutSession(s); }
     }
 
-    const pendientes = list.filter(s=>s.status==='pending_sync'||s.status==='error');
-    let ok=0, fail=0;
+    // 'fotos_pendientes' = el recuento YA está confirmado en Odoo (tiene odooId), pero se
+    // quedaron una o más fotos sin subir la vez anterior (ej. corte de señal) — se
+    // reintentan acá. Reenviar sincronizarSesion() para estos casos es seguro/idempotente:
+    // el Worker detecta el folio_temporal ya existente y no vuelve a crear el encabezado
+    // ni las líneas, solo reintenta las fotos.
+    const pendientes = list.filter(s=>s.status==='pending_sync'||s.status==='error'||s.status==='fotos_pendientes');
+    let ok=0, fail=0, okConFotosPendientes=0;
     if(pendientes.length>0){
       syncProgress = { current:0, total:pendientes.length };
       renderEstadoPill();
@@ -3357,16 +3368,35 @@ async function sincronizarTodo(){
       try{
         const odooId = await sincronizarSesion(fresca);
         // Último intento de fotos por si alguna se quedó sin subir dentro de
-        // sincronizarSesion (ej. un corte de señal a media subida) — antes de borrar todo.
+        // sincronizarSesion (ej. un corte de señal a media subida) — antes de decidir si
+        // ya se puede borrar todo o si hay que dejar algo pendiente de reintentar.
         const urlFotos = await kvGet('worker_url', DEFAULT_WORKER_URL);
         const keyFotos = await kvGet('sync_key', DEFAULT_SYNC_KEY);
         if(urlFotos) await subirFotosDeSesion(fresca.localId, odooId, urlFotos, keyFotos).catch(()=>{});
 
-        // El dato ya quedó seguro en Odoo — se borra del celular en vez de solo marcarlo
-        // 'synced'. Si después hace falta consultarlo o reimprimirlo, se trae directo de
-        // Odoo por folio con ReimprimirRecuento.html, que ya lee los datos confirmados.
-        for(const foto of await idbGetPhotosForSession(fresca.localId)) await idbDeletePhoto(foto.id);
-        await idbDeleteSession(fresca.localId);
+        // OJO: antes acá se borraban TODAS las fotos de la sesión sin fijarse si de verdad
+        // habían llegado a Odoo — si alguna fallaba al subir (señal débil justo al
+        // reconectar, por ejemplo), se perdía para siempre sin haber quedado guardada.
+        // Ahora solo se borran las que sí quedaron marcadas 'synced'; las que fallaron se
+        // dejan en el celular y la sesión pasa a 'fotos_pendientes' para reintentarlas en
+        // la próxima sincronización, en vez de mandar el reporte al archivo sin sus fotos.
+        const fotosSesion = await idbGetPhotosForSession(fresca.localId);
+        const fotosOk = fotosSesion.filter(p=>p.synced);
+        const fotosFaltantes = fotosSesion.filter(p=>!p.synced);
+        for(const foto of fotosOk) await idbDeletePhoto(foto.id);
+
+        if(fotosFaltantes.length > 0){
+          fresca.status = 'fotos_pendientes';
+          fresca.odooId = odooId;
+          fresca.lastError = `El recuento se envió bien, pero quedan ${fotosFaltantes.length} foto(s) por subir — se reintentará solo.`;
+          await idbPutSession(fresca);
+          okConFotosPendientes++;
+        } else {
+          // El dato (y todas sus fotos) ya quedó seguro en Odoo — se borra del celular en
+          // vez de solo marcarlo 'synced'. Si después hace falta consultarlo o
+          // reimprimirlo, se trae directo de Odoo por folio con ReimprimirRecuento.html.
+          await idbDeleteSession(fresca.localId);
+        }
         ok++;
       }catch(e){
         fresca.status='error'; fresca.lastError=e.message;
@@ -3380,16 +3410,32 @@ async function sincronizarTodo(){
     syncProgress = null;
     // Sesiones 'synced' que hayan quedado de ANTES de este cambio (cuando todavía no se
     // borraban solas del celular al confirmarse en Odoo) — se les da un último intento de
-    // fotos pendientes y se limpian, para que el celular quede al día con el nuevo modelo.
+    // fotos pendientes; mismo cuidado que arriba, solo se limpia lo que sí se confirmó
+    // subido, lo demás queda para reintentar en vez de perderse.
     const url = await kvGet('worker_url', DEFAULT_WORKER_URL); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
     const yaSincronizadas = list.filter(s=>s.status==='synced' && s.odooId);
     for(const s of yaSincronizadas){
       if(url) await subirFotosDeSesion(s.localId, s.odooId, url, key).catch(()=>{});
-      for(const foto of await idbGetPhotosForSession(s.localId)) await idbDeletePhoto(foto.id);
-      await idbDeleteSession(s.localId);
+      const fotosSesion = await idbGetPhotosForSession(s.localId);
+      const fotosOk = fotosSesion.filter(p=>p.synced);
+      const fotosFaltantes = fotosSesion.filter(p=>!p.synced);
+      for(const foto of fotosOk) await idbDeletePhoto(foto.id);
+      if(fotosFaltantes.length > 0){
+        s.status = 'fotos_pendientes';
+        s.lastError = `Quedan ${fotosFaltantes.length} foto(s) por subir — se reintentará solo.`;
+        await idbPutSession(s);
+      } else {
+        await idbDeleteSession(s.localId);
+      }
     }
     if(pendientes.length===0 && fail===0){ toast('No hay evaluaciones pendientes'); }
-    else toast(fail===0 ? `${ok} evaluación(es) enviadas a Odoo ✔` : `${ok} enviadas, ${fail} con error`, fail>0);
+    else{
+      const partes = [];
+      if(ok - okConFotosPendientes > 0) partes.push(`${ok - okConFotosPendientes} enviada(s) ✔`);
+      if(okConFotosPendientes > 0) partes.push(`${okConFotosPendientes} con fotos pendientes de subir`);
+      if(fail > 0) partes.push(`${fail} con error`);
+      toast(partes.join(', ') || 'Sincronización completa', fail>0);
+    }
     renderHome();
   } finally {
     syncEnCurso = false;
@@ -3450,13 +3496,14 @@ async function renderEstadoPill(){
   const list = await idbGetAllSessions();
   const errores = list.filter(s=>s.status==='error').length;
   const pendientes = list.filter(s=>s.status==='pending_sync').length;
+  const fotosPendientes = list.filter(s=>s.status==='fotos_pendientes').length;
 
   if(errores>0){
     pill.className = 'estado-pill error';
     iconoEl.innerHTML = '<span style="font-size:17px;">⚠️</span>';
     t1.textContent = `${errores} evaluación(es) con error`;
     t2.textContent = 'Toca Ajustes → Sincronizar ahora para reintentar';
-    pintarCompacto('error', errores);
+    pintarCompacto('error', errores + fotosPendientes);
     return;
   }
   if(pendientes>0){
@@ -3464,7 +3511,15 @@ async function renderEstadoPill(){
     iconoEl.innerHTML = '<div class="dot-live"></div>';
     t1.textContent = 'En línea';
     t2.textContent = `${pendientes} evaluación(es) por enviar`;
-    pintarCompacto('', pendientes);
+    pintarCompacto('', pendientes + fotosPendientes);
+    return;
+  }
+  if(fotosPendientes>0){
+    pill.className = 'estado-pill';
+    iconoEl.innerHTML = '<span style="font-size:17px;">📷</span>';
+    t1.textContent = 'En línea';
+    t2.textContent = `${fotosPendientes} reporte(s) ya enviados, con fotos por subir`;
+    pintarCompacto('', fotosPendientes);
     return;
   }
   pill.className = 'estado-pill';
@@ -3483,7 +3538,7 @@ document.getElementById('estadoPill')?.addEventListener('click', ()=> goScreen('
    ========================================================================= */
 async function renderConfig(){
   const list = await idbGetAllSessions();
-  const pending = list.filter(s=>s.status==='pending_sync'||s.status==='error').length;
+  const pending = list.filter(s=>s.status==='pending_sync'||s.status==='error'||s.status==='fotos_pendientes').length;
   document.getElementById('cfgPendingCount').textContent = pending;
   const lastSync = await kvGet('catalog_updated_at', null);
   document.getElementById('catalogoInfo').textContent = lastSync
