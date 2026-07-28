@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMASA DA · Costeo Taller (P&amp;L)</title>
+<style>
+:root{
+  /* Paleta corporativa (tomada del formato de referencia) */
+  --primary:#1C3C38;--primary-700:#274843;--primary-600:#385A54;--primary-500:#5C776D;--primary-300:#809691;
+  --accent:#E07A38;--accent-hover:#C86527;--gold:#F09A52;
+  --background:#F4F7F6;--surface:#FFFFFF;
+  --text:#22332F;--text-light:#FFFFFF;--text-muted:#70837C;
+  --border-c:#D6DDDC;
+  --success:#3C8C61;--warning:#D5A021;--danger:#C94E4E;--info:#2F81A9;
+  --radius:16px;--shadow:0 10px 35px rgba(0,0,0,.08);
+  /* Alias para no romper el resto del CSS/JS que referencia estos nombres */
+  --hdr:var(--primary);--green:var(--success);--blue:var(--info);--red:var(--danger);--amber:var(--gold);
+  --ink:var(--text);--ink2:var(--primary-600);--ink3:var(--text-muted);--bg:var(--background);--card:var(--surface);
+  --border:var(--border-c);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;background:var(--background);color:var(--text);font-size:13px}
+.top-fijo{position:sticky;top:0;z-index:150;background:var(--background);padding-bottom:10px;box-shadow:0 4px 12px rgba(0,0,0,.04)}
+.grupo-seccion{border-width:1px}
+.grupo-hdr{padding:.6rem 1.2rem;font-size:12px;font-weight:800;letter-spacing:.3px;color:#fff}
+.grupo-ingresos .grupo-hdr{background:var(--success)}
+.grupo-costos .grupo-hdr{background:var(--danger)}
+.bloque-mz{border-left:4px solid #7CB88F;background:#FAFDFB}
+.bloque-hm{border-left:4px solid var(--info);background:#F6FAFC}
+header{background:linear-gradient(135deg,#1C3C38 0%,#274843 25%,#385A54 65%,#5C776D 100%);color:var(--text-light);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;border-radius:0 0 var(--radius) var(--radius);box-shadow:var(--shadow)}
+header h1{font-size:16px;font-weight:700;letter-spacing:.2px}
+header .sub{font-size:11px;color:var(--primary-300)}
+.conn{display:flex;align-items:center;gap:6px;font-size:11px;background:rgba(255,255,255,.12);padding:5px 12px;border-radius:20px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--warning)}
+.dot.ok{background:var(--success)}.dot.err{background:var(--danger)}
+
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border-c);padding:10px 22px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:50}
+.ciclo-toggle{display:flex;background:var(--background);border-radius:10px;padding:3px;gap:3px;border:1px solid var(--border-c)}
+.ciclo-toggle button{border:none;background:transparent;padding:7px 15px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;color:var(--text-muted)}
+.ciclo-toggle button.active{background:var(--accent);color:#fff}
+.ciclo-toggle button:disabled{opacity:.4;cursor:wait}
+.note{font-size:11px;color:var(--text-muted)}
+
+main{padding:20px 22px;max-width:1400px;margin:0 auto}
+.empty{background:var(--surface);border:1px solid var(--border-c);border-radius:var(--radius);padding:3rem;text-align:center;color:var(--text-muted);box-shadow:var(--shadow)}
+
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:var(--surface);border:1px solid var(--border-c);border-radius:var(--radius);padding:1rem 1.15rem;position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--ac,var(--info));border-radius:4px 0 0 4px}
+.kpi-l{font-size:9.5px;color:var(--primary-500);font-weight:700;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px}
+.kpi-v{font-size:21px;font-weight:800;color:var(--primary);line-height:1}
+.kpi-v.neg{color:var(--danger)}
+.kpi-s{font-size:9.5px;color:var(--text-muted);margin-top:6px}
+
+section{background:var(--surface);border:1px solid var(--border-c);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow)}
+.sec-hdr{padding:.9rem 1.2rem;border-bottom:1px solid var(--border-c);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.sec-hdr h2{font-size:12.5px;font-weight:700;color:var(--primary)}
+.sec-hdr .formula{font-size:10.5px;color:var(--text-muted);font-family:Consolas,monospace}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:transparent;padding:9px 10px;text-align:right;font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid var(--border-c);white-space:nowrap}
+th.left{text-align:left}
+td{padding:9px 10px;border-bottom:1px solid var(--border-c);text-align:right;white-space:nowrap;color:var(--text)}
+td.left{text-align:left;cursor:pointer}
+tr:hover td{background:var(--background)}
+tr:last-child td{border-bottom:none}
+.tot-row td{font-weight:700;background:#EFF3F2;border-bottom:none}
+.neg{color:var(--danger)}
+.pos{color:var(--success)}
+.pool-sub{font-size:10px;color:var(--text-muted);font-weight:400}
+.sub-hdr td{font-weight:700;background:var(--background);color:var(--primary-600)}
+
+.badge{display:inline-block;padding:3px 9px;border-radius:7px;font-size:8pt;font-weight:700}
+.badge-ok{background:#E8F5E9;color:var(--success)}
+.mrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:11.5px;border-bottom:1px solid var(--border-c)}
+.mrow:last-child{border-bottom:none}
+.mrow.total{font-weight:800;font-size:13px;color:var(--primary);border-top:2px solid var(--primary);border-bottom:none;margin-top:6px;padding-top:8px}
+
+.mbg{display:none;position:fixed;inset:0;background:rgba(28,60,56,.55);z-index:600;align-items:center;justify-content:center}
+.mbg.show{display:flex}
+.mbox{background:var(--surface);border-radius:var(--radius);width:min(92vw,760px);max-height:85vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+.mhdr{padding:1rem 1.3rem;background:linear-gradient(135deg,#1C3C38 0%,#385A54 100%);color:var(--text-light);border-radius:var(--radius) var(--radius) 0 0;display:flex;justify-content:space-between;align-items:flex-start}
+.mhdr h3{font-size:14px;font-weight:700}
+.mhdr .sub{font-size:11px;color:var(--primary-300);margin-top:2px}
+.mcl{background:rgba(255,255,255,.15);border:none;color:#fff;width:26px;height:26px;border-radius:8px;cursor:pointer;font-size:14px}
+.mbody{padding:0 1.3rem 1.1rem;overflow:auto}
+.spinb{text-align:center;padding:2rem;color:var(--text-muted)}
+footer{text-align:center;padding:1.2rem 0;font-size:10px;color:var(--text-muted)}
+
+/* ---- Memoria de Cálculo: bloques compactos, sin espacios en blanco ---- */
+.mem-block{padding:.8rem 1.2rem;border-bottom:1px solid var(--border-c)}
+.mem-block:last-child{border-bottom:none}
+.mem-hdr{font-size:12.5px;font-weight:700;color:var(--primary);margin-bottom:6px}
+.mem-note{font-size:10px;font-weight:400;color:var(--text-muted)}
+.mem-subhdr{font-size:10px;font-weight:700;color:var(--primary-500);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+.mem-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+/* Forzar que las columnas de Manzanas/Horas y Precio se alineen entre las 2 tablas de Ingresos */
+#pyg-mz,#pyg-hm{table-layout:fixed;width:100%}
+#pyg-mz th:nth-child(1),#pyg-mz td:nth-child(1),#pyg-hm th:nth-child(1),#pyg-hm td:nth-child(1){width:38%}
+#pyg-mz th:nth-child(2),#pyg-mz td:nth-child(2),#pyg-hm th:nth-child(2),#pyg-hm td:nth-child(2){width:20%}
+#pyg-mz th:nth-child(3),#pyg-mz td:nth-child(3),#pyg-hm th:nth-child(3),#pyg-hm td:nth-child(3){width:16%}
+#pyg-mz th:nth-child(4),#pyg-mz td:nth-child(4),#pyg-hm th:nth-child(4),#pyg-hm td:nth-child(4){width:26%}
+/* Alinear columnas entre las 3 tablas de Detalle por Actividad */
+#tbl-mz,#tbl-horas,#tbl-taller{table-layout:fixed;width:100%}
+#tbl-mz th:nth-child(1),#tbl-mz td:nth-child(1),#tbl-horas th:nth-child(1),#tbl-horas td:nth-child(1),#tbl-taller th:nth-child(1),#tbl-taller td:nth-child(1){width:19%}
+#tbl-mz th:nth-child(n+2),#tbl-mz td:nth-child(n+2),#tbl-horas th:nth-child(n+2),#tbl-horas td:nth-child(n+2),#tbl-taller th:nth-child(n+2),#tbl-taller td:nth-child(n+2){width:9%}
+.mem-2col table{font-size:11.5px}
+.mem-2col td,.mem-2col th{padding:5px 8px}
+#mem-comb{max-width:520px}
+#mem-comb td,#mem-comb th{padding:5px 8px}
+#mem-detalle{font-size:11.5px}
+#mem-detalle td,#mem-detalle th{padding:5px 8px}
+@media (max-width:760px){.mem-2col{grid-template-columns:1fr}}
+
+/* ============================================================
+   PANEL LATERAL (sidebar) — fijo, con botón para expandir/contraer.
+   Adaptado del componente de plantilla INFOAGRO BI, con la paleta
+   ya usada en este dashboard.
+   ============================================================ */
+.sidebar{
+  position:fixed;top:0;left:0;bottom:0;z-index:200;
+  width:60px;display:flex;flex-direction:column;overflow:hidden;
+  background:var(--primary);border-right:1px solid var(--primary-700);
+  transition:width .18s ease;
+}
+.sidebar.expandida{width:230px}
+.sidebar-texto{display:none;white-space:nowrap}
+.sidebar.expandida .sidebar-texto{display:inline-block}
+.sidebar-header{display:flex;align-items:center;justify-content:center;gap:9px;padding:16px 10px;border-bottom:1px solid rgba(255,255,255,.12);flex-shrink:0}
+.sidebar.expandida .sidebar-header{justify-content:flex-start;padding:16px 14px}
+.sidebar-logo{display:none;width:26px;height:26px;border-radius:50%;background:var(--gold);color:var(--primary);align-items:center;justify-content:center;font-weight:800;font-size:10px;flex-shrink:0}
+.sidebar.expandida .sidebar-logo{display:flex}
+.sidebar-marca{font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;flex:1}
+.sidebar-toggle{width:26px;height:26px;flex-shrink:0;border:none;border-radius:7px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.sidebar-toggle:hover{background:rgba(255,255,255,.22)}
+.sidebar-toggle svg{width:14px;height:14px;transition:transform .18s ease}
+.sidebar.expandida .sidebar-toggle svg{transform:rotate(180deg)}
+.sidebar-nav{padding:14px 8px;overflow-y:auto;flex:1}
+.sidebar-item{
+  display:flex;align-items:center;justify-content:center;gap:11px;
+  padding:10px 11px;border-radius:24px;color:var(--primary-300);
+  font-size:12.5px;white-space:nowrap;cursor:pointer;text-decoration:none;margin-bottom:5px;
+}
+.sidebar.expandida .sidebar-item{justify-content:flex-start}
+.sidebar-item:hover{background:rgba(255,255,255,.08);color:#fff}
+.sidebar-item.activo{background:#fff;color:var(--primary);font-weight:700}
+.sidebar-item.activo:hover{background:#fff;color:var(--primary)}
+td.left[onclick]::after{content:'ⓘ';margin-left:6px;font-size:9px;color:var(--info);opacity:.55;vertical-align:middle}
+td.left[onclick]:hover::after{opacity:1}
+.sidebar-icon{width:18px;height:18px;flex-shrink:0;stroke:currentColor}
+.app-contenido{margin-left:60px;transition:margin-left .18s ease}
+.app-contenido.con-sidebar-expandida{margin-left:230px}
+
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+<aside class="sidebar expandida" id="sidebarNav">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">CT</div>
+    <span class="sidebar-marca sidebar-texto">Costeo Taller</span>
+    <button class="sidebar-toggle" id="btnToggleSidebar" onclick="toggleSidebar()" title="Mostrar/Ocultar menú">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M15 6l-6 6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="sidebar-item activo" id="side-pyg" onclick="setVista('pyg')">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"><path d="M4 20V10M11 20V4M18 20v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="sidebar-texto">Estado de Resultados</span>
+    </a>
+    <a class="sidebar-item" id="side-pl" onclick="setVista('pl')">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"><path d="M6 6h12M6 12h12M6 18h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="sidebar-texto">Detalle por Actividad</span>
+    </a>
+    <a class="sidebar-item" id="side-memoria" onclick="setVista('memoria')">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M8 9h8M8 13h5M8 17h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span class="sidebar-texto">Memoria de Cálculo</span>
+    </a>
+    <a class="sidebar-item" id="side-finca" onclick="setVista('finca')">
+      <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="1.8"/></svg>
+      <span class="sidebar-texto">Por Finca</span>
+    </a>
+  </nav>
+</aside>
+
+<div class="app-contenido con-sidebar-expandida">
+<div class="top-fijo">
+<header>
+  <div>
+    <h1>COMASA DA · Costeo Taller (Estado de Pérdidas y Ganancias)</h1>
+    <div class="sub">Ingreso por Mz/HM "cobrado" a precio interno vs. Costo real de Reparaciones + Combustible</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button onclick="toggleFiltros()" style="font-size:11px;background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:20px;padding:5px 12px;cursor:pointer;font-weight:600">⚙ Filtros</button>
+    <div class="conn"><span class="dot" id="dot"></span><span id="ctxt">Sin conectar</span></div>
+  </div>
+</header>
+
+<div class="toolbar" id="toolbarFiltros">
+  <div class="ciclo-toggle">
+    <button id="tb-2026" onclick="setCiclo('Mani 2026')" class="active">Mani 2026</button>
+    <button id="tb-2025" onclick="setCiclo('Mani 2025')" disabled>Mani 2025 (cargando…)</button>
+  </div>
+  <span class="note">Proveedor: <b>Comasa</b> (fijo)</span>
+  <div class="note" style="position:relative;display:inline-block">
+    Cultivo:
+    <button id="btn-cultivo" onclick="toggleCultivoDropdown()" style="margin-left:4px;font-size:12px;background:var(--background);border:1px solid var(--border);border-radius:8px;padding:5px 10px;cursor:pointer;color:var(--text);font-weight:600">Mani 2026 ▾</button>
+    <div id="cultivo-dropdown" style="display:none;position:absolute;top:100%;left:0;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:8px 10px;z-index:80;min-width:170px;max-height:220px;overflow:auto"></div>
+  </div>
+  <span class="note" id="toolbar-note"></span>
+</div>
+
+<div id="kpisWrap" style="display:none"><div class="kpis" id="kpis"></div></div>
+</div>
+
+<main>
+  <div class="empty" id="empty">
+    <div class="spinb">Conectando y calculando Mani 2026…</div>
+  </div>
+
+
+  <div id="dash" style="display:none">
+    <div id="view-pyg">
+      <section class="grupo-seccion grupo-ingresos">
+        <div class="grupo-hdr">💰 INGRESOS</div>
+        <div class="mem-block bloque-mz">
+          <div class="mem-hdr">🌾 Productos Mz</div>
+          <div class="scroll"><table id="pyg-mz"></table></div>
+        </div>
+        <div class="mem-block bloque-hm">
+          <div class="mem-hdr">⏱️ Ingresos Alquiler vía HM</div>
+          <div class="scroll"><table id="pyg-hm"></table></div>
+        </div>
+        <div class="mem-block">
+          <table id="pyg-total-ingresos"></table>
+        </div>
+      </section>
+
+      <section class="grupo-seccion grupo-costos">
+        <div class="grupo-hdr">💸 COSTOS</div>
+        <div class="mem-block">
+          <div class="mem-hdr">Costos Servicios Agrícolas</div>
+          <div class="mem-subhdr">Mantenimiento Implementos</div>
+          <div class="scroll"><table id="pyg-impl"></table></div>
+          <div id="pyg-impl-nota" style="font-size:10px;color:var(--ink3);margin:3px 0 12px"></div>
+          <div class="mem-subhdr">Mantenimiento Tractores</div>
+          <div class="scroll"><table id="pyg-tractor"></table></div>
+          <div id="pyg-tractor-nota" style="font-size:10px;color:var(--ink3);margin-top:3px"></div>
+        </div>
+        <div class="mem-block">
+          <div class="mem-hdr">Combustible</div>
+          <div class="scroll"><table id="pyg-comb"></table></div>
+        </div>
+        <div class="mem-block">
+          <table id="pyg-total-costos"></table>
+        </div>
+      </section>
+
+      <section>
+        <div class="mem-block">
+          <table id="pyg-final"></table>
+          <div id="pyg-diag" style="display:none;padding:.6rem 0 0;font-size:11px;color:var(--red)"></div>
+        </div>
+      </section>
+    </div>
+
+    <div id="view-pl" style="display:none">
+      <section>
+        <div class="sec-hdr">
+          <h2>Actividades por Manzana</h2>
+          <span class="formula">Ingreso = Mz × Precio de venta · Costo = Tractor($/HM real) + Implemento($/Mz real) + Combustible($/Lt real)</span>
+        </div>
+        <div class="scroll"><table id="tbl-mz"></table></div>
+      </section>
+
+      <section>
+        <div class="sec-hdr">
+          <h2>Actividades por Hora Motor</h2>
+          <span class="formula">Ingreso = Σ HM(familia) × Precio/HM(familia) · Costo = igual metodología</span>
+        </div>
+        <div class="scroll"><table id="tbl-horas"></table></div>
+      </section>
+
+      <section>
+        <div class="sec-hdr">
+          <h2>Costos de Taller sin Manzana Real</h2>
+          <span class="formula">Gasto de Implemento en pools cuya Mz reportada no es un dato confiable/real para repartir costo (ej. aún sin cosecha, o Mz no auditable)</span>
+        </div>
+        <div class="scroll"><table id="tbl-taller"></table></div>
+      </section>
+
+      <section>
+        <div class="sec-hdr"><h2>Estado de Resultados Consolidado</h2></div>
+        <div class="scroll"><table id="tbl-pl"></table></div>
+      </section>
+    </div>
+
+    <div id="view-finca" style="display:none">
+      <section>
+        <div class="sec-hdr">
+          <h2>Estado de Resultados por Finca</h2>
+          <span class="note">Mismas tarifas globales aplicadas al Mz/HM/Litros propios de cada finca · Clic en una fila → desglose</span>
+        </div>
+        <div class="scroll"><table id="tbl-fincas"></table></div>
+      </section>
+    </div>
+
+    <div id="view-memoria" style="display:none">
+      <section>
+        <div class="mem-block">
+          <div class="mem-hdr">🚜 &nbsp;TRACTOR</div>
+          <div class="mem-2col">
+            <div><div class="mem-subhdr">1. CC de Exactus por familia (Reparaciones+Lub.+Serv.)</div><table id="mem-tractor-cc"></table></div>
+            <div><div class="mem-subhdr">2. Tarifa resultante por familia</div><table id="mem-tractor-fam"></table></div>
+          </div>
+        </div>
+        <div class="mem-block">
+          <div class="mem-hdr">🔧 &nbsp;IMPLEMENTO</div>
+          <div class="mem-2col">
+            <div><div class="mem-subhdr">1. CC de Exactus por pool (Reparaciones+Lub.+Serv.)</div><table id="mem-impl-cc"></table></div>
+            <div><div class="mem-subhdr">2. Tarifa resultante por pool</div><table id="mem-impl-fam"></table></div>
+          </div>
+        </div>
+        <div class="mem-block">
+          <div class="mem-hdr">⛽ &nbsp;COMBUSTIBLE <span class="mem-note">(Exactus registra solo el consumido en Mani)</span></div>
+          <table id="mem-comb"></table>
+        </div>
+        <div class="mem-block">
+          <div class="mem-hdr">🏭 &nbsp;COSTOS DE TALLER SIN MANZANA REAL <span class="mem-note">(no se reparte por Mz a ninguna actividad)</span></div>
+          <table id="mem-taller"></table>
+        </div>
+        <div class="mem-block">
+          <div class="mem-hdr">3. RESULTADO: Costo de cada actividad (Cantidad real × Tarifa de su categoría)</div>
+          <div class="scroll"><table id="mem-detalle"></table></div>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<div class="mbg" id="mbg">
+  <div class="mbox">
+    <div class="mhdr">
+      <div><h3 id="mtitle"></h3><div class="sub" id="msub"></div></div>
+      <button class="mcl" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mbody" id="mbody"></div>
+  </div>
+</div>
+
+<footer>COMASA DA · Costeo Taller · Fase 1</footer>
+</div>
+
+<script>
+/* ===================== CONFIG (mismas fuentes que Costeo_Actividades.html) ===================== */
+const SHEET_ID='1JvLHhYiZ9QpF5EQg1AWdXx-D7Y6kwno_LZWsB3sagig';
+const API_KEY='AIzaSyAzWECpeQSEq1cwVpuCf6kt_kklb5sEKf4';
+const TAB2='Combustible infoagro';
+const API_BASE='http://192.168.5.58:5000';
+const ORIGEN_JSON='https://raw.githubusercontent.com/infoagrodb/dashboard/refs/heads/main/info_AvancesActividades.json';
+
+const CICLOS={
+  'Mani 2025':{inicio:'2025-01-17',fin:'2026-01-16'},
+  'Mani 2026':{inicio:'2026-01-17',fin:'2026-12-31'}
+};
+
+const TRACTOR_FAM={
+  'Reparaciones tractor grande 180+':'Tractor Grande',
+  'Reparaciones tractor mediano 100-179':'Tractor Mediano',
+  'Reparaciones tractor pequeño 99-':'Tractor Pequeño'
+};
+
+const APLICACIONES_TERRESTRES=['Fungicida I','Fungicida II','Fungicida III','Fungicida IV','Fungicida V','Fungicida VI','Fungicida VII','Fungicida VIII','Quema','Sello','Post emergente','Insecticida'];
+
+const IMPLEMENTOS=[
+  {ccs:['Reparaciones aplicadoras'], label:'Aplicadoras', acts:APLICACIONES_TERRESTRES},
+  {ccs:['Reparaciones arrancadores'], label:'Arrancadores', acts:['Arranque']},
+  {ccs:['Reparaciones cosechadoras'], label:'Cosechadoras', acts:['Combina']},
+  {ccs:['Reparaciones grada'], label:'Grada', acts:['Grada']},
+  {ccs:['Reparaciones mureador'], label:'Mureador', acts:['Mureo']},
+  {ccs:['Reparaciones preparacion de suelo'], label:'Preparación de suelo', acts:['Arado/Romplona','Subsuelo']},
+  {ccs:['Reparaciones sembradora'], label:'Sembradora', acts:['Siembra']},
+  {ccs:['Reparaciones cultivadora','Reparaciones niveladoras y terraceo','Reparaciones otros','Reparaciones transporte'], label:'Nivelación y otros', acts:['Nivelacion','Cultivadora'], sinMzReal:true}
+];
+
+/* Precio de venta interno del Taller, por actividad (Mz) */
+const PRECIO_MZ={
+  'Arado/Romplona':50,'Subsuelo':50,'Grada':30,'Mureo':50,'Siembra':50,
+  'Quema':8,'Sello':8,'Post emergente':8,
+  'Fungicida I':8,'Fungicida II':8,'Fungicida III':8,'Fungicida IV':8,'Fungicida V':8,'Fungicida VI':8,'Fungicida VII':8,'Fungicida VIII':8,
+  'Insecticida':8,'Arranque':40,'Combina':150
+  // Re-Siembra: sin precio definido -> $0 de ingreso
+};
+/* Actividades que se miden y "cobran" por Hora Motor (no por Mz) */
+const ACTS_HORAS=['Nivelacion','Cultivadora','Riego','Chapoda/Basureo/Limpia','Surcado','Monosurco','Compostera','Fertilizacion Mecanizada Caña'];
+/* Precio de venta interno por Hora Motor, según familia de tractor */
+const PRECIO_HM_FAMILIA={'Tractor Pequeño':5.42,'Tractor Mediano':23.86,'Tractor Grande':35.20};
+
+/* Renombrado de despliegue (Combina incluye Casamba en la mano de obra del otro dashboard; aquí es solo nombre) */
+const DISPLAY_ALIAS={'combina':'Combina/Casamba'};
+
+let MODEL={};       // {ciclo: resultado}
+let MODEL_FINCA={}; // {ciclo: resultado por finca}
+let cicloActivo='Mani 2026';
+let vistaActiva='pyg';
+const PROVEEDOR_FIJO='Comasa';
+let cultivoActivo=['Mani 2026']; // array (multiselect); ['Todos'] = sin filtro de cultivo
+
+/* ===================== HELPERS ===================== */
+const norm=s=>String(s||'').trim().toLowerCase();
+const toNum=v=>{if(!v&&v!==0)return 0;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:n;};
+const get=(o,...ks)=>{for(const k of ks){if(o[k]!==undefined&&o[k]!=='')return o[k];}return '';};
+const fmt=(n,d=0)=>n==null||isNaN(n)?'—':(n<0?'-':'')+'$'+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const fmtN=(n,d=1)=>n==null||isNaN(n)?'—':n.toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+function sc(ok,msg){document.getElementById('dot').className='dot'+(ok===true?' ok':ok===false?' err':'');document.getElementById('ctxt').textContent=msg;}
+
+/* ===================== FETCH (idénticos a Costeo_Actividades.html) ===================== */
+async function fetchControlOperativo(){
+  const url=`https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${encodeURIComponent(TAB2+'!A1:T')}?key=${API_KEY}`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('Google Sheets HTTP '+r.status);
+  const vals=(await r.json()).values||[];
+  if(!vals.length) return [];
+  const hdr=vals[0].map(norm);
+  return vals.slice(1).map(row=>{const o={};hdr.forEach((h,i)=>o[h]=row[i]!==undefined?row[i]:'');return o;});
+}
+async function fetchExactus(clasificaciones,ciclo){
+  const {inicio,fin}=CICLOS[ciclo];
+  const fini=`${inicio}T00:00:00Z`, ffin=`${fin}T23:59:59Z`;
+  const clasFilter='('+clasificaciones.map(c=>`CLASIFICACION eq '${c}'`).join(' or ')+')';
+  const filt=`DepartamentoCentro eq 'COMASA DA' and Cierre eq 'N' and ORIGEN ne 'pp' and ${clasFilter} and FECHA ge ${fini} and FECHA le ${ffin}`;
+  let url=`${API_BASE}/api/IS_SqlEjecucionComasaDA?$filter=${encodeURIComponent(filt)}&$first=1000`;
+  let out=[]; let pages=0;
+  while(url&&pages<100){
+    const r=await fetch(url);
+    if(!r.ok) throw new Error('Exactus HTTP '+r.status);
+    const d=await r.json();
+    out=out.concat(d.value||[]);
+    url=d.nextLink||null; pages++;
+  }
+  console.log(`Exactus ${clasificaciones.join('+')} ${ciclo}: ${out.length} registros en ${pages} página(s)`);
+  return out;
+}
+async function fetchOrigenActividades(){
+  const r=await fetch(ORIGEN_JSON);
+  if(!r.ok) throw new Error('GitHub JSON HTTP '+r.status);
+  const d=await r.json();
+  return d.result||[];
+}
+async function fetchRelacionFinca(){
+  const url=`${API_BASE}/api/DW_InfoAgro_RelacionCicloFinca?$orderby=Ciclo,Finca&$first=500`;
+  const r=await fetch(url);
+  if(!r.ok) throw new Error('RelacionFinca HTTP '+r.status);
+  const d=await r.json();
+  return d.value||[];
+}
+
+/* ===================== MODELO: Costo real (idéntico método que Costeo_Actividades.html, sin nómina/insumos) ===================== */
+/* Agrega Mz por actividad desde Origen Actividades. cultivosSel=null -> sin filtro de cultivo (todos) */
+function agregarMzOrigen(origen,cultivosSel,añoLimite){
+  const mz={};
+  origen.forEach(r=>{
+    const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+    const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!==norm(PROVEEDOR_FIJO)) return;
+    const c=r.x_studio_ciclo;
+    if(añoLimite){ if(!c||!c[1]||añoDe(c[1])!==añoLimite) return; }
+    if(cultivosSel){ if(!c||!cultivosSel.includes(c[1])) return; }
+    const act=r.x_studio_activiadad_realizada; const actName=act?act[1]:'Sin actividad';
+    if(actName==='Fertilizacion Mecanizada Caña') return; // se mide por HM, no por Mz
+    mz[actName]=(mz[actName]||0)+(r.x_studio_avance_mzn||0);
+  });
+  return mz;
+}
+/* Agrega HM y Litros por actividad desde Control Operativo. cultivosSel=null -> todos los cultivos DENTRO del añoLimite */
+function agregarCO(co,cultivosSel,añoLimite){
+  const rows=co.filter(r=>{
+    if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return false;
+    if(norm(get(r,'proveedor del servicio'))!==norm(PROVEEDOR_FIJO)) return false;
+    const c=get(r,'ciclo');
+    if(añoLimite){ if(!c||añoDe(c)!==añoLimite) return false; }
+    if(cultivosSel){ if(!cultivosSel.some(s=>norm(s)===norm(c))) return false; }
+    return true;
+  });
+  const hmPorActCat={}; const ltsPorAct={};
+  rows.forEach(r=>{
+    const act=get(r,'actividad')||'Sin actividad';
+    const cat=get(r,'categoria equipo')||'';
+    hmPorActCat[act+'|'+cat]=(hmPorActCat[act+'|'+cat]||0)+toNum(get(r,'hme','hm'));
+    ltsPorAct[act]=(ltsPorAct[act]||0)+toNum(get(r,'cantidad diesel ltrs'));
+  });
+  return {hmPorActCat,ltsPorAct};
+}
+
+function calcularTaller(ciclo,co,origen,reps,comb,cultivosSel){
+  const añoLimite=añoDe(ciclo);
+  // ---- Tarifas reales: TODOS los cultivos del mismo AÑO (nunca mezclar con años históricos) ----
+  const mzPorAct_ALL=agregarMzOrigen(origen,null,añoLimite);
+  const {hmPorActCat:hmALL,ltsPorAct:ltsALL}=agregarCO(co,null,añoLimite);
+
+  const repPorCC={}; const repPorCCNorm={};
+  reps.forEach(r=>{
+    const cc=r.Centroccdesc||'Sin CC';
+    const val=parseFloat(r.RealDolar)||0;
+    repPorCC[cc]=(repPorCC[cc]||0)+val;
+    repPorCCNorm[norm(cc)]=(repPorCCNorm[norm(cc)]||0)+val;
+  });
+  const getRep=cc=>repPorCCNorm[norm(cc)]||0;
+
+  const costoTractor={};
+  Object.entries(TRACTOR_FAM).forEach(([cc,fam])=>{
+    const rep=getRep(cc);
+    let hmFam=0;
+    Object.keys(hmALL).forEach(k=>{ if(k.endsWith('|'+fam)) hmFam+=hmALL[k]; });
+    costoTractor[fam]={rep,hm:hmFam,costoHM:hmFam>0?rep/hmFam:null};
+  });
+  // HM de familias de tractor que pertenecen a actividades FUERA de nuestro catálogo de precios
+  // (ej. Vigilancia, Furgones, u otro texto de Control Operativo sin precio asignado) — ese $ no se
+  // puede repartir a ninguna actividad conocida, se muestra aparte para que ambas vistas cuadren.
+  const actividadesConocidas=[...Object.keys(PRECIO_MZ),...ACTS_HORAS];
+  let ajusteTractorSinActividad=0;
+  const detalleAjusteTractor=[];
+  Object.entries(costoTractor).forEach(([fam,d])=>{
+    if(d.costoHM==null) return;
+    let hmConocidas=0;
+    actividadesConocidas.forEach(act=>{ hmConocidas+=hmALL[act+'|'+fam]||0; });
+    const hmDesconocidas=d.hm-hmConocidas;
+    if(Math.abs(hmDesconocidas)>0.001){
+      const monto=hmDesconocidas*d.costoHM;
+      ajusteTractorSinActividad+=monto;
+      detalleAjusteTractor.push({fam,hmDesconocidas,monto});
+    }
+  });
+
+  const costoImplemento=IMPLEMENTOS.map(imp=>{
+    const rep=imp.ccs.reduce((s,cc)=>s+getRep(cc),0);
+    const mzPool=imp.acts.reduce((s,a)=>s+(mzPorAct_ALL[a]||0),0);
+    const costoMz=imp.sinMzReal?null:(mzPool>0?rep/mzPool:null);
+    return {...imp,rep,mzPool,costoMz};
+  });
+  // Pools sin Mz "real" — porque aún no hay cosecha (mzPool=0) o porque la Mz reportada no es
+  // un dato confiable para repartir costo (sinMzReal, ej. "Nivelación y otros"): ese $ no se
+  // reparte a ninguna actividad — se muestra como "Costo de Taller" aparte.
+  const poolsSinMz=costoImplemento.filter(imp=>imp.costoMz==null&&imp.rep!==0);
+  const ajusteImplementoSinActividad=poolsSinMz.reduce((s,imp)=>s+imp.rep,0);
+
+  const combTotal=comb.reduce((s,r)=>s+(parseFloat(r.RealDolar)||0),0);
+  // El combustible en Exactus se registra solo del cultivo Mani -> el $/Litro y el consumo de cada
+  // actividad para combustible SIEMPRE usan litros de "Mani <año>" específicamente, sin importar
+  // el filtro de Cultivo activo ni "todos los cultivos" (a diferencia de Tractor/Implemento).
+  const cultivoManiActual=[`Mani ${añoLimite}`];
+  const {ltsPorAct:ltsMani}=agregarCO(co,cultivoManiActual,añoLimite);
+  const ltsTotal_Mani=Object.values(ltsMani).reduce((s,v)=>s+v,0);
+  const costoPorLitro=ltsTotal_Mani>0?combTotal/ltsTotal_Mani:null;
+
+  function costosDeActividad(act,mzMap,hmMap,ltsManiMapOverride){
+    let tractorCost=0;
+    Object.entries(costoTractor).forEach(([fam,d])=>{
+      const hm=hmMap[act+'|'+fam]||0;
+      if(d.costoHM!=null) tractorCost+=hm*d.costoHM;
+    });
+    let implCost=0, implLabel=null;
+    const imp=costoImplemento.find(i=>i.acts.includes(act));
+    if(imp&&imp.costoMz!=null){ const mz=mzMap[act]||0; implCost=mz*imp.costoMz; implLabel=imp.label; }
+    const ltsMapUse=ltsManiMapOverride||ltsMani; // litros SIEMPRE de Mani específicamente (global u override por finca)
+    const lts=ltsMapUse[act]||0;
+    const combCost=costoPorLitro!=null?lts*costoPorLitro:0;
+    return {tractorCost,implCost,implLabel,combCost,costoTotal:tractorCost+implCost+combCost};
+  }
+
+  // ---- Mz/HM/Litros MOSTRADOS (para Ingreso): filtrados por el/los cultivo(s) seleccionado(s) ----
+  // El COSTO (Tractor/Implemento) SIEMPRE usa mzPorAct_ALL/hmALL — nunca cambia con el filtro de cultivo.
+  // El COSTO de Combustible SIEMPRE usa ltsMani (litros de Mani), sin importar el filtro de cultivo.
+  const cultivosFiltro=(!cultivosSel||cultivosSel.includes('Todos')||cultivosSel.length===0)?null:cultivosSel;
+  const mzPorAct=agregarMzOrigen(origen,cultivosFiltro,añoLimite);
+  const {hmPorActCat,ltsPorAct}=agregarCO(co,cultivosFiltro,añoLimite);
+
+  const filasMz=Object.keys(PRECIO_MZ).map(act=>{
+    const mz=mzPorAct[act]||0; // Mz filtrada -> solo para el Ingreso
+    const precio=PRECIO_MZ[act];
+    const ingreso=mz*precio;
+    const c=costosDeActividad(act,mzPorAct_ALL,hmALL); // costo SIEMPRE con el total real
+    const mzReal=mzPorAct_ALL[act]||0;
+    return {act,actDisplay:DISPLAY_ALIAS[norm(act)]||act,metrica:mz,unidad:'Mz',precio,ingreso,...c,
+      superavit:ingreso-c.costoTotal, costoUnit:mzReal>0?c.costoTotal/mzReal:null};
+  });
+
+  const filasHoras=ACTS_HORAS.map(act=>{
+    let horas=0, ingreso=0;
+    Object.entries(PRECIO_HM_FAMILIA).forEach(([fam,precio])=>{
+      const hm=hmPorActCat[act+'|'+fam]||0; // HM filtrada -> solo para el Ingreso
+      horas+=hm; ingreso+=hm*precio;
+    });
+    const c=costosDeActividad(act,mzPorAct_ALL,hmALL); // costo SIEMPRE con el total real
+    let horasReal=0;
+    Object.keys(PRECIO_HM_FAMILIA).forEach(fam=>{ horasReal+=hmALL[act+'|'+fam]||0; });
+    return {act,actDisplay:act,metrica:horas,unidad:'HM',precio:null,ingreso,...c,
+      superavit:ingreso-c.costoTotal, costoUnit:horasReal>0?c.costoTotal/horasReal:null};
+  });
+
+  const ltsTotal=ltsTotal_Mani; // el $/Litro y su KPI usan litros de Mani, no "todos los cultivos"
+
+  return {ciclo,mzPorAct,hmPorActCat,ltsPorAct,mzPorAct_ALL,hmALL,ltsALL,ltsMani,repPorCC,costoTractor,ajusteTractorSinActividad,detalleAjusteTractor,costoImplemento,poolsSinMz,ajusteImplementoSinActividad,combTotal,ltsTotal,costoPorLitro,
+    combRegistros:comb.length,repRegistros:reps.length,filasMz,filasHoras,costosDeActividad};
+}
+
+/* ===================== MODELO POR FINCA ===================== */
+function mzFincaMap(origen,cultivosSel,fincaNorm,añoLimite){
+  const out={};
+  origen.forEach(r=>{
+    const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+    const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!==norm(PROVEEDOR_FIJO)) return;
+    const c=r.x_studio_ciclo;
+    if(añoLimite){ if(!c||!c[1]||añoDe(c[1])!==añoLimite) return; }
+    if(cultivosSel){ if(!c||!cultivosSel.includes(c[1])) return; }
+    const f=r.x_studio_finca; if(!f||norm(f[1])!==fincaNorm) return;
+    const act=r.x_studio_activiadad_realizada; const actName=act?act[1]:'Sin actividad';
+    if(actName==='Fertilizacion Mecanizada Caña') return;
+    out[actName]=(out[actName]||0)+(r.x_studio_avance_mzn||0);
+  });
+  return out;
+}
+function coFincaRows(co,cultivosSel,fincaNorm,añoLimite){
+  return co.filter(r=>{
+    if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return false;
+    if(norm(get(r,'proveedor del servicio'))!==norm(PROVEEDOR_FIJO)) return false;
+    const c=get(r,'ciclo');
+    if(añoLimite){ if(!c||añoDe(c)!==añoLimite) return false; }
+    if(cultivosSel){ if(!cultivosSel.some(s=>norm(s)===norm(c))) return false; }
+    if(norm(get(r,'finca'))!==fincaNorm) return false;
+    return true;
+  });
+}
+
+function calcularTallerPorFinca(ciclo,model,origen,co,relaciones,cultivosSel){
+  const fincasVistas=new Set(); const fincaList=[];
+  relaciones.forEach(r=>{
+    const cc=r.CentroCC; const finca=r.Finca;
+    if(!cc||!finca||fincasVistas.has(cc)) return;
+    fincasVistas.add(cc); fincaList.push({cc,finca});
+  });
+  const añoLimite=añoDe(ciclo);
+  const cultivosFiltro=(!cultivosSel||cultivosSel.includes('Todos')||cultivosSel.length===0)?null:cultivosSel;
+
+  const ACT_ALL=[...Object.keys(PRECIO_MZ),...ACTS_HORAS];
+
+  const fincas=fincaList.map(({cc,finca})=>{
+    const fincaNorm=norm(finca);
+    // Mz/HM/Litros FILTRADOS (cultivo elegido) -> solo para Ingreso
+    const mzPorActF=mzFincaMap(origen,cultivosFiltro,fincaNorm,añoLimite);
+    const coF=coFincaRows(co,cultivosFiltro,fincaNorm,añoLimite);
+    const hmPorActCatF={}; const ltsPorActF={};
+    coF.forEach(r=>{
+      const act=get(r,'actividad')||'Sin actividad';
+      const cat=get(r,'categoria equipo')||'';
+      hmPorActCatF[act+'|'+cat]=(hmPorActCatF[act+'|'+cat]||0)+toNum(get(r,'hme','hm'));
+      ltsPorActF[act]=(ltsPorActF[act]||0)+toNum(get(r,'cantidad diesel ltrs'));
+    });
+    // Mz/HM/Litros REALES TOTALES de la finca (todos los cultivos del año) -> siempre para el Costo Tractor/Implemento
+    const mzPorActF_ALL=mzFincaMap(origen,null,fincaNorm,añoLimite);
+    const coF_ALL=coFincaRows(co,null,fincaNorm,añoLimite);
+    const hmPorActCatF_ALL={};
+    coF_ALL.forEach(r=>{
+      const act=get(r,'actividad')||'Sin actividad';
+      const cat=get(r,'categoria equipo')||'';
+      hmPorActCatF_ALL[act+'|'+cat]=(hmPorActCatF_ALL[act+'|'+cat]||0)+toNum(get(r,'hme','hm'));
+    });
+    // Litros de la finca SIEMPRE del cultivo Mani específicamente -> para el Costo Combustible
+    const coF_Mani=coFincaRows(co,[`Mani ${añoLimite}`],fincaNorm,añoLimite);
+    const ltsPorActF_Mani={};
+    coF_Mani.forEach(r=>{
+      const act=get(r,'actividad')||'Sin actividad';
+      ltsPorActF_Mani[act]=(ltsPorActF_Mani[act]||0)+toNum(get(r,'cantidad diesel ltrs'));
+    });
+
+    const detalle=ACT_ALL.map(act=>{
+      let ingreso,metrica,unidad;
+      if(PRECIO_MZ[act]!=null){
+        metrica=mzPorActF[act]||0; unidad='Mz'; ingreso=metrica*PRECIO_MZ[act];
+      } else {
+        metrica=0; ingreso=0; unidad='HM';
+        Object.entries(PRECIO_HM_FAMILIA).forEach(([fam,precio])=>{
+          const hm=hmPorActCatF[act+'|'+fam]||0; metrica+=hm; ingreso+=hm*precio;
+        });
+      }
+      const c=model.costosDeActividad(act,mzPorActF_ALL,hmPorActCatF_ALL,ltsPorActF_Mani); // costo SIEMPRE con el real total de la finca (combustible = solo Mani)
+      const actDisplay=DISPLAY_ALIAS[norm(act)]||act;
+      return {act,actDisplay,metrica,unidad,ingreso,...c,superavit:ingreso-c.costoTotal};
+    }).filter(d=>d.metrica>0||d.ingreso>0||d.costoTotal>0);
+
+    const ingresoFinca=detalle.reduce((s,d)=>s+d.ingreso,0);
+    const costoFinca=detalle.reduce((s,d)=>s+d.costoTotal,0);
+    return {finca,cc,detalle,ingresoFinca,costoFinca,superavitFinca:ingresoFinca-costoFinca};
+  }).sort((a,b)=>b.ingresoFinca-a.ingresoFinca);
+
+  return {ciclo,fincas};
+}
+
+/* ===================== CARGA ===================== */
+let CO_CACHE=null, ORIGEN_CACHE=null, RELACIONES_CACHE=null;
+let REPS_CACHE={}, COMB_CACHE={};
+
+function añoDe(ciclo){ const m=String(ciclo).match(/\d{4}/); return m?m[0]:''; }
+
+function poblarCultivos(ciclo){
+  const año=añoDe(ciclo);
+  const EXCLUIR=['cacao','pasto'];
+  const set=new Set(['Todos']);
+  ORIGEN_CACHE.forEach(r=>{
+    const c=r.x_studio_ciclo;
+    if(c&&c[1]&&añoDe(c[1])===año&&!EXCLUIR.some(x=>norm(c[1]).includes(x))) set.add(c[1]);
+  });
+  CO_CACHE.forEach(r=>{
+    const c=get(r,'ciclo');
+    if(c&&añoDe(c)===año&&!EXCLUIR.some(x=>norm(c).includes(x))) set.add(c);
+  });
+  const arr=[...set].sort((a,b)=>a==='Todos'?-1:b==='Todos'?1:a.localeCompare(b));
+  const cont=document.getElementById('cultivo-dropdown');
+  cont.innerHTML=arr.map(c=>`
+    <label style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;cursor:pointer;white-space:nowrap">
+      <input type="checkbox" value="${c}" ${cultivoActivo.includes(c)?'checked':''} onchange="onCultivoCheckChange('${c}',this.checked)">
+      ${c}
+    </label>`).join('');
+  actualizarBotonCultivo();
+}
+
+function actualizarBotonCultivo(){
+  const btn=document.getElementById('btn-cultivo');
+  const txt=cultivoActivo.includes('Todos')?'Todos':(cultivoActivo.length===1?cultivoActivo[0]:`${cultivoActivo.length} cultivos`);
+  btn.textContent=txt+' ▾';
+}
+function toggleCultivoDropdown(){
+  const d=document.getElementById('cultivo-dropdown');
+  d.style.display=d.style.display==='none'?'block':'none';
+}
+document.addEventListener('click',e=>{
+  const d=document.getElementById('cultivo-dropdown'); const btn=document.getElementById('btn-cultivo');
+  if(d&&d.style.display==='block'&&!d.contains(e.target)&&e.target!==btn) d.style.display='none';
+});
+
+function recomputeModel(ciclo,cultivosSel){
+  if(!REPS_CACHE[ciclo]) return; // aún no cargado
+  MODEL[ciclo]=calcularTaller(ciclo,CO_CACHE,ORIGEN_CACHE,REPS_CACHE[ciclo],COMB_CACHE[ciclo],cultivosSel);
+  MODEL_FINCA[ciclo]=calcularTallerPorFinca(ciclo,MODEL[ciclo],ORIGEN_CACHE,CO_CACHE,RELACIONES_CACHE,cultivosSel);
+}
+
+function onCultivoCheckChange(valor,marcado){
+  if(valor==='Todos'){
+    cultivoActivo=marcado?['Todos']:[];
+  } else {
+    cultivoActivo=cultivoActivo.filter(c=>c!=='Todos'); // elegir un cultivo específico desmarca "Todos"
+    if(marcado){ if(!cultivoActivo.includes(valor)) cultivoActivo.push(valor); }
+    else { cultivoActivo=cultivoActivo.filter(c=>c!==valor); }
+  }
+  if(cultivoActivo.length===0) cultivoActivo=['Todos'];
+  poblarCultivos(cicloActivo); // re-render checkboxes (por si "Todos" quedó des/marcado)
+  actualizarBotonCultivo();
+  recomputeModel(cicloActivo,cultivoActivo);
+  render();
+  renderPyG();
+  renderMemoria();
+}
+
+async function cargarCiclo(ciclo,esPrimero){
+  if(esPrimero){
+    sc(null,`Conectando (${ciclo})...`);
+    CO_CACHE=await fetchControlOperativo();
+    ORIGEN_CACHE=await fetchOrigenActividades();
+    RELACIONES_CACHE=await fetchRelacionFinca();
+    poblarCultivos(ciclo);
+  }
+  sc(null,`Exactus Reparaciones+Lubricantes+Servicios ${ciclo}...`);
+  const reps=await fetchExactus(['Reparaciones','Lubricantes','Servicios sub contratados'],ciclo);
+  sc(null,`Exactus Combustible ${ciclo}...`);
+  const comb=await fetchExactus(['Combustibles'],ciclo);
+  REPS_CACHE[ciclo]=reps; COMB_CACHE[ciclo]=comb;
+
+  recomputeModel(ciclo,ciclo===cicloActivo?cultivoActivo:[ciclo]);
+}
+
+async function init(){
+  try{
+    await cargarCiclo('Mani 2026',true);
+    sc(true,'Mani 2026 listo');
+    document.getElementById('empty').style.display='none';
+    document.getElementById('dash').style.display='block';
+    document.getElementById('kpisWrap').style.display='block';
+    render();
+    renderPyG();
+
+    // Cargar Mani 2025 en segundo plano, sin bloquear la vista de 2026
+    cargarCiclo('Mani 2025',false).then(()=>{
+      const btn=document.getElementById('tb-2025');
+      btn.disabled=false; btn.textContent='Mani 2025';
+      sc(true,'Mani 2025 y 2026 listos');
+    }).catch(e=>{
+      console.error(e);
+      document.getElementById('tb-2025').textContent='Mani 2025 (error)';
+    });
+  }catch(e){
+    console.error(e);
+    sc(false,'Error: '+e.message);
+    document.getElementById('empty').innerHTML=`<p style="color:var(--red)">⚠️ Error al conectar: ${e.message}</p><p class="note" style="margin-top:6px">Verifica que estés en la red donde vive la API de Exactus (${API_BASE}) y que Google Sheets sea accesible.</p>`;
+  }
+}
+
+
+/* ===================== UI ===================== */
+function setCiclo(c){
+  if(!MODEL[c]) return;
+  cicloActivo=c;
+  cultivoActivo=[c]; // reset al default de ese año
+  document.getElementById('tb-2025').classList.toggle('active',c==='Mani 2025');
+  document.getElementById('tb-2026').classList.toggle('active',c==='Mani 2026');
+  poblarCultivos(c);
+  recomputeModel(c,cultivoActivo);
+  render();
+  renderPyG();
+  renderMemoria();
+}
+function toggleFiltros(){
+  const t=document.getElementById('toolbarFiltros');
+  t.style.display=t.style.display==='none'?'flex':'none';
+}
+
+function toggleSidebar(){
+  document.getElementById('sidebarNav').classList.toggle('expandida');
+  document.querySelector('.app-contenido').classList.toggle('con-sidebar-expandida');
+}
+
+function setVista(v){
+  vistaActiva=v;
+  document.getElementById('side-pyg').classList.toggle('activo',v==='pyg');
+  document.getElementById('side-pl').classList.toggle('activo',v==='pl');
+  document.getElementById('side-finca').classList.toggle('activo',v==='finca');
+  document.getElementById('side-memoria').classList.toggle('activo',v==='memoria');
+  document.getElementById('view-pyg').style.display=v==='pyg'?'block':'none';
+  document.getElementById('view-pl').style.display=v==='pl'?'block':'none';
+  document.getElementById('view-finca').style.display=v==='finca'?'block':'none';
+  document.getElementById('view-memoria').style.display=v==='memoria'?'block':'none';
+  if(v==='memoria') renderMemoria();
+  if(v==='pyg') renderPyG();
+}
+
+function filaRow(d){
+  const cls=d.superavit>=0?'pos':'neg';
+  const act=d.act.replace(/'/g,"\\'");
+  const onclick=d.unidad==='Mz'?`abrirActividadPorFinca('${act}')`:`abrirActividadHM('${act}')`;
+  return `<tr><td class="left" onclick="${onclick}">${d.actDisplay}</td><td>${fmtN(d.metrica,d.unidad==='Mz'?0:1)} ${d.unidad}</td>`+
+    `<td>${d.precio!=null?fmt(d.precio,2):'—'}</td><td>${fmt(d.ingreso)}</td>`+
+    `<td class="left" style="cursor:pointer;text-align:right" onclick="abrirDesgloseTractorTodasFamilias('${act}')">${fmt(d.tractorCost)}</td>`+
+    `<td class="left" style="cursor:pointer;text-align:right" onclick="abrirDesgloseImplementoActividad('${act}')">${fmt(d.implCost)}</td>`+
+    `<td class="left" style="cursor:pointer;text-align:right" onclick="abrirCombustiblePorFinca('${act}')">${fmt(d.combCost)}</td>`+
+    `<td>${fmt(d.costoTotal)}</td>`+
+    `<td class="${cls}"><b>${fmt(d.superavit)}</b></td><td>${d.costoUnit!=null?fmt(d.costoUnit,2):'—'}</td></tr>`;
+}
+
+function render(){
+  const m=MODEL[cicloActivo]; if(!m) return;
+
+  const ingresoTotal=[...m.filasMz,...m.filasHoras].reduce((s,d)=>s+d.ingreso,0);
+  const costoTotal=[...m.filasMz,...m.filasHoras].reduce((s,d)=>s+d.costoTotal,0)+m.ajusteImplementoSinActividad+m.ajusteTractorSinActividad;
+  const superavitTotal=ingresoTotal-costoTotal;
+
+  document.getElementById('kpis').innerHTML=`
+    <div class="kpi" style="--ac:#3C8C61"><div class="kpi-l">Ingreso Total (precio interno)</div><div class="kpi-v">${fmt(ingresoTotal)}</div><div class="kpi-s">${cicloActivo}</div></div>
+    <div class="kpi" style="--ac:#C94E4E"><div class="kpi-l">Costo Real Total</div><div class="kpi-v">${fmt(costoTotal)}</div><div class="kpi-s">Reparaciones+Lub.+Servicios+Combustible</div></div>
+    <div class="kpi" style="--ac:${superavitTotal>=0?'#3C8C61':'#C94E4E'}"><div class="kpi-l">Superávit / Déficit</div><div class="kpi-v ${superavitTotal<0?'neg':''}">${fmt(superavitTotal)}</div><div class="kpi-s">Ingreso − Costo</div></div>
+    <div class="kpi" style="--ac:#2F81A9"><div class="kpi-l">$/Litro Combustible</div><div class="kpi-v">${m.costoPorLitro!=null?fmt(m.costoPorLitro,3):'—'}</div><div class="kpi-s">${fmtN(m.ltsTotal,0)} Lts</div></div>
+  `;
+
+  const hdr=`<thead><tr><th class="left">Actividad</th><th>Cantidad</th><th>Precio</th><th>Ingreso</th><th>Tractor $</th><th>Implemento $</th><th>Combustible $</th><th>Costo Total</th><th>Superávit/Déficit</th><th>Costo Unit.</th></tr></thead>`;
+
+  let h=hdr+'<tbody>';
+  let tI=0,tT=0,tIm=0,tC=0,tCT=0,tS=0;
+  m.filasMz.forEach(d=>{ h+=filaRow(d); tI+=d.ingreso;tT+=d.tractorCost;tIm+=d.implCost;tC+=d.combCost;tCT+=d.costoTotal;tS+=d.superavit; });
+  h+=`<tr class="tot-row"><td class="left">TOTAL Mz</td><td></td><td></td><td>${fmt(tI)}</td><td>${fmt(tT)}</td><td>${fmt(tIm)}</td><td>${fmt(tC)}</td><td>${fmt(tCT)}</td><td class="${tS>=0?'pos':'neg'}">${fmt(tS)}</td><td></td></tr>`;
+  h+='</tbody>';
+  document.getElementById('tbl-mz').innerHTML=h;
+
+  h=hdr+'<tbody>';
+  let hI=0,hT=0,hIm=0,hC=0,hCT=0,hS=0;
+  m.filasHoras.forEach(d=>{ h+=filaRow(d); hI+=d.ingreso;hT+=d.tractorCost;hIm+=d.implCost;hC+=d.combCost;hCT+=d.costoTotal;hS+=d.superavit; });
+  h+=`<tr class="tot-row"><td class="left">TOTAL Horas</td><td></td><td></td><td>${fmt(hI)}</td><td>${fmt(hT)}</td><td>${fmt(hIm)}</td><td>${fmt(hC)}</td><td>${fmt(hCT)}</td><td class="${hS>=0?'pos':'neg'}">${fmt(hS)}</td><td></td></tr>`;
+  h+='</tbody>';
+  document.getElementById('tbl-horas').innerHTML=h;
+
+  // ---- Costos de Taller sin Manzana Real (pools cuya Mz no es dato confiable/real) ----
+  h=hdr+'<tbody>';
+  let tlIm=0,tlCT=0,tlS=0;
+  (m.poolsSinMz||[]).forEach(p=>{
+    tlIm+=p.rep; tlCT+=p.rep; tlS+=-p.rep;
+    const ccsArr='['+p.ccs.map(cc=>"'"+cc.replace(/'/g,"\\'")+"'").join(',')+']';
+    h+=`<tr><td class="left" onclick="abrirCuentasCC(${ccsArr},'${p.label.replace(/'/g,"\\'")}','${cicloActivo} · Cuentas contables')">${p.label}</td><td>—</td><td>—</td><td>${fmt(0)}</td><td>${fmt(0)}</td><td>${fmt(p.rep)}</td><td>${fmt(0)}</td><td>${fmt(p.rep)}</td><td class="neg">${fmt(-p.rep)}</td><td>—</td></tr>`;
+  });
+  if(!(m.poolsSinMz||[]).length) h+=`<tr><td class="left" colspan="10" style="color:var(--ink3)">Sin pools de este tipo en el ciclo/cultivo actual.</td></tr>`;
+  h+=`<tr class="tot-row"><td class="left">TOTAL Taller</td><td></td><td></td><td>${fmt(0)}</td><td>${fmt(0)}</td><td>${fmt(tlIm)}</td><td>${fmt(0)}</td><td>${fmt(tlCT)}</td><td class="neg">${fmt(tlS)}</td><td></td></tr>`;
+  h+='</tbody>';
+  document.getElementById('tbl-taller').innerHTML=h;
+
+  // Estado de resultados consolidado
+  h=`<thead><tr><th class="left">Concepto</th><th>Monto</th></tr></thead><tbody>`;
+  h+=`<tr><td class="left">Ventas por Manzana</td><td>${fmt(tI)}</td></tr>`;
+  h+=`<tr><td class="left">Ventas por Hora Motor</td><td>${fmt(hI)}</td></tr>`;
+  h+=`<tr class="sub-hdr"><td class="left">TOTAL VENTAS</td><td>${fmt(ingresoTotal)}</td></tr>`;
+  h+=`<tr><td class="left">Costo Tractor (HM real)</td><td>${fmt(tT+hT)}</td></tr>`;
+  h+=`<tr><td class="left">Costo Implemento (Mz real)</td><td>${fmt(tIm+hIm)}</td></tr>`;
+  h+=`<tr><td class="left">Costo Combustible</td><td>${fmt(tC+hC)}</td></tr>`;
+  if(m.ajusteImplementoSinActividad!==0){
+    h+=`<tr><td class="left">Costos de Taller sin Manzana Real (ver tabla arriba: ${m.poolsSinMz.map(p=>p.label).join(', ')})</td><td>${fmt(m.ajusteImplementoSinActividad)}</td></tr>`;
+  }
+  if(Math.abs(m.ajusteTractorSinActividad)>0.5){
+    h+=`<tr><td class="left">Ajuste Tractor (HM en actividades fuera de catálogo: ${m.detalleAjusteTractor.map(x=>x.fam+' '+fmtN(x.hmDesconocidas,1)+'HM').join(', ')})</td><td>${fmt(m.ajusteTractorSinActividad)}</td></tr>`;
+  }
+  h+=`<tr class="sub-hdr"><td class="left">COSTO TOTAL</td><td>${fmt(costoTotal)}</td></tr>`;
+  h+=`<tr class="tot-row"><td class="left">SUPERÁVIT / DÉFICIT</td><td class="${superavitTotal>=0?'pos':'neg'}">${fmt(superavitTotal)}</td></tr>`;
+  h+='</tbody>';
+  document.getElementById('tbl-pl').innerHTML=h;
+
+  renderFincas();
+}
+
+function renderFincas(){
+  const mf=MODEL_FINCA[cicloActivo]; if(!mf) return;
+  let h=`<thead><tr><th class="left">Finca</th><th>CC</th><th>Ingreso $</th><th>Costo $</th><th>Superávit/Déficit</th></tr></thead><tbody>`;
+  let tI=0,tC=0,tS=0;
+  mf.fincas.forEach(f=>{
+    tI+=f.ingresoFinca;tC+=f.costoFinca;tS+=f.superavitFinca;
+    h+=`<tr><td class="left" onclick="abrirDetalleFinca('${f.finca.replace(/'/g,"\\'")}')">${f.finca}</td><td style="font-size:10.5px;color:var(--ink3)">${f.cc}</td><td>${fmt(f.ingresoFinca)}</td><td>${fmt(f.costoFinca)}</td><td class="${f.superavitFinca>=0?'pos':'neg'}"><b>${fmt(f.superavitFinca)}</b></td></tr>`;
+  });
+  h+=`<tr class="tot-row"><td class="left">TOTAL</td><td></td><td>${fmt(tI)}</td><td>${fmt(tC)}</td><td class="${tS>=0?'pos':'neg'}">${fmt(tS)}</td></tr>`;
+  h+='</tbody>';
+  document.getElementById('tbl-fincas').innerHTML=h;
+}
+
+function abrirDetalleFinca(finca){
+  const mf=MODEL_FINCA[cicloActivo];
+  const f=mf.fincas.find(x=>x.finca===finca);
+  if(!f) return;
+  document.getElementById('mtitle').textContent=f.finca;
+  document.getElementById('msub').textContent=cicloActivo+' · CC '+f.cc;
+  const hdr=`<thead><tr><th class="left">Actividad</th><th>Cantidad</th><th>Ingreso</th><th>Costo</th><th>Superávit/Déficit</th></tr></thead>`;
+  let b=hdr+'<tbody>';
+  f.detalle.forEach(d=>{
+    b+=`<tr><td class="left">${d.actDisplay}</td><td>${fmtN(d.metrica,d.unidad==='Mz'?0:1)} ${d.unidad}</td><td>${fmt(d.ingreso)}</td><td>${fmt(d.costoTotal)}</td><td class="${d.superavit>=0?'pos':'neg'}"><b>${fmt(d.superavit)}</b></td></tr>`;
+  });
+  b+=`<tr class="tot-row"><td class="left">TOTAL FINCA</td><td></td><td>${fmt(f.ingresoFinca)}</td><td>${fmt(f.costoFinca)}</td><td class="${f.superavitFinca>=0?'pos':'neg'}">${fmt(f.superavitFinca)}</td></tr>`;
+  b+='</tbody>';
+  document.getElementById('mbody').innerHTML=`<table>${b}</table>`;
+  document.getElementById('mbg').classList.add('show');
+}
+/* ===================== MEMORIA DE CÁLCULO ===================== */
+/* ===================== ESTADO DE RESULTADOS (formato clásico en 4 bloques) ===================== */
+const CC_ORDEN_IMPL=['Reparaciones preparacion de suelo','Reparaciones grada','Reparaciones mureador','Reparaciones sembradora',
+  'Reparaciones aplicadoras','Reparaciones arrancadores','Reparaciones cosechadoras','Reparaciones niveladoras y terraceo',
+  'Reparaciones otros','Reparaciones transporte','Reparaciones cultivadora'];
+const FAM_ORDEN=['Tractor Pequeño','Tractor Mediano','Tractor Grande'];
+const FAM_LABEL={'Tractor Pequeño':'Pequeños','Tractor Mediano':'Medianos','Tractor Grande':'Grandes'};
+
+function renderPyG(){
+  const m=MODEL[cicloActivo]; if(!m) return;
+
+  // ---- Bloque 1: Productos Mz ----
+  let h1=`<thead><tr><th class="left">Productos Mz</th><th>Manzanas</th><th>Precio</th><th>Total</th></tr></thead><tbody>`;
+  let subMz=0;
+  m.filasMz.forEach(d=>{ subMz+=d.ingreso; h1+=`<tr><td class="left" onclick="abrirIngresoPorFinca('${d.act.replace(/'/g,"\\'")}')">${d.actDisplay}</td><td>${fmtN(d.metrica,0)}</td><td>${fmt(d.precio,2)}</td><td>${fmt(d.ingreso)}</td></tr>`; });
+  h1+=`<tr class="tot-row"><td class="left" colspan="3">Subtotal</td><td>${fmt(subMz)}</td></tr></tbody>`;
+  document.getElementById('pyg-mz').innerHTML=h1;
+
+  // ---- Bloque 2: Ingresos Alquiler vía HM (agrupado por familia) ----
+  let h2=`<thead><tr><th class="left">Productos Hrs Motor</th><th>Horas</th><th>Precio</th><th>Total</th></tr></thead><tbody>`;
+  let subHM=0;
+  FAM_ORDEN.forEach(fam=>{
+    let subFam=0, subFamHoras=0;
+    h2+=`<tr class="sub-hdr"><td class="left" colspan="4">${fam}</td></tr>`;
+    ACTS_HORAS.forEach(act=>{
+      const hm=m.hmPorActCat[act+'|'+fam]||0;
+      const precio=PRECIO_HM_FAMILIA[fam];
+      const total=hm*precio;
+      subFam+=total; subFamHoras+=hm;
+      h2+=`<tr><td class="left" style="padding-left:18px" onclick="abrirHMPorFinca('${act.replace(/'/g,"\\'")}','${fam}')">${act}</td><td>${hm>0?fmtN(hm,0):'—'}</td><td>${fmt(precio,2)}</td><td>${total>0?fmt(total):'—'}</td></tr>`;
+    });
+    subHM+=subFam;
+    h2+=`<tr class="tot-row"><td class="left">Subtotal ${fam}</td><td>${fmtN(subFamHoras,0)}</td><td>${fmt(PRECIO_HM_FAMILIA[fam],2)}</td><td>${fmt(subFam)}</td></tr>`;
+  });
+  h2+='</tbody>';
+  document.getElementById('pyg-hm').innerHTML=h2;
+
+  const totalVentas=subMz+subHM;
+
+  let hIng=`<tbody><tr class="tot-row" style="font-size:12.5px"><td class="left">TOTAL INGRESOS (Mz ${fmt(subMz)} + HM ${fmt(subHM)})</td><td>${fmt(totalVentas)}</td></tr></tbody>`;
+  document.getElementById('pyg-total-ingresos').innerHTML=hIng;
+
+  // ---- Bloque 3: Costos Servicios Agrícolas ----
+  let h3i=`<thead><tr><th class="left">Mantenimiento Implementos</th><th>Costo $</th></tr></thead><tbody>`;
+  let subImpl=0;
+  CC_ORDEN_IMPL.forEach(cc=>{ const v=m.repPorCC[cc]||0; subImpl+=v; h3i+=`<tr><td class="left" onclick="abrirCuentasCC(['${cc}'],'${cc}','${cicloActivo} · Cuentas contables')">${cc}</td><td>${fmt(v)}</td></tr>`; });
+  h3i+=`<tr class="tot-row"><td class="left">Subtotal</td><td>${fmt(subImpl)}</td></tr></tbody>`;
+  document.getElementById('pyg-impl').innerHTML=h3i;
+  const notaImpl=document.getElementById('pyg-impl-nota');
+  if(m.poolsSinMz&&m.poolsSinMz.length){
+    notaImpl.innerHTML=`↳ Incluye ${fmt(m.ajusteImplementoSinActividad)} de ${m.poolsSinMz.map(p=>p.label).join(', ')} — sin Mz este ciclo (aún no aplica), por eso no se reparte a ninguna actividad.`;
+  } else {
+    notaImpl.innerHTML='';
+  }
+
+  let h3t=`<thead><tr><th class="left">Mantenimiento Tractores</th><th>Costo $</th></tr></thead><tbody>`;
+  let subTrac=0;
+  FAM_ORDEN.forEach(fam=>{ const v=m.costoTractor[fam].rep||0; subTrac+=v;
+    const ccsFam=Object.keys(TRACTOR_FAM).filter(cc=>TRACTOR_FAM[cc]===fam);
+    const ccsArr='['+ccsFam.map(cc=>"'"+cc.replace(/'/g,"\\'")+"'").join(',')+']';
+    h3t+=`<tr><td class="left" onclick="abrirCuentasCC(${ccsArr},'${FAM_LABEL[fam]}','${cicloActivo} · Cuentas contables')">${FAM_LABEL[fam]}</td><td>${fmt(v)}</td></tr>`;
+  });
+  h3t+=`<tr class="tot-row"><td class="left">Subtotal</td><td>${fmt(subTrac)}</td></tr></tbody>`;
+  document.getElementById('pyg-tractor').innerHTML=h3t;
+  const notaTrac=document.getElementById('pyg-tractor-nota');
+  if(Math.abs(m.ajusteTractorSinActividad)>0.5){
+    notaTrac.innerHTML=`↳ Incluye ${fmt(m.ajusteTractorSinActividad)} de HM en actividades fuera de catálogo (${m.detalleAjusteTractor.map(x=>x.fam+': '+fmtN(x.hmDesconocidas,1)+' HM').join(', ')}) — no se reparte a ninguna actividad conocida.`;
+  } else {
+    notaTrac.innerHTML='';
+  }
+
+  // ---- Bloque 4: Combustible (todas las actividades, Mz + Horas) ----
+  let h4=`<thead><tr><th class="left">Combustible</th><th>Litros (Mani)</th><th>Costo $</th></tr></thead><tbody>`;
+  let subComb=0, subLitros=0;
+  [...m.filasMz,...m.filasHoras].forEach(d=>{
+    const lts=m.ltsMani[d.act]||0;
+    subComb+=d.combCost; subLitros+=lts;
+    h4+=`<tr><td class="left" onclick="abrirCombustiblePorFinca('${d.act.replace(/'/g,"\\'")}')">${d.actDisplay}</td><td>${lts>0?fmtN(lts,0):'—'}</td><td>${d.combCost>0?fmt(d.combCost):'—'}</td></tr>`;
+  });
+  h4+=`<tr class="tot-row"><td class="left">Subtotal</td><td>${fmtN(subLitros,0)}</td><td>${fmt(subComb)}</td></tr>`;
+  h4+=`<tr class="sub-hdr"><td class="left">$/Litro</td><td colspan="2">${m.costoPorLitro!=null?fmt(m.costoPorLitro,3):'—'}</td></tr></tbody>`;
+  document.getElementById('pyg-comb').innerHTML=h4;
+
+  // ---- Resultado final ----
+  const costoTotal=subImpl+subTrac+subComb;
+  const superavit=totalVentas-costoTotal;
+
+  let hCost=`<tbody><tr class="tot-row" style="font-size:12.5px"><td class="left">TOTAL COSTOS (Implementos ${fmt(subImpl)} + Tractores ${fmt(subTrac)} + Combustible ${fmt(subComb)})</td><td>${fmt(costoTotal)}</td></tr></tbody>`;
+  document.getElementById('pyg-total-costos').innerHTML=hCost;
+
+  let hf=`<tbody>`;
+  hf+=`<tr class="tot-row"><td class="left">TOTAL VENTAS</td><td>${fmt(totalVentas)}</td></tr>`;
+  hf+=`<tr class="tot-row"><td class="left">COSTO TOTAL</td><td>${fmt(costoTotal)}</td></tr>`;
+  hf+=`<tr class="tot-row"><td class="left" style="font-size:13px">SUPERÁVIT / DÉFICIT</td><td class="${superavit>=0?'pos':'neg'}" style="font-size:13px">${fmt(superavit)}</td></tr>`;
+  hf+='</tbody>';
+  document.getElementById('pyg-final').innerHTML=hf;
+
+  // ---- Diagnóstico: reconciliar Costo Total (por CC/familia) vs Costo Total (por actividad, usado en las tarjetas KPI) ----
+  const todasFilas=[...m.filasMz,...m.filasHoras];
+  const sumTractorPorActividad=todasFilas.reduce((s,d)=>s+d.tractorCost,0);
+  const sumImplPorActividad=todasFilas.reduce((s,d)=>s+d.implCost,0);
+  const sumCombPorActividad=todasFilas.reduce((s,d)=>s+d.combCost,0);
+  const diffTractor=subTrac-sumTractorPorActividad;
+  const diffImpl=subImpl-sumImplPorActividad;
+  const diffComb=subComb-sumCombPorActividad;
+  console.log('=== Reconciliación Costo Total ===');
+  console.log(`Tractor:     CC/familia=${subTrac.toFixed(2)}  vs  suma por actividad=${sumTractorPorActividad.toFixed(2)}  ->  diferencia=${diffTractor.toFixed(2)}`);
+  if(Math.abs(diffTractor)>1){
+    console.log('--- Desglose Tractor: HM por actividad CRUDA de Control Operativo (comparado contra nuestro catálogo) ---');
+    const conocidas=new Set([...Object.keys(PRECIO_MZ),...ACTS_HORAS].map(norm));
+    FAM_ORDEN.forEach(fam=>{
+      console.log(`  Familia "${fam}":`);
+      Object.keys(m.hmALL).forEach(k=>{
+        if(!k.endsWith('|'+fam)) return;
+        const actCruda=k.slice(0,-('|'+fam).length);
+        const hm=m.hmALL[k];
+        const esConocida=conocidas.has(norm(actCruda));
+        console.log(`      · "${actCruda}"  HM=${hm.toFixed(2)}  ${esConocida?'✓ conocida':'⚠️ NO está en el catálogo (Mz/Horas)'}`);
+      });
+    });
+  }
+  console.log(`Implemento:  CC/pool   =${subImpl.toFixed(2)}  vs  suma por actividad=${sumImplPorActividad.toFixed(2)}  ->  diferencia=${diffImpl.toFixed(2)}`);
+  if(Math.abs(diffImpl)>1){
+    console.log('--- Desglose Implemento por pool ---');
+    m.costoImplemento.forEach(imp=>{
+      const sumaActsDelPool=imp.acts.reduce((s,a)=>{
+        const fila=todasFilas.find(d=>d.act===a);
+        return s+(fila?fila.implCost:0);
+      },0);
+      const d=imp.rep-sumaActsDelPool;
+      console.log(`  ${imp.label}: rep=${imp.rep.toFixed(2)}  mzPool=${imp.mzPool.toFixed(2)}  $/Mz=${imp.costoMz!=null?imp.costoMz.toFixed(4):'null'}  |  suma implCost de sus actividades=${sumaActsDelPool.toFixed(2)}  ->  diff=${d.toFixed(2)}`);
+      imp.acts.forEach(a=>{
+        const fila=todasFilas.find(x=>x.act===a);
+        const mzA=m.mzPorAct_ALL[a]||0;
+        console.log(`      · ${a}: mzPorAct_ALL=${mzA.toFixed(2)}  implCost=${fila?fila.implCost.toFixed(2):'(no encontrada en filasMz/filasHoras)'}`);
+      });
+    });
+  }
+  console.log(`Combustible: total     =${subComb.toFixed(2)}  vs  suma por actividad=${sumCombPorActividad.toFixed(2)}  ->  diferencia=${diffComb.toFixed(2)}`);
+  const diffImplSinExplicar=diffImpl-m.ajusteImplementoSinActividad; // el ajuste de pools sin Mz ya está explicado/mostrado aparte
+  const diffTractorSinExplicar=diffTractor-m.ajusteTractorSinActividad; // el ajuste de HM fuera de catálogo ya está explicado/mostrado aparte
+  if(Math.abs(diffTractorSinExplicar)>1||Math.abs(diffImplSinExplicar)>1||Math.abs(diffComb)>1){
+    let msg=`⚠️ Diferencia de reconciliación SIN EXPLICAR detectada — revisa la consola (F12) para el detalle. `;
+    if(Math.abs(diffTractorSinExplicar)>1) msg+=`Tractor (además del ajuste ya mostrado): ${fmt(diffTractorSinExplicar)}. `;
+    if(Math.abs(diffImplSinExplicar)>1) msg+=`Implemento (además del ajuste ya mostrado): ${fmt(diffImplSinExplicar)}. `;
+    if(Math.abs(diffComb)>1) msg+=`Combustible: ${fmt(diffComb)}.`;
+    document.getElementById('pyg-diag').style.display='block';
+    document.getElementById('pyg-diag').innerHTML=msg;
+  } else {
+    document.getElementById('pyg-diag').style.display='none';
+  }
+}
+
+function renderMemoria(){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const año=añoDe(cicloActivo);
+
+  // ---- Bloque Tractor: 1) CC por familia  2) Tarifa por familia ----
+  let hcc=`<thead><tr><th class="left">Familia</th><th class="left">CC Exactus</th><th>Monto $</th></tr></thead><tbody>`;
+  Object.entries(TRACTOR_FAM).forEach(([cc,fam])=>{ hcc+=`<tr><td class="left" onclick="abrirCuentasCC(['${cc.replace(/'/g,"\\'")}'],'${cc.replace(/'/g,"\\'")}','${cicloActivo} · Cuentas contables')">${fam}</td><td class="left" onclick="abrirCuentasCC(['${cc.replace(/'/g,"\\'")}'],'${cc.replace(/'/g,"\\'")}','${cicloActivo} · Cuentas contables')">${cc}</td><td>${fmt(m.repPorCC[cc]||0)}</td></tr>`; });
+  hcc+='</tbody>';
+  document.getElementById('mem-tractor-cc').innerHTML=hcc;
+
+  let hfam=`<thead><tr><th class="left">Familia</th><th>Total $</th><th>HM Real</th><th>$/HM</th></tr></thead><tbody>`;
+  Object.entries(m.costoTractor).forEach(([fam,d])=>{ hfam+=`<tr><td class="left" onclick="abrirConsumidoresFamilia('${fam}')">${fam}</td><td>${fmt(d.rep)}</td><td>${fmtN(d.hm,1)}</td><td><b>${d.costoHM!=null?fmt(d.costoHM,2):'—'}</b></td></tr>`; });
+  hfam+='</tbody>';
+  document.getElementById('mem-tractor-fam').innerHTML=hfam;
+
+  // ---- Bloque Implemento: 1) CC por pool  2) Tarifa por pool ----
+  let icc=`<thead><tr><th class="left">Pool</th><th class="left">CC Exactus</th><th>Monto $</th></tr></thead><tbody>`;
+  IMPLEMENTOS.forEach(imp=>{ imp.ccs.forEach(cc=>{ icc+=`<tr><td class="left" onclick="abrirCuentasCC(['${cc.replace(/'/g,"\\'")}'],'${cc.replace(/'/g,"\\'")}','${cicloActivo} · Cuentas contables')">${imp.label}</td><td class="left" onclick="abrirCuentasCC(['${cc.replace(/'/g,"\\'")}'],'${cc.replace(/'/g,"\\'")}','${cicloActivo} · Cuentas contables')">${cc}</td><td>${fmt(m.repPorCC[cc]||0)}</td></tr>`; }); });
+  icc+='</tbody>';
+  document.getElementById('mem-impl-cc').innerHTML=icc;
+
+  let ifam=`<thead><tr><th class="left">Pool</th><th>Total $</th><th>Mz Real</th><th>$/Mz</th></tr></thead><tbody>`;
+  m.costoImplemento.forEach(imp=>{ ifam+=`<tr><td class="left" onclick="abrirConsumidoresPool('${imp.label.replace(/'/g,"\\'")}')">${imp.label}</td><td>${fmt(imp.rep)}</td><td>${fmtN(imp.mzPool,0)}</td><td><b>${imp.costoMz!=null?fmt(imp.costoMz,2):'—'}</b></td></tr>`; });
+  ifam+='</tbody>';
+  document.getElementById('mem-impl-fam').innerHTML=ifam;
+
+  // ---- Bloque Combustible: una sola tabla resumen ----
+  const ltsTotalMani=Object.values(m.ltsMani).reduce((s,v)=>s+v,0);
+  let hc=`<tbody>`;
+  hc+=`<tr><td class="left">Combustible Total (${m.combRegistros} registros)</td><td>${fmt(m.combTotal)}</td></tr>`;
+  hc+=`<tr><td class="left">÷ Litros reales de Mani ${año}</td><td>${fmtN(ltsTotalMani,0)}</td></tr>`;
+  hc+=`<tr class="tot-row"><td class="left">= Tarifa $/Litro</td><td>${m.costoPorLitro!=null?fmt(m.costoPorLitro,3):'—'}</td></tr>`;
+  hc+='</tbody>';
+  document.getElementById('mem-comb').innerHTML=hc;
+
+  // ---- Bloque Costos de Taller sin Manzana Real ----
+  let ht=`<thead><tr><th class="left">Pool</th><th class="left">CC Exactus</th><th>Monto $</th></tr></thead><tbody>`;
+  let totTaller=0;
+  (m.poolsSinMz||[]).forEach(p=>{
+    totTaller+=p.rep;
+    p.ccs.forEach((cc,i)=>{
+      ht+=`<tr><td class="left">${i===0?p.label:''}</td><td class="left" onclick="abrirCuentasCC(['${cc.replace(/'/g,"\\'")}'],'${cc.replace(/'/g,"\\'")}','${cicloActivo} · Cuentas contables')">${cc}</td><td>${i===0?fmt(p.rep):''}</td></tr>`;
+    });
+  });
+  if(!(m.poolsSinMz||[]).length) ht+=`<tr><td class="left" colspan="3" style="color:var(--ink3)">Sin pools de este tipo en el ciclo/cultivo actual.</td></tr>`;
+  ht+=`<tr class="tot-row"><td class="left" colspan="2">TOTAL</td><td>${fmt(totTaller)}</td></tr></tbody>`;
+  document.getElementById('mem-taller').innerHTML=ht;
+
+  // ---- Bloque final: costo de cada actividad, todas visibles de una vez ----
+  let hd=`<thead><tr><th class="left">Actividad</th><th>HM Real</th><th>× $/HM</th><th>Mz Real</th><th>× $/Mz</th><th>Lts Mani</th><th>× $/Lt</th><th>Tractor $</th><th>Implemento $</th><th>Combustible $</th><th>Costo Total</th></tr></thead><tbody>`;
+  [...m.filasMz,...m.filasHoras].forEach(d=>{
+    let hmReal=0; Object.values(TRACTOR_FAM).forEach(fam=>{ hmReal+=m.hmALL[d.act+'|'+fam]||0; });
+    const mzReal=m.mzPorAct_ALL[d.act]||0;
+    const ltsReal=m.ltsMani[d.act]||0;
+    const imp=m.costoImplemento.find(i=>i.acts.includes(d.act));
+    const onclick=d.unidad==='Mz'?`abrirActividadPorFinca('${d.act.replace(/'/g,"\\'")}')`:`abrirActividadHM('${d.act.replace(/'/g,"\\'")}')`;
+    hd+=`<tr><td class="left" onclick="${onclick}">${d.actDisplay}</td><td>${hmReal>0?fmtN(hmReal,1):'—'}</td><td>${hmReal>0?'✓':'—'}</td>`+
+      `<td>${imp?fmtN(mzReal,0):'—'}</td><td>${imp?'✓':'—'}</td>`+
+      `<td>${ltsReal>0?fmtN(ltsReal,0):'—'}</td><td>${ltsReal>0?'✓':'—'}</td>`+
+      `<td>${fmt(d.tractorCost)}</td><td>${fmt(d.implCost)}</td><td>${fmt(d.combCost)}</td><td><b>${fmt(d.costoTotal)}</b></td></tr>`;
+  });
+  hd+='</tbody>';
+  document.getElementById('mem-detalle').innerHTML=hd;
+}
+
+/* ===================== EXPORTAR A EXCEL (memoria de cálculo completa) ===================== */
+function descargarExcel(){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const wb=XLSX.utils.book_new();
+
+  // Hoja 1: Resumen P&L
+  const resumen=[['Actividad','Cantidad','Unidad','Precio Venta','Ingreso','Tractor $','Implemento $','Combustible $','Costo Total','Superávit/Déficit']];
+  [...m.filasMz,...m.filasHoras].forEach(d=>{
+    resumen.push([d.actDisplay,d.metrica,d.unidad,d.precio,d.ingreso,d.tractorCost,d.implCost,d.combCost,d.costoTotal,d.superavit]);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(resumen),'Resumen PyG');
+
+  // Hoja 2: Memoria Tractor
+  const tra=[['Familia','CC Exactus (Reparaciones+Lub.+Serv.)','Monto $']];
+  Object.entries(TRACTOR_FAM).forEach(([cc,fam])=>{ tra.push([fam,cc,m.repPorCC[cc]||0]); });
+  tra.push([]);
+  tra.push(['Familia','Total $ (todas sus CC)','HM Real Total (todas actividades, todos cultivos)','Tarifa $/HM']);
+  Object.entries(m.costoTractor).forEach(([fam,d])=>{ tra.push([fam,d.rep,d.hm,d.costoHM]); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(tra),'Memoria Tractor');
+
+  // Hoja 3: Memoria Implemento
+  const imp=[['Pool','Actividades del pool','CC Exactus (Reparaciones+Lub.+Serv.)','Monto $']];
+  m.costoImplemento.forEach(i=>{ i.ccs.forEach(cc=>imp.push([i.label,i.acts.join(', '),cc,m.repPorCC[cc]||0])); });
+  imp.push([]);
+  imp.push(['Pool','Total $ (todas sus CC)','Mz Real Total del pool (todos cultivos)','Tarifa $/Mz']);
+  m.costoImplemento.forEach(i=>{ imp.push([i.label,i.rep,i.mzPool,i.costoMz]); });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(imp),'Memoria Implemento');
+
+  // Hoja 4: Memoria Combustible
+  const comb=[['Concepto','Valor'],
+    ['Combustible Total $ (Exactus registra solo Mani)',m.combTotal],
+    ['Registros Exactus',m.combRegistros],
+    ['Litros Reales de Mani '+añoDe(cicloActivo)+' (no cambia con el filtro de Cultivo)',Object.values(m.ltsMani).reduce((s,v)=>s+v,0)],
+    ['Tarifa $/Litro',m.costoPorLitro]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(comb),'Memoria Combustible');
+
+  // Hoja 5: Detalle paso a paso por actividad
+  const det=[['Actividad','HM Real Total (todos cultivos)','Mz Real Total (todos cultivos)','Litros Mani '+añoDe(cicloActivo),'Costo Tractor $','Costo Implemento $','Costo Combustible $','Costo Total $']];
+  [...m.filasMz,...m.filasHoras].forEach(d=>{
+    let hmReal=0;
+    Object.values(TRACTOR_FAM).forEach(fam=>{ hmReal+=m.hmALL[d.act+'|'+fam]||0; });
+    const mzReal=m.mzPorAct_ALL[d.act]||0;
+    const ltsReal=m.ltsMani[d.act]||0;
+    det.push([d.actDisplay,hmReal,mzReal,ltsReal,d.tractorCost,d.implCost,d.combCost,d.costoTotal]);
+  });
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(det),'Detalle por Actividad');
+
+  // Hoja 6: Por Finca
+  const mf=MODEL_FINCA[cicloActivo];
+  if(mf){
+    const fin=[['Finca','CC','Ingreso $','Costo $','Superávit/Déficit']];
+    mf.fincas.forEach(f=>{ fin.push([f.finca,f.cc,f.ingresoFinca,f.costoFinca,f.superavitFinca]); });
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(fin),'Por Finca');
+  }
+
+  const cultivoTxt=cultivoActivo.includes('Todos')?'Todos':cultivoActivo.join('+');
+  XLSX.writeFile(wb,`Costeo_Taller_${cicloActivo.replace(' ','_')}_${cultivoTxt.replace(/[\s/]/g,'_')}.xlsx`);
+}
+
+/* ===================== SISTEMA GENÉRICO DE MODAL ===================== */
+function abrirModal(titulo,subtitulo,html){
+  document.getElementById('mtitle').textContent=titulo;
+  document.getElementById('msub').textContent=subtitulo;
+  document.getElementById('mbody').innerHTML=html;
+  document.getElementById('mbg').classList.add('show');
+}
+function abrirModalTabs(titulo,subtitulo,tabs){
+  // tabs: [{label, html}]
+  let h=`<div style="display:flex;gap:6px;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px">`;
+  tabs.forEach((t,i)=>{ h+=`<button onclick="cambiarTabModal(${i})" id="mtab-${i}" class="mtab-btn ${i===0?'active':''}" style="border:none;background:${i===0?'var(--accent)':'var(--background)'};color:${i===0?'#fff':'var(--ink3)'};padding:6px 13px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer">${t.label}</button>`; });
+  h+=`</div>`;
+  tabs.forEach((t,i)=>{ h+=`<div class="mtab-panel" id="mtabp-${i}" style="display:${i===0?'block':'none'}">${t.html}</div>`; });
+  document.getElementById('mtitle').textContent=titulo;
+  document.getElementById('msub').textContent=subtitulo;
+  document.getElementById('mbody').innerHTML=h;
+  document.getElementById('mbg').classList.add('show');
+}
+function cambiarTabModal(i){
+  document.querySelectorAll('.mtab-btn').forEach((b,idx)=>{
+    b.classList.toggle('active',idx===i);
+    b.style.background=idx===i?'var(--accent)':'var(--background)';
+    b.style.color=idx===i?'#fff':'var(--ink3)';
+  });
+  document.querySelectorAll('.mtab-panel').forEach((p,idx)=>{ p.style.display=idx===i?'block':'none'; });
+}
+
+/* ---- 1) Mz/Horas de una actividad, desglosado por finca (reutilizable en ambas hojas) ---- */
+function abrirActividadPorFinca(act){
+  const mf=MODEL_FINCA[cicloActivo]; if(!mf) return;
+  const m=MODEL[cicloActivo];
+  const dGlobal=[...m.filasMz,...m.filasHoras].find(x=>x.act===act);
+  const esMz=PRECIO_MZ[act]!=null;
+  const año=añoDe(cicloActivo);
+  const cultivosFiltro=(!cultivoActivo||cultivoActivo.includes('Todos')||cultivoActivo.length===0)?null:cultivoActivo;
+
+  // Costo por finca (real, no varía por cultivo) — ya calculado en MODEL_FINCA
+  const costoFincaMap={};
+  mf.fincas.forEach(f=>{ const d=f.detalle.find(x=>x.act===act); if(d) costoFincaMap[f.finca]=d.costoTotal; });
+
+  // 1) Qué cultivos (ciclos) tienen datos reales para esta actividad, dentro del filtro activo
+  const ciclosSet=new Set();
+  if(esMz){
+    ORIGEN_CACHE.forEach(r=>{
+      const c=r.x_studio_ciclo; if(!c||!c[1]||añoDe(c[1])!==año) return;
+      if(cultivosFiltro&&!cultivosFiltro.includes(c[1])) return;
+      const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+      const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+      const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+      ciclosSet.add(c[1]);
+    });
+  } else {
+    CO_CACHE.forEach(r=>{
+      const c=get(r,'ciclo'); if(!c||añoDe(c)!==año) return;
+      if(cultivosFiltro&&!cultivosFiltro.some(s=>norm(s)===norm(c))) return;
+      if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+      if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+      if(norm(get(r,'actividad'))!==norm(act)) return;
+      ciclosSet.add(c);
+    });
+  }
+  const ciclos=[...ciclosSet].sort((a,b)=>{
+    const aMani=norm(a).startsWith('mani'), bMani=norm(b).startsWith('mani');
+    if(aMani&&!bMani) return -1; if(bMani&&!aMani) return 1;
+    return a.localeCompare(b);
+  });
+  const cicloConCosto=ciclos.find(c=>norm(c).startsWith('mani'))||ciclos[0];
+
+  // 2) Universo de fincas (de la tabla de relación)
+  const fincasVistas=new Set(); const fincaList=[];
+  (RELACIONES_CACHE||[]).forEach(r=>{ const cc=r.CentroCC,finca=r.Finca; if(!cc||!finca||fincasVistas.has(cc)) return; fincasVistas.add(cc); fincaList.push(finca); });
+
+  let cuerpo='';
+  let granCant=0,granIng=0,granCosto=0;
+  ciclos.forEach(ciclo=>{
+    const filasFinca=[];
+    fincaList.forEach(finca=>{
+      const fincaNorm=norm(finca);
+      let cantidad=0,ingreso=0;
+      if(esMz){
+        ORIGEN_CACHE.forEach(r=>{
+          const c=r.x_studio_ciclo; if(!c||c[1]!==ciclo) return;
+          const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+          const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+          const f=r.x_studio_finca; if(!f||norm(f[1])!==fincaNorm) return;
+          const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+          cantidad+=r.x_studio_avance_mzn||0;
+        });
+        ingreso=cantidad*PRECIO_MZ[act];
+      } else {
+        FAM_ORDEN.forEach(fam=>{
+          let hm=0;
+          CO_CACHE.forEach(r=>{
+            if(norm(get(r,'ciclo'))!==norm(ciclo)) return;
+            if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+            if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+            if(norm(get(r,'finca'))!==fincaNorm) return;
+            if(norm(get(r,'actividad'))!==norm(act)) return;
+            if(norm(get(r,'categoria equipo'))!==norm(fam)) return;
+            hm+=toNum(get(r,'hme','hm'));
+          });
+          cantidad+=hm; ingreso+=hm*PRECIO_HM_FAMILIA[fam];
+        });
+      }
+      if(cantidad<=0.001&&ingreso<=0.001) return;
+      const costo=(ciclo===cicloConCosto)?(costoFincaMap[finca]||0):0;
+      filasFinca.push({finca,cantidad,ingreso,costo,superavit:ingreso-costo});
+    });
+    if(!filasFinca.length) return;
+    filasFinca.sort((a,b)=>b.ingreso-a.ingreso);
+    let subCant=0,subIng=0,subCosto=0;
+    cuerpo+=`<tr class="sub-hdr"><td class="left" colspan="5">Cultivo: ${ciclo}</td></tr>`;
+    filasFinca.forEach(f=>{
+      subCant+=f.cantidad; subIng+=f.ingreso; subCosto+=f.costo;
+      cuerpo+=`<tr><td class="left" style="padding-left:18px" onclick="abrirExplicacionCostoFinca('${f.finca.replace(/'/g,"\\'")}','${act.replace(/'/g,"\\'")}')">${f.finca}</td><td>${fmtN(f.cantidad,esMz?0:1)}</td><td>${fmt(f.ingreso)}</td><td>${fmt(f.costo)}</td><td class="${f.superavit>=0?'pos':'neg'}">${fmt(f.superavit)}</td></tr>`;
+    });
+    cuerpo+=`<tr class="tot-row"><td class="left">Subtotal ${ciclo}</td><td>${fmtN(subCant,esMz?0:1)}</td><td>${fmt(subIng)}</td><td>${fmt(subCosto)}</td><td>${fmt(subIng-subCosto)}</td></tr>`;
+    granCant+=subCant; granIng+=subIng; granCosto+=subCosto;
+  });
+
+  // Ajuste global (CC sin match en RelacionCicloFinca) — no se puede ubicar en una finca/ciclo específico
+  if(dGlobal){
+    const ajusteIngreso=dGlobal.ingreso-granIng;
+    const ajusteCosto=dGlobal.costoTotal-granCosto;
+    const ajusteCant=dGlobal.metrica-granCant;
+    if(Math.abs(ajusteIngreso)>1||Math.abs(ajusteCosto)>1||Math.abs(ajusteCant)>0.01){
+      cuerpo+=`<tr><td class="left" onclick="abrirDetalleSinFinca('${act.replace(/'/g,"\\'")}')" style="color:var(--ink3)">Sin finca identificada (CC sin match)</td><td>${Math.abs(ajusteCant)>0.01?fmtN(ajusteCant,1):'—'}</td><td>${fmt(ajusteIngreso)}</td><td>${fmt(ajusteCosto)}</td><td>${fmt(ajusteIngreso-ajusteCosto)}</td></tr>`;
+      granCant+=ajusteCant; granIng+=ajusteIngreso; granCosto+=ajusteCosto;
+    }
+  }
+
+  let h=`<table><thead><tr><th class="left">Cultivo / Finca</th><th>Cantidad</th><th>Ingreso</th><th>Costo</th><th>Superávit/Déficit</th></tr></thead><tbody>`;
+  h+=cuerpo||`<tr><td class="left" colspan="5" style="color:var(--ink3)">Sin datos para esta actividad en este ciclo/cultivo.</td></tr>`;
+  h+=`<tr class="tot-row" style="font-size:12.5px"><td class="left">TOTALES CONSOLIDADOS</td><td>${fmtN(granCant,esMz?0:1)}</td><td>${fmt(granIng)}</td><td>${fmt(granCosto)}</td><td>${fmt(granIng-granCosto)}</td></tr>`;
+  h+='</tbody></table>';
+  abrirModal(act,cicloActivo+' · El Costo real (no varía por cultivo) se muestra solo en "'+cicloConCosto+'" para evitar duplicarlo',h);
+}
+
+/* ---- 1b) Solo Ingreso por finca (para la hoja Estado de Resultados — el costo se ve en Detalle por Actividad) ---- */
+function abrirIngresoPorFinca(act){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const dGlobal=m.filasMz.find(x=>x.act===act);
+  const año=añoDe(cicloActivo);
+  const cultivosFiltro=(!cultivoActivo||cultivoActivo.includes('Todos')||cultivoActivo.length===0)?null:cultivoActivo;
+
+  const ciclosSet=new Set();
+  ORIGEN_CACHE.forEach(r=>{
+    const c=r.x_studio_ciclo; if(!c||!c[1]||añoDe(c[1])!==año) return;
+    if(cultivosFiltro&&!cultivosFiltro.includes(c[1])) return;
+    const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+    const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+    const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+    ciclosSet.add(c[1]);
+  });
+  const ciclos=[...ciclosSet].sort((a,b)=>{
+    const aMani=norm(a).startsWith('mani'), bMani=norm(b).startsWith('mani');
+    if(aMani&&!bMani) return -1; if(bMani&&!aMani) return 1;
+    return a.localeCompare(b);
+  });
+
+  const fincasVistas=new Set(); const fincaList=[];
+  (RELACIONES_CACHE||[]).forEach(r=>{ const cc=r.CentroCC,finca=r.Finca; if(!cc||!finca||fincasVistas.has(cc)) return; fincasVistas.add(cc); fincaList.push(finca); });
+
+  let cuerpo=''; let granCant=0,granIng=0;
+  ciclos.forEach(ciclo=>{
+    const filasFinca=[];
+    fincaList.forEach(finca=>{
+      const fincaNorm=norm(finca);
+      let mz=0;
+      ORIGEN_CACHE.forEach(r=>{
+        const c=r.x_studio_ciclo; if(!c||c[1]!==ciclo) return;
+        const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+        const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+        const f=r.x_studio_finca; if(!f||norm(f[1])!==fincaNorm) return;
+        const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+        mz+=r.x_studio_avance_mzn||0;
+      });
+      if(mz<=0.001) return;
+      filasFinca.push({finca,mz,ingreso:mz*PRECIO_MZ[act]});
+    });
+    if(!filasFinca.length) return;
+    filasFinca.sort((a,b)=>b.ingreso-a.ingreso);
+    let subMz=0,subIng=0;
+    cuerpo+=`<tr class="sub-hdr"><td class="left" colspan="3">Cultivo: ${ciclo}</td></tr>`;
+    filasFinca.forEach(f=>{ subMz+=f.mz; subIng+=f.ingreso; cuerpo+=`<tr><td class="left" style="padding-left:18px">${f.finca}</td><td>${fmtN(f.mz,0)}</td><td>${fmt(f.ingreso)}</td></tr>`; });
+    cuerpo+=`<tr class="tot-row"><td class="left">Subtotal ${ciclo}</td><td>${fmtN(subMz,0)}</td><td>${fmt(subIng)}</td></tr>`;
+    granCant+=subMz; granIng+=subIng;
+  });
+
+  if(dGlobal){
+    const ajusteMetrica=dGlobal.metrica-granCant;
+    const ajusteIngreso=dGlobal.ingreso-granIng;
+    if(Math.abs(ajusteIngreso)>1||Math.abs(ajusteMetrica)>0.01){
+      cuerpo+=`<tr><td class="left" onclick="abrirDetalleSinFinca('${act.replace(/'/g,"\\'")}')" style="color:var(--ink3)">Sin finca identificada (CC sin match)</td><td>${Math.abs(ajusteMetrica)>0.01?fmtN(ajusteMetrica,1):'—'}</td><td>${fmt(ajusteIngreso)}</td></tr>`;
+      granCant+=ajusteMetrica; granIng+=ajusteIngreso;
+    }
+  }
+
+  let h=`<table><thead><tr><th class="left">Cultivo / Finca</th><th>Cantidad</th><th>Ingreso</th></tr></thead><tbody>`;
+  h+=cuerpo||`<tr><td class="left" colspan="3" style="color:var(--ink3)">Sin datos para esta actividad en este ciclo/cultivo.</td></tr>`;
+  h+=`<tr class="tot-row" style="font-size:12.5px"><td class="left">TOTALES CONSOLIDADOS</td><td>${fmtN(granCant,0)}</td><td>${fmt(granIng)}</td></tr></tbody></table>`;
+  abrirModal(act,cicloActivo+' · Ingreso segmentado por Cultivo → Finca',h);
+}
+
+/* ---- 1c) Drill-down: cómo se llegó al costo de una finca+actividad, por categoría (Tractor/Implemento/Combustible) ---- */
+function abrirExplicacionCostoFinca(finca,act){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const fincaNorm=norm(finca);
+  const año=añoDe(cicloActivo);
+
+  const mzF_ALL=mzFincaMap(ORIGEN_CACHE,null,fincaNorm,año);
+  const coF_ALL=coFincaRows(CO_CACHE,null,fincaNorm,año);
+  const hmPorCatF={};
+  coF_ALL.forEach(r=>{
+    if(norm(get(r,'actividad'))!==norm(act)) return;
+    const cat=get(r,'categoria equipo')||'';
+    hmPorCatF[cat]=(hmPorCatF[cat]||0)+toNum(get(r,'hme','hm'));
+  });
+  const coF_Mani=coFincaRows(CO_CACHE,[`Mani ${año}`],fincaNorm,año);
+  let ltsF=0;
+  coF_Mani.forEach(r=>{ if(norm(get(r,'actividad'))===norm(act)) ltsF+=toNum(get(r,'cantidad diesel ltrs')); });
+  const mzActF=mzF_ALL[act]||0;
+
+  const filas=[];
+  const familiasConHM=FAM_ORDEN.filter(fam=>(hmPorCatF[fam]||0)>0);
+  familiasConHM.forEach(fam=>{
+    const hm=hmPorCatF[fam]||0;
+    const rate=m.costoTractor[fam].costoHM;
+    const costo=rate!=null?hm*rate:0;
+    filas.push({icono:'🚜',componente:'Mantenimiento Tractor'+(familiasConHM.length>1?' ('+fam+')':''),
+      consumo:fmtN(hm,1)+' HM Ejecutadas',tarifa:rate!=null?fmt(rate,2)+'/HM':'—',costo,
+      formula:`${fmtN(hm,1)} HM × ${rate!=null?fmt(rate,2):'—'}/HM de su familia ("${fam}")`});
+  });
+  if(!familiasConHM.length){
+    filas.push({icono:'🚜',componente:'Mantenimiento Tractor',consumo:'0 HM',tarifa:'—',costo:0,formula:'Sin HM registradas en esta finca para esta actividad.'});
+  }
+  const imp=m.costoImplemento.find(i=>i.acts.includes(act));
+  if(imp){
+    const costo=imp.costoMz!=null?mzActF*imp.costoMz:0;
+    filas.push({icono:'🔧',componente:'Mantenimiento Implemento',consumo:fmtN(mzActF,0)+' Mz',
+      tarifa:imp.costoMz!=null?fmt(imp.costoMz,2)+'/Mz':'—',costo,
+      formula:`${fmtN(mzActF,0)} Mz × ${imp.costoMz!=null?fmt(imp.costoMz,2):'—'}/Mz del pool "${imp.label}"`});
+  }
+  {
+    const costo=m.costoPorLitro!=null?ltsF*m.costoPorLitro:0;
+    filas.push({icono:'⛽',componente:'Combustible Diesel',consumo:fmtN(ltsF,0)+' Litros',
+      tarifa:m.costoPorLitro!=null?fmt(m.costoPorLitro,3)+'/Lt':'—',costo,
+      formula:`${fmtN(ltsF,0)} Litros (Mani ${año}) × ${m.costoPorLitro!=null?fmt(m.costoPorLitro,3):'—'}/Litro`});
+  }
+
+  const totalCosto=filas.reduce((s,x)=>s+x.costo,0);
+
+  let h=`<div style="background:#EAF3EF;border-radius:8px;padding:10px 14px;margin-bottom:10px">
+    <div style="font-weight:700;font-size:13px;color:var(--hdr)">Costo Total Absorbido por esta Finca: ${fmt(totalCosto)}</div>
+    <div style="font-size:10.5px;color:var(--ink3);margin-top:2px">Resulta de multiplicar los consumos reales físicos de la finca por las tarifas globales de absorción del taller.</div>
+  </div>`;
+  h+=`<table><thead><tr><th class="left">Componente</th><th>Consumo Finca</th><th>Tarifa Global Taller</th><th>Costo $</th><th class="left">Fórmula</th></tr></thead><tbody>`;
+  filas.forEach(x=>{ h+=`<tr><td class="left">${x.icono} ${x.componente}</td><td>${x.consumo}</td><td>${x.tarifa}</td><td>${fmt(x.costo)}</td><td class="left" style="font-size:10px;color:var(--ink3)">${x.formula}</td></tr>`; });
+  h+=`<tr class="tot-row"><td class="left" colspan="3">TOTAL COSTO FINCA</td><td>${fmt(totalCosto)}</td><td class="left" style="font-size:10px">Suma de Tractor + Implemento + Combustible</td></tr>`;
+  h+='</tbody></table>';
+
+  document.getElementById('mtitle').innerHTML=`Explicación de Costo: ${finca} · ${act} `+
+    `<button onclick="abrirActividadPorFinca('${act.replace(/'/g,"\\'")}')" style="margin-left:10px;background:var(--danger);border:none;color:#fff;padding:5px 12px;border-radius:8px;font-size:11px;cursor:pointer;vertical-align:middle;font-weight:700">← Volver a Fincas</button>`;
+  document.getElementById('msub').textContent=cicloActivo;
+  document.getElementById('mbody').innerHTML=h;
+  document.getElementById('mbg').classList.add('show');
+}
+
+/* ---- 2) Actividad por Hora Motor: pestañas (por familia | memoria de cálculo) ---- */
+function abrirActividadHM(act){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const d=m.filasHoras.find(x=>x.act===act); if(!d) return;
+
+  // Tab 1: Horas + Ingreso por familia
+  let h1=`<table><thead><tr><th class="left">Familia</th><th>Horas</th><th>Precio/HM</th><th>Ingreso</th></tr></thead><tbody>`;
+  let tHoras=0,tIng=0;
+  FAM_ORDEN.forEach(fam=>{
+    const hm=m.hmPorActCat[act+'|'+fam]||0;
+    const precio=PRECIO_HM_FAMILIA[fam];
+    const ing=hm*precio;
+    tHoras+=hm; tIng+=ing;
+    h1+=`<tr><td class="left">${fam}</td><td>${hm>0?fmtN(hm,1):'—'}</td><td>${fmt(precio,2)}</td><td>${ing>0?fmt(ing):'—'}</td></tr>`;
+  });
+  h1+=`<tr class="tot-row"><td class="left">TOTAL</td><td>${fmtN(tHoras,1)}</td><td></td><td>${fmt(tIng)}</td></tr></tbody></table>`;
+
+  // Tab 2: memoria de cálculo de esta actividad (Tractor por familia + Combustible)
+  let h2='';
+  FAM_ORDEN.forEach(fam=>{
+    const hmAct=m.hmALL[act+'|'+fam]||0;
+    if(hmAct<=0) return;
+    const rate=m.costoTractor[fam].costoHM;
+    const ccsFam=Object.keys(TRACTOR_FAM).filter(cc=>TRACTOR_FAM[cc]===fam);
+    let filasCC=ccsFam.map(cc=>`<div class="mrow"><span>${cc}</span><b>${fmt(m.repPorCC[cc]||0)}</b></div>`).join('');
+    h2+=`<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;margin-bottom:2px">🚜 Tractor — familia "${fam}"</div>
+      ${filasCC}
+      <div class="mrow" style="font-weight:700"><span>= Total Reparaciones+Lub.+Serv. de la familia</span><b>${fmt(m.costoTractor[fam].rep)}</b></div>
+      <div class="mrow"><span>÷ HM real TOTAL de la familia (todas las actividades, todos los cultivos)</span><b>${fmtN(m.costoTractor[fam].hm,1)} HM</b></div>
+      <div class="mrow" style="color:var(--blue);font-weight:700"><span>= Tarifa $/HM</span><b>${rate!=null?fmt(rate,2):'—'}</b></div>
+      <div class="mrow"><span>× HM reales de "${act}" en esta familia</span><b>${fmtN(hmAct,1)} HM</b></div>
+      <div class="mrow" style="font-weight:700;background:#EAF3EF"><span>= Costo Tractor (familia ${fam})</span><b>${fmt(rate!=null?hmAct*rate:0)}</b></div>
+    </div>`;
+  });
+  const imp=m.costoImplemento.find(i=>i.acts.includes(act));
+  if(imp){
+    const mzAct=m.mzPorAct_ALL[act]||0;
+    let filasCC=imp.ccs.map(cc=>`<div class="mrow"><span>${cc}</span><b>${fmt(m.repPorCC[cc]||0)}</b></div>`).join('');
+    h2+=`<div style="margin-bottom:14px"><div style="font-weight:700;font-size:12px;margin-bottom:2px">🔧 Implemento — pool "${imp.label}"</div>
+      ${filasCC}
+      <div class="mrow" style="font-weight:700"><span>= Total del pool</span><b>${fmt(imp.rep)}</b></div>
+      <div class="mrow"><span>÷ Mz real TOTAL del pool</span><b>${fmtN(imp.mzPool,0)} Mz</b></div>
+      <div class="mrow" style="color:var(--blue);font-weight:700"><span>= Tarifa $/Mz</span><b>${imp.costoMz!=null?fmt(imp.costoMz,2):'—'}</b></div>
+      <div class="mrow"><span>× Mz reales de "${act}"</span><b>${fmtN(mzAct,0)} Mz</b></div>
+      <div class="mrow" style="font-weight:700;background:#EAF3EF"><span>= Costo Implemento</span><b>${fmt(imp.costoMz!=null?mzAct*imp.costoMz:0)}</b></div>
+    </div>`;
+  }
+  const ltsAct=m.ltsMani[act]||0;
+  h2+=`<div><div style="font-weight:700;font-size:12px;margin-bottom:2px">⛽ Combustible</div>
+    <div class="mrow"><span>Combustible Total (${m.combRegistros} registros)</span><b>${fmt(m.combTotal)}</b></div>
+    <div class="mrow"><span>÷ Litros reales de Mani ${añoDe(cicloActivo)}</span><b>${fmtN(Object.values(m.ltsMani).reduce((s,v)=>s+v,0),0)} Lts</b></div>
+    <div class="mrow" style="color:var(--blue);font-weight:700"><span>= Tarifa $/Litro</span><b>${m.costoPorLitro!=null?fmt(m.costoPorLitro,3):'—'}</b></div>
+    <div class="mrow"><span>× Litros de "${act}" en Mani ${añoDe(cicloActivo)}</span><b>${fmtN(ltsAct,0)} Lts</b></div>
+    <div class="mrow" style="font-weight:700;background:#EAF3EF"><span>= Costo Combustible</span><b>${fmt(m.costoPorLitro!=null?ltsAct*m.costoPorLitro:0)}</b></div>
+  </div>`;
+  h2+=`<div class="mrow total"><span>COSTO TOTAL</span><b>${fmt(d.costoTotal)}</b></div>`;
+
+  abrirModalTabs(act,cicloActivo,[{label:'Horas e Ingreso por familia',html:h1},{label:'Memoria de cálculo',html:h2}]);
+}
+
+/* ---- 3) Ingreso HM de una actividad+familia, desglosado por finca ---- */
+function abrirHMPorFinca(act,fam){
+  const relaciones=RELACIONES_CACHE||[];
+  const cultivosFiltro=(!cultivoActivo||cultivoActivo.includes('Todos')||cultivoActivo.length===0)?null:cultivoActivo;
+  const año=añoDe(cicloActivo);
+  const fincasVistas=new Set(); const fincaList=[];
+  relaciones.forEach(r=>{ const cc=r.CentroCC,finca=r.Finca; if(!cc||!finca||fincasVistas.has(cc)) return; fincasVistas.add(cc); fincaList.push(finca); });
+  const precio=PRECIO_HM_FAMILIA[fam];
+
+  const ciclosSet=new Set();
+  CO_CACHE.forEach(r=>{
+    const c=get(r,'ciclo'); if(!c||añoDe(c)!==año) return;
+    if(cultivosFiltro&&!cultivosFiltro.some(s=>norm(s)===norm(c))) return;
+    if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+    if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+    if(norm(get(r,'actividad'))!==norm(act)) return;
+    if(norm(get(r,'categoria equipo'))!==norm(fam)) return;
+    ciclosSet.add(c);
+  });
+  const ciclos=[...ciclosSet].sort((a,b)=>{
+    const aMani=norm(a).startsWith('mani'), bMani=norm(b).startsWith('mani');
+    if(aMani&&!bMani) return -1; if(bMani&&!aMani) return 1;
+    return a.localeCompare(b);
+  });
+
+  let cuerpo=''; let granH=0,granI=0;
+  ciclos.forEach(ciclo=>{
+    const filasFinca=[];
+    fincaList.forEach(finca=>{
+      const fincaNorm=norm(finca);
+      let hm=0;
+      CO_CACHE.forEach(r=>{
+        if(norm(get(r,'ciclo'))!==norm(ciclo)) return;
+        if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+        if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+        if(norm(get(r,'finca'))!==fincaNorm) return;
+        if(norm(get(r,'actividad'))!==norm(act)) return;
+        if(norm(get(r,'categoria equipo'))!==norm(fam)) return;
+        hm+=toNum(get(r,'hme','hm'));
+      });
+      if(hm>0.001) filasFinca.push({finca,hm,ingreso:hm*precio});
+    });
+    if(!filasFinca.length) return;
+    filasFinca.sort((a,b)=>b.ingreso-a.ingreso);
+    let subH=0,subI=0;
+    cuerpo+=`<tr class="sub-hdr"><td class="left" colspan="3">Cultivo: ${ciclo}</td></tr>`;
+    filasFinca.forEach(f=>{ subH+=f.hm; subI+=f.ingreso; cuerpo+=`<tr><td class="left" style="padding-left:18px">${f.finca}</td><td>${fmtN(f.hm,1)}</td><td>${fmt(f.ingreso)}</td></tr>`; });
+    cuerpo+=`<tr class="tot-row"><td class="left">Subtotal ${ciclo}</td><td>${fmtN(subH,1)}</td><td>${fmt(subI)}</td></tr>`;
+    granH+=subH; granI+=subI;
+  });
+
+  let h=`<table><thead><tr><th class="left">Cultivo / Finca</th><th>Horas</th><th>Ingreso</th></tr></thead><tbody>`;
+  h+=cuerpo||`<tr><td class="left" colspan="3" style="color:var(--ink3)">Sin datos por finca.</td></tr>`;
+  h+=`<tr class="tot-row" style="font-size:12.5px"><td class="left">TOTALES CONSOLIDADOS</td><td>${fmtN(granH,1)}</td><td>${fmt(granI)}</td></tr></tbody></table>`;
+  abrirModal(act,cicloActivo+' · Familia "'+fam+'" · Horas e Ingreso segmentado por Cultivo → Finca',h);
+}
+
+/* ---- 4) Cuentas contables reales detrás de una CC (o varias, ej. familia de tractor) ---- */
+function abrirCuentasCC(ccList,titulo,subtitulo){
+  const reps=REPS_CACHE[cicloActivo]||[];
+  const rows=reps.filter(r=>ccList.some(cc=>norm(r.Centroccdesc||r.CENTRO_COSTO)===norm(cc)));
+  const cuentas={};
+  rows.forEach(r=>{ const cu=r.Cuentaccdesc||'Sin cuenta'; cuentas[cu]=(cuentas[cu]||0)+(parseFloat(r.RealDolar)||0); });
+  const filas=Object.entries(cuentas).map(([cuenta,monto])=>({cuenta,monto})).sort((a,b)=>b.monto-a.monto);
+
+  let h=`<table><thead><tr><th class="left">Cuenta contable</th><th>Monto $</th></tr></thead><tbody>`;
+  let tM=0;
+  filas.forEach(f=>{ tM+=f.monto; h+=`<tr><td class="left">${f.cuenta}</td><td>${fmt(f.monto)}</td></tr>`; });
+  if(!filas.length) h+=`<tr><td class="left" colspan="2" style="color:var(--ink3)">Sin registros.</td></tr>`;
+  h+=`<tr class="tot-row"><td class="left">TOTAL</td><td>${fmt(tM)}</td></tr></tbody></table>`;
+  abrirModal(titulo,subtitulo,h);
+}
+
+/* ---- 5) Combustible de una actividad, desglosado por finca (litros de Mani + costo) ---- */
+function abrirCombustiblePorFinca(act){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const relaciones=RELACIONES_CACHE||[];
+  const año=añoDe(cicloActivo);
+  const fincasVistas=new Set(); const fincaList=[];
+  relaciones.forEach(r=>{ const cc=r.CentroCC,finca=r.Finca; if(!cc||!finca||fincasVistas.has(cc)) return; fincasVistas.add(cc); fincaList.push({cc,finca}); });
+
+  const filas=[];
+  fincaList.forEach(({finca})=>{
+    const fincaNorm=norm(finca);
+    const rows=CO_CACHE.filter(r=>{
+      if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return false;
+      if(norm(get(r,'proveedor del servicio'))!=='comasa') return false;
+      if(norm(get(r,'finca'))!==fincaNorm) return false;
+      if(norm(get(r,'actividad'))!==norm(act)) return false;
+      if(añoDe(get(r,'ciclo'))!==año) return false;
+      if(norm(get(r,'ciclo'))!==norm(`Mani ${año}`)) return false;
+      return true;
+    });
+    const lts=rows.reduce((s,r)=>s+toNum(get(r,'cantidad diesel ltrs')),0);
+    if(lts>0) filas.push({finca,lts,costo:m.costoPorLitro!=null?lts*m.costoPorLitro:0});
+  });
+  filas.sort((a,b)=>b.costo-a.costo);
+
+  let h=`<table><thead><tr><th class="left">Finca</th><th>Litros (Mani ${año})</th><th>Costo $</th></tr></thead><tbody>`;
+  let tL=0,tC=0;
+  filas.forEach(f=>{ tL+=f.lts;tC+=f.costo; h+=`<tr><td class="left">${f.finca}</td><td>${fmtN(f.lts,0)}</td><td>${fmt(f.costo)}</td></tr>`; });
+  if(!filas.length) h+=`<tr><td class="left" colspan="3" style="color:var(--ink3)">Sin consumo de combustible en Mani para esta actividad.</td></tr>`;
+  h+=`<tr class="tot-row"><td class="left">TOTAL</td><td>${fmtN(tL,0)}</td><td>${fmt(tC)}</td></tr>`;
+  h+=`<tr class="sub-hdr"><td class="left">$/Litro</td><td colspan="2">${m.costoPorLitro!=null?fmt(m.costoPorLitro,3):'—'}</td></tr></tbody></table>`;
+  abrirModal(act,cicloActivo+' · Litros y costo de Combustible por finca',h);
+}
+
+/* ---- 6) Memoria de Cálculo: qué actividades consumen de una familia/pool ---- */
+function abrirConsumidoresFamilia(fam){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const rate=m.costoTractor[fam].costoHM;
+  const filas=[...m.filasMz,...m.filasHoras].map(d=>{
+    const hm=m.hmALL[d.act+'|'+fam]||0;
+    return hm>0?{act:d.act,actDisplay:d.actDisplay,hm,costo:rate!=null?hm*rate:0}:null;
+  }).filter(Boolean).sort((a,b)=>b.costo-a.costo);
+  let h=`<table><thead><tr><th class="left">Actividad</th><th>HM Real</th><th>Costo $</th></tr></thead><tbody>`;
+  let tH=0,tC=0;
+  filas.forEach(f=>{ tH+=f.hm;tC+=f.costo; h+=`<tr><td class="left" onclick="abrirDesgloseCicloFinca('${f.act.replace(/'/g,"\\'")}','tractor','${fam}')">${f.actDisplay}</td><td>${fmtN(f.hm,1)}</td><td>${fmt(f.costo)}</td></tr>`; });
+  const ajusteFam=(m.detalleAjusteTractor||[]).find(x=>x.fam===fam);
+  if(ajusteFam){
+    tH+=ajusteFam.hmDesconocidas; tC+=ajusteFam.monto;
+    h+=`<tr><td class="left" style="color:var(--ink3)">Fuera de catálogo <span title="HM de Control Operativo en actividades sin precio asignado (ej. Re-Siembra u otras no contempladas)">(sin precio)</span></td><td>${fmtN(ajusteFam.hmDesconocidas,1)}</td><td>${fmt(ajusteFam.monto)}</td></tr>`;
+  }
+  h+=`<tr class="tot-row"><td class="left">TOTAL</td><td>${fmtN(tH,1)}</td><td>${fmt(tC)}</td></tr></tbody></table>`;
+  abrirModal('Familia "'+fam+'"',cicloActivo+' · Actividades que consumen esta tarifa ($/HM='+(rate!=null?fmt(rate,2):'—')+') · Clic en una actividad → desglose por Ciclo/Finca',h);
+}
+/* ---- Desglose de Tractor: todas las actividades × 3 familias, resaltando la seleccionada ---- */
+function abrirDesgloseTractorTodasFamilias(actSeleccionada){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const filas=[...m.filasMz,...m.filasHoras].map(d=>{
+    const porFam={};
+    FAM_ORDEN.forEach(fam=>{
+      const hm=m.hmALL[d.act+'|'+fam]||0;
+      const rate=m.costoTractor[fam].costoHM;
+      porFam[fam]={hm,costo:rate!=null?hm*rate:0};
+    });
+    const tieneHM=FAM_ORDEN.some(fam=>porFam[fam].hm>0);
+    return {act:d.act,actDisplay:d.actDisplay,porFam,tieneHM};
+  }).filter(f=>f.tieneHM).sort((a,b)=>norm(a.act)===norm(actSeleccionada)?-1:norm(b.act)===norm(actSeleccionada)?1:0);
+
+  let h='<div class="scroll"><table><thead><tr><th class="left" rowspan="2">Actividad</th>';
+  FAM_ORDEN.forEach(fam=>{ h+=`<th colspan="2">${fam}</th>`; });
+  h+='</tr><tr>';
+  FAM_ORDEN.forEach(()=>{ h+='<th>HM</th><th>Costo $</th>'; });
+  h+='</tr></thead><tbody>';
+  const totales={}; FAM_ORDEN.forEach(fam=>totales[fam]={hm:0,costo:0});
+  filas.forEach(f=>{
+    const esDestacada=norm(f.act)===norm(actSeleccionada);
+    h+=`<tr style="${esDestacada?'background:#EAF3EF':''}"><td class="left">${esDestacada?'<b>':''}${f.actDisplay}${esDestacada?' ←</b>':''}</td>`;
+    FAM_ORDEN.forEach(fam=>{
+      const d=f.porFam[fam];
+      totales[fam].hm+=d.hm; totales[fam].costo+=d.costo;
+      h+=`<td>${d.hm>0?fmtN(d.hm,1):'—'}</td><td>${d.costo>0?fmt(d.costo):'—'}</td>`;
+    });
+    h+='</tr>';
+  });
+  h+='<tr class="tot-row"><td class="left">TOTAL</td>';
+  FAM_ORDEN.forEach(fam=>{ h+=`<td>${fmtN(totales[fam].hm,1)}</td><td>${fmt(totales[fam].costo)}</td>`; });
+  h+='</tr>';
+  h+='<tr class="sub-hdr"><td class="left">$/HM</td>';
+  FAM_ORDEN.forEach(fam=>{ const r=m.costoTractor[fam].costoHM; h+=`<td colspan="2">${r!=null?fmt(r,2):'—'}</td>`; });
+  h+='</tr></tbody></table></div>';
+  abrirModal('Tractor — desglose por familia',cicloActivo+' · Todas las actividades que usan tractor · resaltada: '+actSeleccionada,h);
+}
+
+
+function abrirConsumidoresPool(poolLabel,destacar){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const imp=m.costoImplemento.find(i=>i.label===poolLabel); if(!imp) return;
+  const filas=imp.acts.map(act=>{
+    const mz=m.mzPorAct_ALL[act]||0;
+    return {act,mz,costo:imp.costoMz!=null?mz*imp.costoMz:0};
+  }).sort((a,b)=>b.costo-a.costo);
+  let h=`<table><thead><tr><th class="left">Actividad</th><th>Mz Real</th><th>Costo $</th></tr></thead><tbody>`;
+  let tM=0,tC=0;
+  filas.forEach(f=>{
+    tM+=f.mz;tC+=f.costo;
+    const esDestacada=destacar&&norm(f.act)===norm(destacar);
+    h+=`<tr style="${esDestacada?'background:#EAF3EF':''}"><td class="left" onclick="abrirDesgloseCicloFinca('${f.act.replace(/'/g,"\\'")}','implemento','${poolLabel.replace(/'/g,"\\'")}')"><b>${f.act}</b>${esDestacada?' ←':''}</td><td>${fmtN(f.mz,0)}</td><td>${fmt(f.costo)}</td></tr>`;
+  });
+  h+=`<tr class="tot-row"><td class="left">TOTAL</td><td>${fmtN(tM,0)}</td><td>${fmt(tC)}</td></tr></tbody></table>`;
+  abrirModal('Pool "'+poolLabel+'"',cicloActivo+' · Actividades que consumen esta tarifa ($/Mz='+(imp.costoMz!=null?fmt(imp.costoMz,2):'—')+') · Clic en una actividad → desglose por Ciclo/Finca',h);
+}
+
+/* ---- Abrir desglose de Implemento desde la tabla de Detalle por Actividad (encuentra el pool y resalta la actividad) ---- */
+function abrirDesgloseImplementoActividad(act){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const imp=m.costoImplemento.find(i=>i.acts.includes(act));
+  if(!imp){ abrirModal(act,cicloActivo,'<p style="color:var(--ink3);padding:.5rem 0">Esta actividad no tiene un pool de implemento asociado.</p>'); return; }
+  abrirConsumidoresPool(imp.label,act);
+}
+
+/* ---- Desglose de una actividad por Ciclo × Finca (usado desde Memoria de Cálculo) ---- */
+/* ---- Detalle de las fincas "sin match" que arman el ajuste de una actividad ---- */
+function abrirDetalleSinFinca(act){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const año=añoDe(cicloActivo);
+  const cultivosFiltro=(!cultivoActivo||cultivoActivo.includes('Todos')||cultivoActivo.length===0)?null:cultivoActivo;
+  const fincasConocidas=new Set((RELACIONES_CACHE||[]).map(r=>norm(r.Finca)));
+  const esMz=PRECIO_MZ[act]!=null;
+
+  // 1) Recolectar nombres de finca "desconocida" (no están en RelacionCicloFinca) para esta actividad
+  const nombres=new Set();
+  ORIGEN_CACHE.forEach(r=>{
+    const c=r.x_studio_ciclo; if(!c||!c[1]||añoDe(c[1])!==año) return;
+    const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+    const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+    const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+    const f=r.x_studio_finca; if(!f||!f[1]) return;
+    if(!fincasConocidas.has(norm(f[1]))) nombres.add(f[1]);
+  });
+  CO_CACHE.forEach(r=>{
+    if(añoDe(get(r,'ciclo'))!==año) return;
+    if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+    if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+    if(norm(get(r,'actividad'))!==norm(act)) return;
+    const f=get(r,'finca'); if(!f) return;
+    if(!fincasConocidas.has(norm(f))) nombres.add(f);
+  });
+
+  // 2) Para cada finca desconocida: Mz/HM/Litros reales (año, todos cultivos) -> costo; y Cantidad/Ingreso filtrados por cultivo
+  const filas=[...nombres].map(finca=>{
+    const fincaNorm=norm(finca);
+    const mzMap={};
+    ORIGEN_CACHE.forEach(r=>{
+      const c=r.x_studio_ciclo; if(!c||!c[1]||añoDe(c[1])!==año) return;
+      const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+      const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+      const f=r.x_studio_finca; if(!f||norm(f[1])!==fincaNorm) return;
+      const a=r.x_studio_activiadad_realizada; const an=a?a[1]:'Sin actividad';
+      mzMap[an]=(mzMap[an]||0)+(r.x_studio_avance_mzn||0);
+    });
+    const hmMap={}; const ltsManiMap={};
+    CO_CACHE.forEach(r=>{
+      if(añoDe(get(r,'ciclo'))!==año) return;
+      if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+      if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+      if(norm(get(r,'finca'))!==fincaNorm) return;
+      const a=get(r,'actividad')||'Sin actividad';
+      const cat=get(r,'categoria equipo')||'';
+      hmMap[a+'|'+cat]=(hmMap[a+'|'+cat]||0)+toNum(get(r,'hme','hm'));
+      if(norm(get(r,'ciclo'))===norm(`Mani ${año}`)) ltsManiMap[a]=(ltsManiMap[a]||0)+toNum(get(r,'cantidad diesel ltrs'));
+    });
+    const c=m.costosDeActividad(act,mzMap,hmMap,ltsManiMap);
+
+    let metrica=0,ingreso=0;
+    if(esMz){
+      ORIGEN_CACHE.forEach(r=>{
+        const cc=r.x_studio_ciclo; if(!cc||!cc[1]) return;
+        if(cultivosFiltro){ if(!cultivosFiltro.includes(cc[1])) return; } else if(añoDe(cc[1])!==año) return;
+        const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+        const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+        const f=r.x_studio_finca; if(!f||norm(f[1])!==fincaNorm) return;
+        const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+        metrica+=r.x_studio_avance_mzn||0;
+      });
+      ingreso=metrica*PRECIO_MZ[act];
+    } else {
+      FAM_ORDEN.forEach(fam=>{
+        let hm=0;
+        CO_CACHE.forEach(r=>{
+          const cc=get(r,'ciclo');
+          if(cultivosFiltro){ if(!cultivosFiltro.some(s=>norm(s)===norm(cc))) return; } else if(añoDe(cc)!==año) return;
+          if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+          if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+          if(norm(get(r,'finca'))!==fincaNorm) return;
+          if(norm(get(r,'actividad'))!==norm(act)) return;
+          if(norm(get(r,'categoria equipo'))!==norm(fam)) return;
+          hm+=toNum(get(r,'hme','hm'));
+        });
+        metrica+=hm; ingreso+=hm*PRECIO_HM_FAMILIA[fam];
+      });
+    }
+    return {finca,metrica,unidad:esMz?'Mz':'HM',ingreso,...c};
+  }).sort((a,b)=>b.costoTotal-a.costoTotal);
+
+  let h=`<table><thead><tr><th class="left">Finca (sin match en RelacionCicloFinca)</th><th>Cantidad</th><th>Ingreso</th><th>Costo</th></tr></thead><tbody>`;
+  let tM=0,tI=0,tC=0;
+  filas.forEach(f=>{ tM+=f.metrica;tI+=f.ingreso;tC+=f.costoTotal;
+    h+=`<tr><td class="left">${f.finca}</td><td>${fmtN(f.metrica,f.unidad==='Mz'?0:1)} ${f.unidad}</td><td>${fmt(f.ingreso)}</td><td>${fmt(f.costoTotal)}</td></tr>`;
+  });
+  if(!filas.length) h+=`<tr><td class="left" colspan="4" style="color:var(--ink3)">No se encontraron fincas sin match para esta actividad.</td></tr>`;
+  h+=`<tr class="tot-row"><td class="left">TOTAL</td><td>${fmtN(tM,esMz?0:1)}</td><td>${fmt(tI)}</td><td>${fmt(tC)}</td></tr></tbody></table>`;
+  abrirModal('Fincas sin match · '+act,cicloActivo+' · Registros de Origen Actividades/Control Operativo cuya finca no está en DW_InfoAgro_RelacionCicloFinca',h);
+}
+
+
+function abrirDesgloseCicloFinca(act,modo,key){
+  const m=MODEL[cicloActivo]; if(!m) return;
+  const año=añoDe(cicloActivo);
+  let rate,unidad;
+  if(modo==='tractor'){ rate=m.costoTractor[key].costoHM; unidad='HM'; }
+  else { const imp=m.costoImplemento.find(i=>i.label===key); rate=imp?imp.costoMz:null; unidad='Mz'; }
+
+  const grupos={}; // ciclo -> {finca -> cantidad}
+  if(modo==='tractor'){
+    CO_CACHE.forEach(r=>{
+      if(añoDe(get(r,'ciclo'))!==año) return;
+      if(norm(get(r,'compañia','compañía'))!=='division agricola comasa') return;
+      if(norm(get(r,'proveedor del servicio'))!=='comasa') return;
+      if(norm(get(r,'actividad'))!==norm(act)) return;
+      if(norm(get(r,'categoria equipo'))!==norm(key)) return;
+      const ciclo=get(r,'ciclo')||'(sin ciclo)';
+      const finca=get(r,'finca')||'(sin finca)';
+      grupos[ciclo]=grupos[ciclo]||{};
+      grupos[ciclo][finca]=(grupos[ciclo][finca]||0)+toNum(get(r,'hme','hm'));
+    });
+  } else {
+    ORIGEN_CACHE.forEach(r=>{
+      const c=r.x_studio_ciclo; if(!c||!c[1]||añoDe(c[1])!==año) return;
+      const comp=r.x_studio_compaia; if(!comp||norm(comp[1])!=='division agricola comasa') return;
+      const p=r.x_studio_proveedor_del_servicio; if(!p||norm(p[1])!=='comasa') return;
+      const a=r.x_studio_activiadad_realizada; if(!a||a[1]!==act) return;
+      const ciclo=c[1];
+      const f=r.x_studio_finca; const finca=f?f[1]:'(sin finca)';
+      grupos[ciclo]=grupos[ciclo]||{};
+      grupos[ciclo][finca]=(grupos[ciclo][finca]||0)+(r.x_studio_avance_mzn||0);
+    });
+  }
+
+  const ciclos=Object.keys(grupos).sort((a,b)=>{
+    const aMani=norm(a).startsWith('mani'), bMani=norm(b).startsWith('mani');
+    if(aMani&&!bMani) return -1; if(bMani&&!aMani) return 1;
+    return a.localeCompare(b);
+  });
+
+  let h=`<table><thead><tr><th class="left">Ciclo / Finca</th><th>${unidad}</th><th>Costo $</th></tr></thead><tbody>`;
+  let totalCant=0,totalCosto=0;
+  if(!ciclos.length) h+=`<tr><td class="left" colspan="3" style="color:var(--ink3)">Sin registros.</td></tr>`;
+  ciclos.forEach(ciclo=>{
+    h+=`<tr class="sub-hdr"><td class="left" colspan="3">${ciclo}</td></tr>`;
+    let subCant=0;
+    Object.entries(grupos[ciclo]).sort((a,b)=>b[1]-a[1]).forEach(([finca,cant])=>{
+      const costo=rate!=null?cant*rate:0;
+      subCant+=cant;
+      h+=`<tr><td class="left" style="padding-left:18px">${finca}</td><td>${fmtN(cant,unidad==='Mz'?0:1)}</td><td>${fmt(costo)}</td></tr>`;
+    });
+    const subCosto=rate!=null?subCant*rate:0;
+    totalCant+=subCant; totalCosto+=subCosto;
+    h+=`<tr class="tot-row"><td class="left">Subtotal ${ciclo}</td><td>${fmtN(subCant,unidad==='Mz'?0:1)}</td><td>${fmt(subCosto)}</td></tr>`;
+  });
+  h+=`<tr class="tot-row" style="font-size:12.5px"><td class="left">TOTAL</td><td>${fmtN(totalCant,unidad==='Mz'?0:1)}</td><td>${fmt(totalCosto)}</td></tr>`;
+  h+='</tbody></table>';
+  abrirModal(act,cicloActivo+' · Desglose por Ciclo y Finca ('+(rate!=null?fmt(rate,2):'—')+'/'+unidad+')',h);
+}
+
+function closeModal(){document.getElementById('mbg').classList.remove('show');}
+document.getElementById('mbg').addEventListener('click',e=>{if(e.target.id==='mbg')closeModal();});
+
+init();
+</script>
+</body>
+</html>
