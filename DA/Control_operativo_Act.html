@@ -10,11 +10,12 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 :root{
   --nav-w:200px; --nav-w-collapsed:52px;
-  --bg-app:#f4f7f5; --bg-card:#fff; --text-main:#1e293b; --text-muted:#475569; --border-light:#e2e8f0;
-  --grad-header:linear-gradient(135deg,#1b4332 0%,#2d6a4f 50%,#40916c 100%);
-  --brand-primary:#1b4332; --brand-secondary:#40916c; --brand-accent:#e76f51;
-  --shadow-sm:0 2px 10px -2px rgba(45,106,79,.05); --shadow-md:0 4px 15px -5px rgba(27,67,50,.08);
-  --ok-bg:#d1fae5; --ok-text:#065f46; --warn-bg:#fef3c7; --warn-text:#b45309; --bad-bg:#fee2e2; --bad-text:#991b1b;
+  --bg-app:#F4F7F6; --bg-card:#fff; --text-main:#22332F; --text-muted:#70837C; --border-light:#D6DDDC;
+  --grad-header:linear-gradient(135deg,#1C3C38 0%,#274843 25%,#385A54 65%,#5C776D 100%);
+  --brand-primary:#1C3C38; --brand-secondary:#385A54; --brand-accent:#E07A38; --brand-accent-hover:#C86527; --brand-gold:#F09A52;
+  --radius-lg:18px;
+  --shadow-sm:0 4px 14px -4px rgba(28,60,56,.08); --shadow-md:0 10px 35px rgba(0,0,0,.08);
+  --ok-bg:#E8F5E9; --ok-text:#3C8C61; --warn-bg:#FFF8E1; --warn-text:#D5A021; --bad-bg:#FFEBEE; --bad-text:#C94E4E;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-main);font-size:12px;overflow-x:hidden;height:100vh;display:flex;}
@@ -37,20 +38,15 @@ body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-ma
 .nav-item:hover{background:rgba(255,255,255,.08);color:#fff;}
 .nav-item.active{background:rgba(255,255,255,.08);color:#fff;border-left-color:var(--brand-accent);border-radius:0 7px 7px 0;}
 .nav-icon{font-size:15px;flex-shrink:0;width:20px;text-align:center;}
+.icono-svg{width:17px;height:17px;flex-shrink:0;color:currentColor;vertical-align:-3px;}
 .nav-text{overflow:hidden;white-space:nowrap;}
 
 /* ===== MAIN ===== */
-.main{margin-left:var(--nav-w);width:calc(100% - var(--nav-w));height:100vh;display:flex;flex-direction:column;transition:margin-left .25s,width .25s;overflow:hidden;min-width:0;
-  background-color:var(--bg-app);
-  background-image:radial-gradient(circle at 12% 15%,rgba(64,145,108,.28),transparent 40%),
-                    radial-gradient(circle at 88% 20%,rgba(64,145,108,.16),transparent 38%),
-                    radial-gradient(circle at 25% 85%,rgba(231,111,81,.20),transparent 40%),
-                    radial-gradient(circle at 90% 88%,rgba(231,111,81,.16),transparent 40%);
-  background-attachment:fixed;}
+.main{margin-left:var(--nav-w);width:calc(100% - var(--nav-w));height:100vh;display:flex;flex-direction:column;transition:margin-left .25s,width .25s;overflow:hidden;min-width:0;}
 .main.expanded{margin-left:var(--nav-w-collapsed);width:calc(100% - var(--nav-w-collapsed));}
 
 /* ===== TOPBAR ===== */
-.topbar{background:rgba(255,255,255,.65);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.5);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;flex-shrink:0;min-height:44px;}
+.topbar{background:#fff;border-bottom:1px solid var(--border-light);padding:6px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;flex-shrink:0;min-height:44px;}
 .topbar-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .page-title{font-size:13px;font-weight:700;color:var(--brand-primary);}
 .live-indicator{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-muted);}
@@ -60,7 +56,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-ma
 .btn-update:hover{opacity:.9;}
 
 /* ===== FILTER BAR ===== */
-.filter-bar{background:rgba(255,255,255,.65);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border-bottom:1px solid rgba(255,255,255,.5);padding:5px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;position:relative;z-index:50;}
+.filter-bar{background:#fff;border-bottom:1px solid var(--border-light);padding:5px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0;position:relative;z-index:50;}
 .filter-group{display:flex;flex-direction:column;gap:2px;position:relative;}
 .filter-group label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;}
 .form-control{background:#fff;border:1px solid var(--border-light);border-radius:5px;color:var(--text-main);font-size:11px;padding:3px 7px;height:24px;font-family:inherit;font-weight:500;outline:none;cursor:pointer;min-width:80px;max-width:100%;}
@@ -75,20 +71,19 @@ body{font-family:'Inter',sans-serif;background:var(--bg-app);color:var(--text-ma
 .filter-divider{width:1px;height:28px;background:var(--border-light);margin:0 4px;}
 
 /* ===== CONTENT AREA ===== */
-.content-area{flex:1;overflow-y:auto;overflow-x:auto;padding:10px 14px;-webkit-overflow-scrolling:touch;}
-table.report-table,table.heat-table{min-width:600px;}
+.content-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:10px 14px;-webkit-overflow-scrolling:touch;}
 .page{display:none;} .page.active{display:block;}
 
 /* ===== CARDS & GRIDS ===== */
 .section-title{font-size:11px;font-weight:700;color:var(--brand-primary);text-transform:uppercase;margin:10px 0 6px;border-left:3px solid #52b788;padding-left:7px;}
-.chart-card{background:rgba(255,255,255,.6);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.7);border-radius:14px;padding:8px 12px;margin-bottom:8px;box-shadow:0 6px 20px -6px rgba(27,67,50,.12);overflow:hidden;min-width:0;}
+.chart-card{background:#fff;border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:8px 12px;margin-bottom:8px;box-shadow:var(--shadow-md);overflow:hidden;min-width:0;}
 .chart-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px;border-bottom:1px solid var(--border-light);padding-bottom:4px;}
 .chart-title{font-size:11px;font-weight:700;color:var(--text-main);}
 .chart-desc{font-size:10px;color:var(--text-muted);margin-top:1px;}
 .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:8px;}
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:10px;}
-.kpi-card{background:rgba(255,255,255,.6);backdrop-filter:blur(18px) saturate(180%);-webkit-backdrop-filter:blur(18px) saturate(180%);border:1px solid rgba(255,255,255,.7);border-radius:14px;padding:8px 12px;border-top:3px solid var(--brand-primary);box-shadow:0 6px 20px -6px rgba(27,67,50,.12);min-width:0;overflow:hidden;}
+.kpi-card{background:#fff;border:1px solid var(--border-light);border-radius:var(--radius-lg);padding:8px 12px;border-top:3px solid var(--brand-primary);box-shadow:var(--shadow-md);min-width:0;overflow:hidden;}
 .kpi-card.bad{border-top-color:#e74c3c;} .kpi-card.warn{border-top-color:var(--brand-accent);}
 .kpi-title{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.02em;}
 .kpi-value{font-size:19px;font-weight:700;color:var(--brand-primary);line-height:1.1;margin:3px 0;}
@@ -136,7 +131,7 @@ table.heat-table td:first-child{text-align:left;font-weight:600;color:var(--bran
 /* Modal */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000;align-items:center;justify-content:center;padding:16px;}
 .modal-overlay.open{display:flex;}
-.modal{background:rgba(255,255,255,.75);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,.6);border-radius:12px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;}
+.modal{background:#fff;border-radius:12px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);display:flex;flex-direction:column;}
 .modal-header{background:var(--grad-header);padding:12px 18px;border-radius:12px 12px 0 0;display:flex;justify-content:space-between;align-items:flex-start;position:sticky;top:0;z-index:10;}
 .modal-header-left h2{font-size:13px;font-weight:700;color:#fff;margin:0;}
 .modal-header-left p{font-size:10px;color:#b7e4c7;margin:2px 0 0;}
@@ -150,18 +145,6 @@ table.heat-table td:first-child{text-align:left;font-weight:600;color:var(--bran
 .ciclo-check input{display:none;}
 .ciclo-check.selected{color:#fff;}
 input.factor-input{width:70px;padding:2px 5px;font-size:11px;border:1px solid var(--border-light);border-radius:4px;text-align:right;font-family:inherit;}
-
-/* ===== A11Y: foco visible, cursor y reduced-motion (UI UX Pro Max checklist) ===== */
-[onclick]{cursor:pointer;}
-.nav-item:focus-visible,.toggle-btn:focus-visible,.btn-update:focus-visible,
-.form-control:focus-visible,.msel-btn:focus-visible,.modal-close:focus-visible,
-.ciclo-check:focus-visible,.mzs-toggle-btn:focus-visible,.mzs-chip:focus-visible,
-td[onclick]:focus-visible,.day-tab-btn:focus-visible{
-  outline:2px solid var(--brand-accent);outline-offset:2px;
-}
-@media (prefers-reduced-motion: reduce){
-  *{transition-duration:.001ms!important;animation-duration:.001ms!important;}
-}
 
 /* ===== RESPONSIVE ===== */
 @media(max-width:1200px){
@@ -223,7 +206,11 @@ canvas{max-width:100%;}
   box-shadow:none;
 }
 /* ===== MZS: Análisis por Mz de Siembra (estilos propios, sin chocar con clases existentes) ===== */
-.mzs-filter-card{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;}
+.mzs-filter-card{display:flex;flex-direction:column;gap:10px;}
+.mzs-filter-header{display:flex;align-items:center;justify-content:space-between;width:100%;}
+.mzs-filter-body{display:flex;align-items:flex-end;gap:22px;flex-wrap:wrap;}
+.mzs-filter-toggle-btn{background:#eef1ee;border:none;border-radius:6px;padding:5px 12px;font-size:10px;font-weight:700;color:var(--brand-primary);cursor:pointer;font-family:inherit;}
+.mzs-filter-toggle-btn:hover{background:#e2e8e5;}
 .mzs-fgroup{display:flex;flex-direction:column;gap:4px;}
 .mzs-fgroup label{font-size:9px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;}
 .mzs-toggle-group{display:inline-flex;background:#eef1ee;border-radius:20px;padding:3px;gap:2px;}
@@ -253,6 +240,14 @@ table.mzs-matrix td:first-child,table.mzs-matrix th:first-child{cursor:default;}
 </head>
 
 <body>
+<svg style="display:none" aria-hidden="true">
+  <symbol id="ic-leaf" viewBox="0 0 24 24"><path d="M5 21c0-8 6-16 16-16 0 10-8 16-16 16Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M5 21c2-4 5-7 9-9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="ic-clipboard" viewBox="0 0 24 24"><rect x="6" y="4" width="12" height="17" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="9" y="2.3" width="6" height="3" rx="1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 11h6M9 15h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="ic-sprout" viewBox="0 0 24 24"><path d="M12 21v-8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 13c0-4-3-6-7-6 0 4 3 6 7 6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M12 10c0-3 2-5 6-5 0 3-2 5-6 5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="ic-map" viewBox="0 0 24 24"><path d="M9 4 4 6v14l5-2 6 2 5-2V4l-5 2-6-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="ic-settings" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 12h4M10 12h10M4 17h13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="16" cy="7" r="2" fill="var(--bg-app)" stroke="currentColor" stroke-width="1.8"/><circle cx="7" cy="12" r="2" fill="var(--bg-app)" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="17" r="2" fill="var(--bg-app)" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="ic-download" viewBox="0 0 24 24"><path d="M12 3v12M8 11l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+</svg>
 
 <!-- SIDEBAR -->
 <nav class="sidebar" id="sidebar">
@@ -266,19 +261,19 @@ table.mzs-matrix td:first-child,table.mzs-matrix th:first-child{cursor:default;}
   <div class="nav-section">
     <div class="nav-label">Principal</div>
     <div class="nav-item active" onclick="showPage('resumen')" id="nav-resumen">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span class="nav-text">Resumen Operativo</span>
+      <span class="nav-icon"><svg class="icono-svg"><use href="#ic-clipboard"/></svg></span><span class="nav-text">Resumen Operativo</span>
     </div>
   </div>
   <div class="nav-section">
     <div class="nav-label">Análisis</div>
     <div class="nav-item" onclick="showPage('avanzado')" id="nav-avanzado">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4-2 7-6 7-11a7 7 0 0 0-14 0c0 5 3 9 7 11Z"/><circle cx="12" cy="11" r="2.5"/></svg></span><span class="nav-text">Análisis por Mz de Siembra</span>
+      <span class="nav-icon"><svg class="icono-svg"><use href="#ic-sprout"/></svg></span><span class="nav-text">Análisis por Mz de Siembra</span>
     </div>
     <div class="nav-item" onclick="showPage('equipos')" id="nav-equipos">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h10V6H5L3 9v4Z"/><circle cx="6.5" cy="17.5" r="1.8"/><circle cx="15.5" cy="17.5" r="1.8"/><path d="M13 13h4l3 3v1.5h-2"/></svg></span><span class="nav-text">Equipos</span>
+      <span class="nav-icon"><svg class="icono-svg"><use href="#ic-settings"/></svg></span><span class="nav-text">Equipos</span>
     </div>
     <div class="nav-item" onclick="showPage('subcontratados')" id="nav-subcontratados">
-      <span class="nav-icon"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5 4 19M11 11l6.5-6.5a2.1 2.1 0 0 1 3 3L14 14M8.5 14.5l3.5 3.5a2 2 0 0 0 3 0l.5-.5M7 13l-2.5-2.5a2 2 0 0 1 0-3l.5-.5a2 2 0 0 1 3 0L11 9.5"/></svg></span><span class="nav-text">Servicios Subcontratados</span>
+      <span class="nav-icon"><svg class="icono-svg"><use href="#ic-map"/></svg></span><span class="nav-text">Servicios Subcontratados</span>
     </div>
   </div>
   <div class="sidebar-toggle">
@@ -322,6 +317,7 @@ table.mzs-matrix td:first-child,table.mzs-matrix th:first-child{cursor:default;}
       <select id="sel-compare" class="form-control" onchange="render()"><option value="">Ninguno</option></select>
     </div>
   </div>
+  <div id="ciclo-anterior-info" style="padding:2px 14px 0;font-size:11px;color:var(--text-muted)"></div>
 
   <!-- FILTROS EQUIPOS -->
   <div class="filter-bar" id="filters-eq" style="display:none">
@@ -390,6 +386,28 @@ table.mzs-matrix td:first-child,table.mzs-matrix th:first-child{cursor:default;}
 </div>
 
 </div>
+  </div>
+</div>
+
+<!-- MODAL EFICIENCIA POR ACTIVIDAD -> DETALLE POR EQUIPO -->
+<div class="modal-overlay" id="eqeff-modal-overlay" onclick="if(event.target===this)eq_eff_closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left"><h2 id="eqeff-modal-title">Detalle por equipo</h2><p id="eqeff-modal-sub"></p></div>
+      <button class="modal-close" onclick="eq_eff_closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="eqeff-modal-body"></div>
+  </div>
+</div>
+
+<!-- MODAL HM/MZ POR ACTIVIDAD -> DETALLE TRACTORES -->
+<div class="modal-overlay" id="acthm-modal-overlay" onclick="if(event.target===this)act_hm_closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-header-left"><h2 id="acthm-modal-title">Detalle por tractor</h2><p id="acthm-modal-sub"></p></div>
+      <button class="modal-close" onclick="act_hm_closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="acthm-modal-body"></div>
   </div>
 </div>
 
@@ -464,7 +482,7 @@ const TAB1='Avances y combustible del 2022 a la fecha';
 const TAB2='Combustible infoagro';
 const SECTORES_VALIDOS=['Sector 1','Sector 2','Sector 3','Sector 4'];
 const CAT_COLORS={'Tractor Pequeño':'#2E6FBA','Tractor Mediano':'#3B9F6F','Tractor Grande':'#1b4332','Combinas':'#E0A52E','Vehículo Liviano':'#7B5FC4','Sin categoría':'#888780'};
-const CICLO_COLORS_MAP={'Mani 2022':'#3B9F6F','Mani 2023':'#2E6FBA','Mani 2024':'#D9445E','Mani 2025':'#E0A52E','Mani 2026':'#7B5FC4'};
+const CICLO_COLORS_MAP={'Mani 2022':'#5C776D','Mani 2023':'#2F81A9','Mani 2024':'#C94E4E','Mani 2025':'#E07A38','Mani 2026':'#1C3C38'};
 const CHART_COLORS=['#2E6FBA','#3B9F6F','#D9445E','#E0A52E','#7B5FC4','#e76f51','#40916c','#BA7517','#72243E','#534AB7'];
 
 /* ===== CONSTANTES FALTANTES DEL CO ===== */
@@ -496,6 +514,8 @@ const MESES_ES={ene:0,feb:1,mar:2,abr:3,may:4,jun:5,jul:6,ago:7,sep:8,set:8,oct:
 /* ===================== SHARED HELPERS ===================== */
 let charts={};
 let dayModalGroups=[], dayModalTituloAct='';
+let ALL_CICLOS=[];
+let actHmModalRows2=[];
 function destroy(id){if(charts[id]){try{charts[id].destroy();}catch(e){}}}
 function toNum(v){if(!v&&v!==0)return 0;const n=parseFloat(String(v).replace(/,/g,''));return isNaN(n)?0:n;}
 function get(o,...keys){for(const k of keys){if(o[k]!==undefined&&o[k]!=='')return o[k];}return '';}
@@ -763,7 +783,7 @@ function afterSelChange(){
   render();
 }
 
-function onCicloChange(){
+function onCicloChange(preserve){
   const ciclo=document.getElementById('sel-ciclo').value;
   state.ciclo=ciclo;
   const SECTORES_VALIDOS=['Sector 1','Sector 2','Sector 3','Sector 4'];
@@ -772,10 +792,18 @@ function onCicloChange(){
   const isCompaña=(r)=>norm(get(r,'compañia','compañía'))==='division agricola comasa';
   const provs=[...new Set(raw1.filter(r=>isCompaña(r)&&get(r,'ciclo')===ciclo).map(r=>get(r,'proveedor del servicio')).filter(Boolean))].sort();
   state.actsAvail=acts; state.secsAvail=secs; state.provsAvail=provs;
-  state.actSel=[acts.includes('Arado/Romplona')?'Arado/Romplona':acts[0]];
-  state.secSel=[];
-  const validProv=state.provSel.filter(p=>provs.includes(p));
-  state.provSel=validProv.length>0?validProv:(provs.includes('Comasa')?['Comasa']:provs.slice(0,1));
+  if(preserve && preserve.ciclo===ciclo){
+    const keepAct=preserve.actSel.filter(a=>acts.includes(a));
+    state.actSel=keepAct.length?keepAct:[acts.includes('Arado/Romplona')?'Arado/Romplona':acts[0]];
+    state.secSel=preserve.secSel.filter(s=>secs.includes(s));
+    const keepProv=preserve.provSel.filter(p=>provs.includes(p));
+    state.provSel=keepProv.length?keepProv:(provs.includes('Comasa')?['Comasa']:provs.slice(0,1));
+  } else {
+    state.actSel=[acts.includes('Arado/Romplona')?'Arado/Romplona':acts[0]];
+    state.secSel=[];
+    const validProv=state.provSel.filter(p=>provs.includes(p));
+    state.provSel=validProv.length>0?validProv:(provs.includes('Comasa')?['Comasa']:provs.slice(0,1));
+  }
   state.crossFinca=null; state.crossCat=null; state.crossWeek=null;
   buildMultiselect('actividad',acts,state.actSel);
   buildMultiselect('sector',secs,state.secSel);
@@ -783,6 +811,7 @@ function onCicloChange(){
   const cmp=document.getElementById('sel-compare'); cmp.innerHTML='<option value="">Ninguno</option>';
   const ciclosAll=[...new Set(raw1.filter(isEmpresa).map(r=>get(r,'ciclo')))].filter(c=>c&&c!==ciclo).sort(cicloSort);
   ciclosAll.forEach(c=>{ const o=document.createElement('option'); o.value=c; o.textContent=c; cmp.appendChild(o); });
+  if(preserve && preserve.compareCiclo && ciclosAll.includes(preserve.compareCiclo)){ cmp.value=preserve.compareCiclo; state.compareCiclo=preserve.compareCiclo; } else { state.compareCiclo=''; }
   render();
 }
 
@@ -794,9 +823,28 @@ async function fetchTab(tabName,range){
   return json.values||[];
 }
 
+function cicloAnterior(ciclo){
+  const info=cicloInfo(ciclo);
+  const candidatos=ALL_CICLOS.filter(c=>{ const i=cicloInfo(c); return i.rank===info.rank && i.base===info.base && i.year<info.year; });
+  if(!candidatos.length) return null;
+  candidatos.sort((a,b)=>cicloInfo(b).year-cicloInfo(a).year);
+  return candidatos[0];
+}
+function renderCicloAnteriorInfo(){
+  const el=document.getElementById('ciclo-anterior-info'); if(!el) return;
+  const cPrev=cicloAnterior(state.ciclo);
+  if(!cPrev || !state.actSel.length){ el.textContent=''; return; }
+  const rows=raw1.filter(r=>norm(get(r,'compañia','compañía'))==='division agricola comasa' && get(r,'ciclo')===cPrev && state.actSel.includes(get(r,'actividad')));
+  const fechas=rows.map(r=>parseDate(get(r,'fecha'))).filter(Boolean).sort((a,b)=>a-b);
+  const tituloAct=state.actSel.length>1?state.actSel.join(' + '):state.actSel[0];
+  if(!fechas.length){ el.innerHTML=`<b>${tituloAct}</b> en <b>${cPrev}</b>: sin registros`; return; }
+  el.innerHTML=`<b>${tituloAct}</b> en <b>${cPrev}</b>: ${fmtShort(fechas[0])} → ${fmtShort(fechas[fechas.length-1])}`;
+}
+
 function render(){
   if(!raw1.length) return;
   updateMselLabel('actividad'); updateMselLabel('sector'); updateMselLabel('proveedor'); renderChips();
+  renderCicloAnteriorInfo();
   const ciclo=state.ciclo, actSel=state.actSel, periodo=state.periodo;
   if(actSel.length===0){
     document.getElementById('page-resumen').innerHTML='<div class="status-msg">Selecciona al menos una actividad para ver el dashboard.</div>';
@@ -926,7 +974,7 @@ function renderResumen(groups){
     </div>
     <div class="grid-2">
       <div class="chart-card"><div class="chart-title">Lts/Mz por actividad vs presupuesto - click para cambiar actividad</div><div class="ch-md"><canvas id="c6"></canvas></div><div class="legend"><span><span class="ldot" style="background:#2d6a4f"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
-      <div class="chart-card"><div class="chart-title">HM/Mz por actividad vs presupuesto - click para cambiar actividad</div><div class="ch-md"><canvas id="c7"></canvas></div><div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
+      <div class="chart-card"><div class="chart-title">HM/Mz por actividad vs presupuesto - click para ver detalle por tractor</div><div class="ch-md"><canvas id="c7"></canvas></div><div class="legend"><span><span class="ldot" style="background:#185FA5"></span>Real</span><span><span class="ldot" style="background:#e76f51"></span>Presupuesto</span></div></div>
     </div>
     <div class="section-title">Mapa de calor — Eficiencia por actividad vs presupuesto</div>
     <div class="chart-card" style="overflow:auto">
@@ -1192,11 +1240,12 @@ function drawResumenCharts(groups,unionDates,labels){
     onClick:(evt,els)=>{ if(els.length){ state.actSel=[actsPresent[els[0].index]]; afterSelChange(); } }}});
 
   destroy('c7');
+  actHmModalRows2=rows2All;
   charts.c7=new Chart(document.getElementById('c7'),{type:'bar',data:{labels:actsPresent,datasets:[
     {label:'Real',data:actsPresent.map(a=>+((actHm[a]||0)/actMz[a]).toFixed(3)),backgroundColor:'#185FA5',borderRadius:4,datalabels:barLabelOpts()},
     {label:'Presupuesto',data:actsPresent.map(a=>PRESUPUESTOS[a].hm),backgroundColor:'#e76f51',borderRadius:4,datalabels:barLabelOpts()}
   ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10, weight:'500'}}},y:{ticks:{font:{size:10}},beginAtZero:true}},
-    onClick:(evt,els)=>{ if(els.length){ state.actSel=[actsPresent[els[0].index]]; afterSelChange(); } }}});
+    onClick:(evt,els)=>{ if(els.length){ act_hm_openModal(actsPresent[els[0].index]); } }}});
 
   destroy('c8');
   const byCat={}; groups.forEach(g=>g.r2.forEach(r=>{ const c=get(r,'categoria equipo')||'Sin categoria'; byCat[c]=(byCat[c]||0)+rowHme(r); }));
@@ -1273,6 +1322,7 @@ function buildHeatmapActividad(groups){
       <tr>
         <th rowspan="2" style="text-align:left">Actividad</th>
         <th rowspan="2" style="text-align:right">Mz avance</th>
+        <th rowspan="2" style="text-align:right">Litros totales</th>
         <th colspan="3" style="background:#1b4332;text-align:center;border-left:2px solid rgba(255,255,255,.2)">Lts/Mz</th>
         <th colspan="3" style="background:#185FA5;text-align:center;border-left:2px solid rgba(255,255,255,.2)">HM/Mz</th>
       </tr>
@@ -1294,10 +1344,19 @@ function buildHeatmapActividad(groups){
     html+=`<tr>
       <td style="font-weight:600">${act}</td>
       <td style="text-align:right">${fmtN(d.mz,1)}</td>
+      <td style="text-align:right">${fmtN(d.lts,0)}</td>
       ${semCell(realLts,ppto?.lts,2)}
       ${semCell(realHm,ppto?.hm,3)}
     </tr>`;
   });
+  const totalLtsAll=acts.reduce((s,a)=>s+byAct[a].lts,0);
+  const totalMzAll=acts.reduce((s,a)=>s+byAct[a].mz,0);
+  html+=`<tr class="total">
+    <td>TOTAL</td>
+    <td style="text-align:right">${fmtN(totalMzAll,1)}</td>
+    <td style="text-align:right">${fmtN(totalLtsAll,0)}</td>
+    <td colspan="6"></td>
+  </tr>`;
   html+='</tbody></table>';
   wrap.innerHTML=html;
 }
@@ -1315,7 +1374,7 @@ function buildSiembra2026(groups){
   const PLACEHOLDER={
     'Rancho Pando':200,'Llano Verde':93,'La Laguna':288,'Montana':225,
     'Quinta Maria':171,'Palo de Pan':63,'San Martin':40,
-    'Santa Isabel':117,'Miramar':425,'San Luis':120,'La Concha':462,'Finca San Blas':1000
+    'Santa Isabel':117,'Miramar':425,'San Luis':120,'La Concha':462,'Finca San Blas':1000,'Roma':91
   };
   const TOTAL_PLAN=Object.values(PLACEHOLDER).reduce((a,b)=>a+b,0); // 4,069
 
@@ -1328,9 +1387,13 @@ function buildSiembra2026(groups){
   );
 
   const realByFinca={};
+  const fechasByFinca={};
   rawSiembra.forEach(r=>{
     const f=get(r,'finca'); if(!f) return;
     realByFinca[f]=(realByFinca[f]||0)+rowAvance(r);
+    const d=parseDate(get(r,'fecha')); if(!d) return;
+    if(!fechasByFinca[f]) fechasByFinca[f]={min:d,max:d};
+    else{ if(d<fechasByFinca[f].min) fechasByFinca[f].min=d; if(d>fechasByFinca[f].max) fechasByFinca[f].max=d; }
   });
 
   // Calcular avance promedio diario — SIN filtro de proveedor
@@ -1393,7 +1456,9 @@ function buildSiembra2026(groups){
     const pendiente=Math.max(0,plan-real);
     const diasF=avgDiario>0?Math.ceil(pendiente/avgDiario):null;
     const semaforo=pct>=80?'cell-ok':pct>=50?'cell-warn':'cell-bad';
-    return {finca,plan,real,pct,pendiente,diasF,semaforo};
+    const rango=fechasByFinca[finca];
+    const inicio=rango?fmtShort(rango.min):'-', fin=rango?fmtShort(rango.max):'-';
+    return {finca,plan,real,pct,pendiente,diasF,semaforo,inicio,fin};
   }).sort((a,b)=>b.pct-a.pct); // ordenar de mayor a menor cumplimiento
 
   let tbl=`<table class="report-table">
@@ -1404,9 +1469,11 @@ function buildSiembra2026(groups){
       <th>% Cumplimiento</th>
       <th>Mz pendientes</th>
       <th>Días restantes est.</th>
+      <th>Inicio</th>
+      <th>Fin</th>
     </tr></thead><tbody>`;
 
-  filas.forEach(({finca,plan,real,pct,pendiente,diasF,semaforo})=>{
+  filas.forEach(({finca,plan,real,pct,pendiente,diasF,semaforo,inicio,fin})=>{
     tbl+=`<tr>
       <td style="font-weight:600">${finca}</td>
       <td>${fmtN(plan,0)}</td>
@@ -1414,10 +1481,14 @@ function buildSiembra2026(groups){
       <td class="${semaforo}">${pct.toFixed(1)}%</td>
       <td>${fmtN(pendiente,1)}</td>
       <td style="text-align:right;color:var(--text-muted)">${diasF!=null?diasF:'-'}</td>
+      <td style="text-align:right;color:var(--text-muted)">${inicio}</td>
+      <td style="text-align:right;color:var(--text-muted)">${fin}</td>
     </tr>`;
   });
 
   // Fila de totales
+  const allFechas=rawSiembra.map(r=>parseDate(get(r,'fecha'))).filter(Boolean).sort((a,b)=>a-b);
+  const totalInicio=allFechas.length?fmtShort(allFechas[0]):'-', totalFin=allFechas.length?fmtShort(allFechas[allFechas.length-1]):'-';
   const totalPlan=Object.values(PLACEHOLDER).reduce((a,b)=>a+b,0);
   const totalPendiente=Math.max(0,totalPlan-totalReal);
   tbl+=`<tr class="total">
@@ -1427,6 +1498,8 @@ function buildSiembra2026(groups){
     <td class="${pctGlobal>=80?'cell-ok':pctGlobal>=50?'cell-warn':'cell-bad'}">${pctGlobal.toFixed(1)}%</td>
     <td>${fmtN(totalPendiente,1)}</td>
     <td style="text-align:right">${diasRestantes!=null?diasRestantes:'-'}</td>
+    <td style="text-align:right">${totalInicio}</td>
+    <td style="text-align:right">${totalFin}</td>
   </tr>`;
   tbl+='</tbody></table>';
 
@@ -1631,7 +1704,9 @@ function applyFiltersEq(){
   stateEq.provSel=[...document.querySelectorAll('#panel-proveedor-eq input:checked')].map(c=>c.value);
   if(!stateEq.provSel.length) stateEq.provSel=stateEq.provsAvail.includes('Comasa')?['Comasa']:stateEq.provsAvail.slice(0,1);
   const catChecked=[...document.querySelectorAll('#panel-categoria-eq input:checked')].map(c=>c.value);
+  const catChanged=catChecked.length && JSON.stringify([...catChecked].sort())!==JSON.stringify([...stateEq.catSel].sort());
   stateEq.catSel=catChecked.length?catChecked:stateEq.catSel;
+  if(catChanged && stateEq.eqSel){ stateEq.eqSel=null; renderEqChip(); }
   const actAll=document.querySelector('#panel-actividad-eq input[data-all]')?.checked;
   stateEq.actFiltSel=actAll?[]:[...document.querySelectorAll('#panel-actividad-eq input:not([data-all]):checked')].map(c=>c.value);
   buildMultiselectEq('sector-eq',stateEq.secsAvail,stateEq.secSel);
@@ -1896,6 +1971,7 @@ function renderContent(rows){
           const act=actEfList[els[0].index].act;
           stateEq.actSel=stateEq.actSel===act?null:act;
           renderActChip(); render();
+          eq_eff_openModal(act,rows);
         }
       }}});
 
@@ -2359,15 +2435,17 @@ async function fetchTabShared(tab,range){
 async function init(){
   const dot=document.getElementById('status-dot');
   dot.className='dot loading'; document.getElementById('update-time').textContent='Conectando...';
+  const preserve = raw1.length ? {ciclo:state.ciclo, actSel:[...state.actSel], secSel:[...state.secSel], provSel:[...state.provSel], compareCiclo:state.compareCiclo} : null;
   try{
     const [v1,v2]=await Promise.all([fetchTabShared(TAB1,'A1:M'),fetchTabShared(TAB2,'A1:T')]);
     raw1=rowsToObjects(v1);
     raw2=toObj(v2);
     // Poblar ciclos CO
     const ciclos=[...new Set(raw1.filter(isEmpresa).map(r=>get(r,'ciclo')))].filter(Boolean).sort(cicloSort);
+    ALL_CICLOS=ciclos;
     const sel=document.getElementById('sel-ciclo'); sel.innerHTML='';
     ciclos.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
-    const def=ciclos.find(c=>norm(c)==='mani 2026')||ciclos[ciclos.length-1]||ciclos[0];
+    const def=(preserve&&ciclos.includes(preserve.ciclo))?preserve.ciclo:(ciclos.find(c=>norm(c)==='mani 2026')||ciclos[ciclos.length-1]||ciclos[0]);
     if(def) sel.value=def;
     // Poblar ciclos SUBCONTRATADOS
     const selSubc=document.getElementById('sel-ciclo-subc'); selSubc.innerHTML='';
@@ -2377,9 +2455,9 @@ async function init(){
     const ciclosEq=[...new Set(raw2.filter(isCompaña).map(r=>get(r,'ciclo')))].filter(Boolean).sort(cicloSort);
     const selEq=document.getElementById('sel-ciclo-eq'); selEq.innerHTML='';
     ciclosEq.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;selEq.appendChild(o);});
-    const defEq=ciclosEq.find(c=>norm(c)==='mani 2026')||ciclosEq[ciclosEq.length-1]||ciclosEq[0];
+    const defEq=(preserve&&ciclosEq.includes(preserve.ciclo))?preserve.ciclo:(ciclosEq.find(c=>norm(c)==='mani 2026')||ciclosEq[ciclosEq.length-1]||ciclosEq[0]);
     if(defEq) selEq.value=defEq;
-    try{ onCicloChange(); } catch(e){ console.error('onCicloChange error:',e); document.getElementById('page-resumen').innerHTML='<div class="error-msg">Error en onCicloChange: '+e.message+'<br><small>'+e.stack+'</small></div>'; }
+    try{ onCicloChange(preserve); } catch(e){ console.error('onCicloChange error:',e); document.getElementById('page-resumen').innerHTML='<div class="error-msg">Error en onCicloChange: '+e.message+'<br><small>'+e.stack+'</small></div>'; }
     try{ onCicloEqChange(); } catch(e){ console.error('onCicloEqChange error:',e); }
     dot.className='dot';
     document.getElementById('update-time').textContent='Actualizado '+new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
@@ -2466,8 +2544,8 @@ function mzs_computeCycleData(ciclo,iniOverride,finOverride,usePlaceholder){
   const actsPresent=Object.keys(byAct).filter(a=>byAct[a].lts>0||byAct[a].hm>0).sort((a,b)=>{const ia=ACT_ORDER_LIST.indexOf(a),ib=ACT_ORDER_LIST.indexOf(b);return(ia<0?999:ia)-(ib<0?999:ib);});
 
   const byMonth={};
-  const ensure=(k)=>{ if(!byMonth[k]) byMonth[k]={lts:0,hm:0,mzSiembra:0,byAct:{},fincaMz:{},hasHm:false}; return byMonth[k]; };
-  rAll.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.lts+=rowLts(r); const a=get(r,'actividad'); o.byAct[a]=(o.byAct[a]||0)+rowLts(r); });
+  const ensure=(k)=>{ if(!byMonth[k]) byMonth[k]={lts:0,hm:0,mzSiembra:0,byAct:{},mzByAct:{},fincaMz:{},hasHm:false}; return byMonth[k]; };
+  rAll.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.lts+=rowLts(r); const a=get(r,'actividad'); o.byAct[a]=(o.byAct[a]||0)+rowLts(r); o.mzByAct[a]=(o.mzByAct[a]||0)+rowAvance(r); });
   rAllHm.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.hm+=rowHme(r); o.hasHm=true; });
   rSiembra.forEach(r=>{ const d=parseDate(get(r,'fecha')); const k=d.getMonth()+1; const o=ensure(k); o.mzSiembra+=rowAvance(r); const f=get(r,'finca')||'Sin finca'; o.fincaMz[f]=(o.fincaMz[f]||0)+rowAvance(r); });
 
@@ -2536,14 +2614,20 @@ function mzs_render(){
   }
   page.innerHTML=`
     <div class="chart-card mzs-filter-card">
-      <div class="mzs-fgroup"><label>Métrica</label><div class="mzs-toggle-group" id="mzs-metrica-toggle"></div></div>
-      <div class="mzs-fgroup"><label>Ciclos</label><div class="mzs-chip-row" id="mzs-ciclo-chips"></div></div>
-      <div class="mzs-fgroup"><label>Sector</label><div class="mzs-chip-row" id="mzs-sector-chips"></div></div>
-      <div class="mzs-fgroup" style="min-width:220px;flex:1;"><label id="mzs-mes-range-lbl">Meses Ene – Dic</label>
-        <div class="mzs-slider-wrap">
-          <div class="mzs-slider-track"><div class="mzs-slider-fill" id="mzs-slider-fill"></div></div>
-          <input type="range" min="1" max="12" step="1" id="mzs-rng-ini" class="mzs-slider-input" oninput="mzs_onSliderChange()">
-          <input type="range" min="1" max="12" step="1" id="mzs-rng-fin" class="mzs-slider-input" oninput="mzs_onSliderChange()">
+      <div class="mzs-filter-header">
+        <span class="section-title mt-0" style="margin:0">Filtros</span>
+        <button class="mzs-filter-toggle-btn" id="mzs-filter-toggle-btn" onclick="mzs_toggleFilters()">Ocultar filtros ▲</button>
+      </div>
+      <div class="mzs-filter-body" id="mzs-filter-body">
+        <div class="mzs-fgroup"><label>Métrica</label><div class="mzs-toggle-group" id="mzs-metrica-toggle"></div></div>
+        <div class="mzs-fgroup"><label>Ciclos</label><div class="mzs-chip-row" id="mzs-ciclo-chips"></div></div>
+        <div class="mzs-fgroup"><label>Sector</label><div class="mzs-chip-row" id="mzs-sector-chips"></div></div>
+        <div class="mzs-fgroup" style="min-width:220px;flex:1;"><label id="mzs-mes-range-lbl">Meses Ene – Dic</label>
+          <div class="mzs-slider-wrap">
+            <div class="mzs-slider-track"><div class="mzs-slider-fill" id="mzs-slider-fill"></div></div>
+            <input type="range" min="1" max="12" step="1" id="mzs-rng-ini" class="mzs-slider-input" oninput="mzs_onSliderChange()">
+            <input type="range" min="1" max="12" step="1" id="mzs-rng-fin" class="mzs-slider-input" oninput="mzs_onSliderChange()">
+          </div>
         </div>
       </div>
     </div>
@@ -2551,6 +2635,14 @@ function mzs_render(){
   `;
   mzs_buildFilters();
   mzs_recompute();
+}
+
+function mzs_toggleFilters(){
+  const body=document.getElementById('mzs-filter-body');
+  const btn=document.getElementById('mzs-filter-toggle-btn');
+  const hidden=body.style.display==='none';
+  body.style.display=hidden?'flex':'none';
+  btn.textContent=hidden?'Ocultar filtros ▲':'Mostrar filtros ▼';
 }
 
 function mzs_renderBody(){
@@ -2605,7 +2697,7 @@ function mzs_renderBody(){
   mzs_drawCombo();
   mzs_drawCycleMonthChart();
   mzs_drawMatrix();
-  mzs_renderHeadline();
+  // mzs_renderHeadline(); // banner de insight removido: las tarjetas KPI ya muestran la tendencia
 }
 
 /* ===== COMBO: Mz Sembrada vs métrica (ciclo completo) ===== */
@@ -2712,15 +2804,114 @@ function mzs_openCicloModal(c){
   document.getElementById('mzs-modal-overlay').classList.add('open');
 }
 function mzs_openDetailModal(ciclo,act){
-  const c=mzsCycles.find(x=>x.ciclo===ciclo); if(!c) return;
+  const idx=mzsCycles.findIndex(x=>x.ciclo===ciclo);
+  const c=mzsCycles[idx]; if(!c) return;
+  const prev=idx>0?mzsCycles[idx-1]:null;
   const d=c.byAct[act]; const p=PRESUPUESTOS[act];
   const ltsMz=c.mzSiembra>0?d.lts/c.mzSiembra:0;
   document.getElementById('mzs-modal-title').textContent=act+' — '+ciclo;
   document.getElementById('mzs-modal-sub').textContent='Meta: '+(p?p.lts.toFixed(2):'-')+' Lts/Mz · Real: '+ltsMz.toFixed(2)+' Lts/Mz';
-  const months=Object.keys(c.byMonth).map(Number).sort((a,b)=>a-b).filter(m=>c.byMonth[m].byAct[act]);
-  let rows=''; let acc=0;
-  months.forEach(m=>{ acc+=c.byMonth[m].byAct[act]; const cumLtsMz=c.mzSiembra>0?(acc/c.mzSiembra):0; rows+=`<tr><td>${MZS_MESES_LBL[m-1]}</td><td>${fmtN(c.byMonth[m].byAct[act])}</td><td>${cumLtsMz.toFixed(2)}</td></tr>`; });
-  document.getElementById('mzs-modal-body').innerHTML=`<table class="report-table"><thead><tr><th>Mes</th><th>Lts en el mes</th><th>Lts/Mz (acum.)</th></tr></thead><tbody>${rows||'<tr><td colspan="3">Sin desglose mensual</td></tr>'}</tbody></table>`;
+
+  let html='';
+
+  // ===== Comparativo vs ciclo anterior =====
+  if(prev && prev.byAct[act]){
+    const dPrev=prev.byAct[act];
+    const numAct=mzsMetrica==='lts'?d.lts:d.hm, numPrev=mzsMetrica==='lts'?dPrev.lts:dPrev.hm;
+    const ratioAct=c.mzSiembra>0?numAct/c.mzSiembra:0, ratioPrev=prev.mzSiembra>0?numPrev/prev.mzSiembra:0;
+    const pctMz=prev.mzSiembra>0?((c.mzSiembra-prev.mzSiembra)/prev.mzSiembra*100):null;
+    const pctNum=numPrev>0?((numAct-numPrev)/numPrev*100):null;
+    const pctRatio=ratioPrev>0?((ratioAct-ratioPrev)/ratioPrev*100):null;
+    const unidad=mzsMetrica==='lts'?'Lts':'HM';
+
+    let explic='';
+    if(pctMz!=null&&pctNum!=null&&pctRatio!=null){
+      if(pctRatio>=0){
+        explic=`Los ${unidad.toLowerCase()} de esta actividad ${pctNum>=0?'subieron':'bajaron'} ${Math.abs(pctNum).toFixed(0)}%, mientras la Mz sembrada del ciclo ${pctMz>=0?'subió':'bajó'} ${Math.abs(pctMz).toFixed(0)}% — por eso el ${mzs_metricLbl()} subió ${Math.abs(pctRatio).toFixed(0)}%.`;
+      } else {
+        explic=`Aunque los ${unidad.toLowerCase()} ${pctNum>=0?'subieron':'bajaron'} ${Math.abs(pctNum).toFixed(0)}%, la Mz sembrada creció más (${Math.abs(pctMz).toFixed(0)}%), por lo que el ${mzs_metricLbl()} bajó ${Math.abs(pctRatio).toFixed(0)}%.`;
+      }
+    }
+
+    html+=`<div class="section-title mt-0">Comparativo vs ${prev.ciclo}</div>
+    <div class="grid-2" style="margin-bottom:10px">
+      <div class="kpi-card">
+        <div class="mzs-kpi-ciclo">${prev.ciclo}</div>
+        <div class="kpi-value">${ratioPrev.toFixed(mzs_metricDec())}</div>
+        <div class="mzs-kpi-sub">${fmtN(numPrev,0)} ${unidad} · ${fmtN(prev.mzSiembra,1)} Mz sembrada</div>
+      </div>
+      <div class="kpi-card" style="border:2px solid var(--brand-secondary)">
+        <div class="mzs-kpi-ciclo">${c.ciclo} · VIGENTE</div>
+        <div class="kpi-value">${ratioAct.toFixed(mzs_metricDec())}</div>
+        <div class="mzs-kpi-sub">${fmtN(numAct,0)} ${unidad} · ${fmtN(c.mzSiembra,1)} Mz sembrada</div>
+      </div>
+    </div>
+    ${explic?`<div class="mzs-insight-box" style="margin-bottom:14px"><span class="mzs-insight-icon">${pctRatio>=0?'▲':'▼'}</span><div>${explic}</div></div>`:''}`;
+  }
+
+  // (el desglose por sector/finca ahora es comparativo entre ciclos; se construye más abajo, junto al comparativo de actividad)
+
+  // ===== Comparativo de la actividad en sí: Mz reales y litros, mismo corte de fecha =====
+  if(prev){
+    const monthsCur=Object.keys(c.byMonth).map(Number).filter(m=>c.byMonth[m].byAct[act]);
+    const cutoff=monthsCur.length?Math.max(...monthsCur):12;
+    const cumHasta=(cycObj,mesTope)=>{
+      let mz=0,lts=0;
+      for(let m=1;m<=mesTope;m++){ const o=cycObj.byMonth[m]; if(!o) continue; mz+=o.mzByAct[act]||0; lts+=o.byAct[act]||0; }
+      return {mz,lts};
+    };
+    const cur2=cumHasta(c,cutoff), prev2=cumHasta(prev,cutoff);
+    const ratioCur2=cur2.mz>0?cur2.lts/cur2.mz:0, ratioPrev2=prev2.mz>0?prev2.lts/prev2.mz:0;
+    const pctMzAct=prev2.mz>0?((cur2.mz-prev2.mz)/prev2.mz*100):null;
+    const pctLtsAct=prev2.lts>0?((cur2.lts-prev2.lts)/prev2.lts*100):null;
+
+    let explic2='';
+    if(pctMzAct!=null&&pctLtsAct!=null){
+      if(Math.abs(pctLtsAct-pctMzAct)<=8){
+        explic2=`Las Mz reales de ${act} ${pctMzAct>=0?'subieron':'bajaron'} ${Math.abs(pctMzAct).toFixed(0)}% y los litros ${pctLtsAct>=0?'subieron':'bajaron'} en proporción similar (${Math.abs(pctLtsAct).toFixed(0)}%) — el mayor consumo se explica principalmente porque se hizo más trabajo real de esta actividad, no por menor eficiencia.`;
+      } else if(pctLtsAct>pctMzAct){
+        explic2=`Las Mz reales de ${act} ${pctMzAct>=0?'subieron':'bajaron'} ${Math.abs(pctMzAct).toFixed(0)}%, pero los litros ${pctLtsAct>=0?'subieron':'bajaron'} más (${Math.abs(pctLtsAct).toFixed(0)}%) — parte del incremento sí corresponde a mayor consumo por Mz, no solo a más área trabajada.`;
+      } else {
+        explic2=`Los litros ${pctLtsAct>=0?'subieron':'bajaron'} ${Math.abs(pctLtsAct).toFixed(0)}%, menos que el aumento de Mz reales (${Math.abs(pctMzAct).toFixed(0)}%) — el consumo por Mz de esta actividad en realidad mejoró.`;
+      }
+    }
+
+    html+=`<div class="section-title mt-0">Comparativo de la actividad — Mz reales y litros (hasta ${MZS_MESES_LBL[cutoff-1]})</div>
+    <div class="chart-desc" style="margin-bottom:6px">Mismo corte de fecha en ambos ciclos, para comparar manzana contra manzana de ${act}.</div>
+    <table class="report-table"><thead><tr><th>Ciclo</th><th>Mz reales (${act})</th><th>Litros</th><th>Lts/Mz de la actividad</th></tr></thead><tbody>
+      <tr><td>${prev.ciclo}</td><td>${fmtN(prev2.mz,1)}</td><td>${fmtN(prev2.lts,0)}</td><td>${ratioPrev2.toFixed(2)}</td></tr>
+      <tr><td>${c.ciclo} · VIGENTE</td><td>${fmtN(cur2.mz,1)}</td><td>${fmtN(cur2.lts,0)}</td><td>${ratioCur2.toFixed(2)}</td></tr>
+    </tbody></table>
+    ${explic2?`<div class="mzs-insight-box" style="margin-top:8px;margin-bottom:14px"><span class="mzs-insight-icon">${pctMzAct!=null&&pctMzAct>=0?'▲':'▼'}</span><div>${explic2}</div></div>`:''}`;
+
+    // ===== Dónde: Mz por sector y finca, comparativo entre ambos ciclos =====
+    const rowsActCur=raw1.filter(r=>mzs_isComasa(r)&&mzs_cTrim(get(r,'ciclo'))===ciclo&&get(r,'actividad')===act);
+    const rowsActPrev=raw1.filter(r=>mzs_isComasa(r)&&mzs_cTrim(get(r,'ciclo'))===prev.ciclo&&get(r,'actividad')===act);
+    const mzCurByFinca={}, mzPrevByFinca={}, sectorByFinca={};
+    rowsActCur.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; mzCurByFinca[f]=(mzCurByFinca[f]||0)+rowAvance(r); sectorByFinca[f]=get(r,'sector')||'Sin sector'; });
+    rowsActPrev.forEach(r=>{ const f=get(r,'finca')||'Sin finca'; mzPrevByFinca[f]=(mzPrevByFinca[f]||0)+rowAvance(r); sectorByFinca[f]=sectorByFinca[f]||get(r,'sector')||'Sin sector'; });
+    const fincasCmp=[...new Set([...Object.keys(mzCurByFinca),...Object.keys(mzPrevByFinca)])];
+    const filasCmp=fincasCmp.map(f=>{
+      const mzC=mzCurByFinca[f]||0, mzP=mzPrevByFinca[f]||0;
+      const dif=mzC-mzP, pct=mzP>0?(dif/mzP*100):(mzC>0?Infinity:0);
+      return {finca:f,sector:sectorByFinca[f]||'Sin sector',mzC,mzP,dif,pct};
+    }).sort((a,b)=>b.dif-a.dif);
+
+    let tblCmp=`<table class="report-table"><thead><tr><th>Sector</th><th>Finca</th><th>Mz ${prev.ciclo}</th><th>Mz ${c.ciclo}</th><th>Diferencia</th></tr></thead><tbody>`;
+    if(!filasCmp.length){ tblCmp+=`<tr><td colspan="5" style="text-align:center;color:var(--text-muted)">Sin registros de esta actividad en ninguno de los dos ciclos.</td></tr>`; }
+    filasCmp.forEach(fl=>{
+      const cls=fl.dif>0?'cell-bad':fl.dif<0?'cell-ok':'';
+      const pctTxt=isFinite(fl.pct)?(fl.pct>=0?'+':'')+fl.pct.toFixed(0)+'%':'nuevo';
+      tblCmp+=`<tr><td>${fl.sector}</td><td>${fl.finca}</td><td>${fmtN(fl.mzP,1)}</td><td>${fmtN(fl.mzC,1)}</td><td class="${cls}">${fl.dif>=0?'+':''}${fmtN(fl.dif,1)} (${pctTxt})</td></tr>`;
+    });
+    tblCmp+='</tbody></table>';
+
+    html+=`<div class="section-title">Dónde subió o bajó — Mz por sector y finca (${prev.ciclo} vs ${c.ciclo})</div>
+    <div class="chart-desc" style="margin-bottom:6px">Ordenado de mayor a menor incremento en Mz reales de ${act}.</div>
+    ${tblCmp}`;
+  }
+
+  document.getElementById('mzs-modal-body').innerHTML=html;
   document.getElementById('mzs-modal-overlay').classList.add('open');
 }
 function mzs_openMonthModal(monthNum){
@@ -2797,6 +2988,61 @@ function day_openModal(dkeyStr){
   document.getElementById('day-modal-overlay').classList.add('open');
 }
 function day_closeModal(){ document.getElementById('day-modal-overlay').classList.remove('open'); }
+
+function act_hm_openModal(act){
+  const rows=actHmModalRows2.filter(r=>get(r,'actividad')===act);
+  const byEquipo={};
+  rows.forEach(r=>{
+    const eq=get(r,'equipo')||get(r,'categoria equipo')||'Equipo';
+    if(!byEquipo[eq]) byEquipo[eq]={hm:0,hmEf:0};
+    byEquipo[eq].hm+=toNum(get(r,'hme'));
+    byEquipo[eq].hmEf+=toNum(get(r,'hora motor efectivo'));
+  });
+  const equipos=Object.keys(byEquipo).sort((a,b)=>byEquipo[b].hmEf-byEquipo[a].hmEf);
+  const totHm=equipos.reduce((s,e)=>s+byEquipo[e].hm,0), totHmEf=equipos.reduce((s,e)=>s+byEquipo[e].hmEf,0);
+
+  document.getElementById('acthm-modal-title').textContent='Detalle por tractor — '+act;
+  document.getElementById('acthm-modal-sub').textContent=`${state.ciclo} · ${fmtN(totHm,1)} HM · ${fmtN(totHmEf,1)} HM efectiva`;
+
+  let h='<table class="report-table"><thead><tr><th>Tractor / Equipo</th><th>HM</th><th>HM efectiva</th></tr></thead><tbody>';
+  if(!equipos.length){ h+='<tr><td colspan="3" style="text-align:center;color:var(--text-muted)">Sin registros de equipo para esta actividad.</td></tr>'; }
+  equipos.forEach(eq=>{
+    h+=`<tr><td>${eq}</td><td>${fmtN(byEquipo[eq].hm,1)}</td><td>${fmtN(byEquipo[eq].hmEf,1)}</td></tr>`;
+  });
+  h+=`<tr class="total"><td>TOTAL</td><td>${fmtN(totHm,1)}</td><td>${fmtN(totHmEf,1)}</td></tr>`;
+  h+='</tbody></table>';
+  document.getElementById('acthm-modal-body').innerHTML=h;
+  document.getElementById('acthm-modal-overlay').classList.add('open');
+}
+function act_hm_closeModal(){ document.getElementById('acthm-modal-overlay').classList.remove('open'); }
+
+function eq_eff_openModal(act,rowsScope){
+  const filtered=rowsScope.filter(r=>(get(r,'actividad')||'Sin actividad')===act);
+  const byEq={};
+  filtered.forEach(r=>{
+    const eq=get(r,'equipo')||'Sin equipo';
+    if(!byEq[eq]) byEq[eq]={lts:0,hm:0};
+    byEq[eq].lts+=toNum(get(r,'cantidad diesel ltrs'));
+    byEq[eq].hm+=rowHme(r);
+  });
+  const eqs=Object.keys(byEq).sort((a,b)=>byEq[b].hm-byEq[a].hm);
+  const totLts=eqs.reduce((s,e)=>s+byEq[e].lts,0), totHm=eqs.reduce((s,e)=>s+byEq[e].hm,0);
+
+  document.getElementById('eqeff-modal-title').textContent='Detalle por equipo — '+act;
+  document.getElementById('eqeff-modal-sub').textContent=`${fmtN(totLts,0)} Lts totales · ${fmtN(totHm,1)} HM totales · ${totHm>0?(totLts/totHm).toFixed(2):'-'} Lts/HM`;
+
+  let h='<table class="report-table"><thead><tr><th>Equipo</th><th>Lts totales</th><th>HM totales</th><th>Lts/HM</th></tr></thead><tbody>';
+  if(!eqs.length){ h+='<tr><td colspan="4" style="text-align:center;color:var(--text-muted)">Sin registros de equipo para esta actividad.</td></tr>'; }
+  eqs.forEach(eq=>{
+    const d=byEq[eq]; const ratio=d.hm>0?(d.lts/d.hm).toFixed(2):'-';
+    h+=`<tr><td>${eq}</td><td>${fmtN(d.lts,0)}</td><td>${fmtN(d.hm,1)}</td><td>${ratio}</td></tr>`;
+  });
+  h+=`<tr class="total"><td>TOTAL</td><td>${fmtN(totLts,0)}</td><td>${fmtN(totHm,1)}</td><td>${totHm>0?(totLts/totHm).toFixed(2):'-'}</td></tr>`;
+  h+='</tbody></table>';
+  document.getElementById('eqeff-modal-body').innerHTML=h;
+  document.getElementById('eqeff-modal-overlay').classList.add('open');
+}
+function eq_eff_closeModal(){ document.getElementById('eqeff-modal-overlay').classList.remove('open'); }
 
 function subc_rows(ciclo,incluirComasa){
   return raw1.filter(r=>isEmpresa(r) && get(r,'ciclo')===ciclo && get(r,'proveedor del servicio') &&
