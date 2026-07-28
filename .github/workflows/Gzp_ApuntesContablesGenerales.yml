@@ -1,0 +1,60 @@
+name: gzp_ApuntesContablesGenerales
+
+on:
+  schedule:
+    # Cada hora entre 07:00 AM y 06:00 PM Nicaragua (13:00 - 00:00 UTC)
+    - cron: "0 13-23 * * *"   # 07 AM - 05 PM Nicaragua
+    - cron: "0 0 * * *"       # 06 PM Nicaragua
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Fetch desde Odoo y extraer datos generales
+        env:
+          GZP_API_KEY: ${{ secrets.GZP_API_KEY }}
+        run: |
+          echo "Descargando account.move.line..."
+          curl -sf -X POST https://grupozp.odoo.com/jsonrpc \
+          -H "Content-Type: application/json" \
+          -d "{\"jsonrpc\":\"2.0\",\"method\":\"call\",\"id\":1,\"params\":{\"service\":\"object\",\"method\":\"execute_kw\",\"args\":[\"grupozp-main-13656030\",7,\"$GZP_API_KEY\",\"account.move.line\",\"search_read\",[],{\"fields\":[\"date\",\"move_name\",\"account_id\",\"partner_id\",\"name\",\"product_uom_category_id\",\"debit\",\"credit\",\"parent_state\",\"x_studio_es_cierre_ab\",\"analytic_distribution\"],\"limit\":0}]}}" \
+          > _raw_contables.json
+
+          [ -s _raw_contables.json ] || { echo "❌ Vacío"; exit 1; }
+
+          # Verificar que no es un error de Odoo
+          if jq -e '.error' _raw_contables.json > /dev/null 2>&1; then
+            echo "❌ Error de Odoo:"
+            jq '.error.data.message' _raw_contables.json
+            exit 1
+          fi
+
+          echo "Procesando todos los apuntes contables con jq..."
+          # Al ser apuntes generales, pasamos el JSON completo de los resultados
+          jq '.' _raw_contables.json > ApuntesContablesGenerales.json
+
+          rm _raw_contables.json
+
+          TOTAL=$(jq '.result | length' ApuntesContablesGenerales.json)
+          SIZE=$(wc -c < ApuntesContablesGenerales.json)
+          echo "✅ ApuntesContablesGenerales extraídos: $TOTAL registros — $SIZE bytes"
+
+      - name: Commit y push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add ApuntesContablesGenerales.json
+          git commit -m "Auto: ApuntesContablesGenerales GZP (todas las cuentas)" || echo "Sin cambios"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push origin main && break
+            [ $i -eq 5 ] && exit 1
+            sleep $(( (RANDOM % 5) + 3 ))
+          done
