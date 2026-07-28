@@ -331,6 +331,7 @@
   .foto-zoom-panel-muestra{ display:block; color:#E8730D; font-size:10.5px; font-weight:700; margin-top:2px; }
   .foto-zoom-panel-item strong{ color:var(--primary); flex-shrink:0; font-size:13px; }
   .foto-zoom-panel-vacio{ font-size:12px; color:var(--text-muted); }
+  .foto-zoom-panel-separador{ border-top:2px solid var(--primary-light); margin:2px 0 3px; }
   .detalle-reporte-card{ background:var(--card-bg); border:1px solid var(--border-color); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
   .detalle-reporte-titulo{ font-size:17px; font-weight:800; color:var(--primary); margin:0 0 2px; }
   .detalle-reporte-sub{ font-size:11.5px; color:var(--text-muted); font-weight:600; margin-bottom:14px; }
@@ -3028,14 +3029,17 @@ function tiposConResultadoEnEstacion(estacion){
   const datos = DETALLE_REPORTE_ACTUAL;
   if(!datos || !Array.isArray(datos.lineas) || estacion==null) return [];
   const campo = 'x_studio_e' + estacion;
+  // Sin re-ordenar por valor: datos.lineas ya viene en el mismo orden que la tabla del
+  // reporte (ordenado por x_studio_idrecuento — ver cargarDetalleReporte), y se mantiene
+  // tal cual para que la lista de la foto coincida con el orden que el técnico ya conoce.
   return datos.lineas
     .map(l => ({
       nombre: m2oListado(l.x_studio_recuento) || `Recuento ${l.x_studio_idrecuento}`,
       valor: l[campo],
       muestra: l.x_studio_mtrs_muestra,
+      familia: l.x_studio_familia_del_recuento || '',
     }))
-    .filter(x => x.valor != null && x.valor !== false && Number(x.valor) > 0)
-    .sort((a,b) => Number(b.valor) - Number(a.valor));
+    .filter(x => x.valor != null && x.valor !== false && Number(x.valor) > 0);
 }
 
 function abrirZoomFoto(indice){
@@ -3051,12 +3055,16 @@ function abrirZoomFoto(indice){
     <div class="foto-zoom-panel" onclick="event.stopPropagation()">
       <div class="foto-zoom-panel-titulo">📋 Tipos de recuento con resultado — Estación E${estacion}</div>
       ${tipos.length
-        ? `<div class="foto-zoom-panel-lista">${tipos.map(t=>`
+        ? `<div class="foto-zoom-panel-lista">${tipos.map((t,i)=>{
+            // Raya separadora cada vez que cambia la familia respecto al ítem anterior —
+            // así quedan agrupados por categoría igual que en la tabla del reporte.
+            const cambioCategoria = i>0 && t.familia !== tipos[i-1].familia;
+            return `${cambioCategoria ? '<div class="foto-zoom-panel-separador"></div>' : ''}
             <div class="foto-zoom-panel-item">
-              <span>${t.nombre}${(t.muestra!=null && t.muestra!==false) ? `<br><span class="foto-zoom-panel-muestra">Muestra: ${t.muestra} Mtrs/Planta</span>` : ''}</span>
+              <span>${t.nombre}${(t.muestra!=null && t.muestra!==false) ? `<br><span class="foto-zoom-panel-muestra">Muestra: ${t.muestra} Mtrs</span>` : ''}</span>
               <strong>${t.valor}</strong>
-            </div>
-          `).join('')}</div>`
+            </div>`;
+          }).join('')}</div>`
         : `<div class="foto-zoom-panel-vacio">Sin resultados mayores a 0 en esta estación.</div>`}
     </div>` : '';
 
