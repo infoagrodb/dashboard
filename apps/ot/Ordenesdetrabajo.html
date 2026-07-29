@@ -5,6 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>INFOAGRO · Reporte de Actividades</title>
 <meta name="theme-color" content="#1C3C38">
+<!-- manifest.json y sw.js van EN LA MISMA CARPETA que este archivo en GitHub Pages —
+     mismo patrón que ya usa recuentosEf.html. Sin esos dos archivos ahí, el navegador no
+     ofrece instalar la app (el botón de Ajustes simplemente no aparece). -->
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Actividades">
 <style>
   :root{
     /* Paleta INFOAGRO "Hijau Natural" (verde) para el look general — igual criterio que
@@ -511,6 +518,12 @@
           <input type="text" id="cfgSyncKey">
         </div>
         <button class="btn btn-secundario" onclick="guardarConfigServidor()">Guardar configuración</button>
+      </div>
+
+      <div class="seccion-card">
+        <h3>Instalar la app</h3>
+        <p id="instalarTexto" style="margin-bottom:10px;">Instálala en tu celular para abrirla como una app normal, con ícono propio, sin la barra del navegador y funcionando sin conexión.</p>
+        <button class="btn btn-secundario" id="btnInstalarApp" onclick="instalarApp()" hidden>📲 Instalar en este celular</button>
       </div>
 
       <div class="seccion-card">
@@ -6067,11 +6080,74 @@ async function renderConfig(){
   document.getElementById('cfgWorkerUrl').value = await kvGet('worker_url', DEFAULT_WORKER_URL);
   document.getElementById('cfgSyncKey').value = await kvGet('sync_key', DEFAULT_SYNC_KEY);
   await actualizarEstadoGlobal();
+  actualizarUIInstalacion();
 }
 async function guardarConfigServidor(){
   await kvSet('worker_url', document.getElementById('cfgWorkerUrl').value.trim());
   await kvSet('sync_key', document.getElementById('cfgSyncKey').value.trim());
   toast('Configuración guardada');
+}
+
+/* =========================================================================
+   INSTALAR LA APP (PWA) — mismo patrón que recuentosEf.html: manifest.json +
+   sw.js deben subirse a la MISMA carpeta que este archivo en GitHub Pages
+   (Ignacio ya los tiene ahí para Recuentos; para esta app son dos archivos
+   nuevos: manifest.json y sw.js, con el mismo nombre). Sin esos dos archivos
+   servidos por https, el navegador nunca dispara "beforeinstallprompt" y el
+   botón de Ajustes se queda oculto — no es un botón que "siempre funciona",
+   depende de que el sitio cumpla los requisitos de instalación de Chrome.
+   ========================================================================= */
+let promptInstalacionDiferido = null;
+
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault(); // evita el mini-banner automático de Chrome; se dispara desde el botón
+  promptInstalacionDiferido = e;
+  actualizarUIInstalacion();
+});
+window.addEventListener('appinstalled', ()=>{
+  promptInstalacionDiferido = null;
+  actualizarUIInstalacion();
+  toast('App instalada ✔');
+});
+function estaInstalada(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function esIOS(){
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+function actualizarUIInstalacion(){
+  const texto = document.getElementById('instalarTexto');
+  const btn = document.getElementById('btnInstalarApp');
+  if(!texto || !btn) return; // la pantalla de Ajustes aún no está en el DOM visible
+  if(estaInstalada()){
+    texto.textContent = '✔ Ya la tienes instalada en este celular.';
+    btn.hidden = true;
+  } else if(esIOS()){
+    texto.innerHTML = 'En iPhone no hay botón automático de instalar: toca el ícono de <b>Compartir</b> en Safari (el cuadrito con la flecha hacia arriba) y elige <b>«Agregar a pantalla de inicio»</b>.';
+    btn.hidden = true;
+  } else if(promptInstalacionDiferido){
+    texto.textContent = 'Instálala en tu celular para abrirla como una app normal, con ícono propio y funcionando sin conexión.';
+    btn.hidden = false;
+  } else {
+    texto.textContent = 'Este navegador todavía no ofrece instalar la app aquí — ábrela desde https:// (no como archivo local) y espera unos segundos.';
+    btn.hidden = true;
+  }
+}
+async function instalarApp(){
+  if(!promptInstalacionDiferido) return;
+  promptInstalacionDiferido.prompt();
+  await promptInstalacionDiferido.userChoice;
+  promptInstalacionDiferido = null;
+  actualizarUIInstalacion();
+}
+// El Service Worker es lo que habilita "instalar" además del uso offline — igual patrón que
+// recuentosEf.html. Si el archivo se abrió sin https (content://, file://) o si sw.js aún no
+// se subió a la misma carpeta, esto falla en silencio a propósito: no es un error crítico,
+// la app sigue funcionando, solo no se podrá instalar ni cachear para modo avión real.
+if('serviceWorker' in navigator && window.isSecureContext){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{ /* sw.js no está en el servidor todavía */ });
+  });
 }
 
 /* =========================================================================
@@ -6108,6 +6184,7 @@ window.addEventListener('unhandledrejection', (e)=>{
     toast('No se pudo abrir el almacenamiento local: ' + e.message, true);
   }
   renderHome();
+  actualizarUIInstalacion();
   if(navigator.onLine) sincronizarTodo();
 })();
 </script>
