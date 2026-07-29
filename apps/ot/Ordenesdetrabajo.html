@@ -222,6 +222,12 @@
 
   .linea-item{background:var(--crema);border:1px solid var(--borde);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;}
   .linea-item:active{background:var(--tinte-neutro);}
+
+  /* miniaturas de fotos del avance por lote — cámara únicamente */
+  .foto-chip{position:relative;width:64px;height:64px;flex-shrink:0;}
+  .foto-chip img{width:100%;height:100%;object-fit:cover;border-radius:8px;border:1px solid var(--borde);}
+  .foto-chip button{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;
+    border:none;background:var(--rojo);color:#fff;font-size:.65rem;display:flex;align-items:center;justify-content:center;padding:0;}
   .linea-item .lt{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;}
   .linea-item .lt b{font-size:.85rem;color:var(--texto);}
   .linea-item .lm{font-size:.75rem;color:var(--texto-suave);margin-top:3px;}
@@ -452,6 +458,24 @@
         <button class="card-add-btn" id="btnAddEquipo" onclick="abrirModalEquipo()">+ Agregar equipo</button>
       </div>
 
+      <div class="card">
+        <div class="card-header"><div class="card-icon">✍️</div><div class="card-title">Firma de quien elabora</div></div>
+        <div class="campo">
+          <label>Nombre de quien elabora *</label>
+          <input type="text" id="firmaNombre" placeholder="Nombre completo" oninput="guardarFirmaAuto()">
+        </div>
+        <div class="campo">
+          <label>Firma *</label>
+          <div style="border:1px solid var(--borde);border-radius:10px;overflow:hidden;background:#fff;">
+            <canvas id="firmaCanvas" style="width:100%;height:150px;touch-action:none;display:block;"></canvas>
+          </div>
+          <div class="btn-fila" style="margin-top:8px;">
+            <button type="button" class="btn btn-ghost" onclick="limpiarFirma()">🗑 Limpiar firma</button>
+          </div>
+          <div class="nota-campo" id="firmaEstado">Firma en el recuadro con el dedo.</div>
+        </div>
+      </div>
+
       <button class="btn btn-primario" id="btnEnviarOT" onclick="marcarListaParaSync()" style="padding:15px;font-size:.95rem;">📤 Marcar lista y enviar a Odoo</button>
       <div style="height:70px;"></div>
     </section>
@@ -562,6 +586,14 @@
       <button type="button" class="btn btn-ghost" onclick="iniciarMedicionGPS()">📍 Medir</button>
     </div>
   </div>
+  <div class="campo">
+    <label>Fotos del avance <span style="font-weight:400;text-transform:none;">(cámara — no se puede subir desde la galería)</span></label>
+    <div id="maFotosFila" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;"></div>
+    <label class="btn btn-ghost" style="margin:0;cursor:pointer;width:100%;text-align:center;">
+      📷 Tomar foto
+      <input type="file" accept="image/*" capture="environment" id="maFotoInput" style="display:none;" onchange="onFotoActividad(event)">
+    </label>
+  </div>
 
   <button class="btn btn-primario" onclick="guardarActividad()">Guardar en la OT</button>
 </div>
@@ -664,22 +696,22 @@
 
 <!-- ================= MODAL: equipo / maquinaria ================= -->
 <!-- Modelo real CONFIRMADO por Ignacio: x_orden_campo_line_4f4f8, con x_studio_equipo
-     (Many2one a x_equiposagricolas, catálogo real de 222 equipos), x_studio_hora_motor_inicial
-     y x_studio_hora_motor_final — ya NO es nombre libre + horas de uso + combustible como
-     en el prototipo anterior. x_equiposagricolas también trae x_studio_estado (solo se
-     listan los "Activo") y x_studio_categoria (se muestra junto al nombre para ubicarlo
-     más rápido). El botón de QR usa la cámara (BarcodeDetector nativo del navegador, sin
+     (Many2one a x_equiposagricolas, catálogo real de 222 equipos), x_studio_hora_motor_inicial,
+     x_studio_hora_motor_final, x_studio_foto_tacometro_hmi y x_studio_foto_tacometro_hmf
+     (CONFIRMADOS por Ignacio — una foto por cada lectura, no una sola genérica como en el
+     prototipo anterior). x_equiposagricolas también trae x_studio_estado (solo se listan
+     los "Activo") y x_studio_categoria (se muestra junto al nombre para ubicarlo más
+     rápido). El botón de QR usa la cámara (BarcodeDetector nativo del navegador, sin
      librería) para leer un código pegado en el equipo y seleccionarlo solo.
      Validación de horas (pedida por Ignacio): Hora Motor Final nunca puede ser menor que
      Hora Motor Inicial (misma línea, bloqueo duro) y Hora Motor Inicial nunca puede ser
      menor que la Hora Motor Final del último reporte de ESE equipo guardado en el celular
      (se avisa con opción de confirmar, por si el medidor se reinició o se cambió — ver
      obtenerUltimaHoraMotor() y guardarEquipo()).
-     Foto del tacómetro: se guarda como evidencia del dato capturado (Blob local, aún sin
-     campo confirmado en Odoo — mismo caso que el polígono GPS). Se intenta leer el número
-     con la API experimental TextDetector del navegador cuando existe; si no está disponible
-     o no reconoce nada, simplemente queda la foto adjunta y el técnico escribe el número a
-     mano — no es un OCR confiable todavía, ver nota en el chat. -->
+     Cada foto intenta leer el número con la API experimental TextDetector del navegador
+     cuando existe; si no está disponible o no reconoce nada, simplemente queda la foto
+     adjunta y el técnico escribe el número a mano — no es un OCR confiable todavía, ver
+     nota en el chat. -->
 <div class="modal-fondo" id="mfEquipo"></div>
 <div class="modal" id="modalEquipo">
   <div class="modal-header"><h3 id="modalEquipoTitulo">Equipo / Maquinaria</h3><button class="modal-cerrar" onclick="cerrarModales()">✕</button></div>
@@ -697,18 +729,31 @@
   </div>
   <div class="nota-campo" id="meAvisoHoras" style="display:none;background:var(--ambar-bg);color:#8a6a15;padding:8px 10px;border-radius:8px;margin:-4px 0 10px;"></div>
 
-  <div class="campo">
-    <label>Foto del tacómetro <span style="font-weight:400;text-transform:none;">(opcional)</span></label>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <label class="btn btn-ghost" style="margin:0;cursor:pointer;">
-        📷 Tomar foto
-        <input type="file" accept="image/*" capture="environment" id="meFotoInput" style="display:none;" onchange="onFotoTacometro(event)">
-      </label>
-      <img id="meFotoPreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:8px;border:1px solid var(--borde);">
-      <button type="button" class="icon-mini peligro" id="meFotoQuitar" style="display:none;" onclick="quitarFotoTacometro()" title="Quitar foto">🗑</button>
+  <div class="fila-2">
+    <div class="campo">
+      <label>Foto tacómetro (inicial)</label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label class="btn btn-ghost" style="margin:0;padding:8px 4px;cursor:pointer;flex:1;text-align:center;font-size:.78rem;">
+          📷
+          <input type="file" accept="image/*" capture="environment" id="meFotoInicialInput" style="display:none;" onchange="onFotoTacometro(event,'inicial')">
+        </label>
+        <img id="meFotoInicialPreview" style="display:none;width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--borde);flex-shrink:0;">
+        <button type="button" class="icon-mini peligro" id="meFotoInicialQuitar" style="display:none;flex-shrink:0;" onclick="quitarFotoTacometro('inicial')" title="Quitar foto">🗑</button>
+      </div>
     </div>
-    <div class="nota-campo" id="meFotoEstado"></div>
+    <div class="campo">
+      <label>Foto tacómetro (final)</label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <label class="btn btn-ghost" style="margin:0;padding:8px 4px;cursor:pointer;flex:1;text-align:center;font-size:.78rem;">
+          📷
+          <input type="file" accept="image/*" capture="environment" id="meFotoFinalInput" style="display:none;" onchange="onFotoTacometro(event,'final')">
+        </label>
+        <img id="meFotoFinalPreview" style="display:none;width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--borde);flex-shrink:0;">
+        <button type="button" class="icon-mini peligro" id="meFotoFinalQuitar" style="display:none;flex-shrink:0;" onclick="quitarFotoTacometro('final')" title="Quitar foto">🗑</button>
+      </div>
+    </div>
   </div>
+  <div class="nota-campo" id="meFotoEstado"></div>
 
   <button class="btn btn-primario" onclick="guardarEquipo()">Guardar en la OT</button>
 </div>
@@ -4630,7 +4675,101 @@ async function abrirDetalle(localId){
   cambiarTab('tab-actividades');
   renderLineas();
   goScreen('screen-detalle');
+  inicializarFirma();
 }
+/* =========================================================================
+   FIRMA DE QUIEN ELABORA LA OT
+   ---------------------------------------------------------------------------
+   Pad de firma a mano (canvas + eventos de puntero, sin librería). La firma
+   se guarda como imagen PNG (dataURL) junto con el nombre en
+   ordenActual.header.firmaNombre / firmaImagen, y se autoguarda en IndexedDB
+   apenas el técnico termina un trazo o escribe el nombre — no hace falta un
+   botón "Guardar firma" aparte. Mientras la OT no tenga firma completa
+   (nombre + al menos un trazo), NO se puede generar el PDF — ver
+   firmaCompleta() y el bloqueo en descargarPDF()/compartirPDF().
+   ========================================================================= */
+let firmaCtx = null;
+let firmaTieneTrazo = false;
+
+function inicializarFirma(){
+  const canvas = document.getElementById('firmaCanvas');
+  const dpr = window.devicePixelRatio || 1;
+  const anchoCss = canvas.getBoundingClientRect().width || canvas.parentElement.clientWidth || 300;
+  const altoCss = 150;
+  canvas.width = Math.round(anchoCss * dpr);
+  canvas.height = Math.round(altoCss * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.strokeStyle = '#111827';
+  firmaCtx = ctx;
+  firmaTieneTrazo = false;
+
+  const h = ordenActual.header;
+  document.getElementById('firmaNombre').value = h.firmaNombre || '';
+  if(h.firmaImagen){
+    const img = new Image();
+    img.onload = ()=> ctx.drawImage(img, 0, 0, anchoCss, altoCss);
+    img.src = h.firmaImagen;
+    firmaTieneTrazo = true;
+  }
+  const soloLectura = esSoloLectura(ordenActual);
+  document.getElementById('firmaNombre').disabled = soloLectura;
+  canvas.style.pointerEvents = soloLectura ? 'none' : 'auto';
+  canvas.style.opacity = soloLectura ? '.8' : '1';
+  document.getElementById('firmaEstado').textContent = soloLectura
+    ? 'OT ya enviada — la firma queda bloqueada.'
+    : (h.firmaImagen ? 'Firma guardada ✔' : 'Firma en el recuadro con el dedo.');
+}
+
+// Los eventos del pad se enganchan UNA sola vez (el <canvas> es un elemento fijo del DOM,
+// no se recrea) — cada trazo dibuja directo sobre firmaCtx, que apunta siempre al canvas
+// de la OT actualmente abierta.
+(function engancharPadDeFirma(){
+  const canvas = document.getElementById('firmaCanvas');
+  let dibujando = false, ultimo = null;
+  const posicion = (ev) => {
+    const rect = canvas.getBoundingClientRect();
+    return { x: ev.clientX - rect.left, y: ev.clientY - rect.top };
+  };
+  canvas.addEventListener('pointerdown', (ev)=>{
+    if(!firmaCtx || canvas.style.pointerEvents==='none') return;
+    ev.preventDefault();
+    dibujando = true; ultimo = posicion(ev);
+    try{ canvas.setPointerCapture(ev.pointerId); }catch(e){ /* algunos WebView no lo soportan — no es crítico */ }
+  });
+  canvas.addEventListener('pointermove', (ev)=>{
+    if(!dibujando || !firmaCtx) return;
+    const p = posicion(ev);
+    firmaCtx.beginPath(); firmaCtx.moveTo(ultimo.x, ultimo.y); firmaCtx.lineTo(p.x, p.y); firmaCtx.stroke();
+    ultimo = p; firmaTieneTrazo = true;
+  });
+  ['pointerup','pointerleave','pointercancel'].forEach(evt => canvas.addEventListener(evt, ()=>{
+    if(dibujando){ dibujando = false; guardarFirmaAuto(); }
+  }));
+})();
+
+function limpiarFirma(){
+  if(!ordenActual || esSoloLectura()) return;
+  const canvas = document.getElementById('firmaCanvas');
+  const rect = canvas.getBoundingClientRect();
+  firmaCtx.clearRect(0, 0, rect.width, rect.height);
+  firmaTieneTrazo = false;
+  guardarFirmaAuto();
+}
+async function guardarFirmaAuto(){
+  if(!ordenActual || esSoloLectura()) return;
+  const canvas = document.getElementById('firmaCanvas');
+  ordenActual.header.firmaNombre = document.getElementById('firmaNombre').value.trim();
+  ordenActual.header.firmaImagen = firmaTieneTrazo ? canvas.toDataURL('image/png') : null;
+  await idbPut(ordenActual);
+  document.getElementById('firmaEstado').textContent = firmaTieneTrazo ? 'Firma guardada ✔' : 'Firma en el recuadro con el dedo.';
+}
+// Requisito de Ignacio: sin firma completa (nombre + trazo) no se puede generar el PDF.
+function firmaCompleta(o){
+  o = o || ordenActual;
+  return !!(o && o.header && o.header.firmaNombre && o.header.firmaImagen);
+}
+
 function cambiarTab(id){
   tabActivo = id;
   document.querySelectorAll('.tab-tile').forEach(b=>b.classList.toggle('activo', b.dataset.tab===id));
@@ -4646,7 +4785,7 @@ function renderLineas(){
   la.innerHTML = ordenActual.lineasActividades.length ? ordenActual.lineasActividades.map((l,i)=>`
     <div class="linea-item" ${clic('abrirModalActividad',i)}>
       <div class="lt"><b>${l.actividadNombre}</b>${equis('lineasActividades',i)}</div>
-      <div class="lm">${l.loteNombre?('Lote '+l.loteNombre+' · '):''}${l.avanceMzn?l.avanceMzn+' mzn avanzadas · ':''}${l.proveedorNombre?('Proveedor: '+l.proveedorNombre+' · '):''}${l.poligono?('📍 '+l.poligono.puntos.length+' pts GPS'):''}</div>
+      <div class="lm">${l.loteNombre?('Lote '+l.loteNombre+' · '):''}${l.avanceMzn?l.avanceMzn+' mzn avanzadas · ':''}${l.proveedorNombre?('Proveedor: '+l.proveedorNombre+' · '):''}${l.poligono?('📍 '+l.poligono.puntos.length+' pts GPS'+(l.fotos&&l.fotos.length?' · ':'')):''}${l.fotos&&l.fotos.length?('📷 '+l.fotos.length+' foto'+(l.fotos.length>1?'s':'')):''}</div>
     </div>`).join('') : `<div class="vacio"><span class="icono">📋</span>Sin actividades registradas todavía</div>`;
 
   const li = document.getElementById('listaInsumos');
@@ -4731,6 +4870,7 @@ function cerrarModales(){
 document.querySelectorAll('.modal-fondo').forEach(m=>m.addEventListener('click', cerrarModales));
 
 let edicionActividadIdx = null;
+let fotosActividadCapturadas = []; // Blobs tomados en este modal (cámara únicamente)
 function abrirModalActividad(idx){
   if(esSoloLectura()) return;
   edicionActividadIdx = (idx!==undefined && idx!==null) ? idx : null;
@@ -4749,15 +4889,38 @@ function abrirModalActividad(idx){
     document.getElementById('maLote').value = l.loteId || '';
     document.getElementById('maAvanceMzn').value = l.avanceMzn || '';
     poligonoCapturado = l.poligono || null;
+    fotosActividadCapturadas = (l.fotos || []).slice();
   } else {
     document.getElementById('maAvanceMzn').value='';
     poligonoCapturado = null;
+    fotosActividadCapturadas = [];
   }
   document.getElementById('maPoligonoTxt').innerHTML = poligonoCapturado
     ? `<b>${poligonoCapturado.puntos.length} puntos ✔</b>${poligonoCapturado.areaMzn.toFixed(2)} mzn medidas por GPS`
     : '<b>Sin medir</b>Camina el borde del lote para trazarlo';
+  renderFotosActividad();
   document.getElementById('mfActividad').classList.add('abierto');
   document.getElementById('modalActividad').classList.add('abierto');
+}
+// Fotos del avance — SOLO cámara (capture="environment" en el <input>, sin selector de
+// galería) para garantizar que la foto se tomó ahí mismo, en el lote, y no es una imagen
+// vieja subida desde el almacenamiento del celular.
+function renderFotosActividad(){
+  const fila = document.getElementById('maFotosFila');
+  fila.innerHTML = fotosActividadCapturadas.map((blob,i)=>
+    `<div class="foto-chip"><img src="${URL.createObjectURL(blob)}"><button type="button" onclick="quitarFotoActividad(${i})">✕</button></div>`
+  ).join('');
+}
+function onFotoActividad(ev){
+  const file = ev.target.files[0];
+  if(!file) return;
+  fotosActividadCapturadas.push(file);
+  renderFotosActividad();
+  document.getElementById('maFotoInput').value = ''; // permite tomar la siguiente foto
+}
+function quitarFotoActividad(i){
+  fotosActividadCapturadas.splice(i,1);
+  renderFotosActividad();
 }
 async function guardarActividad(){
   const actId = Number(document.getElementById('maActividad').value);
@@ -4772,12 +4935,14 @@ async function guardarActividad(){
     actividadId: act.id, actividadNombre: act.nombre,
     loteId, loteNombre: lote?.nombre || null,
     avanceMzn: Number(document.getElementById('maAvanceMzn').value)||0,
-    poligono: poligonoCapturado || null
+    poligono: poligonoCapturado || null,
+    fotos: fotosActividadCapturadas.slice()
   };
   if(edicionActividadIdx!==null) ordenActual.lineasActividades[edicionActividadIdx] = linea;
   else ordenActual.lineasActividades.push(linea);
   await idbPut(ordenActual);
   poligonoCapturado = null;
+  fotosActividadCapturadas = [];
   cerrarModales(); renderLineas();
   toast(edicionActividadIdx!==null ? 'Actividad actualizada' : 'Actividad agregada');
   edicionActividadIdx = null;
@@ -4904,7 +5069,7 @@ async function guardarPersonal(){
 }
 
 let edicionEquipoIdx = null;
-let fotoTacometroCapturada = null; // Blob de la foto recién tomada en este modal (o null)
+let fotosTacometroCapturadas = { inicial:null, final:null }; // Blobs recién tomados en este modal
 function abrirModalEquipo(idx){
   if(esSoloLectura()) return;
   edicionEquipoIdx = (idx!==undefined && idx!==null) ? idx : null;
@@ -4913,14 +5078,16 @@ function abrirModalEquipo(idx){
   llenarSelect(document.getElementById('meEquipo'), opciones.length?opciones:[{id:'',nombre:'— sin equipos cargados —'}]);
   document.getElementById('meQrEstado').textContent = '';
   document.getElementById('meAvisoHoras').style.display = 'none';
+  document.getElementById('meFotoEstado').textContent = '';
   document.getElementById('modalEquipoTitulo').textContent = edicionEquipoIdx!==null ? 'Editar equipo' : 'Equipo / Maquinaria';
-  quitarFotoTacometro();
+  quitarFotoTacometro('inicial'); quitarFotoTacometro('final');
   if(edicionEquipoIdx!==null){
     const l = ordenActual.lineasEquipos[edicionEquipoIdx];
     document.getElementById('meEquipo').value = l.equipoId || '';
     document.getElementById('meHoraInicial').value = l.horaInicial ?? '';
     document.getElementById('meHoraFinal').value = l.horaFinal ?? '';
-    if(l.fotoTacometro) mostrarFotoTacometro(l.fotoTacometro);
+    if(l.fotoTacometroInicial) mostrarFotoTacometro(l.fotoTacometroInicial, 'inicial');
+    if(l.fotoTacometroFinal) mostrarFotoTacometro(l.fotoTacometroFinal, 'final');
   } else {
     document.getElementById('meHoraInicial').value='';
     document.getElementById('meHoraFinal').value='';
@@ -4981,37 +5148,42 @@ function validarHoraMotorEnVivo(){
   }
 }
 
-// ---- Foto del tacómetro + intento de lectura automática ----
+// ---- Foto del tacómetro (inicial y final, campos CONFIRMADOS por Ignacio:
+// x_studio_foto_tacometro_hmi / x_studio_foto_tacometro_hmf) + intento de lectura automática.
 // TextDetector es una API experimental de Chrome (no un OCR de verdad, más pensado para
 // leer texto de documentos escaneados) — funciona a veces con displays digitales grandes y
 // claros, pero NO es confiable con tacómetros analógicos, reflejos o mala luz. Cuando no
 // reconoce nada (lo más común), la foto igual queda guardada como respaldo y el técnico
 // escribe el número a mano, que es como funciona hoy.
-function mostrarFotoTacometro(blob){
+function mostrarFotoTacometro(blob, cual){
   const url = URL.createObjectURL(blob);
-  const img = document.getElementById('meFotoPreview');
+  const img = document.getElementById(cual==='inicial' ? 'meFotoInicialPreview' : 'meFotoFinalPreview');
   img.src = url; img.style.display = 'inline-block';
-  document.getElementById('meFotoQuitar').style.display = 'inline-flex';
-  fotoTacometroCapturada = blob;
+  document.getElementById(cual==='inicial' ? 'meFotoInicialQuitar' : 'meFotoFinalQuitar').style.display = 'inline-flex';
+  fotosTacometroCapturadas[cual] = blob;
 }
-function quitarFotoTacometro(){
-  fotoTacometroCapturada = null;
-  document.getElementById('meFotoPreview').style.display = 'none';
-  document.getElementById('meFotoPreview').src = '';
-  document.getElementById('meFotoQuitar').style.display = 'none';
-  document.getElementById('meFotoEstado').textContent = '';
-  document.getElementById('meFotoInput').value = '';
+function quitarFotoTacometro(cual){
+  fotosTacometroCapturadas[cual] = null;
+  const previewId = cual==='inicial' ? 'meFotoInicialPreview' : 'meFotoFinalPreview';
+  const quitarId = cual==='inicial' ? 'meFotoInicialQuitar' : 'meFotoFinalQuitar';
+  const inputId = cual==='inicial' ? 'meFotoInicialInput' : 'meFotoFinalInput';
+  document.getElementById(previewId).style.display = 'none';
+  document.getElementById(previewId).src = '';
+  document.getElementById(quitarId).style.display = 'none';
+  document.getElementById(inputId).value = '';
 }
-async function onFotoTacometro(ev){
+async function onFotoTacometro(ev, cual){
   const file = ev.target.files[0];
   if(!file) return;
-  mostrarFotoTacometro(file);
+  mostrarFotoTacometro(file, cual);
   const estado = document.getElementById('meFotoEstado');
+  const etiquetaCampo = cual==='inicial' ? 'Hora Motor Inicial' : 'Hora Motor Final';
+  const idCampoHora = cual==='inicial' ? 'meHoraInicial' : 'meHoraFinal';
   if(!('TextDetector' in window)){
-    estado.textContent = 'Foto guardada. Este navegador no puede leer el número solo — escríbelo a mano.';
+    estado.textContent = `Foto (${cual}) guardada. Este navegador no puede leer el número solo — escríbelo a mano.`;
     return;
   }
-  estado.textContent = 'Buscando el número en la foto…';
+  estado.textContent = `Buscando el número en la foto (${cual})…`;
   try{
     const bitmap = await createImageBitmap(file);
     const detector = new window.TextDetector();
@@ -5019,19 +5191,18 @@ async function onFotoTacometro(ev){
     const numeros = detecciones.map(d=>d.rawValue).join(' ').match(/\d+([.,]\d+)?/g);
     if(numeros && numeros.length){
       const valor = numeros.sort((a,b)=>b.length-a.length)[0].replace(',','.'); // el número más largo detectado, buena señal de que es la lectura principal
-      estado.textContent = `¿Es "${valor}" lo que marca el tacómetro?`;
-      if(confirm(`¿El tacómetro marca "${valor}"? Se usará en Hora Motor Final si aceptas.`)){
-        document.getElementById('meHoraFinal').value = valor;
+      if(confirm(`¿El tacómetro marca "${valor}"? Se usará en ${etiquetaCampo} si aceptas.`)){
+        document.getElementById(idCampoHora).value = valor;
         validarHoraMotorEnVivo();
-        estado.textContent = `Se usó "${valor}" en Hora Motor Final — verifícalo.`;
+        estado.textContent = `Se usó "${valor}" en ${etiquetaCampo} — verifícalo.`;
       } else {
-        estado.textContent = 'Foto guardada. Escribe el número a mano.';
+        estado.textContent = `Foto (${cual}) guardada. Escribe el número a mano.`;
       }
     } else {
-      estado.textContent = 'No se reconoció ningún número en la foto — foto guardada, escribe el valor a mano.';
+      estado.textContent = `No se reconoció ningún número en la foto (${cual}) — foto guardada, escribe el valor a mano.`;
     }
   }catch(e){
-    estado.textContent = 'No se pudo leer la foto automáticamente — queda guardada igual.';
+    estado.textContent = `No se pudo leer la foto (${cual}) automáticamente — queda guardada igual.`;
   }
 }
 
@@ -5064,7 +5235,8 @@ async function guardarEquipo(){
   const linea = {
     equipoId: equipo.id, nombre: equipo.nombre,
     horaInicial, horaFinal,
-    fotoTacometro: fotoTacometroCapturada || (edicionEquipoIdx!==null ? ordenActual.lineasEquipos[edicionEquipoIdx].fotoTacometro : null) || null
+    fotoTacometroInicial: fotosTacometroCapturadas.inicial || (edicionEquipoIdx!==null ? ordenActual.lineasEquipos[edicionEquipoIdx].fotoTacometroInicial : null) || null,
+    fotoTacometroFinal: fotosTacometroCapturadas.final || (edicionEquipoIdx!==null ? ordenActual.lineasEquipos[edicionEquipoIdx].fotoTacometroFinal : null) || null
   };
   if(edicionEquipoIdx!==null) ordenActual.lineasEquipos[edicionEquipoIdx] = linea;
   else ordenActual.lineasEquipos.push(linea);
@@ -5072,8 +5244,9 @@ async function guardarEquipo(){
   cerrarModales(); renderLineas();
   toast(edicionEquipoIdx!==null ? 'Equipo actualizado' : 'Equipo agregado');
   edicionEquipoIdx = null;
-  fotoTacometroCapturada = null;
+  fotosTacometroCapturadas = { inicial:null, final:null };
 }
+
 
 // Prefijo de contenido de los QR de equipos — lo mismo que genera generarQREquipos()
 // más abajo, así lo que se imprime y lo que se lee siempre coinciden.
@@ -5193,115 +5366,257 @@ document.body.appendChild(fab);
    tabla de Avance de Actividades por Lotes, Asistencia Jornalera, Lista de
    Tractores/Implementos, Listado de Consumo de Insumos Agrícolas y Observación.
    ========================================================================= */
+// Rellena una tabla con filas vacías hasta un mínimo — así el PDF sale con la misma
+// cuadrícula uniforme que la hoja física (que ya viene impresa con líneas en blanco),
+// en vez de una tabla que se ve "cortada" cuando hay pocos datos.
+function conFilasVacias(filas, minFilas, numCols){
+  const relleno = Array.from({length: Math.max(0, minFilas - filas.length)}, () => Array(numCols).fill(''));
+  return filas.concat(relleno);
+}
+
 function construirDocPDF(o){
   const h = o.header;
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit:'mm', format:'letter', orientation:'portrait' });
   const pageW = doc.internal.pageSize.getWidth();
-  const marginX = 12;
-  let y = 14;
+  const marginX = 10;
+  const anchoUtil = pageW - marginX*2;
+  let y = 10;
 
-  // ---- Membrete, igual disposición que la hoja física (título a la izquierda, N° arriba a la derecha) ----
-  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(0,0,0);
-  doc.text('ORDEN DE TRABAJO CAMPO', marginX, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(90,90,90);
-  doc.text(h.companyNombre || '', marginX, y+5);
+  // ---- Membrete: barra azul con el título + recuadro blanco con el N° de OT, igual que
+  // la hoja física ----
+  const altoBarra = 9;
+  doc.setFillColor(31,64,122);
+  doc.rect(marginX, y, anchoUtil, altoBarra, 'F');
+  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  doc.text('ORDEN DE TRABAJO CAMPO', marginX+3, y+altoBarra/2+1.6);
+  doc.setFillColor(255,255,255);
+  doc.rect(pageW-marginX-28, y+1.3, 25, altoBarra-2.6, 'F');
+  doc.setTextColor(180,20,20); doc.setFont('helvetica','bold'); doc.setFontSize(8);
+  doc.text('N°', pageW-marginX-25, y+altoBarra/2+1.4);
+  doc.setTextColor(0,0,0); doc.setFontSize(11);
+  doc.text(String(h.nombre||''), pageW-marginX-5, y+altoBarra/2+1.6, {align:'right'});
+  y += altoBarra + 6;
 
-  doc.setDrawColor(0,0,0); doc.setLineWidth(0.3);
-  doc.rect(pageW-marginX-26, y-7, 26, 9);
-  doc.setFont('helvetica','normal'); doc.setFontSize(6.5);
-  doc.text('N°', pageW-marginX-23, y-2);
-  doc.setFont('helvetica','bold'); doc.setFontSize(11);
-  doc.text(String(h.nombre||''), pageW-marginX-3, y-1.5, {align:'right'});
-
-  y += 8;
-  doc.setDrawColor(0,0,0); doc.setLineWidth(0.5);
-  doc.line(marginX, y, pageW-marginX, y);
+  // ---- Fecha | Ciclo | Finca | Turno Día/Noche — misma fila que la hoja física ----
+  doc.setTextColor(0,0,0); doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  let x = marginX;
+  const campoLinea = (etiqueta, valor, anchoEtq, anchoLinea) => {
+    doc.text(etiqueta, x, y);
+    const xIni = x + anchoEtq;
+    doc.text(String(valor||''), xIni + 1, y);
+    doc.setLineWidth(0.2); doc.line(xIni, y+0.8, xIni+anchoLinea, y+0.8);
+    x = xIni + anchoLinea + 4;
+  };
+  campoLinea('Fecha:', fmtFechaCorta(h.fecha), 11, 22);
+  campoLinea('Ciclo:', h.cicloNombre||'', 10, 28);
+  campoLinea('Finca:', h.fincaNombre||'', 10, 30);
+  campoLinea('Turno Dia:', h.turno!=='Noche' ? 'X' : '', 16, 8);
+  campoLinea('Noche:', h.turno==='Noche' ? 'X' : '', 12, 8);
   y += 6;
 
-  // ---- Datos generales: Fecha | Ciclo | Finca | Turno (misma fila que la hoja física) ----
-  const campos = [
-    ['Fecha', fmtFechaCorta(h.fecha)],
-    ['Ciclo', h.cicloNombre || ''],
-    ['Finca', h.fincaNombre || ''],
-    ['Turno', h.turno === 'Noche' ? 'Noche' : 'Día']
-  ];
-  const colW = (pageW - marginX*2)/4;
-  campos.forEach((c,i)=>{
-    const x = marginX + i*colW;
-    doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(90,90,90);
-    doc.text(String(c[0]).toUpperCase(), x, y);
-    doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(0,0,0);
-    doc.text(String(c[1]||'—'), x, y+4.5);
-  });
-  y += 10;
+  // ---- Dos tablas lado a lado: Avance de Actividades por Lotes / Asistencia Jornaleros ----
+  const brechaCol = 4;
+  const anchoIzq = anchoUtil*0.56, anchoDer = anchoUtil - anchoIzq - brechaCol;
+  const estiloTabla = { fontSize:7.5, cellPadding:1.4, lineColor:[90,90,90], lineWidth:0.15, textColor:[0,0,0] };
+  const estiloCab = { fillColor:[224,224,224], textColor:[0,0,0], fontStyle:'bold', halign:'center' };
 
-  // ---- Dos tablas lado a lado: Avance de Actividades / Asistencia Jornalera ----
-  const halfW = (pageW - marginX*2 - 4)/2;
-  const actHead = [['Actividad','Lote','Avance (Mzn)']];
-  const actBody = o.lineasActividades.length
-    ? o.lineasActividades.map(l=>[l.actividadNombre||'', l.loteNombre||'', l.avanceMzn?fmtNumeroPDF(l.avanceMzn):''])
-    : [['—','—','—']];
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.text('Avance de Actividades por Lotes', marginX, y);
+  doc.text('Asistencia Jornaleros por actividad', marginX+anchoIzq+brechaCol, y);
+  y += 1.5;
+
+  const actFilas = o.lineasActividades.map(l=>[l.actividadNombre||'', l.loteNombre||'', l.avanceMzn?fmtNumeroPDF(l.avanceMzn):'']);
+  const totalAvance = o.lineasActividades.reduce((s,l)=>s+(Number(l.avanceMzn)||0),0);
   doc.autoTable({
-    startY:y, head:actHead, body:actBody, margin:{ left:marginX, right: marginX+halfW+4 },
-    tableWidth:halfW, styles:{ fontSize:7, cellPadding:1.3, lineColor:[120,120,120], lineWidth:0.1, textColor:[0,0,0] },
-    headStyles:{ fillColor:[235,235,235], textColor:[0,0,0], fontStyle:'bold' }, theme:'grid'
+    startY:y, head:[['Actividad','Nombre del lote','Avance(Mzn)']],
+    body: conFilasVacias(actFilas, 8, 3),
+    foot: [['Total', '', totalAvance ? fmtNumeroPDF(totalAvance) : '']],
+    margin:{ left:marginX, right: pageW-marginX-anchoIzq },
+    tableWidth: anchoIzq, styles: estiloTabla, headStyles: estiloCab,
+    footStyles:{ fillColor:[255,255,255], textColor:[0,0,0], fontStyle:'bold', lineWidth:0.15, lineColor:[90,90,90] },
+    columnStyles:{ 2:{ halign:'right' } }, theme:'grid'
   });
   const yActividades = doc.lastAutoTable.finalY;
 
-  const perHead = [['Actividad','Cantidad']];
-  const perBody = o.lineasPersonal.length
-    ? o.lineasPersonal.map(l=>[l.nombre||'', String(l.cantidad||'')])
-    : [['—','—']];
+  const perFilas = o.lineasPersonal.map(l=>[l.nombre||'', String(l.cantidad||'')]);
+  const totalPersonal = o.lineasPersonal.reduce((s,l)=>s+(Number(l.cantidad)||0),0);
   doc.autoTable({
-    startY:y, head:perHead, body:perBody, margin:{ left:marginX+halfW+4, right:marginX },
-    tableWidth:halfW, styles:{ fontSize:7, cellPadding:1.3, lineColor:[120,120,120], lineWidth:0.1, textColor:[0,0,0] },
-    headStyles:{ fillColor:[235,235,235], textColor:[0,0,0], fontStyle:'bold' }, theme:'grid'
+    startY:y, head:[['Actividad','Cantidad']],
+    body: conFilasVacias(perFilas, 8, 2),
+    foot: [['Total', totalPersonal || '']],
+    margin:{ left: marginX+anchoIzq+brechaCol, right:marginX },
+    tableWidth: anchoDer, styles: estiloTabla, headStyles: estiloCab,
+    footStyles:{ fillColor:[255,255,255], textColor:[0,0,0], fontStyle:'bold', lineWidth:0.15, lineColor:[90,90,90] },
+    columnStyles:{ 1:{ halign:'right' } }, theme:'grid'
   });
   const yPersonal = doc.lastAutoTable.finalY;
-  y = Math.max(yActividades, yPersonal) + 6;
+  y = Math.max(yActividades, yPersonal) + 5;
 
-  // ---- Lista de Tractores o Implementos ----
-  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(0,0,0);
-  doc.text('Lista de Tractores o Implementos', marginX, y);
-  y += 2;
+  // ---- Lista de Tractores e Implementos ----
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
+  doc.text('Lista de Tractores e Implementos', marginX, y);
+  y += 1.5;
+  const eqFilas = o.lineasEquipos.map(l=>[l.nombre||'', l.horaInicial!=null?fmtNumeroPDF(l.horaInicial):'', l.horaFinal!=null?fmtNumeroPDF(l.horaFinal):'']);
   doc.autoTable({
     startY:y, head:[['Equipo','Hora Motor Inicial','Hora Motor Final']],
-    body: o.lineasEquipos.length ? o.lineasEquipos.map(l=>[l.nombre||'', l.horaInicial!=null?fmtNumeroPDF(l.horaInicial):'', l.horaFinal!=null?fmtNumeroPDF(l.horaFinal):'']) : [['—','—','—']],
+    body: conFilasVacias(eqFilas, 5, 3),
     margin:{ left:marginX, right:marginX },
-    styles:{ fontSize:7, cellPadding:1.3, lineColor:[120,120,120], lineWidth:0.1, textColor:[0,0,0] },
-    headStyles:{ fillColor:[235,235,235], textColor:[0,0,0], fontStyle:'bold' }, theme:'grid'
+    styles: estiloTabla, headStyles: estiloCab, theme:'grid'
   });
-  y = doc.lastAutoTable.finalY + 6;
+  y = doc.lastAutoTable.finalY + 5;
 
   // ---- Listado de Consumo de Insumos Agrícolas ----
-  if(y > 240){ doc.addPage(); y = 16; }
-  doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(0,0,0);
+  if(y > 220){ doc.addPage(); y = 14; }
+  doc.setFont('helvetica','bold'); doc.setFontSize(7.5);
   doc.text('Listado de Consumo de Insumos Agrícolas', marginX, y);
-  y += 2;
+  doc.setFont('helvetica','normal');
+  doc.text('Calibración (Mzn): _______', pageW-marginX, y, {align:'right'});
+  y += 1.5;
+  const insFilas = o.lineasInsumos.map(l=>[
+    l.loteNombre||'', l.producto||'',
+    l.cantGastada?fmtNumeroPDF(l.cantGastada)+(l.um?' '+l.um:''):'',
+    l.cargas?fmtNumeroPDF(l.cargas):'', l.areaMzn?fmtNumeroPDF(l.areaMzn):'', ''
+  ]);
   doc.autoTable({
     startY:y,
-    head:[['Lote','Insumo','Cant. Gastada','N° Cargas','Área Aplicada (Mzn)','Dosis x Mzn']],
-    body: o.lineasInsumos.length ? o.lineasInsumos.map(l=>[
-      l.loteNombre||'', l.producto||'',
-      l.cantGastada?fmtNumeroPDF(l.cantGastada)+' '+(l.um||''):'',
-      l.cargas?fmtNumeroPDF(l.cargas):'', l.areaMzn?fmtNumeroPDF(l.areaMzn):'', l.dosis?fmtNumeroPDF(l.dosis):''
-    ]) : [['—','—','—','—','—','—']],
+    head:[['Nombre del Lote','Insumo','Cantidad de Gasto','N° Carga','Área Aplicada','N° Salida Bodega']],
+    body: conFilasVacias(insFilas, 10, 6),
     margin:{ left:marginX, right:marginX },
-    styles:{ fontSize:7, cellPadding:1.3, lineColor:[120,120,120], lineWidth:0.1, textColor:[0,0,0] },
-    headStyles:{ fillColor:[235,235,235], textColor:[0,0,0], fontStyle:'bold' }, theme:'grid'
+    styles: estiloTabla, headStyles: estiloCab, theme:'grid'
   });
   y = doc.lastAutoTable.finalY + 6;
 
   // ---- Observación ----
-  if(y > 270){ doc.addPage(); y = 16; }
-  doc.setFont('helvetica','bold'); doc.setFontSize(7); doc.setTextColor(90,90,90);
-  doc.text('OBSERVACIÓN', marginX, y);
-  doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(0,0,0);
-  const obsLines = doc.splitTextToSize(h.observacion || '—', pageW - marginX*2);
-  doc.text(obsLines, marginX, y+4);
+  if(y > 265){ doc.addPage(); y = 14; }
+  doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(0,0,0);
+  doc.text('Observación:', marginX, y);
+  const anchoObs = anchoUtil - 24;
+  doc.setLineWidth(0.2); doc.line(marginX+22, y+0.8, marginX+22+anchoObs, y+0.8);
+  if(h.observacion){
+    const obsLines = doc.splitTextToSize(h.observacion, anchoObs);
+    doc.text(obsLines, marginX+23, y);
+  }
+  y += 10;
+
+  // ---- Leyenda de códigos de actividad — mismo texto de referencia que trae la hoja física ----
+  doc.setDrawColor(150,150,150); doc.setLineWidth(0.1);
+  doc.line(marginX, y, pageW-marginX, y);
+  y += 4;
+  doc.setFont('helvetica','bold'); doc.setFontSize(6.5); doc.setTextColor(60,60,60);
+  const leyenda = [
+    ['Preparación de Suelo:', 'Arado/Romplona, Subsuelo, Grada'],
+    ['Siembra:', 'Mureo, Siembra, Resiembra'],
+    ['Cosecha:', 'Arranque, Casamba, Combina'],
+    ['Aplicaciones terrestres:', 'Quema, Sello, Post-emergente, Fung. 1, Fung. 2, Fung. 3, Fung. 4, Fung. 5, Fung. 6, Fung. 7, Fung. 8, Fertilización'],
+    ['Otros:', 'Nivelación, Limpia-Chapodo-Socola']
+  ];
+  leyenda.forEach(([etq, val])=>{
+    doc.setFont('helvetica','bold'); doc.text(etq, marginX, y);
+    doc.setFont('helvetica','normal');
+    doc.text(val, marginX + 34, y);
+    y += 3.2;
+  });
+  y += 5;
+
+  // ---- Elaborado por (con firma real) / Supervisor / Fecha y Hora Cierre ----
+  const altoFirma = 16;
+  if(y + altoFirma + 10 > 285){ doc.addPage(); y = 14; }
+  const tercioAncho = anchoUtil/3;
+  if(h.firmaImagen){
+    try{ doc.addImage(h.firmaImagen, 'PNG', marginX, y, 40, altoFirma); }catch(e){ /* firma dañada — se deja el espacio en blanco */ }
+  }
+  y += altoFirma + 2;
+  doc.setFontSize(8.5); doc.setTextColor(0,0,0);
+  [['Elaborado por:', h.firmaNombre||''], ['Supervisor:', ''], ['Fecha y Hora Cierre:', '']].forEach((c,i)=>{
+    const xi = marginX + i*tercioAncho;
+    doc.setFont('helvetica','normal');
+    doc.text(c[0], xi, y);
+    const xValor = xi + doc.getTextWidth(c[0]) + 1;
+    doc.line(xValor, y+0.8, xi + tercioAncho - 4, y+0.8);
+    if(c[1]){ doc.setFont('helvetica','bold'); doc.text(String(c[1]), xValor + 1, y-0.5); }
+  });
+
+  // ---- Una hoja nueva por cada polígono GPS medido — pedido por Ignacio, para poder
+  // imprimir/archivar el plano del lote junto con la OT ----
+  o.lineasActividades.forEach(l=>{
+    if(l.poligono) agregarPaginaPoligono(doc, o, l);
+  });
 
   return doc;
+}
+
+// Dibuja el polígono medido por GPS en una hoja nueva: proyecta los puntos lat/lon a un
+// plano local en metros (mismo método que calcularAreaPoligono), lo escala para que quepa
+// en la hoja conservando la forma real, y lo traza como un polígono cerrado con sus
+// vértices marcados — más una tabla de coordenadas abajo, útil como referencia si alguien
+// quiere importar el polígono a un GIS más adelante.
+function agregarPaginaPoligono(doc, o, l){
+  const h = o.header;
+  doc.addPage();
+  const pageW = doc.internal.pageSize.getWidth();
+  const marginX = 12;
+  let y = 14;
+
+  doc.setTextColor(0,0,0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+  doc.text('Polígono del Lote — Medición GPS', marginX, y);
+  y += 7;
+  doc.setDrawColor(150,150,150); doc.setLineWidth(0.2);
+  doc.line(marginX, y, pageW-marginX, y);
+  y += 6;
+
+  doc.setFont('helvetica','normal'); doc.setFontSize(9);
+  const datos = [
+    ['OT', h.nombre||''], ['Actividad', l.actividadNombre||''],
+    ['Ciclo', h.cicloNombre||''], ['Finca', h.fincaNombre||''], ['Lote', l.loteNombre||'']
+  ];
+  datos.forEach((d,i)=>{
+    doc.setFont('helvetica','bold'); doc.text(d[0]+':', marginX + (i%3)*63, y + Math.floor(i/3)*6);
+    doc.setFont('helvetica','normal'); doc.text(String(d[1]), marginX + (i%3)*63 + 20, y + Math.floor(i/3)*6);
+  });
+  y += Math.ceil(datos.length/3)*6 + 6;
+
+  // ---- Proyección local a metros (mismo criterio que calcularAreaPoligono) ----
+  const puntos = l.poligono.puntos;
+  const latRef = puntos.reduce((s,p)=>s+p.lat,0)/puntos.length;
+  const mPorGradoLat = 111320, mPorGradoLon = 111320*Math.cos(latRef*Math.PI/180);
+  const xy = puntos.map(p=>[ (p.lon-puntos[0].lon)*mPorGradoLon, (p.lat-puntos[0].lat)*mPorGradoLat ]);
+  const xs = xy.map(p=>p[0]), ys = xy.map(p=>p[1]);
+  const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+  const anchoM = Math.max(maxX-minX, 1), altoM = Math.max(maxY-minY, 1);
+
+  // ---- Recuadro de dibujo: escala conservando proporción real del lote ----
+  const cajaW = pageW - marginX*2, cajaH = 130;
+  const escala = Math.min((cajaW-16)/anchoM, (cajaH-16)/altoM);
+  const dibujoW = anchoM*escala, dibujoH = altoM*escala;
+  const offX = marginX + (cajaW-dibujoW)/2, offY = y + (cajaH-dibujoH)/2;
+  const proyectar = ([px,py]) => [ offX + (px-minX)*escala, offY + (maxY-py)*escala ]; // Y invertido: PDF crece hacia abajo
+
+  doc.setDrawColor(210,210,210); doc.setLineWidth(0.2);
+  doc.rect(marginX, y, cajaW, cajaH);
+
+  const puntosPDF = xy.map(proyectar);
+  doc.setFillColor(209,250,229); doc.setDrawColor(31,64,122); doc.setLineWidth(0.6);
+  doc.lines(
+    puntosPDF.slice(1).map((p,i)=>[p[0]-puntosPDF[i][0], p[1]-puntosPDF[i][1]]),
+    puntosPDF[0][0], puntosPDF[0][1], [1,1], 'FD', true
+  );
+  doc.setFillColor(31,64,122);
+  puntosPDF.forEach(p=> doc.circle(p[0], p[1], 0.9, 'F'));
+
+  y += cajaH + 8;
+  doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(0,0,0);
+  doc.text(`Área medida: ${l.poligono.areaMzn.toFixed(2)} mzn  (${fmtNumeroPDF(l.poligono.areaM2)} m²)  ·  ${puntos.length} puntos GPS`, marginX, y);
+  y += 8;
+
+  // ---- Tabla de coordenadas — referencia por si se necesita llevar el polígono a un GIS ----
+  doc.autoTable({
+    startY:y, head:[['#','Latitud','Longitud']],
+    body: puntos.map((p,i)=>[String(i+1), p.lat.toFixed(6), p.lon.toFixed(6)]),
+    margin:{ left:marginX, right:marginX }, tableWidth: 80,
+    styles:{ fontSize:7, cellPadding:1.2, lineColor:[150,150,150], lineWidth:0.1, textColor:[0,0,0] },
+    headStyles:{ fillColor:[224,224,224], textColor:[0,0,0], fontStyle:'bold' }, theme:'grid'
+  });
 }
 function generarPDFBlob(o){
   const doc = construirDocPDF(o);
@@ -5309,6 +5624,11 @@ function generarPDFBlob(o){
 }
 async function descargarPDF(){
   if(!ordenActual) return;
+  if(!firmaCompleta()){
+    toast('Falta la firma de quien elabora la OT — no se puede generar el PDF sin firma', true);
+    document.getElementById('firmaEstado').textContent = '⚠ Falta tu nombre y/o la firma para poder generar el PDF.';
+    return;
+  }
   toast('Generando PDF…');
   try{
     const { blob, folio } = generarPDFBlob(ordenActual);
@@ -5323,6 +5643,11 @@ async function descargarPDF(){
 }
 async function compartirPDF(){
   if(!ordenActual) return;
+  if(!firmaCompleta()){
+    toast('Falta la firma de quien elabora la OT — no se puede generar el PDF sin firma', true);
+    document.getElementById('firmaEstado').textContent = '⚠ Falta tu nombre y/o la firma para poder generar el PDF.';
+    return;
+  }
   toast('Generando PDF…');
   try{
     const { blob, folio } = generarPDFBlob(ordenActual);
@@ -5518,8 +5843,46 @@ async function imprimirBluetooth(){
    SINCRONIZACIÓN CON ODOO (vía Cloudflare Worker) — mismo patrón que
    sincronizarSesion()/sincronizarTodo() de recuentosEf.html
    ========================================================================= */
-function ordenToPayload(o){
+// Convierte un Blob (foto tomada con la cámara) a base64 puro (sin el prefijo
+// "data:image/...;base64,") — lo que espera un adjunto normal en Odoo.
+function blobToBase64(blob){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function ordenToPayload(o){
   const h = o.header;
+
+  // ---- Adjuntos para el chatter de la OT (decisión de Ignacio: la firma va como adjunto
+  // en el chatter, NO como campo Binary en el formulario — el Worker debe usar
+  // message_post(attachments=[...]) o crear ir.attachment con res_model/res_id apuntando
+  // al registro de x_orden_campo recién creado/actualizado). Las fotos del avance por lote
+  // (sin campo confirmado todavía) viajan aquí también, mismo mecanismo, hasta que se
+  // decida si necesitan su propio campo. Las fotos del tacómetro SÍ tienen campo propio
+  // confirmado (ver lineas_equipos) y no van en este arreglo.
+  const adjuntosChatter = [];
+  if(h.firmaImagen){
+    adjuntosChatter.push({
+      nombre: `Firma_${(h.firmaNombre||'OT').trim().replace(/\s+/g,'_')}_OT${h.nombre}.png`,
+      tipo: 'image/png',
+      contenido_base64: h.firmaImagen.split(',')[1] || ''
+    });
+  }
+  for(const l of o.lineasActividades){
+    const fotos = l.fotos || [];
+    for(let i=0; i<fotos.length; i++){
+      adjuntosChatter.push({
+        nombre: `Avance_${(l.loteNombre||'lote').replace(/\s+/g,'_')}_OT${h.nombre}_${i+1}.jpg`,
+        tipo: fotos[i].type || 'image/jpeg',
+        contenido_base64: await blobToBase64(fotos[i])
+      });
+    }
+  }
+
   return {
     localId: o.localId,
     // ---- Encabezado: mapeo confirmado contra x_orden_campo (MCP, jul-2026) ----
@@ -5540,6 +5903,11 @@ function ordenToPayload(o){
     x_studio_observacion: h.observacion || false,
     x_studio_latitud: o._gps?.lat || 0.0,
     x_studio_longitud: o._gps?.lon || 0.0,
+    // "Elaborado por" como texto simple (nombre técnico real pendiente de confirmar); la
+    // firma en sí NO va aquí — viaja en adjuntos_chatter (ver arriba), por decisión de
+    // Ignacio de subirla como adjunto del chatter en vez de un campo del formulario.
+    elaborado_por: h.firmaNombre || null,
+    adjuntos_chatter: adjuntosChatter,
     // ---- Línea "Actividades Agrícolas Realizadas": modelo real CONFIRMADO por MCP —
     // x_orden_campo_line_b660b (328 líneas exploradas). Esto cierra el último TODO de
     // modelo que quedaba pendiente en el prototipo. Confirmado también que:
@@ -5557,7 +5925,7 @@ function ordenToPayload(o){
     //   x_studio_fincafiltroot e x_studio_id_lote son campos de agrupación/reporte que arma
     //   Odoo por su cuenta (se ven en registros reales como "RA-0000", secuencia, duplicados
     //   de finca/lote para filtros) — no se mandan desde acá, igual criterio que "Salidas de
-    //   Bodega" en Insumos.
+    //   Bodega" en Insumos. Las fotos de esta línea viajan en adjuntos_chatter, no aquí.
     lineas_actividades: o.lineasActividades.map(l=>({
       x_studio_compaia: h.companyId,               // typo intencional confirmado, preservar tal cual
       x_studio_ciclo: h.cicloId || false,
@@ -5606,12 +5974,18 @@ function ordenToPayload(o){
       x_studio_dosis_x_mzn: l.dosis,
       x_studio_actividad_realizada: l.actividadId || false
     })),
-    // ---- Línea "Equipos": modelo real CONFIRMADO por Ignacio: x_orden_campo_line_4f4f8 ----
-    lineas_equipos: o.lineasEquipos.map(l=>({
+    // ---- Línea "Equipos": modelo real CONFIRMADO por Ignacio: x_orden_campo_line_4f4f8.
+    // Las dos fotos del tacómetro (x_studio_foto_tacometro_hmi / hmf) también son campos
+    // CONFIRMADOS — van en base64 puro, listas para que el Worker las decodifique y las
+    // suba como Binary/Imagen directo en esos dos campos (no por el chatter, a diferencia
+    // de la firma y las fotos de avance). ----
+    lineas_equipos: await Promise.all(o.lineasEquipos.map(async l=>({
       x_studio_equipo: l.equipoId,                       // Many2one CONFIRMADO a x_equiposagricolas
       x_studio_hora_motor_inicial: l.horaInicial,
-      x_studio_hora_motor_final: l.horaFinal
-    })),
+      x_studio_hora_motor_final: l.horaFinal,
+      x_studio_foto_tacometro_hmi: l.fotoTacometroInicial ? await blobToBase64(l.fotoTacometroInicial) : false,
+      x_studio_foto_tacometro_hmf: l.fotoTacometroFinal ? await blobToBase64(l.fotoTacometroFinal) : false
+    }))),
     // ---- TODO Ignacio: confirmar modelo/campos técnicos reales antes de
     // activar el envío de esta (por ahora viaja como JSON genérico) ----
     lineas_personal: o.lineasPersonal
@@ -5625,7 +5999,7 @@ async function sincronizarOrden(o){
   const res = await fetch(url, {
     method:'POST',
     headers:{'Content-Type':'application/json','X-Sync-Key':key||''},
-    body: JSON.stringify(ordenToPayload(o))
+    body: JSON.stringify(await ordenToPayload(o))
   });
   if(!res.ok){
     const txt = await res.text().catch(()=> '');
