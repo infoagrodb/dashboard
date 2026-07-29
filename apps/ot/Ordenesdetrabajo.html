@@ -509,15 +509,7 @@
       <div style="height:16px;"></div>
       <div class="seccion-card">
         <h3>Servidor</h3>
-        <div class="campo">
-          <label>URL del Worker</label>
-          <input type="text" id="cfgWorkerUrl" placeholder="https://…workers.dev/ordenes">
-        </div>
-        <div class="campo">
-          <label>Clave de sincronización</label>
-          <input type="text" id="cfgSyncKey">
-        </div>
-        <button class="btn btn-secundario" onclick="guardarConfigServidor()">Guardar configuración</button>
+        <p style="margin:0;color:var(--texto-suave);font-size:.82rem;">🔒 Conectado a INFOAGRO. La dirección del servidor y la clave de sincronización vienen configuradas de fábrica en la app — no se muestran ni se editan aquí por seguridad; la app las manda sola cada vez que sincroniza. Si alguna vez cambian, avísale a Ignacio para que suba una versión nueva de la app.</p>
       </div>
 
       <div class="seccion-card">
@@ -6006,9 +5998,11 @@ async function ordenToPayload(o){
 }
 
 async function sincronizarOrden(o){
-  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
-  const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
-  if(!url) throw new Error('Configura la URL del servidor en Ajustes');
+  // La URL y la clave del servidor son fijas, configuradas de fábrica en la app — nunca se
+  // muestran ni se editan desde Ajustes, por seguridad (ver tarjeta "Servidor"). Es la app
+  // la que las manda sola en cada sincronización, no algo que el técnico de campo controle.
+  const url = DEFAULT_WORKER_URL;
+  const key = DEFAULT_SYNC_KEY;
   const res = await fetch(url, {
     method:'POST',
     headers:{'Content-Type':'application/json','X-Sync-Key':key||''},
@@ -6077,15 +6071,8 @@ async function actualizarEstadoGlobal(){
 }
 
 async function renderConfig(){
-  document.getElementById('cfgWorkerUrl').value = await kvGet('worker_url', DEFAULT_WORKER_URL);
-  document.getElementById('cfgSyncKey').value = await kvGet('sync_key', DEFAULT_SYNC_KEY);
   await actualizarEstadoGlobal();
   actualizarUIInstalacion();
-}
-async function guardarConfigServidor(){
-  await kvSet('worker_url', document.getElementById('cfgWorkerUrl').value.trim());
-  await kvSet('sync_key', document.getElementById('cfgSyncKey').value.trim());
-  toast('Configuración guardada');
 }
 
 /* =========================================================================
