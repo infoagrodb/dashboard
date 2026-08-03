@@ -10,7 +10,6 @@ on:
     - cron: "30 23 * * *"
   workflow_dispatch:
 
-
 permissions:
   contents: write
 
@@ -62,6 +61,13 @@ jobs:
           if [ ! -s info_Combustible_Despachos.json ]; then
             echo "❌ Error: info_Combustible_Despachos.json está vacío o no se generó correctamente."
             exit 1
+          fi
+
+          # Validar rápidamente si el JSON trajo un error de Odoo (opcional pero recomendado)
+          if grep -q '"error"' info_Combustible_Despachos.json; then
+             echo "❌ Error desde Odoo: Revisa el nombre de los campos en el JSON"
+             cat info_Combustible_Despachos.json
+             exit 1
           fi
 
           echo "✅ Archivo generado correctamente:"
