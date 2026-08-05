@@ -311,6 +311,10 @@
     .toolbar { flex-direction: column; align-items: stretch; }
     .toolbar-wrapper { max-height: none; }
     .toolbar-wrapper:not(.collapsed) { max-height: 1400px; }
+    /* El botón "Filtros" ya no existe: en móvil este panel (Sector/Ciclo/Finca/Tipo
+       Recuento) se oculta automáticamente para no saturar la pantalla; en escritorio
+       queda siempre visible sin necesidad de abrirlo manualmente. */
+    #panelFiltrosWrapper { display: none; }
 
     .table-toolbar { flex-direction: column; align-items: stretch; padding: 8px 10px; }
     .btn-table-menu-mobile { display: flex; width: 100%; justify-content: center; height: 36px; font-size: 12.5px; background-color: #475569; }
@@ -413,11 +417,20 @@
      estiran la tabla y descuadran el resto de columnas — se acota con elipsis y el
      texto completo queda disponible al pasar el mouse (title). */
   .alerta-table .col-variedad { max-width: 170px; overflow: hidden; text-overflow: ellipsis; }
+  /* Columna Área Sembrada (mzn): oculta por defecto, se muestra con el checkbox junto a "Exportar Excel" */
+  #tablaCompletosMaster .col-area { display: none; }
+  #tablaCompletosMaster.mostrar-area .col-area { display: table-cell; }
+  #tablaCompletosFoot td { font-weight: 700; background-color: #f0fdf4; border-top: 2px solid #bbf7d0; color: #15803d; padding: 8px 10px; }
+  #tablaCompletosFoot .total-area-valor { text-align: right; font-size: 13px; }
+  #tablaTodosFoot td { font-weight: 700; background-color: #eff6ff; border-top: 2px solid #bfdbfe; color: #1d4ed8; padding: 8px 10px; }
+  .chk-area-toggle { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #15803d; cursor: pointer; user-select: none; }
+  .chk-area-toggle input { cursor: pointer; }
   .alerta-table tr:hover td { background: var(--bg-main); }
   .badge-dds { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
   .badge-dds.en-rango { background: #fee2e2; color: #b91c1c; }
   .badge-dds.vencido  { background: #fef3c7; color: #b45309; }
   .badge-dds.pendiente { background: #f3f4f6; color: #6b7280; }
+  .badge-dds.completo { background: #dcfce7; color: #15803d; }
 
   .btn-ver-siembra { background: none; border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; padding: 3px 10px; font-size: 11px; font-weight: 600; cursor: pointer; }
   .btn-ver-siembra:hover { background: var(--primary); color: #fff; }
@@ -454,7 +467,6 @@
     </div>
     <div class="header-action-area">
       <div class="header-quick-actions">
-        <button class="btn-toggle-filters" onclick="toggleFiltrosPanel()">🔍 Filtros</button>
         <button class="btn-toggle-filters btn-menu-mobile" id="btnToggleHeaderMenu" onclick="toggleHeaderMenu()">☰ Menú</button>
       </div>
       <div class="header-menu-panel collapsed" id="headerMenuPanel">
@@ -578,7 +590,7 @@
           <div class="kpi-value ok" id="kpiCompletos">-</div>
           <div class="kpi-sub">Con ambos recuentos registrados</div>
         </div>
-        <div class="kpi-card info" onclick="filtrarTablaAlertas('all')">
+        <div class="kpi-card info" onclick="filtrarTablaAlertas('todos')">
           <div class="kpi-label">📋 Total Lotes Sembrados</div>
           <div class="kpi-value" id="kpiTotal">-</div>
           <div class="kpi-sub">En los filtros seleccionados</div>
@@ -600,6 +612,34 @@
         </div>
       </div>
 
+      <!-- TABLA "TOTAL LOTES SEMBRADOS": todo lote sembrado, tenga o no tenga recuento de germinación -->
+      <div id="seccionTodos" style="display:none;">
+        <div class="alerta-section-title" style="color:#1d4ed8; border-color:#bfdbfe; display: flex; justify-content: space-between; align-items: center; width: 100%;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            📋 Todos los Lotes Sembrados
+            <span class="badge-alert" id="badgeTodos" style="background:#dbeafe; color:#1d4ed8;">0</span>
+          </div>
+          <button class="btn-excel" onclick="exportarTablaTodosAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
+        </div>
+        <div class="alerta-table-wrap">
+          <table class="alerta-table" id="tablaTodosMaster">
+            <thead>
+              <tr>
+                <th class="sortable" id="th_todos_finca" onclick="cambiarOrdenAlertas('finca')">Finca<span class="sort-indicator">↕</span></th>
+                <th class="sortable" id="th_todos_lote" onclick="cambiarOrdenAlertas('lote')">Lote<span class="sort-indicator">↕</span></th>
+                <th class="sortable" id="th_todos_fechaSiembra" onclick="cambiarOrdenAlertas('fechaSiembra')">Fecha Siembra<span class="sort-indicator">↕</span></th>
+                <th>Área Sembrada (mzn)</th>
+                <th>Semillas m.l.</th>
+                <th class="sortable" id="th_todos_dds" onclick="cambiarOrdenAlertas('dds')">DDS Hoy<span class="sort-indicator">↕</span></th>
+                <th>Estado Recuento</th>
+              </tr>
+            </thead>
+            <tbody id="tablaTodosBody"></tbody>
+            <tfoot id="tablaTodosFoot"></tfoot>
+          </table>
+        </div>
+      </div>
+
       <!-- TABLA 1: LOTES COMPLETOS (Posicionada al inicio por solicitud) -->
       <div id="seccionCompletos" style="display:none;">
         <div class="alerta-section-title" style="color:#15803d; border-color:#bbf7d0; display: flex; justify-content: space-between; align-items: center; width: 100%;">
@@ -607,7 +647,12 @@
             ✅ Lotes con Recuentos de Germinación Completos
             <span class="badge-alert" id="badgeCompletos" style="background:#dcfce7; color:#15803d;">0</span>
           </div>
-          <button class="btn-excel" onclick="exportarTablaCompletosAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
+          <div style="display:flex; align-items:center; gap:12px;">
+            <label class="chk-area-toggle" title="Muestra u oculta la columna Área Sembrada (mzn)">
+              <input type="checkbox" id="chkMostrarAreaCompletos" onchange="toggleColumnaAreaCompletos()"> Área Sembrada
+            </label>
+            <button class="btn-excel" onclick="exportarTablaCompletosAExcel()" style="height: 30px; font-size: 11px; padding: 0 12px; font-weight: 700; border-radius: 6px;">📥 Exportar Excel</button>
+          </div>
         </div>
         <div class="alerta-table-wrap">
           <table class="alerta-table" id="tablaCompletosMaster">
@@ -632,6 +677,13 @@
                     <span>Fecha Siembra</span><span class="sort-indicator">↕</span>
                     <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'fechaSiembra')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
                     <div class="col-inline-filter-panel" id="fp_fechaSiembra" onclick="event.stopPropagation()"></div>
+                  </div>
+                </th>
+                <th class="sortable col-area" id="th_completos_area" onclick="manejadorHeaderClick(event, 'area')">
+                  <div class="th-inline-filter-container">
+                    <span>Área Sembrada (mzn)</span><span class="sort-indicator">↕</span>
+                    <button class="btn-col-inline-filter" onclick="toggleFiltroColumnaFlotante(event, 'area')"><svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg></button>
+                    <div class="col-inline-filter-panel" id="fp_area" onclick="event.stopPropagation()"></div>
                   </div>
                 </th>
                 <th class="sortable" id="th_completos_semillas" onclick="manejadorHeaderClick(event, 'semillas')">
@@ -679,6 +731,7 @@
               </tr>
             </thead>
             <tbody id="tablaCompletosBody"></tbody>
+            <tfoot id="tablaCompletosFoot"></tfoot>
           </table>
         </div>
       </div>
@@ -762,7 +815,7 @@
   <!-- TAB: PIVOT (Segundo Tab) -->
   <div class="tab-panel" id="tabPivot">
 
-    <div class="toolbar-wrapper collapsed" id="panelFiltrosWrapper">
+    <div class="toolbar-wrapper" id="panelFiltrosWrapper">
       <div class="toolbar">
         <div class="filter-group">
           <div class="label-container">
@@ -893,7 +946,7 @@ let universosUnicos = { compania: [], sector: [], ciclo: [], finca: [], tipo: []
 let seleccionesFiltros = { compania: [], sector: [], ciclo: [], finca: [], tipo: [] };
 
 // Estado global filtros Lotes Completos
-let inlineFiltersCompletos = { finca: [], lote: [], fechaSiembra: [], dds: [], p10: [], g10: [], p15: [], g15: [], variedad: [], semillas: [] };
+let inlineFiltersCompletos = { finca: [], lote: [], fechaSiembra: [], dds: [], p10: [], g10: [], p15: [], g15: [], variedad: [], semillas: [], area: [] };
 let universosCompletosFisicos = {};
 
 const METRICAS_LLAVES = ['semillas', '10dds', '15dds', 'g10', 'g15'];
@@ -907,7 +960,6 @@ let visibilidadColumnas = { semillas: true, '10dds': true, '15dds': true, g10: t
 
 let alertasSortConfig = { key: 'fechaSiembra', asc: true };
 
-function toggleFiltrosPanel() { document.getElementById('panelFiltrosWrapper').classList.toggle('collapsed'); }
 function toggleHeaderMenu() {
   document.getElementById('headerMenuPanel').classList.toggle('collapsed');
   document.getElementById('btnToggleHeaderMenu').classList.toggle('active-menu');
@@ -1393,13 +1445,14 @@ function abrirModalPopupDetalle(tipoColumna, finca, lote, ciclo, fechaSiembra) {
     title.textContent = `Detalle de Siembra — ${finca} · Lote ${lote}${fechaSiembra ? ` · ${formatFechaLegible(fechaSiembra)}` : ''}`;
     itemsCelda.sort((a, b) => (extraerFecha(a.rawSiembra) || '').localeCompare(extraerFecha(b.rawSiembra) || ''));
 
-    html += `<table class="modal-table"><thead><tr><th>Reporte</th><th>Fecha Reporte</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Variedad</th><th>Lote Semilla (Comasa)</th><th>Sem. Enteras</th><th>Sem. Quebradas</th><th>% Enteras</th><th>Total Sem. m.l.</th></tr></thead><tbody id="modalTableBody">`;
+    html += `<table class="modal-table"><thead><tr><th>Reporte</th><th>Fecha Reporte</th><th>Ciclo</th><th>Finca</th><th>Lote</th><th>Variedad</th><th>Calibre</th><th>Área Sembrada (mzn)</th><th>Lote Semilla (Comasa)</th><th>Sem. Enteras</th><th>Sem. Quebradas</th><th>% Enteras</th><th>Total Sem. m.l.</th></tr></thead><tbody id="modalTableBody">`;
     itemsCelda.forEach((item, idx) => {
       const s = item.rawSiembra || {};
       const enteras = parseFloat(s.x_studio_semilla_entre_x_mtrs_lineal || 0);
       const quebradas = parseFloat(s.x_studio_semilla_quebradas_x_mtrs_lineal || 0);
       const totalSem = item.total_semillas || (enteras + quebradas);
-      html += `<tr><td><strong>${s.name || s.x_name || ('#' + (idx + 1))}</strong></td><td>${extraerFecha(s) || 'N/A'}</td><td>${item.ciclo}</td><td>${item.finca}</td><td>${item.lote}</td><td>${limpiarDescripcion(s.x_studio_variedades || s.x_studio_variedad)}</td><td><span style="color:var(--accent-peanut); font-weight:700;">${limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa)}</span></td><td style="text-align:right;">${enteras.toFixed(2)}</td><td style="text-align:right;">${quebradas.toFixed(2)}</td><td style="text-align:right; font-weight:600;">${(totalSem > 0 ? (enteras/totalSem)*100 : 0).toFixed(2)}%</td><td style="text-align:right; background-color:#fff3cd; color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</td></tr>`;
+      const areaSembrada = parseFloat(s.x_studio_mzn_sembrada || 0);
+      html += `<tr><td><strong>${s.name || s.x_name || ('#' + (idx + 1))}</strong></td><td>${extraerFecha(s) || 'N/A'}</td><td>${item.ciclo}</td><td>${item.finca}</td><td>${item.lote}</td><td>${limpiarDescripcion(s.x_studio_variedades || s.x_studio_variedad)}</td><td>${limpiarDescripcion(s.x_studio_calibre)}</td><td style="text-align:right;">${areaSembrada > 0 ? areaSembrada.toFixed(2) : '-'}</td><td><span style="color:var(--accent-peanut); font-weight:700;">${limpiarDescripcion(s.x_studio_lote_comasa || s.x_studio_lote_de_semilla_comasa)}</span></td><td style="text-align:right;">${enteras.toFixed(2)}</td><td style="text-align:right;">${quebradas.toFixed(2)}</td><td style="text-align:right; font-weight:600;">${(totalSem > 0 ? (enteras/totalSem)*100 : 0).toFixed(2)}%</td><td style="text-align:right; background-color:#fff3cd; color:var(--accent-peanut); font-weight:700;">${totalSem.toFixed(2)}</td></tr>`;
     });
     html += `</tbody></table>`;
   } else {
@@ -1599,8 +1652,8 @@ function cambiarOrdenAlertas(key) {
 }
 
 function actualizarEstilosCabecerasAlertas() {
-  const prefijos = ['espera', '10dds', '15dds', 'completos'];
-  const llavesColumnas = ['finca', 'lote', 'fechaSiembra', 'dds', 'variedad', 'semillas', 'p10', 'g10', 'p15', 'g15'];
+  const prefijos = ['espera', '10dds', '15dds', 'completos', 'todos'];
+  const llavesColumnas = ['finca', 'lote', 'fechaSiembra', 'dds', 'variedad', 'semillas', 'area', 'p10', 'g10', 'p15', 'g15'];
   prefijos.forEach(pref => {
     llavesColumnas.forEach(col => {
       const th = document.getElementById(`th_${pref}_${col}`);
@@ -1619,6 +1672,10 @@ function ordenarFilasAlertas(filas) {
     if (alertasSortConfig.key === 'semillas') {
       valA = a.countSemillas > 0 ? (a.sumSemillas / a.countSemillas) : 0;
       valB = b.countSemillas > 0 ? (b.sumSemillas / b.countSemillas) : 0;
+    }
+    if (alertasSortConfig.key === 'area') {
+      valA = a.sumArea || 0;
+      valB = b.sumArea || 0;
     }
     if (valA === undefined || valA === null) return 1;
     if (valB === undefined || valB === null) return -1;
@@ -1746,6 +1803,30 @@ function renderAlertas() {
 
   alertasCicloData = { sin10, sin15, enEspera, completos, todos };
 
+  // ── TABLA "Todos los Lotes Sembrados": agrupa CADA lote sembrado (finca+lote+fecha),
+  // tenga o no tenga recuento de germinación — para poder cuadrar el área total sembrada
+  // y detectar de un vistazo cuáles siguen sin recuento. ──
+  const todosGruposRaw = [];
+  const cacheGruposTodos = {};
+  todos.forEach(item => {
+    const key = `${item.finca}|||${item.lote}|||${item.fechaSiembra || 'N/A'}`;
+    if (!cacheGruposTodos[key]) {
+      cacheGruposTodos[key] = {
+        finca: item.finca, lote: item.lote, ciclo: item.ciclo,
+        fechaSiembra: item.fechaSiembra, dds: item.dds,
+        tiene10: false, tiene15: false,
+        sumArea: 0, countArea: 0, sumSemillas: 0, countSemillas: 0
+      };
+      todosGruposRaw.push(cacheGruposTodos[key]);
+    }
+    const gt = cacheGruposTodos[key];
+    if (item.tiene10) gt.tiene10 = true;
+    if (item.tiene15) gt.tiene15 = true;
+    const areaItemTodos = parseFloat((item.rawSiembra || {}).x_studio_mzn_sembrada) || 0;
+    if (areaItemTodos > 0) { gt.sumArea += areaItemTodos; gt.countArea++; }
+    if (item.total_semillas > 0) { gt.sumSemillas += item.total_semillas; gt.countSemillas++; }
+  });
+
   const completosGruposRaw = [];
   const cacheGruposCompletos = {};
   completos.forEach(item => {
@@ -1756,12 +1837,14 @@ function renderAlertas() {
         finca: item.finca, lote: item.lote, ciclo: item.ciclo,
         fechaSiembra: item.fechaSiembra, dds: item.dds,
         variedad: limpiarDescripcion(s.x_studio_variedad || s.x_studio_variedad_1),
-        sumSemillas: 0, countSemillas: 0, muestras10: [], muestras15: []
+        sumSemillas: 0, countSemillas: 0, sumArea: 0, countArea: 0, muestras10: [], muestras15: []
       };
       cacheGruposCompletos[key] = gObj;
       completosGruposRaw.push(gObj);
     }
     if (item.total_semillas > 0) { cacheGruposCompletos[key].sumSemillas += item.total_semillas; cacheGruposCompletos[key].countSemillas++; }
+    const areaItem = parseFloat((item.rawSiembra || {}).x_studio_mzn_sembrada) || 0;
+    if (areaItem > 0) { cacheGruposCompletos[key].sumArea += areaItem; cacheGruposCompletos[key].countArea++; }
     (item.rawMuestrasOriginales || []).forEach(m => {
       const d = parseFloat(m.x_studio_dds);
       if (d >= 10 && d <= 14) cacheGruposCompletos[key].muestras10.push(parseFloat(m.x_studio_cant_plantas_x_mtr_lineal||0));
@@ -1782,6 +1865,9 @@ function renderAlertas() {
     
     g.ddsFormated = `${g.dds} días`;
     g.fechaSiembraFormated = formatFechaLegible(g.fechaSiembra);
+    // Área Sembrada es una SUMA (área total sembrada de ese lote/fecha), no un promedio —
+    // a diferencia de Semillas m.l., que sí se promedia entre reportes del mismo evento.
+    g.areaFormated = g.countArea > 0 ? g.sumArea.toFixed(2) : '-';
   });
 
   universosCompletosFisicos.finca = [...new Set(completosGruposRaw.map(g => g.finca))].sort();
@@ -1794,6 +1880,7 @@ function renderAlertas() {
   universosCompletosFisicos.g15 = [...new Set(completosGruposRaw.map(g => g.g15Val))].sort((a,b)=>parseFloat(a)-parseFloat(b));
   universosCompletosFisicos.variedad = [...new Set(completosGruposRaw.map(g => g.variedad))].sort();
   universosCompletosFisicos.semillas = [...new Set(completosGruposRaw.map(g => g.semillasFormated))].sort((a,b)=>parseFloat(a)-parseFloat(b));
+  universosCompletosFisicos.area = [...new Set(completosGruposRaw.map(g => g.areaFormated))].sort((a,b)=>parseFloat(a)-parseFloat(b));
 
   const completosGruposFiltrados = completosGruposRaw.filter(g => {
     return (inlineFiltersCompletos.finca.length === 0 || inlineFiltersCompletos.finca.includes(g.finca)) &&
@@ -1805,7 +1892,8 @@ function renderAlertas() {
            (inlineFiltersCompletos.p15.length === 0 || inlineFiltersCompletos.p15.includes(g.p15Val)) &&
            (inlineFiltersCompletos.g15.length === 0 || inlineFiltersCompletos.g15.includes(g.g15Val)) &&
            (inlineFiltersCompletos.variedad.length === 0 || inlineFiltersCompletos.variedad.includes(g.variedad)) &&
-           (inlineFiltersCompletos.semillas.length === 0 || inlineFiltersCompletos.semillas.includes(g.semillasFormated));
+           (inlineFiltersCompletos.semillas.length === 0 || inlineFiltersCompletos.semillas.includes(g.semillasFormated)) &&
+           (inlineFiltersCompletos.area.length === 0 || inlineFiltersCompletos.area.includes(g.areaFormated));
   });
 
   document.getElementById('kpiTotal').textContent     = new Set(todos.map(i => `${i.finca}|||${i.lote}`)).size;
@@ -1832,15 +1920,73 @@ function renderAlertas() {
   inyectarFilasCompletosTablaDOM(completosGruposFiltrados);
   document.getElementById('badgeCompletos').textContent = completosGruposFiltrados.length;
 
+  renderTablaTodos(todosGruposRaw);
+  document.getElementById('badgeTodos').textContent = todosGruposRaw.length;
+
   document.getElementById('seccionEspera').style.display    = (alertaFiltroActivo === 'all' || alertaFiltroActivo === 'espera') && enEspera.length > 0 ? '' : 'none';
   document.getElementById('seccion10dds').style.display     = (alertaFiltroActivo === 'all' || alertaFiltroActivo === '10dds') ? '' : 'none';
   document.getElementById('seccion15dds').style.display     = (alertaFiltroActivo === 'all' || alertaFiltroActivo === '15dds') ? '' : 'none';
   document.getElementById('seccionCompletos').style.display = (alertaFiltroActivo === 'all' || alertaFiltroActivo === 'completos') ? '' : 'none';
+  document.getElementById('seccionTodos').style.display     = (alertaFiltroActivo === 'todos') ? '' : 'none';
 
   if (sin10.length === 0 && sin15.length === 0 && (alertaFiltroActivo === 'all' || alertaFiltroActivo === '10dds')) {
     document.getElementById('seccion10dds').style.display = '';
     document.getElementById('tabla10ddsBody').innerHTML = `<tr><td colspan="8" class="alerta-empty"><span>🎉</span>¡Excelente! Todos los lotes tienen sus recuentos al día.</td></tr>`;
   }
+}
+
+function renderTablaTodos(grupos) {
+  const tbody = document.getElementById('tablaTodosBody');
+  const tfoot = document.getElementById('tablaTodosFoot');
+  if (!tbody) return;
+  if (!grupos || grupos.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7" class="alerta-empty"><span>📋</span>No hay lotes sembrados con los filtros actuales.</td></tr>`;
+    if (tfoot) tfoot.innerHTML = '';
+    return;
+  }
+  const clavesOrdenables = ['finca', 'lote', 'fechaSiembra', 'dds'];
+  const filas = clavesOrdenables.includes(alertasSortConfig.key)
+    ? ordenarFilasAlertas([...grupos])
+    : [...grupos].sort((a, b) => (a.fechaSiembra || '').localeCompare(b.fechaSiembra || ''));
+
+  let html = '';
+  let totalArea = 0;
+  filas.forEach(g => {
+    const areaVal = g.countArea > 0 ? g.sumArea : 0;
+    totalArea += areaVal;
+    const semVal = g.countSemillas > 0 ? (g.sumSemillas / g.countSemillas) : null;
+    let estadoHtml;
+    if (g.dds >= 0 && g.dds <= 9) {
+      estadoHtml = `<span class="badge-dds pendiente">En espera</span>`;
+    } else if (g.dds >= 10 && g.dds <= 14) {
+      estadoHtml = g.tiene10 ? `<span class="badge-dds completo">Completo (10 DDS)</span>` : `<span class="badge-dds en-rango">Sin 10 DDS</span>`;
+    } else {
+      estadoHtml = (g.tiene10 && g.tiene15) ? `<span class="badge-dds completo">Completo</span>` : `<span class="badge-dds vencido">Sin 15 DDS</span>`;
+    }
+    html += `<tr>
+      <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${formatFechaLegible(g.fechaSiembra)}</td>
+      <td style="text-align:right;">${areaVal > 0 ? areaVal.toFixed(2) : '-'}</td>
+      <td style="text-align:right;">${semVal !== null ? semVal.toFixed(2) : '-'}</td>
+      <td>${g.dds} días</td>
+      <td>${estadoHtml}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = html;
+
+  if (tfoot) {
+    tfoot.innerHTML = `<tr>
+      <td colspan="3">Total (${grupos.length} lote${grupos.length === 1 ? '' : 's'})</td>
+      <td style="text-align:right;">${totalArea.toFixed(2)}</td>
+      <td colspan="3"></td>
+    </tr>`;
+  }
+}
+
+function exportarTablaTodosAExcel() {
+  const tabla = document.getElementById('tablaTodosMaster');
+  if (!tabla) return;
+  const wb = XLSX.utils.table_to_book(tabla, { sheet: "Todos los Lotes", raw: true });
+  XLSX.writeFile(wb, `Todos_Los_Lotes_Sembrados_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
 function renderTablaEspera(items) {
@@ -1891,8 +2037,10 @@ function renderTablaAlerta(tbodyId, items, etiqueta) {
 
 function inyectarFilasCompletosTablaDOM(filasGrupos) {
   const tbody = document.getElementById('tablaCompletosBody');
+  const tfoot = document.getElementById('tablaCompletosFoot');
   if (filasGrupos.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="9" class="alerta-empty"><span>📋</span>No hay lotes que coincidan con los filtros de las columnas.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="alerta-empty"><span>📋</span>No hay lotes que coincidan con los filtros de las columnas.</td></tr>`;
+    if (tfoot) tfoot.innerHTML = '';
     return;
   }
 
@@ -1908,6 +2056,7 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
 
     html += `<tr>
       <td><strong>${g.finca}</strong></td><td>${g.lote}</td><td>${g.fechaSiembraFormated}</td>
+      <td class="col-area" style="text-align:right;">${g.areaFormated}</td>
       <td style="text-align:right;"><button class="btn-ver-siembra" onclick="abrirModalPopupDetalle('semillas','${fincaEsc}','${loteEsc}','${cicloEsc}','${g.fechaSiembra}')">${g.semillasFormated}</button></td>
       <td><span class="badge-dds pendiente">${g.ddsFormated}</span></td>
       <td style="text-align:right;"><button class="btn-ver-siembra" style="color:#0284c7; border-color:#0284c7;" onclick="abrirModalPopupDetalle('10dds','${fincaEsc}','${loteEsc}','${cicloEsc}')">${g.p10Val}</button></td>
@@ -1917,12 +2066,30 @@ function inyectarFilasCompletosTablaDOM(filasGrupos) {
     </tr>`;
   });
   tbody.innerHTML = html;
+
+  if (tfoot) {
+    const totalArea = filasGrupos.reduce((acc, g) => acc + (g.sumArea || 0), 0);
+    tfoot.innerHTML = `<tr>
+      <td colspan="3">Total (${filasGrupos.length} lote${filasGrupos.length === 1 ? '' : 's'})</td>
+      <td class="col-area total-area-valor">${totalArea.toFixed(2)}</td>
+      <td colspan="6"></td>
+    </tr>`;
+  }
+}
+
+function toggleColumnaAreaCompletos() {
+  const chk = document.getElementById('chkMostrarAreaCompletos');
+  document.getElementById('tablaCompletosMaster').classList.toggle('mostrar-area', chk.checked);
 }
 
 function exportarTablaCompletosAExcel() {
   const table = document.getElementById("tablaCompletosMaster");
   const clonedTable = table.cloneNode(true);
   clonedTable.querySelectorAll('.col-inline-filter-panel, .btn-col-inline-filter, .sort-indicator').forEach(el => el.remove());
+  // Si la columna Área Sembrada está oculta en pantalla, no se incluye en el Excel.
+  if (!table.classList.contains('mostrar-area')) {
+    clonedTable.querySelectorAll('.col-area').forEach(el => el.remove());
+  }
   const wb = XLSX.utils.table_to_book(clonedTable, { sheet: "Lotes Completos", raw: true });
   XLSX.writeFile(wb, `Lotes_Completos_Germinacion_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
