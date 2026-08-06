@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Ingresar</title>
+<script src="core.js"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626;
+    --radio:10px; --sombra-panel:0 10px 28px rgba(17,24,39,.14);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:linear-gradient(160deg,#F8FAFC 0%,var(--color-acento-suave) 100%);
+    color:var(--color-texto);
+  }
+  .tarjeta{
+    background:var(--color-panel); border:1px solid var(--color-borde); border-radius:16px;
+    box-shadow:var(--sombra-panel); padding:36px 32px; width:100%; max-width:380px;
+  }
+  .logo{font-size:34px; text-align:center; margin-bottom:4px;}
+  h1{font-size:19px; text-align:center; margin:0 0 4px; color:var(--color-texto);}
+  .subtitulo{font-size:12.5px; text-align:center; color:var(--color-texto-suave); margin:0 0 24px;}
+  label{display:block; font-size:12px; color:var(--color-texto-suave); margin:14px 0 4px; text-transform:uppercase; letter-spacing:.03em;}
+  input{
+    width:100%; border:1px solid var(--color-borde); border-radius:8px; padding:10px 12px;
+    font-size:14.5px; background:#fff; color:var(--color-texto);
+  }
+  input:focus{outline:2px solid var(--color-primario); outline-offset:1px; border-color:var(--color-primario);}
+  button{
+    width:100%; margin-top:22px; background:var(--color-primario); color:#fff; border:none;
+    border-radius:8px; padding:11px; font-size:14.5px; font-weight:600; cursor:pointer;
+    transition:background .15s;
+  }
+  button:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  button:disabled{opacity:.6; cursor:default;}
+  .error{
+    margin-top:14px; background:#FEE2E2; border-left:3px solid var(--color-peligro);
+    color:#991B1B; font-size:12.5px; padding:8px 10px; border-radius:6px;
+  }
+  .pie{margin-top:20px; text-align:center; font-size:11.5px; color:var(--color-texto-suave);}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+function Login(){
+  const [usuario, setUsuario] = useState("");
+  const [clave, setClave] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    // Si ya hay sesión activa, saltar directo al panel.
+    if (obtenerSesion()) window.location.href = "index.html";
+  }, []);
+
+  async function enviar(e){
+    e.preventDefault();
+    setError("");
+    if (!usuario.trim() || !clave){
+      setError("Ingresá usuario y clave.");
+      return;
+    }
+    setCargando(true);
+    try{
+      const resp = await tallerLogin(usuario.trim(), clave);
+      if (resp.ok){
+        guardarSesion(resp.usuario);
+        window.location.href = "index.html";
+      } else {
+        setError(resp.error || "Usuario o clave incorrectos.");
+      }
+    } catch(err){
+      setError("No se pudo conectar con el servidor: " + err.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  return (
+    <div className="tarjeta">
+      <div className="logo">🔧</div>
+      <h1>Infotaller</h1>
+      <p className="subtitulo">Taller de Reparación — División Agrícola COMASA</p>
+      <form onSubmit={enviar}>
+        <label htmlFor="campoUsuario">Usuario</label>
+        <input id="campoUsuario" type="text" autoComplete="username" autoFocus
+               value={usuario} onChange={e => setUsuario(e.target.value)} />
+
+        <label htmlFor="campoClave">Clave</label>
+        <input id="campoClave" type="password" autoComplete="current-password"
+               value={clave} onChange={e => setClave(e.target.value)} />
+
+        <button type="submit" disabled={cargando}>
+          {cargando ? "Verificando..." : "Ingresar"}
+        </button>
+
+        {error && <div className="error">{error}</div>}
+      </form>
+      <p className="pie">Acceso restringido — cada usuario tiene su propio rol y permisos.</p>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(<Login />);
+</script>
+</body>
+</html>
