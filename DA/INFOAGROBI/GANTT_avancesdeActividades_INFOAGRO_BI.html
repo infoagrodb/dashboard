@@ -708,6 +708,25 @@ table.ca-tabla tbody tr:hover td:not(.ca-fija){filter:brightness(.97);}
 table.ca-tabla tbody tr:hover td.ca-fija{background:#f4f7f5;}
 .ca-celda{min-width:96px; text-align:center; vertical-align:middle;}
 .ca-celda-simple{min-width:96px; text-align:center; vertical-align:middle; background:#f8fafc; color:#000000; font-weight:400;}
+.ca-celda-valor{background:#bbf7d0; color:#14532d; font-weight:700; text-align:center; font-size:11px;}
+.ca-celda-programada{background:#dbeafe; color:#1d4ed8; font-weight:600; text-align:center; font-size:11px;}
+.ca-celda-real-fija{background:#dcfce7; color:#166534; font-weight:800; text-align:center;}
+.btn-organic-action.pendiente-guardar{background:#f59e0b !important; border-color:#f59e0b !important;}
+.tag-multi-box{
+  min-width:64px; min-height:22px; display:flex; align-items:center; flex-wrap:wrap; gap:3px;
+  padding:2px 4px; border:1px solid rgba(163,177,198,0.5); border-radius:5px; background:#fff; cursor:pointer;
+}
+.tag-multi-box:hover{border-color:#52b788;}
+.tag-chip{
+  display:inline-flex; align-items:center; gap:3px; background:#dbeafe; color:#1d4ed8;
+  font-size:9.5px; font-weight:700; border-radius:10px; padding:1px 4px 1px 7px;
+}
+.tag-chip-x{border:none; background:none; cursor:pointer; color:#1d4ed8; font-size:9px; padding:0; line-height:1;}
+.tag-chip-x:hover{color:#991b1b;}
+.tag-add{font-size:9.5px; color:#94a3b8; padding:0 2px;}
+.tag-multi-box-solo-lectura{background:#f1f5f9; cursor:default; border-style:dashed;}
+.tag-chip-solo-lectura{background:#e2e8f0; color:#475569;}
+.celda-mzn-solo-lectura{background:#f1f5f9; color:#475569; text-align:center; font-size:10.5px;}
 
 /* ---------- Calendario de Siembra (Sector > Finca > Grupo de Siembra) ---------- */
 table.ca-cal-tabla{border-collapse:collapse; font-size:11px;}
@@ -717,16 +736,30 @@ table.ca-cal-tabla thead tr:nth-child(1) th{top:0;}
 table.ca-cal-tabla thead tr:nth-child(2) th{top:28px;}
 table.ca-cal-tabla thead tr:nth-child(3) th{top:56px;}
 table.ca-cal-tabla thead tr:nth-child(4) th{top:84px;}
+/* tablaSeguimientoAplic tiene una 5ta fila de encabezado (Turno) que
+   Calendario de Siembra no tiene — de ahí el ID-scope en vez de nth-child(5) genérico. */
+#tablaSeguimientoAplic thead tr:nth-child(5) th{top:112px;}
 .ca-cal-etapa-band{background:#fde047; color:#713f12; font-size:10.5px; letter-spacing:.04em;}
 .ca-cal-sector{background:#c7d2fe;}
+.ca-cal-grupo{background:#99f6e4; font-size:10.5px; color:#134e4a;}
 .ca-cal-finca{background:#fbcfe8; font-size:10.5px;}
 .ca-cal-sigla{background:#93c5fd; font-size:10px;}
 table.ca-cal-tabla td.ca-fija{position:sticky; left:0; z-index:4; background:#fff; font-weight:600; text-align:left; min-width:80px;}
 table.ca-cal-tabla th.ca-fija{position:sticky; left:0; top:0; z-index:9; background:#1b4332; color:#fff; text-align:left;}
 .ca-cal-total-row td{background:#1b4332; color:#fff; font-weight:700; position:sticky; top:112px; z-index:7;}
+/* +28px extra por la 5ta fila de encabezado (Turno) que solo tiene tablaSeguimientoAplic. */
+#tablaSeguimientoAplic .ca-cal-total-row td{top:140px;}
 .ca-cal-total-row td.ca-fija{left:0; z-index:10; background:#1b4332;}
 .ca-cal-valor{background:#bbf7d0; color:#14532d; font-weight:700;}
 .ca-cal-programado{background:#dbeafe; color:#1d4ed8; font-weight:700; font-size:9px;}
+.ca-cal-proyectado{background:repeating-linear-gradient(45deg,#fef3c7,#fef3c7 4px,#fde68a 4px,#fde68a 8px); color:#78350f; font-weight:700; font-style:italic;}
+.ca-cal-dds{background:#f8fafc; color:#475569; font-weight:600; font-size:10.5px; text-align:center;}
+.ca-fija-domingo{background:#fecaca !important; color:#7f1d1d !important; font-weight:800;}
+tr.ca-cal-fila-domingo td:not(.ca-fija):not(.ca-cal-valor):not(.ca-cal-proyectado):not(.ca-cal-programado){background:#fef2f2;}
+.alerta-sin-grupo-banner{
+  background:#fffbeb; border:1px solid #f59e0b; border-radius:8px; color:#92400e;
+  font-size:12px; padding:8px 12px; margin-bottom:10px; display:flex; align-items:center; flex-wrap:wrap; gap:4px;
+}
 .ca-info-popover{
   display:none; position:absolute; top:26px; left:0; z-index:50; width:360px;
   background:#fff; border:1px solid rgba(163,177,198,0.4); border-radius:10px;
@@ -959,8 +992,9 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     <button class="tab-switch-btn active" id="tabBtnActividades" onclick="switchTab('actividades')">📊 Avance de Actividades</button>
     <button class="tab-switch-btn" id="tabBtnInsumos" onclick="switchTab('insumos')">🧪 Consumo de Insumos</button>
     <button class="tab-switch-btn" id="tabBtnResumen" onclick="switchTab('resumen')">📋 Resumen de Actividades</button>
-    <button class="tab-switch-btn" id="tabBtnFungicidas" onclick="switchTab('fungicidas')">🧴 Control de Aplicaciones</button>
-    <button class="tab-switch-btn" id="tabBtnProgramacion" onclick="switchTab('programacion')">🗓️ Programación de aplicaciones</button>
+    <button class="tab-switch-btn" id="tabBtnFungicidas" style="display:none;" onclick="switchTab('fungicidas')">🧴 Control de Aplicaciones</button>
+    <button class="tab-switch-btn" id="tabBtnProgramacion" style="display:none;" onclick="switchTab('programacion')">🗓️ Programación de aplicaciones</button>
+    <button class="tab-switch-btn" id="tabBtnSeguimientoAplic" onclick="switchTab('seguimientoAplic')">🚜 Seguimiento Grupos de Aplicaciones</button>
   </div>
 
   <div class="tab-panel" id="tabPanelActividades">
@@ -1087,6 +1121,37 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   </div>
   <!-- /tabPanelProgramacion -->
 
+  <div class="tab-panel" id="tabPanelSeguimientoAplic" style="display:none;">
+
+    <div id="alertaSinGrupoAplicContainer"></div>
+
+    <div class="table-toolbar" style="flex-wrap:wrap; gap:14px;">
+      <div class="d-flex align-items-center gap-2 flex-wrap" style="position:relative;">
+        <span class="fw-bold text-secondary" style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em;">
+          🚜 Seguimiento Grupos de Aplicación · Ciclo Mani 2026 — progreso por grupo mecanizado (Siembra → Fungicida I..VIII → Arranque/Combina)
+        </span>
+        <button type="button" class="tf-icon" style="width:20px; height:20px; min-width:20px; padding:0; border-radius:50%; font-weight:800; font-size:12px; background:#1b4332; color:#fff; border-color:#1b4332;" onclick="toggleInfoSeguimientoAplic(event)" title="Cómo leer esta tabla">!</button>
+        <div id="infoSeguimientoAplicPopover" class="ca-info-popover" onclick="event.stopPropagation()"></div>
+      </div>
+      <div class="d-flex align-items-center gap-3 flex-wrap">
+        <label style="font-size:11px; font-weight:700; color:#334155; display:flex; align-items:center; gap:5px; cursor:pointer;" title="Cada Finca en la columna Siembra se abre en una sub-columna por cada Grupo de Siembra distinto, cada una con su propio contador de edad">
+          <input type="checkbox" id="checkSepararGrupoSiembra" onchange="alCambiarToggleSepararGrupoSiembra(this)"> Separar Siembra por Grupo de Siembra
+        </label>
+        <div class="text-muted" style="font-size: 11px;" id="recordCounterSeguimientoAplic">—</div>
+        <button id="btnGuardarProgramacionSiembra" class="btn-organic-action excel" title="Guarda lo escrito en Finca/MZN de Fungicida I" onclick="guardarProgramacionSiembraDesdeTab()">💾 Guardar Programación</button>
+        <button class="btn-organic-action excel" onclick="exportarSeguimientoAplicAExcel()">⬇︎ Exportar a Excel</button>
+      </div>
+    </div>
+
+    <div class="table-responsive-organic" id="matrixContainerSeguimientoAplic">
+      <div class="loading-box text-center py-4">
+        <div class="loading-spinner"><div class="spinner-blob"></div></div>
+      </div>
+    </div>
+
+  </div>
+  <!-- /tabPanelSeguimientoAplic -->
+
 </div>
 
 <div id="global-gantt-tooltip"></div>
@@ -1133,6 +1198,29 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     <div class="modal-footer-ins">
       <button class="btn-organic-action" style="background:#fff; border:1px solid rgba(163,177,198,0.4); color:#334155;" onclick="restablecerProgramacionDefecto()">↺ Restablecer todo a 30 / 13</button>
       <button class="btn-organic-action excel" onclick="guardarProgramacionDesdeModal()">💾 Guardar Programación</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay-ins" id="modalSinGrupoAplicOverlay" onclick="if(event.target === this) cerrarModalSinGrupoAplicacion()">
+  <div class="modal-box-ins" style="width:min(760px, 94vw);">
+    <div class="modal-hdr-ins">
+      <div>
+        <div class="modal-title-ins">⚠️ Actividades sin Grupo de Aplicación</div>
+        <div class="modal-subtitle-ins" id="tituloModalSinGrupoAplic">—</div>
+      </div>
+      <button class="modal-close-ins" onclick="cerrarModalSinGrupoAplicacion()">✕</button>
+    </div>
+    <div class="modal-body-ins" style="padding:0;">
+      <table class="modal-table-ins" style="width:100%;">
+        <thead><tr>
+          <th>Sector</th><th style="text-align:left;">Finca</th><th>Lote</th><th>Actividad</th><th>Fecha</th><th>Avance (mzn)</th>
+        </tr></thead>
+        <tbody id="tbodyModalSinGrupoAplic"></tbody>
+      </table>
+    </div>
+    <div class="modal-footer-ins">
+      <button type="button" class="btn-organic-action" style="background:#fff; border:1px solid rgba(163,177,198,0.4); color:#334155;" onclick="cerrarModalSinGrupoAplicacion()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -1235,8 +1323,8 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   }
 
   function switchTab(tab) {
-    const paneles = { actividades:'tabPanelActividades', insumos:'tabPanelInsumos', resumen:'tabPanelResumen', fungicidas:'tabPanelFungicidas', programacion:'tabPanelProgramacion' };
-    const botones = { actividades:'tabBtnActividades', insumos:'tabBtnInsumos', resumen:'tabBtnResumen', fungicidas:'tabBtnFungicidas', programacion:'tabBtnProgramacion' };
+    const paneles = { actividades:'tabPanelActividades', insumos:'tabPanelInsumos', resumen:'tabPanelResumen', fungicidas:'tabPanelFungicidas', programacion:'tabPanelProgramacion', seguimientoAplic:'tabPanelSeguimientoAplic' };
+    const botones = { actividades:'tabBtnActividades', insumos:'tabBtnInsumos', resumen:'tabBtnResumen', fungicidas:'tabBtnFungicidas', programacion:'tabBtnProgramacion', seguimientoAplic:'tabBtnSeguimientoAplic' };
     Object.keys(paneles).forEach(k=>{
       document.getElementById(paneles[k]).style.display = (k===tab) ? 'flex' : 'none';
       document.getElementById(botones[k]).classList.toggle('active', k===tab);
@@ -1253,6 +1341,11 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     }
     if(tab==='programacion'){
       renderControlAplicaciones();
+    }
+    if(tab==='seguimientoAplic'){
+      renderAlertaSinGrupoAplicacion();
+      if(!programacionSiembraCargada){ cargarProgramacionSiembraRemota().then(renderSeguimientoAplic); }
+      else { renderSeguimientoAplic(); }
     }
   }
 
@@ -1273,12 +1366,12 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     // Ciclo = Mani 2026 y Actividad = Siembra internamente, no dependen de los filtros
     // superiores).
     document.querySelectorAll('.campo-actividades-y-resumen').forEach(el=>{
-      el.style.display = (tab==='insumos' || tab==='fungicidas' || tab==='programacion') ? 'none' : '';
+      el.style.display = (tab==='insumos' || tab==='fungicidas' || tab==='programacion' || tab==='seguimientoAplic') ? 'none' : '';
     });
     // El bloque de arriba deja "customDateInputs" visible (display:'') junto con el
     // resto de .campo-actividades-y-resumen — pero ese campo solo debe mostrarse cuando
     // Período = "Personalizada", así que se vuelve a evaluar acá para no pisar esa regla.
-    if(tab!=='insumos' && tab!=='fungicidas' && tab!=='programacion'){
+    if(tab!=='insumos' && tab!=='fungicidas' && tab!=='programacion' && tab!=='seguimientoAplic'){
       const selPeriodo = document.getElementById('filterFechaTipo');
       const customInputs = document.getElementById('customDateInputs');
       if(selPeriodo && customInputs) customInputs.style.display = (selPeriodo.value === 'personalizada') ? 'flex' : 'none';
@@ -1359,6 +1452,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
           lote_agricola: Array.isArray(r.x_studio_lote_agricola) ? r.x_studio_lote_agricola[1] : (r.x_studio_lote_agricola || "Sin Lote"),
           actividad: Array.isArray(r.x_studio_activiadad_realizada) ? r.x_studio_activiadad_realizada[1] : (r.x_studio_activiadad_realizada || "Sin Actividad"),
           grupo_siembra: r.x_studio_grupo_de_siembra || "Sin Grupo",
+          grupo_aplicacion: r.x_studio_grupo_de_aplicacion || "Sin Grupo",
           turno: r.x_studio_turno || "Dia",
           avance: Number(r.x_studio_avance_mzn || 0),
           fecha: r.x_studio_fecha || "" 
@@ -2034,7 +2128,15 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     html += `</tr></thead><tbody>`;
 
     function celda(popupIdBase, cant, area, dosisVals, isTotal) {
-      const vals = { cant, area, dosis: avgArr(dosisVals) };
+      // Dosis x Mzn = Cantidad Gastada / Área Mzn Aplicada — SIEMPRE se deriva así,
+      // en cualquier nivel (celda por finca, fila de producto, subtotal, total
+      // general). Antes se promediaba el campo x_studio_dosis_x_mzn crudo de cada
+      // registro (avgArr(dosisVals)), lo que da un número distinto y matemáticamente
+      // inconsistente con Cantidad/Área — un subtotal de "promedio de promedios" no
+      // tiene por qué coincidir con Cantidad total ÷ Área total, que es lo que
+      // realmente significa "dosis por manzana". Con esto, la fila y el subtotal
+      // siempre cuadran entre sí.
+      const vals = { cant, area, dosis: area > 0 ? cant / area : 0 };
       const isBlank = (cant === 0 && area === 0 && !dosisVals.length);
       const safeId = escHtml(popupIdBase);
       let out = "";
@@ -2943,6 +3045,8 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   // de la columna de Siembra — mismo color en los dos lugares.
   const PALETA_ETAPA = {
     'Siembra':        { bg:'#eab308', bgLight:'#fef9c3', text:'#713f12' },
+    'Sello':          { bg:'#0891b2', bgLight:'#cffafe', text:'#164e63' },
+    'Post emergente': { bg:'#7c3aed', bgLight:'#ede9fe', text:'#4c1d95' },
     'Fungicida I':    { bg:'#f59e0b', bgLight:'#fef3c7', text:'#78350f' },
     'Fungicida II':   { bg:'#f97316', bgLight:'#ffedd5', text:'#7c2d12' },
     'Fungicida III':  { bg:'#ef4444', bgLight:'#fee2e2', text:'#7f1d1d' },
@@ -3042,7 +3146,266 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     }
   }
 
+  // ===================================================================
+  // PROGRAMACIÓN DE SIEMBRA (proyección manual, estilo Excel) — tabla plana
+  // por Finca, con un bloque de columnas de fecha ("Programación") donde se
+  // escribe a mano cuántas manzanas se piensa avanzar cada día. Sin modal,
+  // sin tasa automática: cada celda es lo que Ignacio decide. Esa cifra
+  // funciona igual que si fuera un dato real de Siembra para el resto de la
+  // cascada — Fungicida I..VIII se calculan solos a partir de ella (+30/+13
+  // días), exactamente igual que ya hacían con datos reales. Se guarda como
+  // JSON plano en GitHub (Worker: /siembra-proyectada-config), sin crear
+  // ningún modelo nuevo en Odoo.
+  // ===================================================================
+  let PROGRAMACION_SIEMBRA = {};   // grupo -> finca -> { "YYYY-MM-DD": mzn }
+  let programacionSiembraCargada = false;
+  const DIAS_VENTANA_PROGRAMACION = 21; // columnas de fecha que se muestran para escribir
+
+  // PROGRAMACIÓN DE FUNGICIDA I (proyección manual, igual estilo Excel que
+  // Siembra) — acá NO va por finca en columnas; va por FECHA con dos campos
+  // libres: qué Finca(s) le tocan ese día (texto libre, admite "RP/LG" en un
+  // día de transición) y cuántas mzn en total. La tasa/turno del equipo del
+  // Grupo de Aplicación es independiente del área total de Siembra — el
+  // usuario escribe lo que el equipo realmente puede avanzar, sin ningún tope
+  // automático. Esto alimenta la fecha base de esa etapa para que la SIGUIENTE
+  // etapa siga la cascada +13 días (o la propia Programación manual de esa
+  // siguiente etapa, si también se escribió a mano) — se repite igual para
+  // Fungicida I, II, III... VIII, cada una con sus propias columnas.
+  let PROGRAMACION_FUNGICIDAS = {}; // etapa -> grupo -> { "YYYY-MM-DD": { finca: "RP" | "RP/LG", mzn: 50 } }
+  // Toggle "Separar Siembra por Grupo de Siembra" (checkbox en la barra del tab
+  // Seguimiento Grupos de Aplicación) — con esto activo, cada Finca en la columna
+  // Siembra se abre en una sub-columna por cada x_studio_grupo_de_siembra distinto,
+  // cada una con su propio contador de edad (DDS) reiniciado en 0.
+  let SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA = false;
+  function alCambiarToggleSepararGrupoSiembra(chk){
+    SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA = chk.checked;
+    renderSeguimientoAplic();
+  }
+  let FINCAS_POR_GRUPO_CA = {}; // grupo -> [{finca, sigla}] — se llena en cada render, para el selector de chips
+  let _panelSelectorFincaManual = null; // panel flotante único, reutilizado para cualquier celda
+
+  async function cargarProgramacionSiembraRemota(){
+    try {
+      const r = await fetch(`${WORKER}/siembra-proyectada-config`);
+      const d = await r.json();
+      PROGRAMACION_SIEMBRA = (d && d.config && d.config.programado) ? d.config.programado : {};
+      PROGRAMACION_FUNGICIDAS = (d && d.config && d.config.programadoFungicidas) ? d.config.programadoFungicidas : {};
+      // Migración: versiones anteriores solo guardaban Fungicida I bajo la clave
+      // "programadoFungicidaI" (sin etapa) — si aparece y todavía no hay nada
+      // migrado para 'Fungicida I', se adopta ahí para no perder lo ya escrito.
+      if(d && d.config && d.config.programadoFungicidaI && !PROGRAMACION_FUNGICIDAS['Fungicida I']){
+        PROGRAMACION_FUNGICIDAS['Fungicida I'] = d.config.programadoFungicidaI;
+      }
+    } catch(e) {
+      console.log('No se pudo cargar la Programación de Siembra:', e.message);
+      PROGRAMACION_SIEMBRA = {};
+      PROGRAMACION_FUNGICIDAS = {};
+    } finally {
+      programacionSiembraCargada = true;
+    }
+  }
+
+  async function guardarProgramacionSiembraRemota(){
+    const r = await fetch(`${WORKER}/siembra-proyectada-config/write`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: { programado: PROGRAMACION_SIEMBRA, programadoFungicidas: PROGRAMACION_FUNGICIDAS } })
+    });
+    const d = await r.json();
+    if(!d.ok) throw new Error(d.error || 'Error desconocido');
+  }
+
+  // "RP/LG", "RP, LG", "RP LG" -> ["RP","LG"] — admite separar varias fincas
+  // en el mismo texto libre para un día de transición.
+  function fincasDeTextoLibre(texto){
+    return String(texto||'').split(/[\/,]| y /i).map(s=>s.trim()).filter(Boolean);
+  }
+
+  // Resumen real (avance ya registrado en Odoo) por Finca, para un Grupo de
+  // Aplicación dado — se usa para saber qué celdas de la tabla ya son reales
+  // (no editables) y desde dónde sigue la cascada de Fungicida I..VIII.
+  function resumenSiembraRealPorFinca(grupo){
+    const resumen = {};
+    filasBaseCA()
+      .filter(r => normTxtCA(r.actividad)===normTxtCA('Siembra') && r.grupo_aplicacion === grupo)
+      .forEach(r=>{
+        if(!resumen[r.finca]) resumen[r.finca] = { total: 0, fechaMin: r.fecha, fechaMax: r.fecha };
+        const s = resumen[r.finca];
+        s.total += (r.avance||0);
+        if(r.fecha < s.fechaMin) s.fechaMin = r.fecha;
+        if(r.fecha > s.fechaMax) s.fechaMax = r.fecha;
+      });
+    return resumen;
+  }
+
+  // Lista de Grupos de Aplicación presentes en los datos cargados (GA1, GA2...),
+  // ordenados numéricamente.
+  function listaGruposAplicacionPresentes(){
+    const set = new Set();
+    DB_RAW.forEach(r=>{ if(r.grupo_aplicacion) set.add(r.grupo_aplicacion); });
+    Object.keys(PROGRAMACION_SIEMBRA || {}).forEach(g=> set.add(g));
+    return [...set].sort((a,b)=>{
+      const na = parseInt(String(a).match(/(\d+)$/)?.[1] || '0', 10);
+      const nb = parseInt(String(b).match(/(\d+)$/)?.[1] || '0', 10);
+      return na - nb;
+    });
+  }
+
+  // Todas las fincas visibles por grupo (las que ya tienen algo real, más las
+  // que solo tienen algo escrito en Programación) — así una finca que Ignacio
+  // agrega a mano en la Programación, sin ningún dato real todavía, también
+  // aparece en la tabla.
+  function fincasPorGrupoParaProgramacion(grupo){
+    const real = resumenSiembraRealPorFinca(grupo);
+    const set = new Set(Object.keys(real));
+    Object.keys((PROGRAMACION_SIEMBRA[grupo]||{})).forEach(f=> set.add(f));
+    return [...set].sort((a,b)=>{
+      const fa = real[a]?.fechaMin || '9999-99-99';
+      const fb = real[b]?.fechaMin || '9999-99-99';
+      return fa.localeCompare(fb) || a.localeCompare(b);
+    });
+  }
+
+  function ventanaFechasProgramacion(){
+    const hoy = new Date().toISOString().split('T')[0];
+    const fechas = [hoy];
+    for(let i=1;i<DIAS_VENTANA_PROGRAMACION;i++) fechas.push(addDiasCA(hoy, i));
+    return fechas;
+  }
+
+  function renderProgramacionSiembraAplic(){
+    const cont = document.getElementById('contenedorProgramacionSiembra');
+    if(!cont) return;
+    if(!DB_RAW.length){
+      cont.innerHTML = '<div class="text-center text-muted py-3">Cargando…</div>';
+      return;
+    }
+    const grupos = listaGruposAplicacionPresentes();
+    if(!grupos.length){
+      cont.innerHTML = '<div class="text-center text-muted py-3">No hay Grupos de Aplicación en los datos cargados todavía.</div>';
+      return;
+    }
+    const fechas = ventanaFechasProgramacion();
+
+    let thead = `<thead><tr>
+      <th class="ca-fija" style="left:0;">Grupo</th>
+      <th class="ca-fija" style="left:70px;">Finca</th>
+      <th>Fecha Siembra</th>
+      <th style="text-align:right;">Área Sembrada</th>
+      <th colspan="${fechas.length}" style="background:#fde68a; color:#78350f;">PROGRAMACIÓN (escribí mzn/día)</th>
+      ${ETAPAS_FUNGICIDA.map(e=>`<th>${e}</th>`).join('')}
+      ${ETAPAS_COSECHA.map(e=>`<th>${e}</th>`).join('')}
+    </tr>
+    <tr>
+      <th class="ca-fija" style="left:0;"></th>
+      <th class="ca-fija" style="left:70px;"></th>
+      <th></th><th></th>
+      ${fechas.map(f=>`<th style="font-size:9px;">${formatFechaCortaCA(f)}</th>`).join('')}
+      ${ETAPAS_FUNGICIDA.map(()=>`<th></th>`).join('')}
+      ${ETAPAS_COSECHA.map(()=>`<th></th>`).join('')}
+    </tr></thead>`;
+
+    let filas = '';
+    grupos.forEach(grupo=>{
+      const real = resumenSiembraRealPorFinca(grupo);
+      const programado = PROGRAMACION_SIEMBRA[grupo] || {};
+      const fincas = fincasPorGrupoParaProgramacion(grupo);
+
+      fincas.forEach(finca=>{
+        const r = real[finca];
+        const prog = programado[finca] || {};
+        const rango = r ? (r.fechaMin===r.fechaMax ? formatFechaCortaCA(r.fechaMin) : `${formatFechaCortaCA(r.fechaMin)}–${formatFechaCortaCA(r.fechaMax)}`) : '—';
+
+        // Cascada Fungicida I..VIII para esta finca: base = fecha real mínima, o si
+        // no hay ninguna, la fecha más temprana escrita en Programación.
+        const fechaBaseInicio = r ? r.fechaMin : Object.keys(prog).sort()[0];
+        const indiceEtapaFinca = {};
+        if(fechaBaseInicio){
+          filasBaseCA()
+            .filter(x => x.finca===finca && x.grupo_aplicacion===grupo)
+            .forEach(x=>{
+              const key = x.actividad;
+              if(!indiceEtapaFinca[key] || x.fecha < indiceEtapaFinca[key]) indiceEtapaFinca[key] = x.fecha;
+            });
+        }
+        let fechaCascada = fechaBaseInicio;
+        const celdasEtapa = [...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA].map((etapa, i)=>{
+          if(!fechaBaseInicio) return `<td></td>`;
+          const real2 = indiceEtapaFinca[etapa];
+          if(ETAPAS_COSECHA.includes(etapa)){
+            return real2 ? `<td class="ca-celda-valor">${formatFechaCortaCA(real2)}</td>` : `<td></td>`;
+          }
+          const idxFung = ETAPAS_FUNGICIDA.indexOf(etapa);
+          const salto = (idxFung===0) ? DIAS_DEFECTO.diasF1 : DIAS_DEFECTO.diasEntre;
+          const fechaProg = addDiasCA(fechaCascada, salto);
+          fechaCascada = real2 || fechaProg;
+          return real2
+            ? `<td class="ca-celda-valor" title="Aplicado">${formatFechaCortaCA(real2)}</td>`
+            : `<td class="ca-celda-programada" title="Programado (30/13d)">${formatFechaCortaCA(fechaProg)}</td>`;
+        }).join('');
+
+        const celdasFecha = fechas.map(f=>{
+          if(r && f>=r.fechaMin && f<=r.fechaMax){
+            // Ya hay dato real ese día para esta finca — no editable, se muestra en verde.
+            return `<td class="ca-celda-real-fija" title="Ya hay Siembra real registrada">✓</td>`;
+          }
+          const val = prog[f];
+          return `<td><input type="number" min="0" step="0.01" class="input-programacion-siembra"
+            data-grupo="${grupo.replace(/"/g,'&quot;')}" data-finca="${finca.replace(/"/g,'&quot;')}" data-fecha="${f}"
+            value="${val!=null ? val : ''}" placeholder="—"
+            style="width:52px; text-align:center; padding:2px; border:1px solid rgba(163,177,198,0.4); border-radius:4px; font-size:11px;"></td>`;
+        }).join('');
+
+        filas += `<tr>
+          <td class="ca-fija" style="left:0;">${siglaGrupoAplicCA(grupo)}</td>
+          <td class="ca-fija" style="left:70px;"><strong>${finca}</strong></td>
+          <td style="font-size:11px;">${rango}</td>
+          <td style="text-align:right;">${r ? r.total.toFixed(2) : '0.00'}</td>
+          ${celdasFecha}
+          ${celdasEtapa}
+        </tr>`;
+      });
+    });
+
+    cont.innerHTML = `<table class="ca-tabla" id="tablaProgramacionSiembraAplic">${thead}<tbody>${filas}</tbody></table>`;
+
+    // Guarda en el objeto en memoria al vuelo — el botón "Guardar" recién hace el POST.
+    cont.querySelectorAll('.input-programacion-siembra').forEach(inp=>{
+      inp.addEventListener('change', ()=>{
+        const { grupo, finca, fecha } = inp.dataset;
+        const val = inp.value === '' ? null : Number(inp.value);
+        PROGRAMACION_SIEMBRA[grupo] = PROGRAMACION_SIEMBRA[grupo] || {};
+        PROGRAMACION_SIEMBRA[grupo][finca] = PROGRAMACION_SIEMBRA[grupo][finca] || {};
+        if(val==null || val===0) delete PROGRAMACION_SIEMBRA[grupo][finca][fecha];
+        else PROGRAMACION_SIEMBRA[grupo][finca][fecha] = val;
+        marcarProgramacionSiembraSinGuardar();
+      });
+    });
+  }
+
+  function marcarProgramacionSiembraSinGuardar(){
+    const btn = document.getElementById('btnGuardarProgramacionSiembra');
+    if(btn){ btn.textContent = '💾 Guardar Programación *'; btn.classList.add('pendiente-guardar'); }
+  }
+
+  async function guardarProgramacionSiembraDesdeTab(){
+    const btn = document.getElementById('btnGuardarProgramacionSiembra');
+    const textoOriginal = '💾 Guardar Programación';
+    if(btn){ btn.disabled = true; btn.textContent = '⏳ Guardando...'; }
+    try {
+      await guardarProgramacionSiembraRemota();
+      if(btn){ btn.textContent = '✓ Guardado'; btn.classList.remove('pendiente-guardar'); }
+      setTimeout(()=>{ if(btn) btn.textContent = textoOriginal; }, 1500);
+      renderSeguimientoAplic(); // refresca el calendario de abajo con lo recién programado
+    } catch(e) {
+      alert('No se pudo guardar la programación: ' + e.message);
+      if(btn) btn.textContent = textoOriginal;
+    } finally {
+      if(btn) btn.disabled = false;
+    }
+  }
+
   // Fecha puntual reprogramada a mano (arrastrar y soltar) para una Finca+Grupo+Etapa,
+
   // si existe — tiene prioridad sobre el cálculo genérico de días.
   function obtenerAjusteEtapa(finca, grupo, etapaNombre){
     const cfg = CONFIG_AJUSTES[claveFincaGrupo(finca, grupo)];
@@ -3415,11 +3778,61 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   function etiquetaCicloActivoCA(){
     return SELECCIONES.ciclo.length ? SELECCIONES.ciclo.join(', ') : 'todos los ciclos';
   }
+
+  // ===================================================================
+  // ALERTA: actividades sin Grupo de Aplicación asignado. Como todo el tab
+  // "Seguimiento Grupos de Aplicación" se arma alrededor de ese campo, un
+  // registro sin él simplemente NO aparece en ninguna columna — en vez de que
+  // esa falta pase desapercibida, se detecta y se avisa con un banner + modal
+  // de detalle para que se pueda corregir en Odoo.
+  // ===================================================================
+  const ACTIVIDADES_RASTREADAS_CA = ['Siembra', ...ETAPAS_FUNGICIDA, 'Sello', 'Post emergente', ...ETAPAS_COSECHA];
+
+  function detectarActividadesSinGrupoAplicacion(){
+    return filasBaseCA().filter(r =>
+      !r.grupo_aplicacion && ACTIVIDADES_RASTREADAS_CA.some(a => normTxtCA(a)===normTxtCA(r.actividad))
+    );
+  }
+
+  function renderAlertaSinGrupoAplicacion(){
+    const cont = document.getElementById('alertaSinGrupoAplicContainer');
+    if(!cont) return;
+    const filas = detectarActividadesSinGrupoAplicacion();
+    if(!filas.length){ cont.innerHTML = ''; return; }
+    cont.innerHTML = `
+      <div class="alerta-sin-grupo-banner">
+        ⚠️ <b>${filas.length}</b> registro${filas.length===1?'':'s'} de actividad con Grupo de Aplicación vacío para
+        ${COMPAIA_SELECCIONADA} (${etiquetaCicloActivoCA()}) — no aparecen en ninguna columna de este calendario hasta que se corrijan en Odoo.
+        <button type="button" class="btn-organic-action" style="background:#fff; border:1px solid #f59e0b; color:#92400e; margin-left:10px;" onclick="abrirModalSinGrupoAplicacion()">Ver detalle</button>
+      </div>`;
+  }
+
+  function abrirModalSinGrupoAplicacion(){
+    const filas = detectarActividadesSinGrupoAplicacion();
+    const tbody = filas.slice(0, 500).map(r => `<tr>
+      <td>${r.sector}</td><td><strong>${r.finca}</strong></td><td>${r.lote_agricola||'—'}</td>
+      <td>${r.actividad}</td><td>${formatFechaCortaCA(r.fecha)}</td><td style="text-align:right;">${(r.avance||0).toFixed(2)}</td>
+    </tr>`).join('');
+    const modal = document.getElementById('modalSinGrupoAplicOverlay');
+    document.getElementById('tbodyModalSinGrupoAplic').innerHTML = tbody ||
+      '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:16px;">Sin registros</td></tr>';
+    document.getElementById('tituloModalSinGrupoAplic').textContent =
+      `${filas.length} registro${filas.length===1?'':'s'} sin Grupo de Aplicación${filas.length>500 ? ' (mostrando los primeros 500)' : ''}`;
+    modal.classList.add('show');
+  }
+
+  function cerrarModalSinGrupoAplicacion(){
+    document.getElementById('modalSinGrupoAplicOverlay').classList.remove('show');
+  }
   // Si el tab Control de Aplicaciones o Programación de aplicaciones está visible cuando
   // cambian los filtros de arriba, los vuelve a renderizar con el filtro nuevo aplicado.
   function refrescarTabsFungicidasSiVisibles(){
     if(document.getElementById('tabPanelFungicidas').style.display !== 'none') renderCalendarioSiembra();
     if(document.getElementById('tabPanelProgramacion').style.display !== 'none') renderControlAplicaciones();
+    if(document.getElementById('tabPanelSeguimientoAplic').style.display !== 'none'){
+      renderAlertaSinGrupoAplicacion();
+      renderSeguimientoAplic();
+    }
   }
 
   function toggleInfoCalendarioSiembra(event){
@@ -3453,6 +3866,19 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     const d = new Date(fechaStr + 'T00:00:00');
     d.setDate(d.getDate() + dias);
     return d.toISOString().split('T')[0];
+  }
+  function esDomingoCA(fechaStr){
+    return new Date(fechaStr + 'T00:00:00').getDay() === 0;
+  }
+  // Grupo de Aplicación 6 es el único que sí trabaja domingo (mismo criterio que
+  // ya usa la Programación de Siembra) — el resto de grupos salta el domingo.
+  function esGA6(grupo){ return /6\s*$/.test(String(grupo||'').trim()); }
+  // Avanza "dias" días calendario desde fechaBase; si el resultado cae domingo y
+  // el grupo no es GA6, empuja 1 día más para no programar nada en domingo.
+  function avanzarDiasCascadaCA(fechaBase, dias, grupo){
+    let fecha = addDiasCA(fechaBase, dias);
+    if(!esGA6(grupo) && esDomingoCA(fecha)) fecha = addDiasCA(fecha, 1);
+    return fecha;
   }
 
   function formatFechaCortaCA(f){
@@ -3597,6 +4023,701 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     const clon = table.cloneNode(true);
     const wb = XLSX.utils.table_to_book(clon, { raw: true });
     XLSX.writeFile(wb, `INFOAGRO_Control_Aplicaciones_Mani2026_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  // ===================================================================
+  // TAB "SEGUIMIENTO GRUPOS DE APLICACIÓN" — mismo formato de calendario que
+  // Control de Aplicaciones (Calendario de Siembra: fecha en la primera columna,
+  // bandas de etapa arriba, columnas Sector›Finca›Grupo›Turno), pero agrupando
+  // por x_studio_grupo_de_aplicacion en vez de x_studio_grupo_de_siembra. Es de
+  // SOLO LECTURA (sin arrastrar para reprogramar, sin asignar insumos): no existe
+  // todavía un modelo de "Programación por Grupo de Aplicación" en Odoo (el que
+  // existe, x_programacion_fungici, está keyed por Grupo de Siembra), así que la
+  // cascada de fechas programadas usa siempre el default fijo de 30/13 días.
+  // ===================================================================
+
+  function siglaGrupoAplicCA(g){
+    // "Grupo de Aplicacion 6" -> "GA6"
+    const m = String(g||'').trim().match(/(\d+)$/);
+    return m ? ('GA'+m[1]) : '—';
+  }
+
+  function construirCalendarioAplicacion(){
+    const todasFilas = filasBaseCA();
+    const filasSiembra = todasFilas.filter(r => normTxtCA(r.actividad)===normTxtCA('Siembra') && r.grupo_aplicacion);
+    if(!filasSiembra.length) return null;
+
+    function grupoDe(r){ return r.grupo_aplicacion || 'Sin Grupo'; }
+    function turnoDe(r){ return (r.turno === 'Noche') ? 'Noche' : 'Dia'; }
+
+    // El Sector de una Finca a veces llega vacío/atrasado en algún registro puntual
+    // (ej. una línea de Fungicida recién creada, o un caché todavía no actualizado) —
+    // si se usara el sector de CADA fila tal cual, esa sola fila abriría un bloque
+    // "Sector: —" duplicado con la misma Finca+Grupo, en vez de sumarse al bloque
+    // correcto. Para evitarlo, el Sector de cada Finca se decide una sola vez por
+    // voto mayoritario entre TODAS sus filas (Siembra + cualquier otra actividad), y
+    // esa es la única fuente de verdad para agrupar columnas — nunca r.sector directo.
+    const sectorPorFinca = {};
+    { const conteo = {};
+      todasFilas.forEach(r=>{
+        if(!r.sector || r.sector==='Sin Sector') return;
+        conteo[r.finca] = conteo[r.finca] || {};
+        conteo[r.finca][r.sector] = (conteo[r.finca][r.sector]||0) + 1;
+      });
+      Object.entries(conteo).forEach(([finca, porSector])=>{
+        sectorPorFinca[finca] = Object.entries(porSector).sort((a,b)=>b[1]-a[1])[0][0];
+      });
+    }
+    function sectorDe(r){ return sectorPorFinca[r.finca] || r.sector || 'Sin Sector'; }
+
+    // Columna base = Sector > Grupo de Aplicación > Finca (SIN turno en la clave):
+    // el turno ya no se deriva de qué datos existen — se abre SIEMPRE en 2
+    // sub-columnas fijas (Día y Noche) para cualquier actividad que no sea Siembra,
+    // sin importar en qué turno se sembró ni si todavía hay datos en alguno de los
+    // dos (quedan en 0). Siembra sigue siendo una sola columna, sin split de turno.
+    function colKeyDe(r){ return `${sectorDe(r)}|||${grupoDe(r)}|||${r.finca}`; }
+    function fincaGrupoKeyDe(r){ return `${r.finca}|||${grupoDe(r)}`; }
+
+    const colMap = {};
+    // Solo se admiten Grupos de Aplicación reales ("Grupo de Aplicacion 1".."6",
+    // sigla GA1..GA6) — cualquier valor que no resuelva a una sigla válida (vacío,
+    // "Sin Grupo", basura de una prueba vieja, etc.) queda afuera para no generar
+    // una columna "—" de ruido visual sin ningún dato real detrás.
+    function grupoValidoCA(grupo){ return siglaGrupoAplicCA(grupo) !== '—'; }
+    const todasConGrupo = todasFilas.filter(r => r.grupo_aplicacion && grupoValidoCA(r.grupo_aplicacion));
+    todasConGrupo.forEach(r=>{
+      const key = colKeyDe(r);
+      if(!colMap[key]) colMap[key] = {
+        key, sector:sectorDe(r), finca:r.finca, grupo: grupoDe(r),
+        sigla: siglaGrupoAplicCA(grupoDe(r)), fincaSigla: siglaFincaCA(r.finca), total:0
+      };
+    });
+    // Fincas que están en la Programación de Siembra (manual) pero todavía no
+    // tienen NINGÚN registro real en Odoo (finca 100% futura) — sin esto, esa
+    // finca nunca aparecería en el calendario aunque ya se le haya escrito algo.
+    Object.entries(PROGRAMACION_SIEMBRA || {}).forEach(([grupo, porFinca])=>{
+      if(!grupoValidoCA(grupo)) return;
+      Object.keys(porFinca||{}).forEach(finca=>{
+        const sector = sectorPorFinca[finca] || 'Sin Sector';
+        const key = `${sector}|||${grupo}|||${finca}`;
+        if(!colMap[key]) colMap[key] = {
+          key, sector, finca, grupo,
+          sigla: siglaGrupoAplicCA(grupo), fincaSigla: siglaFincaCA(finca), total: 0
+        };
+      });
+    });
+    // El total de la columna (usado en el bloque de Siembra) se acumula solo desde
+    // filas de Siembra — no queremos que un Fungicida sume área "sembrada".
+    filasSiembra.forEach(r=>{ colMap[colKeyDe(r)].total += (r.avance||0); });
+    const columnas = Object.values(colMap).sort((a,b)=>
+      a.sector.localeCompare(b.sector) || a.grupo.localeCompare(b.grupo) || a.finca.localeCompare(b.finca)
+    );
+
+    const matrizSiembra = {};
+    filasSiembra.forEach(r=>{
+      const key = colKeyDe(r);
+      matrizSiembra[r.fecha] = matrizSiembra[r.fecha] || {};
+      matrizSiembra[r.fecha][key] = (matrizSiembra[r.fecha][key]||0) + (r.avance||0);
+    });
+
+    // Igual que matrizSiembra, pero con el Grupo de Siembra metido en la clave —
+    // solo se usa cuando el toggle "Separar Siembra por Grupo de Siembra" está
+    // activo, para poder pintar una sub-columna por cada grupo de siembra.
+    const matrizSiembraPorGrupoSiembra = {};
+    filasSiembra.forEach(r=>{
+      const key = `${colKeyDe(r)}|||${r.grupo_siembra || 'Sin Grupo de Siembra'}`;
+      matrizSiembraPorGrupoSiembra[r.fecha] = matrizSiembraPorGrupoSiembra[r.fecha] || {};
+      matrizSiembraPorGrupoSiembra[r.fecha][key] = (matrizSiembraPorGrupoSiembra[r.fecha][key]||0) + (r.avance||0);
+    });
+
+    // ===== Programación de Siembra (manual, ver tabla "📝 Programación de
+    // Siembra" arriba del calendario) — se guarda APARTE de matrizSiembra (real)
+    // para poder pintarla distinto; nunca pisa un valor real ya registrado
+    // (esas celdas quedan bloqueadas en la tabla de captura). =====
+    const matrizSiembraProyectada = {};
+    const fechaInicioProyectadaFincaGrupo = {}; // "finca|||grupo" -> primera fecha programada
+    Object.entries(PROGRAMACION_SIEMBRA || {}).forEach(([grupo, porFinca])=>{
+      Object.entries(porFinca||{}).forEach(([finca, porFecha])=>{
+        const sector = sectorPorFinca[finca] || 'Sin Sector';
+        const key = `${sector}|||${grupo}|||${finca}`;
+        Object.entries(porFecha||{}).forEach(([fecha, mzn])=>{
+          if(!mzn) return;
+          matrizSiembraProyectada[fecha] = matrizSiembraProyectada[fecha] || {};
+          matrizSiembraProyectada[fecha][key] = (matrizSiembraProyectada[fecha][key]||0) + mzn;
+          const fgKey = `${finca}|||${grupo}`;
+          if(!fechaInicioProyectadaFincaGrupo[fgKey] || fecha < fechaInicioProyectadaFincaGrupo[fgKey]){
+            fechaInicioProyectadaFincaGrupo[fgKey] = fecha;
+          }
+        });
+      });
+    });
+
+    // Etapas propias de este calendario (además de Siembra y las de la cascada de
+    // Fungicidas/Cosecha ya compartidas con Calendario de Siembra): Sello y Post
+    // emergente, que van ANTES de Fungicida I y también abren en Día/Noche.
+    const ETAPAS_PRE_FUNGICIDA_CA = ['Sello', 'Post emergente'];
+
+    // matricesEtapaTurno[etapa]['Dia'|'Noche'][fecha][colKey] = área real aplicada.
+    // Las dos ramas (Dia/Noche) SIEMPRE existen para cada etapa, aunque queden vacías.
+    const matricesEtapaTurno = {};
+    [...ETAPAS_PRE_FUNGICIDA_CA, ...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA].forEach(etapa=>{ matricesEtapaTurno[etapa] = { Dia:{}, Noche:{} }; });
+    todasFilas.forEach(r=>{
+      if(!r.grupo_aplicacion || normTxtCA(r.actividad)===normTxtCA('Siembra')) return;
+      const rama = matricesEtapaTurno[r.actividad];
+      if(!rama) return; // actividad fuera de la lista de arriba — se ignora, igual que antes
+      const turno = turnoDe(r);
+      const key = colKeyDe(r);
+      rama[turno][r.fecha] = rama[turno][r.fecha] || {};
+      rama[turno][r.fecha][key] = (rama[turno][r.fecha][key]||0) + (r.avance||0);
+    });
+
+    const indiceEtapaPorFincaGrupo = {};
+    todasFilas.forEach(r=>{
+      if(!r.grupo_aplicacion) return;
+      const key = `${fincaGrupoKeyDe(r)}|||${r.actividad}`;
+      (indiceEtapaPorFincaGrupo[key] = indiceEtapaPorFincaGrupo[key] || []).push({ fecha: r.fecha, avance: r.avance||0 });
+    });
+    Object.values(indiceEtapaPorFincaGrupo).forEach(arr => arr.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))));
+
+    const baseSiembraFincaGrupo = {};
+    filasSiembra.forEach(r=>{
+      const key = fincaGrupoKeyDe(r);
+      if(!baseSiembraFincaGrupo[key] || r.fecha < baseSiembraFincaGrupo[key]) baseSiembraFincaGrupo[key] = r.fecha;
+    });
+
+    // Grupo de Siembra dentro de cada Finca+Grupo de Aplicación — para la opción
+    // "Separar Siembra por Grupo de Siembra": lista de grupos de siembra distintos
+    // y la fecha de arranque PROPIA de cada uno (el contador de edad/DDS se
+    // reinicia a 0 por cada Grupo de Siembra, en vez de compartirse por finca).
+    const baseSiembraPorFincaGrupoSiembra = {}; // "fgKey|||grupoSiembra" -> fecha mínima de ESE grupo de siembra
+    const gruposSiembraSetPorFincaGrupo = {};   // fgKey -> Set(grupoSiembra)
+    filasSiembra.forEach(r=>{
+      const fgKey = fincaGrupoKeyDe(r);
+      const gs = r.grupo_siembra || 'Sin Grupo de Siembra';
+      const claveGs = `${fgKey}|||${gs}`;
+      if(!baseSiembraPorFincaGrupoSiembra[claveGs] || r.fecha < baseSiembraPorFincaGrupoSiembra[claveGs]){
+        baseSiembraPorFincaGrupoSiembra[claveGs] = r.fecha;
+      }
+      (gruposSiembraSetPorFincaGrupo[fgKey] = gruposSiembraSetPorFincaGrupo[fgKey] || new Set()).add(gs);
+    });
+    // Lista final por finca, ordenada por la fecha de arranque de cada grupo de siembra.
+    const gruposSiembraPorFincaGrupo = {};
+    Object.entries(gruposSiembraSetPorFincaGrupo).forEach(([fgKey, set])=>{
+      gruposSiembraPorFincaGrupo[fgKey] = [...set].sort((a,b)=>
+        (baseSiembraPorFincaGrupoSiembra[`${fgKey}|||${a}`]||'').localeCompare(baseSiembraPorFincaGrupoSiembra[`${fgKey}|||${b}`]||'')
+      );
+    });
+
+    // Programación manual de Fungicida I (única fuente editable: texto libre
+    // "Finca" + "MZN Proyectada", una fila por fecha) — Fungicida II..VIII se
+    // DERIVAN automáticamente RECONSTRUYENDO la proyección de cero en cada
+    // etapa: se toma el primer día de la etapa anterior +13 (con chequeo de
+    // domingo ahí), y desde ese día se van colocando TODAS las entradas de
+    // Fungicida I, en su mismo orden, en días CONSECUTIVOS — sin dejar huecos
+    // salvo saltarse un domingo cuando corresponda. No se intenta conservar el
+    // espaciado real que tenían en Fungicida I (que podía traer huecos por
+    // otros motivos) — Fungicida II..VIII quedan siempre "corridas" apretadas.
+    // El resultado (programacionEfectivaPorEtapa) alimenta tanto la cascada de
+    // fechas como la vista de solo-lectura de Finca/MZN en cada Fungicida II..VIII.
+    const programacionEfectivaPorEtapa = { 'Fungicida I': PROGRAMACION_FUNGICIDAS['Fungicida I'] || {} };
+    Object.keys(PROGRAMACION_FUNGICIDAS['Fungicida I'] || {}).forEach(grupo=>{
+      if(!grupoValidoCA(grupo)) return;
+      const porFechaOriginal = PROGRAMACION_FUNGICIDAS['Fungicida I'][grupo] || {};
+      const fechasOriginales = Object.keys(porFechaOriginal)
+        .filter(f => porFechaOriginal[f] && porFechaOriginal[f].finca)
+        .sort();
+      if(!fechasOriginales.length) return;
+      const entradasEnOrden = fechasOriginales.map(f => porFechaOriginal[f]); // [{finca,mzn}, ...] en el orden real
+
+      let inicioEtapaAnterior = fechasOriginales[0]; // primer día real de Fungicida I
+      for(let i=1; i<ETAPAS_FUNGICIDA.length; i++){
+        const etapaActual = ETAPAS_FUNGICIDA[i];
+        let cursor = avanzarDiasCascadaCA(inicioEtapaAnterior, DIAS_DEFECTO.diasEntre, grupo);
+        const porFechaDerivada = {};
+        entradasEnOrden.forEach((entrada, idx)=>{
+          if(idx > 0){
+            cursor = addDiasCA(cursor, 1); // día consecutivo, sin dejar hueco
+            if(!esGA6(grupo) && esDomingoCA(cursor)) cursor = addDiasCA(cursor, 1); // salvo que caiga domingo
+          }
+          porFechaDerivada[cursor] = { finca: entrada.finca, mzn: entrada.mzn };
+        });
+        programacionEfectivaPorEtapa[etapaActual] = programacionEfectivaPorEtapa[etapaActual] || {};
+        programacionEfectivaPorEtapa[etapaActual][grupo] = porFechaDerivada;
+        inicioEtapaAnterior = Object.keys(porFechaDerivada).sort()[0]; // primer día de ESTA etapa, base de la siguiente
+      }
+    });
+
+    const manualPorEtapaFincaGrupo = {}; // etapa -> "finca|||grupo" -> fecha más temprana escrita
+    ETAPAS_FUNGICIDA.forEach(etapa=>{
+      const indice = manualPorEtapaFincaGrupo[etapa] = {};
+      Object.entries(programacionEfectivaPorEtapa[etapa] || {}).forEach(([grupo, porFecha])=>{
+        if(!grupoValidoCA(grupo)) return;
+        Object.entries(porFecha||{}).forEach(([fecha, entrada])=>{
+          if(!entrada || !entrada.finca) return;
+          fincasDeTextoLibre(entrada.finca).forEach(finca=>{
+            const fgKey = `${finca}|||${grupo}`;
+            if(!indice[fgKey] || fecha < indice[fgKey]) indice[fgKey] = fecha;
+          });
+        });
+      });
+    });
+
+    // Cascada por Finca+Grupo de Aplicación con el default fijo (30d / 13d) — sin
+    // ajuste manual por grupo, porque no existe todavía Programación editable acá.
+    // Es turno-agnóstica: la fecha programada no depende de si la aplicación real
+    // termina siendo de Día o de Noche.
+    const programadoEtapaFincaGrupo = {};
+    [...ETAPAS_PRE_FUNGICIDA_CA, ...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA].forEach(etapa => { programadoEtapaFincaGrupo[etapa] = {}; });
+
+    const fincaGrupoUnicos = {};
+    columnas.forEach(c=>{ fincaGrupoUnicos[`${c.finca}|||${c.grupo}`] = { finca:c.finca, grupo:c.grupo }; });
+
+    Object.values(fincaGrupoUnicos).forEach(fg=>{
+      const fgKey = `${fg.finca}|||${fg.grupo}`;
+      // Si la finca todavía no tiene NINGÚN día real de siembra, se usa la fecha
+      // de arranque proyectada (Programación de Siembra) como base de la cascada
+      // — así Fungicida I..VIII también se proyectan hacia adelante para fincas
+      // que aún no empiezan.
+      let fechaBase = baseSiembraFincaGrupo[fgKey] || fechaInicioProyectadaFincaGrupo[fgKey];
+      if(!fechaBase) return;
+      ETAPAS_FUNGICIDA.forEach((etapa, i) => {
+        const salto = (i===0) ? DIAS_DEFECTO.diasF1 : DIAS_DEFECTO.diasEntre;
+        // Respeta domingo (salvo Grupo de Aplicación 6): si +13/+30 días cae
+        // domingo, se corre 1 día más — igual criterio que la Programación de
+        // Siembra para no proyectar trabajo en un día que ese grupo no trabaja.
+        const fechaProgramada = avanzarDiasCascadaCA(fechaBase, salto, fg.grupo);
+        const regs = indiceEtapaPorFincaGrupo[`${fgKey}|||${etapa}`] || [];
+        // Si ya hay un registro real para ESTA etapa, manda igual que siempre; si
+        // no, una entrada manual en la Programación de ESTA etapa cuenta como si
+        // fuera real (misma prioridad) para poder seguir la cascada hacia la
+        // siguiente etapa — se repite igual en cada una de las 8 Fungicidas.
+        const fechaManual = regs.length ? null : manualPorEtapaFincaGrupo[etapa][fgKey];
+        programadoEtapaFincaGrupo[etapa][fgKey] = fechaManual
+          ? { fechaProgramada: fechaManual, tieneReal: true, esManual: true }
+          : { fechaProgramada, tieneReal: regs.length>0 };
+        fechaBase = regs.length ? regs[0].fecha : (fechaManual || fechaProgramada);
+      });
+    });
+
+    let fechaMin = filasSiembra.reduce((min,r)=> (!min || r.fecha<min) ? r.fecha : min, null);
+    let fechaMax = fechaMin;
+    Object.values(matricesEtapaTurno).forEach(porTurno => Object.values(porTurno).forEach(m =>
+      Object.keys(m).forEach(f => { if(f>fechaMax) fechaMax=f; })));
+    Object.keys(matrizSiembraProyectada).forEach(f => { if(f>fechaMax) fechaMax=f; });
+    Object.values(programadoEtapaFincaGrupo).forEach(porCol => Object.values(porCol).forEach(info => {
+      if(info.fechaProgramada && info.fechaProgramada > fechaMax) fechaMax = info.fechaProgramada;
+    }));
+
+    const rangoFechas = [];
+    for(let d=new Date(fechaMin+'T00:00:00'); d<=new Date(fechaMax+'T00:00:00'); d.setDate(d.getDate()+1)){
+      rangoFechas.push(d.toISOString().split('T')[0]);
+    }
+
+    return { columnas, rangoFechas, matrizSiembra, matrizSiembraPorGrupoSiembra, matrizSiembraProyectada, matricesEtapaTurno, programadoEtapaFincaGrupo, ETAPAS_PRE_FUNGICIDA_CA, baseSiembraFincaGrupo, fechaInicioProyectadaFincaGrupo, gruposSiembraPorFincaGrupo, baseSiembraPorFincaGrupoSiembra, programacionEfectivaPorEtapa };
+  }
+
+  function renderSeguimientoAplic(){
+    const cont = document.getElementById('matrixContainerSeguimientoAplic');
+    const contador = document.getElementById('recordCounterSeguimientoAplic');
+    if(!DB_RAW.length){
+      cont.innerHTML = '<div class="text-center text-muted py-4">Cargando datos de actividades…</div>';
+      return;
+    }
+    const datos = construirCalendarioAplicacion();
+    if(!datos){
+      cont.innerHTML = `<div class="text-center text-muted py-4">No se encontraron registros de Siembra con Grupo de Aplicación asignado para ${etiquetaCicloActivoCA()} (${COMPAIA_SELECCIONADA}).</div>`;
+      contador.textContent = '0 columnas';
+      return;
+    }
+    const { columnas, rangoFechas, matrizSiembra, matrizSiembraPorGrupoSiembra, matrizSiembraProyectada, matricesEtapaTurno, programadoEtapaFincaGrupo, ETAPAS_PRE_FUNGICIDA_CA, baseSiembraFincaGrupo, fechaInicioProyectadaFincaGrupo, gruposSiembraPorFincaGrupo, baseSiembraPorFincaGrupoSiembra, programacionEfectivaPorEtapa } = datos;
+    const ETAPAS_TODAS = ['Siembra', ...ETAPAS_PRE_FUNGICIDA_CA, ...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA];
+    // Siembra nunca se abre en Día/Noche (una sola aplicación de referencia); toda
+    // otra actividad SIEMPRE muestra ambos turnos, tengan o no datos todavía.
+    function turnosDe(etapa){ return etapa==='Siembra' ? ['Dia'] : ['Dia','Noche']; }
+    // Sub-columnas de Siembra para una Finca puntual: sin el toggle, siempre 1 (el
+    // comportamiento de toda la vida); con el toggle activo, una por cada Grupo de
+    // Siembra distinto que sembró esa Finca (cada una reinicia su propio DDS en 0).
+    function subEtiquetasSiembra(c){
+      if(!SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA) return ['Dia'];
+      const fgKey = `${c.finca}|||${c.grupo}`;
+      const lista = gruposSiembraPorFincaGrupo[fgKey];
+      return (lista && lista.length) ? lista : ['Sin Grupo de Siembra'];
+    }
+
+    // Árbol Sector > Grupo de Aplicación > Finca — "columnas" ya viene ordenada así
+    // (ver construirCalendarioAplicacion); el turno ahora se decide por etapa (ver
+    // turnosDe), no por finca, así que no vive en este árbol.
+    const arbol = [];
+    FINCAS_POR_GRUPO_CA = {};
+    columnas.forEach(c=>{
+      let sec = arbol.find(s=>s.sector===c.sector);
+      if(!sec){ sec = { sector: c.sector, grupos: [] }; arbol.push(sec); }
+      let grp = sec.grupos.find(g=>g.grupo===c.grupo);
+      if(!grp){ grp = { grupo: c.grupo, sigla: c.sigla, fincas: [] }; sec.grupos.push(grp); }
+      grp.fincas.push(c);
+      (FINCAS_POR_GRUPO_CA[c.grupo] = FINCAS_POR_GRUPO_CA[c.grupo] || []).push({ finca: c.finca, sigla: c.fincaSigla });
+    });
+
+    function fmtVal(v){ return v % 1 === 0 ? v.toFixed(0) : v.toFixed(2); }
+    // Ancho de un bloque de etapa para el grupo g: cada finca aporta 1 columna si la
+    // etapa es Siembra (o varias si el toggle "Separar por Grupo de Siembra" está
+    // activo), o 2 (Día+Noche) para cualquier otra etapa.
+    // Fungicida I además suma 2 columnas fijas al inicio ("Finca" + "MZN Proyectada
+    // (P)") para la Programación manual — únicas en toda la tabla, el resto de
+    // etapas se calculan solas a partir de esa fecha.
+    const anchoEtapaGrupo = (g, etapa) => {
+      if(etapa==='Siembra') return g.fincas.reduce((s,c)=> s + subEtiquetasSiembra(c).length, 0);
+      return g.fincas.length * turnosDe(etapa).length + (ETAPAS_FUNGICIDA.includes(etapa) ? 2 : 0);
+    };
+    const anchoTotalGrupo = (g) => ETAPAS_TODAS.reduce((s,etapa)=> s + anchoEtapaGrupo(g, etapa), 0);
+
+    // --- Encabezado: 5 filas, Sector > Grupo > Actividad(banda) > Finca > Turno ---
+    let filaSector = '<tr><th class="ca-fija" rowspan="5">Fecha</th>';
+    arbol.forEach(sec=>{
+      const colspan = sec.grupos.reduce((s,g)=> s + anchoTotalGrupo(g), 0);
+      filaSector += `<th colspan="${colspan}" class="ca-cal-sector">${sec.sector}</th>`;
+    });
+    filaSector += '</tr>';
+
+    let filaGrupo = '<tr>';
+    arbol.forEach(sec=> sec.grupos.forEach(g=>{
+      filaGrupo += `<th colspan="${anchoTotalGrupo(g)}" class="ca-cal-grupo" title="${g.grupo}">${g.sigla}</th>`;
+    }));
+    filaGrupo += '</tr>';
+
+    let filaEtapa = '<tr>';
+    arbol.forEach(sec=> sec.grupos.forEach(g=>{
+      ETAPAS_TODAS.forEach(etapa=>{
+        const colBanda = PALETA_ETAPA[etapa] || PALETA_ETAPA['Siembra'];
+        filaEtapa += `<th colspan="${anchoEtapaGrupo(g, etapa)}" class="ca-cal-etapa-band" style="background:${colBanda.bg}; color:#fff;">${etapa.toUpperCase()}</th>`;
+      });
+    }));
+    filaEtapa += '</tr>';
+
+    let filaFinca = '<tr>';
+    arbol.forEach(sec=> sec.grupos.forEach(g=>{
+      ETAPAS_TODAS.forEach(etapa=>{
+        if(etapa==='Fungicida I'){
+          filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Programá acá manualmente Fungicida I — el resto (II..VIII) se genera solo, +13 días sin domingo desde esta fecha">Finca</th>`;
+          filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Manzanas proyectadas ese día para esa finca">MZN (P)</th>`;
+        } else if(ETAPAS_FUNGICIDA.includes(etapa)){
+          filaFinca += `<th class="ca-cal-finca" style="background:#e2e8f0;" title="Se genera solo copiando Fungicida I, +13 días sin domingo (encadenado) — no editable">Finca</th>`;
+          filaFinca += `<th class="ca-cal-finca" style="background:#e2e8f0;" title="Manzanas proyectadas — copiado de la etapa anterior">MZN (P)</th>`;
+        }
+        g.fincas.forEach(c=>{
+          const n = etapa==='Siembra' ? subEtiquetasSiembra(c).length : turnosDe(etapa).length;
+          filaFinca += `<th colspan="${n}" class="ca-cal-finca" title="${c.finca}">${c.fincaSigla}</th>`;
+        });
+      });
+    }));
+    filaFinca += '</tr>';
+
+    let filaTurno = '<tr>';
+    arbol.forEach(sec=> sec.grupos.forEach(g=>{
+      ETAPAS_TODAS.forEach(etapa=>{
+        if(ETAPAS_FUNGICIDA.includes(etapa)){
+          filaTurno += `<th class="ca-cal-sigla">—</th><th class="ca-cal-sigla">—</th>`;
+        }
+        g.fincas.forEach(c=>{
+          if(etapa==='Siembra'){
+            subEtiquetasSiembra(c).forEach(gs=>{
+              const etiqueta = SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA ? siglaGrupoCA(gs) : 'D';
+              filaTurno += `<th class="ca-cal-sigla" title="${gs}">${etiqueta}</th>`;
+            });
+          } else {
+            turnosDe(etapa).forEach(turno=>
+              filaTurno += `<th class="ca-cal-sigla" title="Turno ${turno}">${turno==='Noche' ? 'N' : 'D'}</th>`
+            );
+          }
+        });
+      });
+    }));
+    filaTurno += '</tr>';
+
+    // --- Secuencia plana de columnas físicas, en el MISMO orden que el encabezado
+    // (Sector > Grupo > Actividad > Finca > Turno) — la usan tanto la fila de Totales
+    // como cada fila de fecha, para no repetir la lógica de recorrido dos veces. ---
+    const secuencia = [];
+    arbol.forEach(sec=> sec.grupos.forEach(g=>{
+      ETAPAS_TODAS.forEach(etapa=>{
+        if(etapa==='Fungicida I'){
+          secuencia.push({ manual:'finca', grupo:g.grupo, etapa, editable:true });
+          secuencia.push({ manual:'mzn', grupo:g.grupo, etapa, editable:true });
+        } else if(ETAPAS_FUNGICIDA.includes(etapa)){
+          secuencia.push({ manual:'finca', grupo:g.grupo, etapa, editable:false });
+          secuencia.push({ manual:'mzn', grupo:g.grupo, etapa, editable:false });
+        }
+        g.fincas.forEach(c=>{
+          if(etapa==='Siembra'){
+            subEtiquetasSiembra(c).forEach(gs=> secuencia.push({ c, etapa, grupoSiembra: gs }));
+          } else {
+            turnosDe(etapa).forEach(turno=> secuencia.push({ c, etapa, turno }));
+          }
+        });
+      });
+    }));
+
+    let filaTotal = `<tr class="ca-cal-total-row"><td class="ca-fija">Total (mzn)</td>`;
+    secuencia.forEach(entrada=>{
+      if(entrada.manual==='finca'){ filaTotal += `<td>—</td>`; return; }
+      if(entrada.manual==='mzn'){
+        let totalManual = 0;
+        Object.values((programacionEfectivaPorEtapa[entrada.etapa]||{})[entrada.grupo]||{}).forEach(e=>{ totalManual += (e.mzn||0); });
+        filaTotal += `<td>${fmtVal(totalManual)}</td>`;
+        return;
+      }
+      const {c, etapa} = entrada;
+      let total = 0;
+      if(etapa==='Siembra'){
+        if(SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA){
+          const keyGs = `${c.key}|||${entrada.grupoSiembra}`;
+          Object.values(matrizSiembraPorGrupoSiembra).forEach(porCol => { total += (porCol[keyGs]||0); });
+        } else {
+          total = c.total;
+        }
+      }
+      else Object.values(matricesEtapaTurno[etapa][entrada.turno]).forEach(porCol => { total += (porCol[c.key]||0); });
+      filaTotal += `<td>${fmtVal(total)}</td>`;
+    });
+    filaTotal += '</tr>';
+
+    const filasCuerpo = rangoFechas.map(f=>{
+      const esDom = esDomingoCA(f);
+      let fila = `<tr${esDom ? ' class="ca-cal-fila-domingo"' : ''}><td class="ca-fija${esDom ? ' ca-fija-domingo' : ''}">${formatFechaCortaCA(f)}</td>`;
+      secuencia.forEach(entrada=>{
+        if(entrada.manual){
+          const grupo = entrada.grupo, etapaManual = entrada.etapa;
+          const guardado = ((programacionEfectivaPorEtapa[etapaManual]||{})[grupo] && (programacionEfectivaPorEtapa[etapaManual]||{})[grupo][f]) || {};
+          if(!entrada.editable){
+            // Fungicida II..VIII: solo lectura, copiado de la etapa anterior — sin
+            // click, sin input, para que quede clarísimo que no se edita acá.
+            if(entrada.manual==='finca'){
+              const fincasSel = fincasDeTextoLibre(guardado.finca);
+              const chips = fincasSel.map(fn=> `<span class="tag-chip tag-chip-solo-lectura">${siglaFincaCA(fn)}</span>`).join('');
+              fila += `<td style="padding:1px;"><div class="tag-multi-box tag-multi-box-solo-lectura" title="Copiado de Fungicida I, +13 días sin domingo (encadenado) — no editable">${chips || ''}</div></td>`;
+            } else {
+              fila += `<td class="celda-mzn-solo-lectura" title="Copiado de la etapa anterior">${guardado.mzn!=null ? fmtVal(guardado.mzn) : ''}</td>`;
+            }
+            return;
+          }
+          if(entrada.manual==='finca'){
+            const fincasSel = fincasDeTextoLibre(guardado.finca);
+            const chips = fincasSel.map(fn=>{
+              const sigla = siglaFincaCA(fn);
+              return `<span class="tag-chip" data-finca="${fn.replace(/"/g,'&quot;')}">${sigla}<button type="button" class="tag-chip-x" onclick="quitarChipFincaManualCA(event,this)">✕</button></span>`;
+            }).join('');
+            fila += `<td style="padding:1px;"><div class="tag-multi-box" data-grupo="${grupo.replace(/"/g,'&quot;')}" data-fecha="${f}" data-etapa="${etapaManual.replace(/"/g,'&quot;')}"
+              data-fincas="${fincasSel.join('|||').replace(/"/g,'&quot;')}" onclick="abrirSelectorFincaManualCA(this, event)"
+              title="Click para elegir en qué Finca(s) toca ${etapaManual} el ${formatFechaCortaCA(f)}">
+              ${chips}<span class="tag-add">+</span>
+            </div></td>`;
+          } else {
+            fila += `<td style="padding:1px;"><input type="number" min="0" step="0.01" class="input-manual-fungicida-mzn"
+              data-grupo="${grupo.replace(/"/g,'&quot;')}" data-fecha="${f}" data-etapa="${etapaManual.replace(/"/g,'&quot;')}" value="${guardado.mzn!=null ? guardado.mzn : ''}"
+              title="Manzanas proyectadas de ${etapaManual} el ${formatFechaCortaCA(f)}" style="width:52px; text-align:center; padding:2px; border:1px solid rgba(163,177,198,0.4); border-radius:4px; font-size:10.5px;"></td>`;
+          }
+          return;
+        }
+        const {c, etapa} = entrada;
+        if(etapa==='Siembra'){
+          // Ya no se muestra el área del día acá (esa queda solo en la fila Total) —
+          // en su lugar, un contador de edad (DDS: Días Después de Siembra) continuo
+          // desde el primer día real (o el proyectado si la finca aún no arranca):
+          // 0 el día de siembra, 1 al día siguiente, etc. Con el toggle "Separar por
+          // Grupo de Siembra" activo, el contador se reinicia en 0 por cada grupo.
+          const fgKey = `${c.finca}|||${c.grupo}`;
+          const inicio = SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA
+            ? baseSiembraPorFincaGrupoSiembra[`${fgKey}|||${entrada.grupoSiembra}`]
+            : (baseSiembraFincaGrupo[fgKey] || fechaInicioProyectadaFincaGrupo[fgKey]);
+          if(!inicio || f < inicio){
+            fila += `<td></td>`;
+          } else {
+            const dds = Math.round((new Date(f+'T00:00:00') - new Date(inicio+'T00:00:00')) / 86400000);
+            const tip = SEPARAR_SIEMBRA_POR_GRUPO_SIEMBRA
+              ? `${c.finca} · ${entrada.grupoSiembra} · Día ${dds} después de siembra`
+              : `${c.finca} · ${c.grupo} · Día ${dds} después de siembra`;
+            fila += `<td class="ca-cal-dds" title="${tip}">${dds}</td>`;
+          }
+          return;
+        }
+        const turno = entrada.turno;
+        const val = (matricesEtapaTurno[etapa][turno][f] && matricesEtapaTurno[etapa][turno][f][c.key]) || 0;
+        if(val>0){
+          fila += `<td class="ca-cal-valor" title="${c.finca} · ${c.grupo} · Turno ${turno} · ${etapa} aplicado">${fmtVal(val)}</td>`;
+        } else {
+          const fgKey = `${c.finca}|||${c.grupo}`;
+          const esColumnaDia = turno === 'Dia'; // el marcador programado solo vive en la col. Día
+          const info = esColumnaDia ? programadoEtapaFincaGrupo[etapa][fgKey] : null;
+          const esManualEsteDia = info && info.esManual && info.fechaProgramada === f;
+          const esProgramado = info && !info.tieneReal && info.fechaProgramada === f;
+          if(esManualEsteDia){
+            // La cifra proyectada vive SOLO en la columna "MZN (P)" — acá nada más se
+            // marca (punto) que ese día quedó cubierto por una Programación manual.
+            fila += `<td class="ca-cal-proyectado" title="${c.finca} · ${c.grupo} · cubierto por Programación manual de ${etapa}">●</td>`;
+          } else if(esProgramado){
+            const colE = PALETA_ETAPA[etapa];
+            fila += `<td class="ca-cal-programado" style="background:${colE.bgLight}; color:${colE.text};" title="Programado (default 30/13d): ${etapa}">●</td>`;
+          } else {
+            fila += `<td></td>`;
+          }
+        }
+      });
+      fila += '</tr>';
+      return fila;
+    }).join('');
+
+    cont.innerHTML = `<table class="ca-cal-tabla" id="tablaSeguimientoAplic">
+      <thead>${filaSector}${filaGrupo}${filaEtapa}${filaFinca}${filaTurno}</thead>
+      <tbody>${filaTotal}${filasCuerpo}</tbody>
+    </table>`;
+    contador.textContent = `${columnas.length} fincas × ${ETAPAS_TODAS.length} etapas (Día+Noche fijos) · ${rangoFechas.length} días (Sector › Grupo de Aplicación › Actividad › Finca › Turno)`;
+
+    // Programación de Fungicidas ("Finca" por chips + "MZN Proyectada"), repetida
+    // igual para cada una de las 8 — se guarda en memoria al vuelo, junto con la
+    // Programación de Siembra, con el mismo botón "💾 Guardar Programación" de arriba.
+    function guardarEntradaManualFungicidaI(grupo, fecha, etapaManual){
+      const box = cont.querySelector(`.tag-multi-box[data-grupo="${CSS.escape(grupo)}"][data-fecha="${fecha}"][data-etapa="${CSS.escape(etapaManual)}"]`);
+      const filaMzn = cont.querySelector(`.input-manual-fungicida-mzn[data-grupo="${CSS.escape(grupo)}"][data-fecha="${fecha}"][data-etapa="${CSS.escape(etapaManual)}"]`);
+      const finca = box ? (box.dataset.fincas||'').split('|||').filter(Boolean).join('/') : '';
+      const mzn = filaMzn && filaMzn.value !== '' ? Number(filaMzn.value) : null;
+      PROGRAMACION_FUNGICIDAS[etapaManual] = PROGRAMACION_FUNGICIDAS[etapaManual] || {};
+      PROGRAMACION_FUNGICIDAS[etapaManual][grupo] = PROGRAMACION_FUNGICIDAS[etapaManual][grupo] || {};
+      if(!finca && !mzn) delete PROGRAMACION_FUNGICIDAS[etapaManual][grupo][fecha];
+      else PROGRAMACION_FUNGICIDAS[etapaManual][grupo][fecha] = { finca, mzn };
+      marcarProgramacionSiembraSinGuardar();
+    }
+    cont.querySelectorAll('.input-manual-fungicida-mzn').forEach(inp=>{
+      inp.addEventListener('change', ()=> guardarEntradaManualFungicidaI(inp.dataset.grupo, inp.dataset.fecha, inp.dataset.etapa));
+    });
+    cont.querySelectorAll('.tag-chip-x').forEach(()=>{}); // los onclick ya están inline (quitarChipFincaManualCA)
+    window._guardarEntradaManualFungicidaICtx = guardarEntradaManualFungicidaI;
+  }
+
+  // --- Selector de Finca por chips (estilo Odoo many2many tags) para la
+  // Programación de Fungicidas (I..VIII). Un solo panel flotante reutilizado
+  // para cualquier celda, reusando las clases visuales ms-panel/ms-item. ---
+  function cerrarSelectorFincaManualCA(){
+    if(_panelSelectorFincaManual){ _panelSelectorFincaManual.remove(); _panelSelectorFincaManual = null; }
+  }
+  document.addEventListener('click', (e)=>{
+    if(_panelSelectorFincaManual && !_panelSelectorFincaManual.contains(e.target) && !e.target.closest('.tag-multi-box')){
+      cerrarSelectorFincaManualCA();
+    }
+  });
+
+  function refrescarChipsBox(box){
+    const seleccion = (box.dataset.fincas||'').split('|||').filter(Boolean);
+    const chips = seleccion.map(fn=>{
+      const sigla = siglaFincaCA(fn);
+      return `<span class="tag-chip" data-finca="${fn.replace(/"/g,'&quot;')}">${sigla}<button type="button" class="tag-chip-x" onclick="quitarChipFincaManualCA(event,this)">✕</button></span>`;
+    }).join('');
+    box.innerHTML = `${chips}<span class="tag-add">+</span>`;
+  }
+
+  function quitarChipFincaManualCA(event, btn){
+    event.stopPropagation();
+    const box = btn.closest('.tag-multi-box');
+    const finca = btn.closest('.tag-chip').dataset.finca;
+    const seleccion = (box.dataset.fincas||'').split('|||').filter(f=> f && f!==finca);
+    box.dataset.fincas = seleccion.join('|||');
+    refrescarChipsBox(box);
+    if(window._guardarEntradaManualFungicidaICtx) window._guardarEntradaManualFungicidaICtx(box.dataset.grupo, box.dataset.fecha, box.dataset.etapa);
+  }
+
+  function abrirSelectorFincaManualCA(box, event){
+    event.stopPropagation();
+    const yaAbierto = _panelSelectorFincaManual && _panelSelectorFincaManual.dataset.owner === (box.dataset.grupo+'|'+box.dataset.fecha+'|'+box.dataset.etapa);
+    cerrarSelectorFincaManualCA();
+    if(yaAbierto) return;
+
+    const grupo = box.dataset.grupo, fecha = box.dataset.fecha, etapaManual = box.dataset.etapa;
+    const opciones = FINCAS_POR_GRUPO_CA[grupo] || [];
+    const seleccionActual = new Set((box.dataset.fincas||'').split('|||').filter(Boolean));
+
+    const panel = document.createElement('div');
+    panel.className = 'ms-panel show';
+    panel.dataset.owner = grupo+'|'+fecha+'|'+etapaManual;
+    panel.innerHTML = `
+      <div class="ms-items">
+        ${opciones.map(o => `<label class="ms-item">
+          <input type="checkbox" value="${o.finca.replace(/"/g,'&quot;')}" ${seleccionActual.has(o.finca)?'checked':''}>
+          <b style="min-width:32px; display:inline-block;">${o.sigla}</b> ${o.finca}
+        </label>`).join('') || '<div style="padding:10px 12px; color:#94a3b8; font-size:12px;">Sin fincas para este grupo</div>'}
+      </div>
+      <div class="ms-footer">
+        <button type="button" class="cancel">Cancelar</button>
+        <button type="button" class="ok">Aceptar</button>
+      </div>`;
+    document.body.appendChild(panel);
+    panel.style.position = 'fixed';
+    const r = box.getBoundingClientRect();
+    const vh = window.innerHeight, vw = window.innerWidth;
+    let top = r.bottom + 4, left = r.left;
+    if(top + 260 > vh) top = Math.max(8, r.top - 260 - 4);
+    if(left + 200 > vw) left = Math.max(8, vw - 200 - 8);
+    panel.style.top = top+'px'; panel.style.left = left+'px'; panel.style.width='200px'; panel.style.maxHeight='260px'; panel.style.zIndex = 1300;
+    panel.addEventListener('click', e=> e.stopPropagation());
+    panel.querySelector('.cancel').addEventListener('click', cerrarSelectorFincaManualCA);
+    panel.querySelector('.ok').addEventListener('click', ()=>{
+      const marcados = [...panel.querySelectorAll('input[type=checkbox]:checked')].map(cb=>cb.value);
+      box.dataset.fincas = marcados.join('|||');
+      refrescarChipsBox(box);
+      cerrarSelectorFincaManualCA();
+      if(window._guardarEntradaManualFungicidaICtx) window._guardarEntradaManualFungicidaICtx(grupo, fecha, etapaManual);
+    });
+    _panelSelectorFincaManual = panel;
+  }
+
+  function toggleInfoSeguimientoAplic(event){
+    event.stopPropagation();
+    const pop = document.getElementById('infoSeguimientoAplicPopover');
+    const yaAbierto = pop.classList.contains('show');
+    if(yaAbierto){ pop.classList.remove('show'); return; }
+    const leyenda = ['Siembra', ...ETAPAS_FUNGICIDA, ...ETAPAS_COSECHA].map(etapa => {
+      const c = PALETA_ETAPA[etapa];
+      return `<div class="ca-leyenda-item"><span class="ca-leyenda-swatch" style="background:${c.bg};"></span>${etapa}</div>`;
+    }).join('');
+    pop.innerHTML = `
+      <h4>Cómo leer este calendario</h4>
+      Igual formato que Control de Aplicaciones, pero con el orden de columnas <b>Sector › Grupo de
+      Aplicación › Actividad › Finca › Turno</b> (<code>x_studio_grupo_de_aplicacion</code> en vez de
+      Grupo de Siembra) — pensado para leer de un vistazo el avance de <b>cada grupo mecanizado</b> a
+      través de todas sus etapas y fincas. <b>Siembra</b> es una sola columna (sin split); cualquier
+      otra actividad (Fungicida I–VIII, Arranque, Combina) <b>siempre</b> abre en dos columnas fijas,
+      Día y Noche, aunque todavía no haya datos en alguna de las dos — porque aunque la siembra haya
+      sido de día, las aplicaciones sí pueden ser de día o de noche indistintamente. Filas por fecha.<br><br>
+      <b>Verde</b> = área real aplicada ese día, en la columna del turno (D/N) que la ejecutó.<br>
+      <b>Amarillo rayado</b> = Siembra o Fungicida I <i>programados a mano</i> (todavía no ocurren en
+      Odoo). Siembra se escribe en la tabla "📝 Programación de Siembra" de arriba; Fungicida I se
+      escribe directo acá abajo, en las 2 columnas "Finca" / "MZN (P)" que aparecen antes de las fincas
+      de cada Grupo (texto libre — admite "RP/LG" en un día de transición). Ninguna de las dos pisa un
+      dato ya real.<br>
+      <b>Punto de color (●)</b> = fecha programada de esa etapa (Fungicida I = siembra +30 días fijos;
+      las siguientes, +13 días fijos desde la aplicación real anterior, la programada, o la escrita a
+      mano en Fungicida I — lo que exista) — se muestra en la columna "D" de cada Finca/Grupo mientras
+      no exista un registro real. Esta cascada también corre sobre fincas 100% programadas (que aún no
+      tienen ni un día real de siembra), usando su primera fecha escrita en Programación como base.
+      <b>Solo lectura</b> en todo lo demás: a
+      diferencia de Control de Aplicaciones, acá no se puede arrastrar para reprogramar ni asignar
+      insumos, porque todavía no existe un modelo de Programación en Odoo indexado por Grupo de
+      Aplicación (el que existe está indexado por Grupo de Siembra).<br><br>
+      Dentro de la columna de <b>Siembra</b> aparece el mismo marcador (FI, FII... FVIII) como vista
+      previa, igual que en Control de Aplicaciones.<br><br>
+      <b>Colores por etapa:</b>
+      ${leyenda}
+    `;
+    pop.classList.add('show');
+    document.addEventListener('click', function cerrar(e){
+      if(!pop.contains(e.target)){ pop.classList.remove('show'); document.removeEventListener('click', cerrar); }
+    });
+  }
+
+  function exportarSeguimientoAplicAExcel(){
+    const table = document.getElementById('tablaSeguimientoAplic');
+    if(!table) return;
+    const clon = table.cloneNode(true);
+    const wb = XLSX.utils.table_to_book(clon, { raw: true });
+    XLSX.writeFile(wb, `INFOAGRO_Seguimiento_Grupos_Aplicacion_Mani2026_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
 
   function siglaGrupoCA(g){
@@ -3885,10 +5006,15 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   async function initAll() {
     await loadData();
     buildAreaIndex();
-    await Promise.all([loadDataInsumos(), loadDataCombustible(), cargarConfigProgramacionRemota(), cargarCatalogoInsumosRemoto(), cargarAsignacionesInsumosRemoto()]);
+    await Promise.all([loadDataInsumos(), loadDataCombustible(), cargarConfigProgramacionRemota(), cargarCatalogoInsumosRemoto(), cargarAsignacionesInsumosRemoto(), cargarProgramacionSiembraRemota()]);
     renderMatrixIns();
     mostrarCamposSegunTab('actividades'); // arranca en la pestaña Actividades
     actualizarColapsoResponsivoFiltros();
+    // Si el usuario ya había hecho clic en otra pestaña (ej. "Seguimiento Grupos de
+    // Aplicación") ANTES de que esta carga terminara, esa pestaña se quedaba en
+    // "Cargando..." para siempre porque nada la volvía a renderizar una vez listos
+    // los datos — acá se refresca cualquier pestaña que ya esté visible en pantalla.
+    refrescarTabsFungicidasSiVisibles();
   }
 
   // Los filtros Compañía/Sector/Ciclo/Finca ahora viven de nuevo dentro de esta misma
