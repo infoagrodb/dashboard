@@ -7,12 +7,13 @@
      3. Manejo de sesión (sessionStorage, compartido entre
         index.html y todos los iframes del mismo origen)
      4. Catálogos compartidos (roles, estados, prioridades)
-     5. TablaInfoAgro — componente de tabla Excel-style reutilizable
+     5. Conexión a Exactus (DAB) — catálogo de artículos
+     6. TablaInfoAgro — componente de tabla Excel-style reutilizable
    Si corriges algo aquí, todos los HTML lo heredan — no hay
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v2 cargado correctamente");
+console.log("core.js v4 cargado correctamente (Exactus con costos reales)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -189,7 +190,83 @@ const INFOTALLER_CAUSAS_DESVIACION = [
 ];
 
 /* ------------------------------------------------------------
-   5. TablaInfoAgro — componente de tabla reutilizable
+   5. Conexión a Exactus (DAB) — solo para catálogo de artículos.
+      Mismo patrón ya usado en infotaller_mvp.html: intenta la
+      intranet directa primero (más rápido si estás en la oficina),
+      si no responde en 1.5s cae al proxy de Cloudflare.
+   ------------------------------------------------------------ */
+const DAB_API_DIRECTO = "http://192.168.5.58:5000/api";
+const DAB_API_PROXY = "https://sia.comasa.com.ni/dab/api";
+let DAB_API = "";
+let dabBasePromise = null;
+
+async function dabResolverBase() {
+  if (!dabBasePromise) {
+    dabBasePromise = (async () => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 1500);
+        const r = await fetch(DAB_API_DIRECTO + "/ARTICULO?$first=1", { signal: ctrl.signal });
+        clearTimeout(t);
+        if (r.ok) return DAB_API_DIRECTO;
+      } catch (e) { /* intranet no disponible, se usa el proxy */ }
+      return DAB_API_PROXY;
+    })();
+  }
+  DAB_API = await dabBasePromise;
+  return DAB_API;
+}
+
+async function dabFetchAll(pathWithQuery) {
+  await dabResolverBase();
+  let items = [];
+  let url = DAB_API + pathWithQuery;
+  let guard = 0;
+  while (url && guard < 50) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Exactus HTTP " + res.status + " en " + url);
+    const d = await res.json();
+    items = items.concat(d.value || []);
+    url = d.nextLink ? (d.nextLink.startsWith("http") ? d.nextLink : DAB_API + d.nextLink) : null;
+    guard++;
+  }
+  return items;
+}
+
+// El DAB no soporta "contains" en $filter, así que el catálogo (liviano,
+// 3 campos) se trae una sola vez y se filtra aquí en memoria.
+const DAB_BODEGAS_TALLER = ["156", "164"];
+let dabCatalogoArticulosPromise = null;
+function dabObtenerCatalogoArticulos() {
+  if (!dabCatalogoArticulosPromise) {
+    dabCatalogoArticulosPromise = dabFetchAll(
+      "/ARTICULO?$select=ARTICULO,DESCRIPCION,CLASIFICACION_1,CLASIFICACION_2,COSTO_PROM_LOC,COSTO_PROM_DOL,COSTO_ULT_LOC,COSTO_ULT_DOL,UNIDAD_ALMACEN,ACTIVO&$filter=ACTIVO eq 'S'"
+    );
+  }
+  return dabCatalogoArticulosPromise;
+}
+
+/**
+ * Busca artículos activos en Exactus por texto (código o descripción) y
+ * marca cuáles tienen existencia en las bodegas del taller (156/164).
+ * Devuelve máximo 15 resultados: [{ARTICULO, DESCRIPCION, TIENE_EXISTENCIA}]
+ */
+async function buscarArticulosExactus(texto) {
+  const catalogo = await dabObtenerCatalogoArticulos();
+  const q = texto.toUpperCase();
+  const arts = catalogo
+    .filter(a => (a.DESCRIPCION || "").toUpperCase().includes(q) || (a.ARTICULO || "").toUpperCase().includes(q))
+    .slice(0, 15);
+  if (!arts.length) return [];
+  const filtroCodigos = arts.map(a => `ARTICULO eq '${a.ARTICULO.replace(/'/g, "''")}'`).join(" or ");
+  const filtroBodega = DAB_BODEGAS_TALLER.map(b => `BODEGA eq '${b}'`).join(" or ");
+  const existe = await dabFetchAll(`/EXISTENCIA_BODEGA?$filter=${encodeURIComponent(`(${filtroCodigos}) and (${filtroBodega})`)}`);
+  const conStock = new Set(existe.map(e => e.ARTICULO));
+  return arts.map(a => ({ ...a, TIENE_EXISTENCIA: conStock.has(a.ARTICULO) }));
+}
+
+/* ------------------------------------------------------------
+   6. TablaInfoAgro — componente de tabla reutilizable
    ------------------------------------------------------------
    Estándar fijo de UI del proyecto: formato tabular, encabezado
    con botón de orden y botón de filtro estilo autofiltro de
