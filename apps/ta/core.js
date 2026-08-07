@@ -184,3 +184,232 @@ const INFOTALLER_CAUSAS_DESVIACION = [
   "Error de diagnóstico","Retrabajo","Cambio solicitado por el cliente",
   "Falta de disponibilidad de repuesto","Sustitución de SKU","Otro",
 ];
+
+/* ------------------------------------------------------------
+   5. TablaInfoAgro — componente de tabla reutilizable
+   ------------------------------------------------------------
+   Estándar fijo de UI del proyecto: formato tabular, encabezado
+   con botón de orden y botón de filtro estilo autofiltro de
+   Excel, filtros SIEMPRE en cascada entre columnas.
+
+   Construido en React puro (createElement, sin JSX/Babel) para
+   que el filtrado/orden lo controle React de punta a punta, sin
+   mezclar manipulación directa del DOM. Se usa así, dentro de
+   cualquier pestaña que ya tenga React cargado:
+
+     TablaInfoAgro(h, {
+       columnas: [
+         { clave: "x_name", titulo: "Folio" },
+         { clave: "estado", titulo: "Estado" },
+         { clave: "fecha", titulo: "Fecha", formatear: formatearFecha },
+       ],
+       filas: arregloDeObjetos,
+       onFilaClick: fila => {...},          // opcional
+       filaClaveUnica: "id",                // opcional, default "id"
+     })
+
+   Devuelve un elemento React ya armado — se usa directo dentro
+   de cualquier h(...) del componente que lo llama.
+   ------------------------------------------------------------ */
+function TablaInfoAgro(h, props) {
+  const { useState, useMemo, useRef, useEffect } = React;
+  const { columnas, filas, onFilaClick, filaClaveUnica } = props;
+  const claveId = filaClaveUnica || "id";
+
+  function ComponenteTabla() {
+    const [orden, setOrden] = useState(null); // { clave, direccion: 1 | -1 }
+    const [filtros, setFiltros] = useState({}); // { clave: Set(valores seleccionados) }
+    const [panelAbierto, setPanelAbierto] = useState(null); // clave de columna con el panel de filtro visible
+    const [busquedaPanel, setBusquedaPanel] = useState("");
+    const [seleccionTemp, setSeleccionTemp] = useState(null); // selección en edición dentro del panel abierto
+    const contenedorRef = useRef(null);
+
+    function valorDeCelda(fila, col) {
+      const crudo = fila[col.clave];
+      if (col.formatear) return col.formatear(crudo);
+      if (Array.isArray(crudo)) return crudo[1] ?? ""; // Many2one de Odoo: [id, "Nombre"]
+      if (crudo === false || crudo === null || crudo === undefined) return "";
+      return String(crudo);
+    }
+
+    // Cierra el panel si se hace clic fuera de la tabla
+    useEffect(() => {
+      function alClicFuera(e) {
+        if (contenedorRef.current && !contenedorRef.current.contains(e.target)) {
+          setPanelAbierto(null);
+        }
+      }
+      document.addEventListener("mousedown", alClicFuera);
+      return () => document.removeEventListener("mousedown", alClicFuera);
+    }, []);
+
+    // Filas que pasan TODOS los filtros activos
+    const filasFiltradas = useMemo(() => {
+      return filas.filter(fila =>
+        columnas.every(col => {
+          const set = filtros[col.clave];
+          if (!set) return true; // sin filtro en esta columna = pasa
+          return set.has(valorDeCelda(fila, col));
+        })
+      );
+    }, [filas, filtros]);
+
+    const filasOrdenadas = useMemo(() => {
+      if (!orden) return filasFiltradas;
+      const col = columnas.find(c => c.clave === orden.clave);
+      const copia = [...filasFiltradas];
+      copia.sort((a, b) => {
+        const va = valorDeCelda(a, col), vb = valorDeCelda(b, col);
+        const na = parseFloat(va), nb = parseFloat(vb);
+        let cmp;
+        if (!isNaN(na) && !isNaN(nb) && va !== "" && vb !== "") cmp = na - nb;
+        else cmp = String(va).localeCompare(String(vb), "es");
+        return cmp * orden.direccion;
+      });
+      return copia;
+    }, [filasFiltradas, orden]);
+
+    function alternarOrden(clave) {
+      setOrden(prev => {
+        if (!prev || prev.clave !== clave) return { clave, direccion: 1 };
+        if (prev.direccion === 1) return { clave, direccion: -1 };
+        return null;
+      });
+    }
+
+    // Valores disponibles para el panel de una columna: se calculan sobre las
+    // filas que ya pasan los filtros de TODAS LAS DEMÁS columnas (esto es lo
+    // que produce la cascada real entre filtros).
+    function valoresDisponibles(colActual) {
+      const filasBase = filas.filter(fila =>
+        columnas.every(col => {
+          if (col.clave === colActual.clave) return true;
+          const set = filtros[col.clave];
+          if (!set) return true;
+          return set.has(valorDeCelda(fila, col));
+        })
+      );
+      const conteo = new Map();
+      filasBase.forEach(fila => {
+        const v = valorDeCelda(fila, colActual);
+        conteo.set(v, (conteo.get(v) || 0) + 1);
+      });
+      return [...conteo.entries()].sort((a, b) => a[0].localeCompare(b[0], "es"));
+    }
+
+    function abrirPanel(col) {
+      const disponibles = valoresDisponibles(col).map(([v]) => v);
+      const actual = filtros[col.clave];
+      setSeleccionTemp(new Set(actual ? [...actual] : disponibles));
+      setBusquedaPanel("");
+      setPanelAbierto(col.clave);
+    }
+
+    function aplicarPanel(col) {
+      const disponibles = valoresDisponibles(col).map(([v]) => v);
+      setFiltros(prev => {
+        const copia = { ...prev };
+        if (seleccionTemp.size === disponibles.length) {
+          delete copia[col.clave]; // todo seleccionado = sin filtro
+        } else {
+          copia[col.clave] = new Set(seleccionTemp);
+        }
+        return copia;
+      });
+      setPanelAbierto(null);
+    }
+
+    function limpiarFiltro(clave) {
+      setFiltros(prev => { const c = { ...prev }; delete c[clave]; return c; });
+    }
+
+    const hayFiltrosActivos = Object.keys(filtros).length > 0;
+
+    return h("div", { className: "tabla-infoagro-envoltura", ref: contenedorRef },
+      hayFiltrosActivos && h("div", { className: "tabla-barra-filtros" },
+        h("span", null, "Filtros activos:"),
+        Object.keys(filtros).map(clave => {
+          const col = columnas.find(c => c.clave === clave);
+          return h("span", { key: clave, className: "tabla-chip-filtro" },
+            (col ? col.titulo : clave) + " (" + filtros[clave].size + ")",
+            h("button", { onClick: () => limpiarFiltro(clave) }, "✕")
+          );
+        }),
+        h("button", { className: "tabla-limpiar-todo", onClick: () => setFiltros({}) }, "Limpiar todo")
+      ),
+      h("div", { className: "tabla-scroll" },
+        h("table", { className: "tabla-infoagro" },
+          h("thead", null,
+            h("tr", null,
+              columnas.map(col => h("th", { key: col.clave },
+                h("div", { className: "tabla-th-contenido" },
+                  h("span", {
+                    className: "tabla-th-titulo",
+                    onClick: () => alternarOrden(col.clave),
+                  },
+                    col.titulo,
+                    orden && orden.clave === col.clave && h("span", { className: "tabla-flecha-orden" }, orden.direccion === 1 ? " ▲" : " ▼")
+                  ),
+                  h("button", {
+                    className: "tabla-btn-filtro" + (filtros[col.clave] ? " activo" : ""),
+                    onClick: () => panelAbierto === col.clave ? setPanelAbierto(null) : abrirPanel(col),
+                  }, "▾"),
+                  panelAbierto === col.clave && h("div", { className: "tabla-panel-filtro", onClick: e => e.stopPropagation() },
+                    h("input", {
+                      type: "text", placeholder: "Buscar...", value: busquedaPanel,
+                      onChange: e => setBusquedaPanel(e.target.value),
+                      className: "tabla-panel-buscar",
+                    }),
+                    h("div", { className: "tabla-panel-acciones-rapidas" },
+                      h("button", { onClick: () => setSeleccionTemp(new Set(valoresDisponibles(col).map(([v]) => v))) }, "Todos"),
+                      h("button", { onClick: () => setSeleccionTemp(new Set()) }, "Ninguno")
+                    ),
+                    h("div", { className: "tabla-panel-lista" },
+                      valoresDisponibles(col)
+                        .filter(([v]) => v.toLowerCase().includes(busquedaPanel.toLowerCase()))
+                        .map(([v, cuenta]) => h("label", { key: v || "(vacío)", className: "tabla-panel-item" },
+                          h("input", {
+                            type: "checkbox",
+                            checked: seleccionTemp.has(v),
+                            onChange: e => {
+                              setSeleccionTemp(prev => {
+                                const copia = new Set(prev);
+                                if (e.target.checked) copia.add(v); else copia.delete(v);
+                                return copia;
+                              });
+                            },
+                          }),
+                          h("span", null, v || "(vacío)"),
+                          h("span", { className: "tabla-panel-cuenta" }, cuenta)
+                        ))
+                    ),
+                    h("div", { className: "tabla-panel-botones" },
+                      h("button", { className: "tabla-panel-cancelar", onClick: () => setPanelAbierto(null) }, "Cancelar"),
+                      h("button", { className: "tabla-panel-ok", onClick: () => aplicarPanel(col) }, "Aceptar")
+                    )
+                  )
+                )
+              ))
+            )
+          ),
+          h("tbody", null,
+            filasOrdenadas.length === 0
+              ? h("tr", null, h("td", { colSpan: columnas.length, className: "tabla-vacia" }, "Sin resultados"))
+              : filasOrdenadas.map(fila => h("tr", {
+                  key: fila[claveId],
+                  className: onFilaClick ? "tabla-fila-clicable" : "",
+                  onClick: onFilaClick ? () => onFilaClick(fila) : undefined,
+                },
+                  columnas.map(col => h("td", { key: col.clave }, valorDeCelda(fila, col)))
+                ))
+          )
+        )
+      ),
+      h("div", { className: "tabla-pie" },
+        filasOrdenadas.length + " de " + filas.length + " registro" + (filas.length === 1 ? "" : "s")
+      )
+    );
+  }
+
+  return h(ComponenteTabla);
+}

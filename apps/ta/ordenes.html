@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Órdenes de Trabajo</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js"></script>
+<link rel="stylesheet" href="core.css">
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;
+  }
+  .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .barra-superior h1{font-size:15px; margin:0;}
+  .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
+  .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px;}
+
+  .badge-estado{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:10px; white-space:nowrap;}
+  .estado-Recibida, .estado-En-diagnostico{background:#DBEAFE; color:#1D4ED8;}
+  .estado-Pendiente-de-presupuesto, .estado-Presupuestada, .estado-Pendiente-de-aprobacion{background:#FEF3C7; color:#B45309;}
+  .estado-Aprobada, .estado-En-reparacion, .estado-Pendiente-de-repuesto{background:#DBEAFE; color:#1D4ED8;}
+  .estado-Terminada, .estado-Entregada, .estado-Cerrada{background:#D1FAE5; color:#15803D;}
+  .estado-Rechazada, .estado-Cancelada{background:#FEE2E2; color:#991B1B;}
+
+  .badge-prioridad{font-size:10px; font-weight:700; padding:1px 7px; border-radius:9px;}
+  .prioridad-Baja{background:#F1F5F9; color:#64748B;}
+  .prioridad-Normal{background:#E0F2FE; color:#0369A1;}
+  .prioridad-Alta{background:#FEF3C7; color:#B45309;}
+  .prioridad-Emergencia{background:#FEE2E2; color:#991B1B;}
+
+  .cargando, .error-carga{text-align:center; padding:40px; color:var(--color-texto-suave);}
+
+  /* ---- Modal detalle ---- */
+  .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
+  .modal-detalle{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:560px; max-height:88vh; overflow-y:auto; box-shadow:0 20px 40px rgba(17,24,39,.25);}
+  .modal-detalle h3{margin:0 0 4px; font-size:16px;}
+  .modal-detalle .folio-sub{color:var(--color-texto-suave); font-size:12px; margin-bottom:16px;}
+  .fila-detalle{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;}
+  .campo-detalle label{display:block; font-size:11px; color:var(--color-texto-suave); text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;}
+  .campo-detalle .valor{font-size:13.5px;}
+  .campo-detalle textarea, .campo-detalle select{
+    width:100%; border:1px solid var(--color-borde); border-radius:7px; padding:8px; font-size:13px; font-family:inherit;
+  }
+  .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:18px;}
+  .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:8px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v1</div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect } = React;
+
+function claseEstado(estado){
+  return "badge-estado estado-" + String(estado).replace(/\s+/g, "-").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+function claseTexto(prefijo, valor){
+  return prefijo + " " + prefijo + "-" + String(valor).replace(/\s+/g, "-").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/* ------------------------------------------------------------
+   Modal de detalle / cambio de estado
+   ------------------------------------------------------------ */
+function ModalDetalleOrden({ orden, onCerrar, onActualizado }){
+  const [nuevoEstado, setNuevoEstado] = useState(orden.x_studio_estado);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+  const [exito, setExito] = useState("");
+
+  function m2oTexto(v){
+    return Array.isArray(v) ? v[1] : (v || "—");
+  }
+
+  async function guardarEstado(){
+    if (nuevoEstado === orden.x_studio_estado){ setError("Elegí un estado distinto al actual."); return; }
+    setGuardando(true); setError(""); setExito("");
+    try {
+      const resp = await tallerActualizar("x_taller_orden", orden.id, { x_studio_estado: nuevoEstado });
+      if (resp.ok) {
+        setExito("Estado actualizado.");
+        onActualizado({ ...orden, x_studio_estado: nuevoEstado });
+      } else {
+        setError(resp.error || "No se pudo actualizar.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal-detalle", onClick: e => e.stopPropagation() },
+      h("h3", null, orden.x_name),
+      h("div", { className: "folio-sub" }, "Recepcionado: " + formatearFecha(orden.x_studio_fecha_recepcion)),
+
+      h("div", { className: "fila-detalle" },
+        h("div", { className: "campo-detalle" },
+          h("label", null, "Cliente"),
+          h("div", { className: "valor" }, m2oTexto(orden.x_studio_cliente_id))
+        ),
+        h("div", { className: "campo-detalle" },
+          h("label", null, "Equipo"),
+          h("div", { className: "valor" }, m2oTexto(orden.x_studio_equipo_id))
+        )
+      ),
+      h("div", { className: "fila-detalle" },
+        h("div", { className: "campo-detalle" },
+          h("label", null, "Prioridad"),
+          h("div", { className: "valor" }, h("span", { className: claseTexto("badge-prioridad", orden.x_studio_prioridad) }, orden.x_studio_prioridad))
+        ),
+        h("div", { className: "campo-detalle" },
+          h("label", null, "Bahía"),
+          h("div", { className: "valor" }, m2oTexto(orden.x_studio_bahia_id))
+        )
+      ),
+      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+        h("label", null, "Problema reportado"),
+        h("div", { className: "valor" }, orden.x_studio_problema_reportado || "—")
+      ),
+
+      h("div", { className: "campo-detalle", style: { marginBottom: "0" } },
+        h("label", null, "Cambiar estado"),
+        h("select", { value: nuevoEstado, onChange: e => setNuevoEstado(e.target.value) },
+          INFOTALLER_ESTADOS_ORDEN.map(e => h("option", { key: e, value: e }, e))
+        )
+      ),
+
+      error && h("div", { className: "mensaje-error" }, error),
+      exito && h("div", { className: "mensaje-exito" }, exito),
+
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar"),
+        h("button", { className: "btn-primario", onClick: guardarEstado, disabled: guardando }, guardando ? "Guardando..." : "Guardar estado")
+      )
+    )
+  );
+}
+
+/* ------------------------------------------------------------
+   Pantalla principal
+   ------------------------------------------------------------ */
+function OrdenesDeTrabajo(){
+  const [sesion, setSesion] = useState(null);
+  const [ordenes, setOrdenes] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) { setSesion(s); cargarOrdenes(); }
+  }, []);
+
+  async function cargarOrdenes(){
+    setCargando(true); setErrorCarga("");
+    try {
+      const filas = await tallerQuery("x_taller_orden", [
+        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
+        "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
+        "x_studio_tecnico_responsable_id","x_studio_problema_reportado",
+      ], [], 1000, 0);
+      setOrdenes(filas);
+    } catch(e) {
+      setErrorCarga("No se pudieron cargar las órdenes: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  if (!sesion) return null;
+
+  const columnas = [
+    { clave: "x_name", titulo: "Folio" },
+    { clave: "x_studio_cliente_id", titulo: "Cliente" },
+    { clave: "x_studio_equipo_id", titulo: "Equipo" },
+    { clave: "x_studio_estado", titulo: "Estado" },
+    { clave: "x_studio_prioridad", titulo: "Prioridad" },
+    { clave: "x_studio_fecha_recepcion", titulo: "Fecha Recepción", formatear: formatearFecha },
+    { clave: "x_studio_bahia_id", titulo: "Bahía" },
+    { clave: "x_studio_tecnico_responsable_id", titulo: "Técnico" },
+  ];
+
+  return h("div", null,
+    h("div", { className: "barra-superior" },
+      h("h1", null, "🛠️ Órdenes de Trabajo"),
+      h("button", { className: "btn-refrescar", onClick: cargarOrdenes }, "↻ Refrescar")
+    ),
+
+    h("div", { className: "panel" },
+      cargando
+        ? h("div", { className: "cargando" }, "Cargando órdenes...")
+        : errorCarga
+          ? h("div", { className: "error-carga" }, errorCarga)
+          : TablaInfoAgro(h, {
+              columnas,
+              filas: ordenes || [],
+              onFilaClick: setOrdenSeleccionada,
+            })
+    ),
+
+    ordenSeleccionada && h(ModalDetalleOrden, {
+      orden: ordenSeleccionada,
+      onCerrar: () => setOrdenSeleccionada(null),
+      onActualizado: actualizada => {
+        setOrdenes(prev => prev.map(o => o.id === actualizada.id ? actualizada : o));
+        setOrdenSeleccionada(null);
+      },
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(OrdenesDeTrabajo));
+</script>
+</body>
+</html>
