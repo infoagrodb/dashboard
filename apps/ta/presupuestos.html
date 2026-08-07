@@ -106,13 +106,14 @@
 
   .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
   .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:420px; box-shadow:0 20px 40px rgba(17,24,39,.25);}
+  .modal.modal-ancho{max-width:680px;}
   .modal h3{margin:0 0 14px; font-size:15px;}
   .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:16px;}
 </style>
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v2</div>
 
 <script>
 const h = React.createElement;
@@ -160,12 +161,19 @@ function Buscador({ placeholder, buscar, renderItem, onSeleccionar }){
 
 function ModalNuevoPresupuesto({ onCerrar, onCreado }){
   const [orden, setOrden] = useState(null);
+  const [ordenes, setOrdenes] = useState(null);
+  const [cargandoOrdenes, setCargandoOrdenes] = useState(true);
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState("");
 
-  async function buscarOrdenes(texto){
-    return tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_estado"], [["x_name","ilike",texto]], 15);
-  }
+  useEffect(() => {
+    tallerQuery("x_taller_orden", [
+      "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado","x_studio_fecha_recepcion",
+    ], [["x_studio_estado","not in",["Cerrada","Cancelada","Entregada"]]], 1000)
+      .then(setOrdenes)
+      .catch(e => setError("No se pudieron cargar las órdenes: " + e.message))
+      .finally(() => setCargandoOrdenes(false));
+  }, []);
 
   async function crear(){
     setCreando(true); setError("");
@@ -193,22 +201,32 @@ function ModalNuevoPresupuesto({ onCerrar, onCreado }){
     }
   }
 
+  const columnasOrdenes = [
+    { clave: "x_name", titulo: "Folio" },
+    { clave: "x_studio_cliente_id", titulo: "Cliente" },
+    { clave: "x_studio_equipo_id", titulo: "Equipo" },
+    { clave: "x_studio_estado", titulo: "Estado" },
+    { clave: "x_studio_fecha_recepcion", titulo: "Recepción", formatear: formatearFecha },
+  ];
+
   return h("div", { className: "modal-fondo", onClick: onCerrar },
-    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+    h("div", { className: "modal modal-ancho", onClick: e => e.stopPropagation() },
       h("h3", null, "💵 Nuevo Presupuesto"),
       h("div", { className: "campo" },
-        h("label", null, "Orden de trabajo"),
+        h("label", null, "Elegí la orden de trabajo"),
         orden
           ? h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", background:"#D1FAE5", borderRadius:"7px", padding:"9px 12px" } },
-              h("strong", null, orden.x_name),
+              h("div", null,
+                h("strong", null, orden.x_name),
+                h("div", { className: "sub" }, (Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "") + " · " + orden.x_studio_estado)
+              ),
               h("button", { className: "btn-chico", onClick: () => setOrden(null) }, "Cambiar")
             )
-          : h(Buscador, {
-              placeholder: "Buscar orden por folio...",
-              buscar: buscarOrdenes,
-              onSeleccionar: setOrden,
-              renderItem: o => h(React.Fragment, null, o.x_name, h("div", { className: "sub" }, o.x_studio_estado)),
-            })
+          : cargandoOrdenes
+            ? h("div", { className: "buscador-vacio" }, "Cargando órdenes...")
+            : h("div", { style: { maxHeight: "360px", overflowY: "auto" } },
+                TablaInfoAgro(h, { columnas: columnasOrdenes, filas: ordenes || [], onFilaClick: setOrden })
+              )
       ),
       error && h("div", { className: "mensaje-error" }, error),
       h("div", { className: "modal-botones" },
