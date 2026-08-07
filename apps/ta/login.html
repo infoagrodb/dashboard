@@ -35,10 +35,9 @@
     }
   }, 4000);
 </script>
-<script src="core.js"></script>
+<script src="core.js?v=2"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -84,7 +83,10 @@
 <body>
 <div id="raiz"></div>
 
-<script type="text/babel" data-presets="react">
+<script>
+// Sin JSX ni Babel: React.createElement directo. Más verboso, pero elimina
+// por completo la dependencia de transformar código en el navegador.
+const h = React.createElement;
 const { useState, useEffect } = React;
 
 function Login(){
@@ -94,7 +96,6 @@ function Login(){
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Si ya hay sesión activa, saltar directo al panel.
     if (obtenerSesion()) window.location.href = "index.html";
   }, []);
 
@@ -121,32 +122,29 @@ function Login(){
     }
   }
 
-  return (
-    <div className="tarjeta">
-      <div className="logo">🔧</div>
-      <h1>Infotaller</h1>
-      <p className="subtitulo">Taller de Reparación — División Agrícola COMASA</p>
-      <form onSubmit={enviar}>
-        <label htmlFor="campoUsuario">Usuario</label>
-        <input id="campoUsuario" type="text" autoComplete="username" autoFocus
-               value={usuario} onChange={e => setUsuario(e.target.value)} />
-
-        <label htmlFor="campoClave">Clave</label>
-        <input id="campoClave" type="password" autoComplete="current-password"
-               value={clave} onChange={e => setClave(e.target.value)} />
-
-        <button type="submit" disabled={cargando}>
-          {cargando ? "Verificando..." : "Ingresar"}
-        </button>
-
-        {error && <div className="error">{error}</div>}
-      </form>
-      <p className="pie">Acceso restringido — cada usuario tiene su propio rol y permisos.</p>
-    </div>
+  return h("div", { className: "tarjeta" },
+    h("div", { className: "logo" }, "🔧"),
+    h("h1", null, "Infotaller"),
+    h("p", { className: "subtitulo" }, "Taller de Reparación — División Agrícola COMASA"),
+    h("form", { onSubmit: enviar },
+      h("label", { htmlFor: "campoUsuario" }, "Usuario"),
+      h("input", {
+        id: "campoUsuario", type: "text", autoComplete: "username", autoFocus: true,
+        value: usuario, onChange: e => setUsuario(e.target.value),
+      }),
+      h("label", { htmlFor: "campoClave" }, "Clave"),
+      h("input", {
+        id: "campoClave", type: "password", autoComplete: "current-password",
+        value: clave, onChange: e => setClave(e.target.value),
+      }),
+      h("button", { type: "submit", disabled: cargando }, cargando ? "Verificando..." : "Ingresar"),
+      error ? h("div", { className: "error" }, error) : null
+    ),
+    h("p", { className: "pie" }, "Acceso restringido — cada usuario tiene su propio rol y permisos.")
   );
 }
 
-ReactDOM.createRoot(document.getElementById("raiz")).render(<Login />);
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(Login));
 </script>
 </body>
 </html>
