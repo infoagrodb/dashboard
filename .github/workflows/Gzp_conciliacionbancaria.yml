@@ -76,26 +76,29 @@ jobs:
             exit 1
           fi
 
+          jq '.result' _raw_lines.json > _lines_result.json
+          jq '.result' _raw_statements.json > _stmts_result.json
+
           jq -n \
-            --argjson lines "$(jq '.result' _raw_lines.json)" \
-            --argjson stmts "$(jq '.result' _raw_statements.json)" \
+            --slurpfile linesFile _lines_result.json \
+            --slurpfile stmtsFile _stmts_result.json \
             '{
               generated_at: (now | todate),
               BNK1: {
                 label: "11103 Banpro Cta Cordoba 95447 (C$)",
                 currency: "C$",
-                lines: ($lines | map(select(.journal_id[0]==6)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
-                statements: ($stmts | map(select(.journal_id[0]==6)) | sort_by(.date) | map({date: .date, real: .balance_end_real}))
+                lines: ($linesFile[0] | map(select(.journal_id[0]==6)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
+                statements: ($stmtsFile[0] | map(select(.journal_id[0]==6)) | sort_by(.date) | map({date: .date, real: .balance_end_real}))
               },
               BNK2: {
                 label: "Banpro 48612 (USD)",
                 currency: "US$",
-                lines: ($lines | map(select(.journal_id[0]==9)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
-                statements: ($stmts | map(select(.journal_id[0]==9)) | sort_by(.date) | map({date: .date, real: .balance_end_real}))
+                lines: ($linesFile[0] | map(select(.journal_id[0]==9)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
+                statements: ($stmtsFile[0] | map(select(.journal_id[0]==9)) | sort_by(.date) | map({date: .date, real: .balance_end_real}))
               }
             }' > gzp_ConciliacionBancaria.json
 
-          rm -f _payload_lines.json _payload_stmts.json _raw_lines.json _raw_statements.json
+          rm -f _payload_lines.json _payload_stmts.json _raw_lines.json _raw_statements.json _lines_result.json _stmts_result.json
 
           N1=$(jq '.BNK1.lines | length' gzp_ConciliacionBancaria.json)
           N2=$(jq '.BNK2.lines | length' gzp_ConciliacionBancaria.json)
