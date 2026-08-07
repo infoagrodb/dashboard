@@ -326,7 +326,7 @@ function Recepcion(){
       }
     }
     const filas = await tallerQuery("x_equiposagricolas",
-      ["id","x_name","x_studio_tipo_equipo","x_studio_marca","x_studio_modelo"],
+      ["id","x_name","x_studio_tipo_equipo","x_studio_marca","x_studio_modelo","x_studio_horometro_actual","x_studio_kilometraje_actual"],
       domain, 15);
     return filas;
   }
@@ -344,6 +344,19 @@ function Recepcion(){
     if (!cliente){ setError("Seleccioná un cliente."); return; }
     if (!equipo){ setError("Seleccioná un equipo."); return; }
     if (!problema.trim()){ setError("Describí el problema reportado por el cliente."); return; }
+    if (horometro === "" || horometro === null || horometro === undefined){
+      setError("El horómetro de recepción es obligatorio.");
+      return;
+    }
+    const horometroNum = Number(horometro);
+    if (isNaN(horometroNum) || horometroNum < 0){
+      setError("El horómetro de recepción no es un número válido.");
+      return;
+    }
+    if (equipo.x_studio_horometro_actual > 0 && horometroNum < equipo.x_studio_horometro_actual){
+      setError(`El horómetro (${horometroNum}) no puede ser menor al último registrado para este equipo (${equipo.x_studio_horometro_actual}).`);
+      return;
+    }
 
     setGuardando(true);
     try {
@@ -357,7 +370,7 @@ function Recepcion(){
         x_studio_estado: "Recibida",
         x_studio_prioridad: prioridad,
         x_studio_problema_reportado: problema.trim(),
-        x_studio_horometro_recepcion: horometro ? Number(horometro) : 0,
+        x_studio_horometro_recepcion: horometroNum,
         x_studio_kilometraje_recepcion: kilometraje ? Number(kilometraje) : 0,
         x_studio_responsable_recepcion_id: sesion.id,
         x_studio_requiere_presupuesto: true,
@@ -365,6 +378,13 @@ function Recepcion(){
       const resp = await tallerCrear("x_taller_orden", payload);
       setRespuestaCruda({ folio, payload_enviado: payload, respuesta_servidor: resp });
       if (resp.ok) {
+        // Actualiza el horómetro/kilometraje "vigente" del equipo con esta lectura más reciente,
+        // para que la próxima recepción compare contra el dato más nuevo.
+        try {
+          const actualizacionEquipo = { x_studio_horometro_actual: horometroNum };
+          if (kilometraje) actualizacionEquipo.x_studio_kilometraje_actual = Number(kilometraje);
+          await tallerActualizar("x_equiposagricolas", equipo.id, actualizacionEquipo);
+        } catch(e) { /* no bloquea el flujo si esto falla — la orden ya quedó registrada */ }
         setFolioCreado(folio);
       } else {
         setError(resp.error || "No se pudo registrar la recepción.");
@@ -483,12 +503,18 @@ function Recepcion(){
           )
         ),
         h("div", { className: "campo" },
-          h("label", null, "Horómetro de recepción"),
-          h("input", { type: "number", step: "0.1", value: horometro, onChange: e => setHorometro(e.target.value) })
+          h("label", null, "Horómetro de recepción ", h("span", { className: "req" }, "*")),
+          h("input", { type: "number", step: "0.1", value: horometro, onChange: e => setHorometro(e.target.value) }),
+          equipo && equipo.x_studio_horometro_actual > 0 &&
+            h("div", { style: { fontSize:"11px", color:"var(--color-texto-suave)", marginTop:"3px" } },
+              "Último registrado: " + equipo.x_studio_horometro_actual)
         ),
         h("div", { className: "campo" },
           h("label", null, "Kilometraje de recepción"),
-          h("input", { type: "number", step: "1", value: kilometraje, onChange: e => setKilometraje(e.target.value) })
+          h("input", { type: "number", step: "1", value: kilometraje, onChange: e => setKilometraje(e.target.value) }),
+          equipo && equipo.x_studio_kilometraje_actual > 0 &&
+            h("div", { style: { fontSize:"11px", color:"var(--color-texto-suave)", marginTop:"3px" } },
+              "Último registrado: " + equipo.x_studio_kilometraje_actual)
         )
       ),
       h("div", { className: "campo" },
