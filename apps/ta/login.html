@@ -4,6 +4,37 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infotaller — Ingresar</title>
+<script>
+  // Captura cualquier error (incluido que un script del CDN no cargue) y lo
+  // muestra en una caja roja visible en pantalla — para diagnosticar sin
+  // necesidad de abrir las herramientas de desarrollador del navegador.
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+  setTimeout(function(){
+    if (!document.getElementById('raiz') || !document.getElementById('raiz').hasChildNodes()){
+      var caja = document.getElementById('cajaErrorDiag');
+      if (!caja) {
+        caja = document.createElement('div');
+        caja.id = 'cajaErrorDiag';
+        caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+          + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;';
+        document.body.appendChild(caja);
+      }
+      caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ Pasaron 4 segundos y React nunca dibujó nada (sin error explícito) — probablemente un script del CDN no cargó a tiempo.';
+    }
+  }, 4000);
+</script>
 <script src="core.js"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
