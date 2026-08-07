@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Presupuestos</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js?v=2"></script>
+<link rel="stylesheet" href="core.css?v=2">
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --color-alerta:#D97706; --color-alerta-suave:#FEF3C7;
+    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;
+  }
+  .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .barra-superior h1{font-size:15px; margin:0; display:flex; align-items:center; gap:8px;}
+  .barra-botones{display:flex; gap:8px;}
+  .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
+  .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .btn-chico{background:#fff; border:1px solid var(--color-borde); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--color-texto);}
+  .btn-chico:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .link-volver{background:none; border:none; color:var(--color-primario-oscuro); font-size:13px; cursor:pointer; padding:0; text-decoration:underline; margin-bottom:10px;}
+
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px; margin-bottom:14px;}
+  .cargando, .error-carga{text-align:center; padding:40px; color:var(--color-texto-suave);}
+
+  .badge-estado{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:10px; white-space:nowrap;}
+  .estado-Borrador{background:#F1F5F9; color:#64748B;}
+  .estado-Enviado{background:#FEF3C7; color:#B45309;}
+  .estado-Aprobado{background:#D1FAE5; color:#15803D;}
+  .estado-Rechazado{background:#FEE2E2; color:#991B1B;}
+  .estado-Sustituido{background:#E0E7FF; color:#4338CA;}
+
+  .buscador{position:relative;}
+  .buscador-resultados{
+    position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--color-borde);
+    border-radius:7px; box-shadow:var(--sombra); max-height:220px; overflow-y:auto; z-index:50; margin-top:4px;
+  }
+  .buscador-item{padding:8px 10px; cursor:pointer; border-bottom:1px solid var(--color-fondo); font-size:13px;}
+  .buscador-item:hover{background:var(--color-acento-suave);}
+  .buscador-item .sub{font-size:11px; color:var(--color-texto-suave);}
+  .buscador-vacio{padding:10px; font-size:12.5px; color:var(--color-texto-suave); text-align:center;}
+
+  .cabecera-presupuesto{display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;}
+  .cabecera-presupuesto h2{margin:0 0 2px; font-size:16px;}
+  .cabecera-presupuesto .sub{font-size:12px; color:var(--color-texto-suave);}
+  .campo{margin-bottom:14px;}
+  label{display:block; font-size:11.5px; color:var(--color-texto-suave); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+  input, select, textarea{width:100%; border:1px solid var(--color-borde); border-radius:7px; padding:8px 10px; font-size:13.5px; background:#fff; color:var(--color-texto); font-family:inherit;}
+  textarea{resize:vertical; min-height:50px;}
+  .fila{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .fila-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+
+  table.tabla-lineas{width:100%; border-collapse:collapse; font-size:12.5px;}
+  table.tabla-lineas th{
+    background:#F8FAFC; text-align:left; padding:7px 8px; font-size:10.5px; text-transform:uppercase;
+    letter-spacing:.03em; color:#374151; border-bottom:2px solid var(--color-borde);
+  }
+  table.tabla-lineas td{padding:6px 8px; border-bottom:1px solid #F1F5F9; vertical-align:middle;}
+  table.tabla-lineas input, table.tabla-lineas select{padding:5px 6px; font-size:12.5px;}
+  .col-num{width:80px;}
+  .col-tipo{width:120px;}
+  .btn-quitar{background:none; border:none; color:var(--color-peligro); cursor:pointer; font-size:15px; padding:2px 6px;}
+  .texto-derecha{text-align:right;}
+
+  .form-nueva-linea{display:flex; gap:8px; align-items:flex-end; margin-top:10px; flex-wrap:wrap; background:#F8FAFC; padding:10px; border-radius:8px;}
+  .form-nueva-linea .campo-chico{min-width:110px; flex:1;}
+  .form-nueva-linea label{margin-bottom:3px;}
+
+  .totales-resumen{display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px;}
+  .totales-caja{background:#F8FAFC; border-radius:8px; padding:12px;}
+  .totales-caja .linea-total{display:flex; justify-content:space-between; font-size:12.5px; padding:3px 0;}
+  .totales-caja .linea-total.grande{font-size:15px; font-weight:700; border-top:1px solid var(--color-borde); margin-top:6px; padding-top:8px; color:var(--color-primario-oscuro);}
+
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+
+  .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:420px; box-shadow:0 20px 40px rgba(17,24,39,.25);}
+  .modal h3{margin:0 0 14px; font-size:15px;}
+  .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:16px;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v1</div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect, useRef, useMemo } = React;
+
+const TIPOS_LINEA = ["Repuesto","Material","Mano de obra","Servicio","Otro"];
+
+function claseEstado(estado){
+  return "badge-estado estado-" + String(estado).replace(/\s+/g, "");
+}
+function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+function moneda(v){ return "$" + num(v).toFixed(2); }
+
+function Buscador({ placeholder, buscar, renderItem, onSeleccionar }){
+  const [texto, setTexto] = useState("");
+  const [resultados, setResultados] = useState(null);
+  const [buscando, setBuscando] = useState(false);
+  const timerRef = useRef(null);
+
+  function cambiar(valor){
+    setTexto(valor);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!valor.trim()){ setResultados(null); return; }
+    timerRef.current = setTimeout(async () => {
+      setBuscando(true);
+      try { setResultados(await buscar(valor.trim())); }
+      catch(e) { setResultados([]); }
+      finally { setBuscando(false); }
+    }, 300);
+  }
+
+  return h("div", { className: "buscador" },
+    h("input", { type: "text", placeholder, value: texto, onChange: e => cambiar(e.target.value) }),
+    resultados !== null && h("div", { className: "buscador-resultados" },
+      buscando ? h("div", { className: "buscador-vacio" }, "Buscando...") :
+      resultados.length === 0 ? h("div", { className: "buscador-vacio" }, "Sin resultados") :
+      resultados.map(item => h("div", {
+          key: item.id, className: "buscador-item",
+          onClick: () => { onSeleccionar(item); setTexto(""); setResultados(null); },
+        }, renderItem(item))
+      )
+    )
+  );
+}
+
+function ModalNuevoPresupuesto({ onCerrar, onCreado }){
+  const [orden, setOrden] = useState(null);
+  const [creando, setCreando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function buscarOrdenes(texto){
+    return tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_estado"], [["x_name","ilike",texto]], 15);
+  }
+
+  async function crear(){
+    setCreando(true); setError("");
+    try {
+      const existentes = await tallerQuery("x_taller_presupuesto", ["id","x_studio_version"], [["x_studio_orden_id","=",orden.id]], 100);
+      const siguienteVersion = existentes.length ? Math.max(...existentes.map(p => p.x_studio_version)) + 1 : 1;
+      const nombre = orden.x_name + "-V" + siguienteVersion;
+      const resp = await tallerCrear("x_taller_presupuesto", {
+        x_name: nombre,
+        x_studio_orden_id: orden.id,
+        x_studio_version: siguienteVersion,
+        x_studio_fecha_presupuesto: fechaParaOdoo(new Date()),
+        x_studio_estado: "Borrador",
+        x_studio_vigencia_dias: 8,
+      });
+      if (resp.ok) {
+        onCreado(resp.id);
+      } else {
+        setError(resp.error || "No se pudo crear el presupuesto.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setCreando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "💵 Nuevo Presupuesto"),
+      h("div", { className: "campo" },
+        h("label", null, "Orden de trabajo"),
+        orden
+          ? h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", background:"#D1FAE5", borderRadius:"7px", padding:"9px 12px" } },
+              h("strong", null, orden.x_name),
+              h("button", { className: "btn-chico", onClick: () => setOrden(null) }, "Cambiar")
+            )
+          : h(Buscador, {
+              placeholder: "Buscar orden por folio...",
+              buscar: buscarOrdenes,
+              onSeleccionar: setOrden,
+              renderItem: o => h(React.Fragment, null, o.x_name, h("div", { className: "sub" }, o.x_studio_estado)),
+            })
+      ),
+      error && h("div", { className: "mensaje-error" }, error),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: creando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: crear, disabled: creando || !orden }, creando ? "Creando..." : "Crear versión")
+      )
+    )
+  );
+}
+
+function FilaLinea({ linea, soloLectura, onCambiar, onGuardar, onQuitar }){
+  const total = num(linea.x_studio_cantidad_presupuestada) * num(linea.x_studio_costo_manual);
+  return h("tr", null,
+    h("td", { className: "col-tipo" },
+      soloLectura ? linea.x_studio_tipo_linea :
+      h("select", { value: linea.x_studio_tipo_linea, onChange: e => onCambiar({ ...linea, x_studio_tipo_linea: e.target.value }) },
+        TIPOS_LINEA.map(t => h("option", { key: t, value: t }, t))
+      )
+    ),
+    h("td", null,
+      soloLectura ? linea.x_studio_descripcion :
+      h("input", { type: "text", value: linea.x_studio_descripcion || "", onChange: e => onCambiar({ ...linea, x_studio_descripcion: e.target.value }) })
+    ),
+    h("td", { className: "col-num" },
+      soloLectura ? linea.x_studio_cantidad_presupuestada :
+      h("input", { type: "number", step: "0.01", value: linea.x_studio_cantidad_presupuestada, onChange: e => onCambiar({ ...linea, x_studio_cantidad_presupuestada: e.target.value }) })
+    ),
+    h("td", { className: "col-num" },
+      soloLectura ? linea.x_studio_unidad_medida :
+      h("input", { type: "text", value: linea.x_studio_unidad_medida || "", onChange: e => onCambiar({ ...linea, x_studio_unidad_medida: e.target.value }) })
+    ),
+    h("td", { className: "col-num" },
+      soloLectura ? moneda(linea.x_studio_costo_manual) :
+      h("input", { type: "number", step: "0.01", value: linea.x_studio_costo_manual, onChange: e => onCambiar({ ...linea, x_studio_costo_manual: e.target.value }) })
+    ),
+    h("td", { className: "col-num texto-derecha" }, moneda(total)),
+    !soloLectura && h("td", null,
+      h("button", { className: "btn-chico", onClick: onGuardar }, linea._guardando ? "..." : (linea.id ? "💾" : "➕")),
+      h("button", { className: "btn-quitar", onClick: onQuitar, title: "Quitar" }, "✕")
+    )
+  );
+}
+
+function DetallePresupuesto({ presupuestoId, onVolver }){
+  const [presupuesto, setPresupuesto] = useState(null);
+  const [orden, setOrden] = useState(null);
+  const [lineas, setLineas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [exito, setExito] = useState("");
+  const [nuevaLinea, setNuevaLinea] = useState(lineaVacia());
+  const [guardandoNueva, setGuardandoNueva] = useState(false);
+  const [aprobando, setAprobando] = useState(false);
+  const [nombreAprobador, setNombreAprobador] = useState("");
+  const [modalAprobar, setModalAprobar] = useState(false);
+
+  function lineaVacia(){
+    return { x_studio_tipo_linea: "Repuesto", x_studio_descripcion: "", x_studio_cantidad_presupuestada: 1, x_studio_unidad_medida: "und", x_studio_costo_manual: 0, x_studio_origen_costo: "Manual" };
+  }
+
+  useEffect(() => { cargar(); }, [presupuestoId]);
+
+  async function cargar(){
+    setCargando(true); setError("");
+    try {
+      const [presRows, lineasRows] = await Promise.all([
+        tallerQuery("x_taller_presupuesto", [
+          "id","x_name","x_studio_orden_id","x_studio_version","x_studio_estado","x_studio_fecha_presupuesto",
+          "x_studio_descuento","x_studio_impuestos","x_studio_otros_costos","x_studio_vigencia_dias",
+          "x_studio_elaborado_por","x_studio_aprobado_por_cliente","x_studio_fecha_aprobacion","x_studio_observaciones",
+        ], [["id","=",presupuestoId]], 1),
+        tallerQuery("x_presupuesto_detalle", [
+          "id","x_studio_tipo_linea","x_studio_descripcion","x_studio_cantidad_presupuestada",
+          "x_studio_unidad_medida","x_studio_costo_manual","x_studio_origen_costo",
+        ], [["x_studio_presupuesto_id","=",presupuestoId]], 500),
+      ]);
+      if (!presRows.length){ setError("No se encontró el presupuesto."); setCargando(false); return; }
+      setPresupuesto(presRows[0]);
+      setLineas(lineasRows);
+      if (Array.isArray(presRows[0].x_studio_orden_id)) {
+        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id"], [["id","=",presRows[0].x_studio_orden_id[0]]], 1);
+        if (ordenRows.length) setOrden(ordenRows[0]);
+      }
+    } catch(e) {
+      setError("Error al cargar: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  const soloLectura = presupuesto && presupuesto.x_studio_estado !== "Borrador";
+
+  const totales = useMemo(() => {
+    const subMateriales = lineas.filter(l => ["Repuesto","Material","Otro"].includes(l.x_studio_tipo_linea))
+      .reduce((s,l) => s + num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual), 0);
+    const subManoObra = lineas.filter(l => l.x_studio_tipo_linea === "Mano de obra")
+      .reduce((s,l) => s + num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual), 0);
+    const subServicios = lineas.filter(l => l.x_studio_tipo_linea === "Servicio")
+      .reduce((s,l) => s + num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual), 0);
+    const subtotal = subMateriales + subManoObra + subServicios;
+    const descuento = presupuesto ? num(presupuesto.x_studio_descuento) : 0;
+    const impuestos = presupuesto ? num(presupuesto.x_studio_impuestos) : 0;
+    const otros = presupuesto ? num(presupuesto.x_studio_otros_costos) : 0;
+    const total = subtotal - descuento + impuestos + otros;
+    return { subMateriales, subManoObra, subServicios, subtotal, descuento, impuestos, otros, total };
+  }, [lineas, presupuesto]);
+
+  async function guardarLinea(linea, indice){
+    setLineas(prev => prev.map((l,i) => i === indice ? { ...l, _guardando: true } : l));
+    const valores = {
+      x_studio_presupuesto_id: presupuestoId,
+      x_studio_tipo_linea: linea.x_studio_tipo_linea,
+      x_studio_descripcion: linea.x_studio_descripcion,
+      x_studio_cantidad_presupuestada: num(linea.x_studio_cantidad_presupuestada),
+      x_studio_unidad_medida: linea.x_studio_unidad_medida,
+      x_studio_costo_manual: num(linea.x_studio_costo_manual),
+      x_studio_costo_unitario_presupuestado: num(linea.x_studio_costo_manual),
+      x_studio_origen_costo: "Manual",
+      x_studio_total_costo_presupuestado: num(linea.x_studio_cantidad_presupuestada) * num(linea.x_studio_costo_manual),
+    };
+    try {
+      if (linea.id) {
+        await tallerActualizar("x_presupuesto_detalle", linea.id, valores);
+      } else {
+        const resp = await tallerCrear("x_presupuesto_detalle", valores);
+        if (resp.ok) {
+          setLineas(prev => prev.map((l,i) => i === indice ? { ...linea, id: resp.id, _guardando: false } : l));
+          return;
+        }
+      }
+      setLineas(prev => prev.map((l,i) => i === indice ? { ...l, _guardando: false } : l));
+    } catch(e) {
+      setError("No se pudo guardar la línea: " + e.message);
+      setLineas(prev => prev.map((l,i) => i === indice ? { ...l, _guardando: false } : l));
+    }
+  }
+
+  async function quitarLinea(linea, indice){
+    if (linea.id) {
+      if (!confirm("¿Quitar esta línea del presupuesto?")) return;
+      try { await tallerDesactivar("x_presupuesto_detalle", linea.id, "Quitada por el usuario"); }
+      catch(e) { setError("No se pudo quitar: " + e.message); return; }
+    }
+    setLineas(prev => prev.filter((_,i) => i !== indice));
+  }
+
+  async function agregarNuevaLinea(){
+    setGuardandoNueva(true); setError("");
+    const valores = {
+      x_studio_presupuesto_id: presupuestoId,
+      x_studio_tipo_linea: nuevaLinea.x_studio_tipo_linea,
+      x_studio_descripcion: nuevaLinea.x_studio_descripcion,
+      x_studio_cantidad_presupuestada: num(nuevaLinea.x_studio_cantidad_presupuestada),
+      x_studio_unidad_medida: nuevaLinea.x_studio_unidad_medida,
+      x_studio_costo_manual: num(nuevaLinea.x_studio_costo_manual),
+      x_studio_costo_unitario_presupuestado: num(nuevaLinea.x_studio_costo_manual),
+      x_studio_origen_costo: "Manual",
+      x_studio_total_costo_presupuestado: num(nuevaLinea.x_studio_cantidad_presupuestada) * num(nuevaLinea.x_studio_costo_manual),
+    };
+    try {
+      const resp = await tallerCrear("x_presupuesto_detalle", valores);
+      if (resp.ok) {
+        setLineas(prev => [...prev, { ...valores, id: resp.id }]);
+        setNuevaLinea(lineaVacia());
+      } else {
+        setError(resp.error || "No se pudo agregar la línea.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardandoNueva(false);
+    }
+  }
+
+  async function confirmarAprobacion(){
+    if (!nombreAprobador.trim()){ setError("Escribí el nombre de quien aprueba."); return; }
+    setAprobando(true); setError("");
+    try {
+      const resp = await tallerActualizar("x_taller_presupuesto", presupuestoId, {
+        x_studio_estado: "Aprobado",
+        x_studio_aprobado_por_cliente: nombreAprobador.trim(),
+        x_studio_fecha_aprobacion: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+      });
+      if (resp.ok) {
+        setModalAprobar(false);
+        setExito("Presupuesto aprobado.");
+        cargar();
+      } else {
+        setError(resp.error || "No se pudo aprobar.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setAprobando(false);
+    }
+  }
+
+  if (cargando) return h("div", { className: "panel cargando" }, "Cargando presupuesto...");
+  if (error && !presupuesto) return h("div", { className: "panel error-carga" }, error);
+  if (!presupuesto) return null;
+
+  return h("div", null,
+    h("button", { className: "link-volver", onClick: onVolver }, "← Volver a la lista"),
+
+    h("div", { className: "panel" },
+      h("div", { className: "cabecera-presupuesto" },
+        h("div", null,
+          h("h2", null, presupuesto.x_name),
+          h("div", { className: "sub" },
+            orden ? "Orden: " + orden.x_name + " · " + (Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "") : "",
+            " · " + formatearFecha(presupuesto.x_studio_fecha_presupuesto)
+          )
+        ),
+        h("span", { className: claseEstado(presupuesto.x_studio_estado) }, presupuesto.x_studio_estado)
+      ),
+
+      presupuesto.x_studio_estado === "Aprobado" && h("div", { className: "mensaje-exito" },
+        "✅ Aprobado por " + presupuesto.x_studio_aprobado_por_cliente + " el " + formatearFecha(presupuesto.x_studio_fecha_aprobacion) + " — este presupuesto ya no se puede editar."
+      ),
+
+      h("table", { className: "tabla-lineas" },
+        h("thead", null,
+          h("tr", null,
+            h("th", null, "Tipo"), h("th", null, "Descripción"), h("th", null, "Cant."),
+            h("th", null, "UM"), h("th", null, "Costo Unit."), h("th", { className: "texto-derecha" }, "Total"),
+            !soloLectura && h("th", null, "")
+          )
+        ),
+        h("tbody", null,
+          lineas.map((l, i) => h(FilaLinea, {
+            key: l.id || "nueva" + i, linea: l, soloLectura,
+            onCambiar: nueva => setLineas(prev => prev.map((x,idx) => idx === i ? nueva : x)),
+            onGuardar: () => guardarLinea(l, i),
+            onQuitar: () => quitarLinea(l, i),
+          })),
+          lineas.length === 0 && h("tr", null, h("td", { colSpan: 7, style: { textAlign:"center", color:"var(--color-texto-suave)", padding:"14px" } }, "Sin líneas todavía."))
+        )
+      ),
+
+      !soloLectura && h("div", { className: "form-nueva-linea" },
+        h("div", { className: "campo-chico" },
+          h("label", null, "Tipo"),
+          h("select", { value: nuevaLinea.x_studio_tipo_linea, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_tipo_linea: e.target.value }) },
+            TIPOS_LINEA.map(t => h("option", { key: t, value: t }, t))
+          )
+        ),
+        h("div", { className: "campo-chico", style: { flex: "2" } },
+          h("label", null, "Descripción"),
+          h("input", { type: "text", value: nuevaLinea.x_studio_descripcion, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_descripcion: e.target.value }) })
+        ),
+        h("div", { className: "campo-chico" },
+          h("label", null, "Cantidad"),
+          h("input", { type: "number", step: "0.01", value: nuevaLinea.x_studio_cantidad_presupuestada, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_cantidad_presupuestada: e.target.value }) })
+        ),
+        h("div", { className: "campo-chico" },
+          h("label", null, "UM"),
+          h("input", { type: "text", value: nuevaLinea.x_studio_unidad_medida, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_unidad_medida: e.target.value }) })
+        ),
+        h("div", { className: "campo-chico" },
+          h("label", null, "Costo Unit."),
+          h("input", { type: "number", step: "0.01", value: nuevaLinea.x_studio_costo_manual, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_costo_manual: e.target.value }) })
+        ),
+        h("button", { className: "btn-primario", onClick: agregarNuevaLinea, disabled: guardandoNueva || !nuevaLinea.x_studio_descripcion.trim() },
+          guardandoNueva ? "..." : "+ Agregar")
+      ),
+
+      h("div", { className: "totales-resumen" },
+        h("div", { className: "totales-caja" },
+          h("div", { className: "linea-total" }, h("span", null, "Materiales/Repuestos"), h("span", null, moneda(totales.subMateriales))),
+          h("div", { className: "linea-total" }, h("span", null, "Mano de obra"), h("span", null, moneda(totales.subManoObra))),
+          h("div", { className: "linea-total" }, h("span", null, "Servicios"), h("span", null, moneda(totales.subServicios))),
+          h("div", { className: "linea-total" }, h("span", null, "Subtotal"), h("span", null, moneda(totales.subtotal)))
+        ),
+        h("div", { className: "totales-caja" },
+          !soloLectura ? h(React.Fragment, null,
+            h("div", { className: "campo", style: { marginBottom: "8px" } },
+              h("label", null, "Descuento"),
+              h("input", { type: "number", step: "0.01", value: presupuesto.x_studio_descuento || 0,
+                onChange: e => setPresupuesto({ ...presupuesto, x_studio_descuento: e.target.value }) })
+            ),
+            h("div", { className: "campo", style: { marginBottom: "8px" } },
+              h("label", null, "Impuestos"),
+              h("input", { type: "number", step: "0.01", value: presupuesto.x_studio_impuestos || 0,
+                onChange: e => setPresupuesto({ ...presupuesto, x_studio_impuestos: e.target.value }) })
+            )
+          ) : h(React.Fragment, null,
+            h("div", { className: "linea-total" }, h("span", null, "Descuento"), h("span", null, "-" + moneda(totales.descuento))),
+            h("div", { className: "linea-total" }, h("span", null, "Impuestos"), h("span", null, moneda(totales.impuestos)))
+          ),
+          h("div", { className: "linea-total grande" }, h("span", null, "TOTAL"), h("span", null, moneda(totales.total)))
+        )
+      ),
+
+      error && h("div", { className: "mensaje-error" }, error),
+      exito && h("div", { className: "mensaje-exito" }, exito),
+
+      !soloLectura && h("div", { className: "barra-botones", style: { marginTop: "16px" } },
+        h("button", { className: "btn-secundario", onClick: async () => {
+            const resp = await tallerActualizar("x_taller_presupuesto", presupuestoId, {
+              x_studio_descuento: num(presupuesto.x_studio_descuento), x_studio_impuestos: num(presupuesto.x_studio_impuestos),
+              x_studio_total_presupuesto: totales.total, x_studio_subtotal_materiales: totales.subMateriales,
+              x_studio_subtotal_mano_obra: totales.subManoObra, x_studio_subtotal_servicios: totales.subServicios,
+            });
+            if (resp.ok) setExito("Totales guardados."); else setError(resp.error || "No se pudo guardar.");
+          } }, "💾 Guardar totales"),
+        h("button", { className: "btn-primario", onClick: () => setModalAprobar(true), disabled: lineas.length === 0 }, "✅ Marcar como Aprobado")
+      )
+    ),
+
+    modalAprobar && h("div", { className: "modal-fondo", onClick: () => setModalAprobar(false) },
+      h("div", { className: "modal", onClick: e => e.stopPropagation() },
+        h("h3", null, "Aprobar presupuesto"),
+        h("div", { className: "campo" },
+          h("label", null, "Nombre de quien aprueba (cliente)"),
+          h("input", { type: "text", value: nombreAprobador, autoFocus: true, onChange: e => setNombreAprobador(e.target.value) })
+        ),
+        h("div", { className: "mensaje-error", style: { background:"var(--color-alerta-suave)", borderColor:"var(--color-alerta)", color:"#92400E" } },
+          "Total a aprobar: " + moneda(totales.total) + ". Una vez aprobado, este presupuesto queda bloqueado para edición."
+        ),
+        error && h("div", { className: "mensaje-error" }, error),
+        h("div", { className: "modal-botones" },
+          h("button", { className: "btn-secundario", onClick: () => setModalAprobar(false), disabled: aprobando }, "Cancelar"),
+          h("button", { className: "btn-primario", onClick: confirmarAprobacion, disabled: aprobando }, aprobando ? "Guardando..." : "Confirmar aprobación")
+        )
+      )
+    )
+  );
+}
+
+function Presupuestos(){
+  const [sesion, setSesion] = useState(null);
+  const [presupuestos, setPresupuestos] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [modalNuevo, setModalNuevo] = useState(false);
+  const [presupuestoAbierto, setPresupuestoAbierto] = useState(null);
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) { setSesion(s); cargarLista(); }
+  }, []);
+
+  async function cargarLista(){
+    setCargando(true); setErrorCarga("");
+    try {
+      const filas = await tallerQuery("x_taller_presupuesto", [
+        "id","x_name","x_studio_orden_id","x_studio_version","x_studio_estado",
+        "x_studio_fecha_presupuesto","x_studio_total_presupuesto","x_studio_elaborado_por",
+      ], [], 1000);
+      setPresupuestos(filas);
+    } catch(e) {
+      setErrorCarga("No se pudieron cargar los presupuestos: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  if (!sesion) return null;
+
+  if (presupuestoAbierto) {
+    return h(DetallePresupuesto, { presupuestoId: presupuestoAbierto, onVolver: () => { setPresupuestoAbierto(null); cargarLista(); } });
+  }
+
+  const columnas = [
+    { clave: "x_name", titulo: "Nombre" },
+    { clave: "x_studio_orden_id", titulo: "Orden" },
+    { clave: "x_studio_version", titulo: "Versión" },
+    { clave: "x_studio_estado", titulo: "Estado" },
+    { clave: "x_studio_total_presupuesto", titulo: "Total", formatear: moneda },
+    { clave: "x_studio_fecha_presupuesto", titulo: "Fecha", formatear: formatearFecha },
+    { clave: "x_studio_elaborado_por", titulo: "Elaborado por" },
+  ];
+
+  return h("div", null,
+    h("div", { className: "barra-superior" },
+      h("h1", null, "💵 Presupuestos"),
+      h("div", { className: "barra-botones" },
+        h("button", { className: "btn-refrescar", onClick: cargarLista }, "↻ Refrescar"),
+        h("button", { className: "btn-primario", onClick: () => setModalNuevo(true) }, "+ Nuevo Presupuesto")
+      )
+    ),
+    h("div", { className: "panel" },
+      cargando
+        ? h("div", { className: "cargando" }, "Cargando...")
+        : errorCarga
+          ? h("div", { className: "error-carga" }, errorCarga)
+          : TablaInfoAgro(h, { columnas, filas: presupuestos || [], onFilaClick: p => setPresupuestoAbierto(p.id) })
+    ),
+    modalNuevo && h(ModalNuevoPresupuesto, {
+      onCerrar: () => setModalNuevo(false),
+      onCreado: id => { setModalNuevo(false); setPresupuestoAbierto(id); },
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(Presupuestos));
+</script>
+</body>
+</html>
