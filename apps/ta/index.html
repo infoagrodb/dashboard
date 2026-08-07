@@ -4,10 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Infotaller — Panel</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
 <script src="core.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.24.7/babel.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -26,7 +40,6 @@
 
   .app{display:flex; height:100vh; overflow:hidden;}
 
-  /* ---------- Sidebar ---------- */
   .sidebar{
     width:var(--ancho-sidebar); flex-shrink:0; background:#fff; border-right:1px solid var(--color-borde);
     display:flex; flex-direction:column; transition:margin-left .2s;
@@ -49,14 +62,13 @@
   .sidebar-item.activo{background:var(--color-acento-suave); color:var(--color-primario-oscuro); font-weight:600;}
   .sidebar-item .icono{font-size:15px; width:18px; text-align:center;}
 
-  /* ---------- Header ---------- */
   .contenido{flex:1; display:flex; flex-direction:column; min-width:0;}
   .header{
     height:var(--alto-header); flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
     padding:0 20px; background:#fff; border-bottom:1px solid var(--color-borde); box-shadow:var(--sombra);
   }
-  .header-titulo{font-size:15.5px; font-weight:600;}
   .header-izq{display:flex; align-items:center;}
+  .header-titulo{font-size:15.5px; font-weight:600;}
   .btn-hamburguesa{display:none; background:none; border:none; font-size:20px; cursor:pointer; margin-right:10px;}
   .usuario-caja{display:flex; align-items:center; gap:10px;}
   .usuario-nombre{font-size:13px; font-weight:600;}
@@ -70,7 +82,6 @@
   }
   .btn-salir:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
 
-  /* ---------- Área de contenido ---------- */
   .marco-host{flex:1; min-height:0;}
   iframe{width:100%; height:100%; border:none; display:block;}
   .bienvenida{
@@ -98,17 +109,11 @@
 <body>
 <div id="raiz"></div>
 
-<script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef } = React;
+<script>
+// Sin JSX ni Babel: React.createElement directo (misma razón que login.html).
+const h = React.createElement;
+const { useState, useEffect } = React;
 
-/* ------------------------------------------------------------
-   Estructura del menú. Cada item apunta a un archivo HTML de
-   pestaña independiente (se cargan por separado en el iframe).
-   "rolMinimo": si se define, solo ese/esos roles ven el item.
-   Los archivos aún no existen todos — se van agregando uno a
-   uno; hasta entonces el iframe mostrará "no encontrado", lo
-   cual es esperado mientras se construyen.
-   ------------------------------------------------------------ */
 const MENU = [
   {
     grupo: "Taller",
@@ -150,7 +155,7 @@ function App(){
     if (s) setSesion(s);
   }, []);
 
-  if (!sesion) return null; // exigirSesion ya redirige a login.html
+  if (!sesion) return null;
 
   function elegirPestana(item){
     setPestanaActiva(item.id);
@@ -164,62 +169,58 @@ function App(){
 
   const itemActual = MENU.flatMap(g => g.items).find(i => i.id === pestanaActiva);
 
-  return (
-    <div className="app">
-      <div className={"fondo-sidebar-movil" + (sidebarAbierta ? " visible" : "")}
-           onClick={() => setSidebarAbierta(false)} />
+  const gruposEl = MENU.map(grupo => {
+    const visibles = grupo.items.filter(it => !it.rolMinimo || it.rolMinimo.includes(sesion.rol));
+    if (!visibles.length) return null;
+    return h("div", { className: "sidebar-grupo", key: grupo.grupo },
+      h("div", { className: "sidebar-grupo-titulo" }, grupo.grupo),
+      ...visibles.map(it => h("button", {
+          key: it.id,
+          className: "sidebar-item" + (pestanaActiva === it.id ? " activo" : ""),
+          onClick: () => elegirPestana(it),
+        },
+        h("span", { className: "icono" }, it.icono),
+        h("span", null, it.label)
+      ))
+    );
+  });
 
-      <aside className={"sidebar" + (sidebarAbierta ? " abierta" : "")}>
-        <div className="sidebar-marca">🔧 Infotaller</div>
-        {MENU.map(grupo => {
-          const visibles = grupo.items.filter(it =>
-            !it.rolMinimo || it.rolMinimo.includes(sesion.rol));
-          if (!visibles.length) return null;
-          return (
-            <div className="sidebar-grupo" key={grupo.grupo}>
-              <div className="sidebar-grupo-titulo">{grupo.grupo}</div>
-              {visibles.map(it => (
-                <button key={it.id}
-                        className={"sidebar-item" + (pestanaActiva === it.id ? " activo" : "")}
-                        onClick={() => elegirPestana(it)}>
-                  <span className="icono">{it.icono}</span>
-                  <span>{it.label}</span>
-                </button>
-              ))}
-            </div>
-          );
-        })}
-      </aside>
+  return h("div", { className: "app" },
+    h("div", {
+      className: "fondo-sidebar-movil" + (sidebarAbierta ? " visible" : ""),
+      onClick: () => setSidebarAbierta(false),
+    }),
 
-      <div className="contenido">
-        <header className="header">
-          <div className="header-izq">
-            <button className="btn-hamburguesa" onClick={() => setSidebarAbierta(v => !v)}>☰</button>
-            <span className="header-titulo">{tituloDe(pestanaActiva)}</span>
-          </div>
-          <div className="usuario-caja">
-            <span className="usuario-nombre">{sesion.nombre}</span>
-            <span className="usuario-rol">{sesion.rol}</span>
-            <button className="btn-salir" onClick={salir}>Salir</button>
-          </div>
-        </header>
+    h("aside", { className: "sidebar" + (sidebarAbierta ? " abierta" : "") },
+      h("div", { className: "sidebar-marca" }, "🔧 Infotaller"),
+      ...gruposEl
+    ),
 
-        <div className="marco-host">
-          {itemActual ? (
-            <iframe id="marco" src={itemActual.href} title={itemActual.label} />
-          ) : (
-            <div className="bienvenida">
-              <div className="icono-grande">🔧</div>
-              <div>Elegí una sección del menú para empezar.</div>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
+    h("div", { className: "contenido" },
+      h("header", { className: "header" },
+        h("div", { className: "header-izq" },
+          h("button", { className: "btn-hamburguesa", onClick: () => setSidebarAbierta(v => !v) }, "☰"),
+          h("span", { className: "header-titulo" }, tituloDe(pestanaActiva))
+        ),
+        h("div", { className: "usuario-caja" },
+          h("span", { className: "usuario-nombre" }, sesion.nombre),
+          h("span", { className: "usuario-rol" }, sesion.rol),
+          h("button", { className: "btn-salir", onClick: salir }, "Salir")
+        )
+      ),
+      h("div", { className: "marco-host" },
+        itemActual
+          ? h("iframe", { id: "marco", src: itemActual.href, title: itemActual.label })
+          : h("div", { className: "bienvenida" },
+              h("div", { className: "icono-grande" }, "🔧"),
+              h("div", null, "Elegí una sección del menú para empezar.")
+            )
+      )
+    )
   );
 }
 
-ReactDOM.createRoot(document.getElementById("raiz")).render(<App />);
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(App));
 </script>
 </body>
 </html>
