@@ -1,15 +1,18 @@
 /* ============================================================
-   INFOTALLER — core.js
+   INFOTALLER — core.js — v2 (agrega TablaInfoAgro)
    Núcleo compartido que cada HTML de pestaña importa con
    <script src="core.js"></script>. Contiene:
      1. Conexión al Worker (módulo /taller/*  y  /query genérico)
      2. Formato de fecha estándar 01-Ene-2026
      3. Manejo de sesión (sessionStorage, compartido entre
         index.html y todos los iframes del mismo origen)
+     4. Catálogos compartidos (roles, estados, prioridades)
+     5. TablaInfoAgro — componente de tabla Excel-style reutilizable
    Si corriges algo aquí, todos los HTML lo heredan — no hay
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
+console.log("core.js v2 cargado correctamente");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
