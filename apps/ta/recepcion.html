@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Recepción</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --color-alerta:#D97706; --color-alerta-suave:#FEF3C7;
+    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:20px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;
+  }
+  .envoltura{max-width:760px; margin:0 auto;}
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:22px; margin-bottom:16px;}
+  .panel h2{font-size:14px; margin:0 0 14px; color:var(--color-texto); display:flex; align-items:center; gap:6px;}
+  .fila{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .fila-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+  .campo{margin-bottom:14px;}
+  label{display:block; font-size:11.5px; color:var(--color-texto-suave); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+  label .req{color:var(--color-peligro);}
+  input, select, textarea{
+    width:100%; border:1px solid var(--color-borde); border-radius:7px; padding:8px 10px;
+    font-size:13.5px; background:#fff; color:var(--color-texto); font-family:inherit;
+  }
+  input:focus, select:focus, textarea:focus{outline:2px solid var(--color-primario); outline-offset:1px; border-color:var(--color-primario);}
+  textarea{resize:vertical; min-height:70px;}
+
+  .buscador{position:relative;}
+  .buscador-resultados{
+    position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--color-borde);
+    border-radius:7px; box-shadow:var(--sombra); max-height:220px; overflow-y:auto; z-index:50; margin-top:4px;
+  }
+  .buscador-item{padding:8px 10px; cursor:pointer; border-bottom:1px solid var(--color-fondo); font-size:13px;}
+  .buscador-item:hover{background:var(--color-acento-suave);}
+  .buscador-item .sub{font-size:11px; color:var(--color-texto-suave);}
+  .buscador-vacio{padding:10px; font-size:12.5px; color:var(--color-texto-suave); text-align:center;}
+
+  .seleccionado{
+    display:flex; align-items:center; justify-content:space-between; background:var(--color-acento-suave);
+    border:1px solid #A7F3D0; border-radius:7px; padding:9px 12px; font-size:13px; margin-bottom:14px;
+  }
+  .seleccionado .txt strong{display:block;}
+  .seleccionado .txt .sub{font-size:11.5px; color:var(--color-texto-suave);}
+  .seleccionado button{width:auto; background:none; border:none; color:var(--color-peligro); font-size:12px; cursor:pointer; padding:4px 8px;}
+
+  .badge{display:inline-block; font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:10px; margin-left:6px;}
+  .badge-interno{background:#DBEAFE; color:#1D4ED8;}
+  .badge-externo{background:#FCE7F3; color:#BE185D;}
+
+  .link-chico{background:none; border:none; color:var(--color-primario-oscuro); font-size:12px; cursor:pointer; padding:0; text-decoration:underline; width:auto;}
+
+  .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:8px; padding:11px 18px; font-size:14px; font-weight:600; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:10px 16px; font-size:13.5px; cursor:pointer; color:var(--color-texto);}
+
+  .mensaje{border-radius:7px; padding:10px 12px; font-size:12.5px; margin-bottom:14px;}
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B;}
+  .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro);}
+
+  .exito-grande{text-align:center; padding:40px 20px;}
+  .exito-grande .folio{font-size:26px; font-weight:700; color:var(--color-primario-oscuro); margin:10px 0;}
+
+  .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500;}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:420px; box-shadow:0 20px 40px rgba(17,24,39,.25);}
+  .modal h3{margin:0 0 14px; font-size:15px;}
+  .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:16px;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect, useRef } = React;
+
+/* ------------------------------------------------------------
+   Buscador genérico reutilizable (cliente / equipo)
+   ------------------------------------------------------------ */
+function Buscador({ placeholder, buscar, renderItem, onSeleccionar, deshabilitado }){
+  const [texto, setTexto] = useState("");
+  const [resultados, setResultados] = useState(null);
+  const [buscando, setBuscando] = useState(false);
+  const timerRef = useRef(null);
+
+  function cambiar(valor){
+    setTexto(valor);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!valor.trim()){ setResultados(null); return; }
+    timerRef.current = setTimeout(async () => {
+      setBuscando(true);
+      try {
+        const r = await buscar(valor.trim());
+        setResultados(r);
+      } catch(e) {
+        setResultados([]);
+      } finally {
+        setBuscando(false);
+      }
+    }, 300);
+  }
+
+  return h("div", { className: "buscador" },
+    h("input", {
+      type: "text", placeholder, value: texto, disabled: deshabilitado,
+      onChange: e => cambiar(e.target.value),
+    }),
+    resultados !== null && h("div", { className: "buscador-resultados" },
+      buscando ? h("div", { className: "buscador-vacio" }, "Buscando...") :
+      resultados.length === 0 ? h("div", { className: "buscador-vacio" }, "Sin resultados") :
+      resultados.map(item => h("div", {
+          key: item.id, className: "buscador-item",
+          onClick: () => { onSeleccionar(item); setTexto(""); setResultados(null); },
+        }, renderItem(item))
+      )
+    )
+  );
+}
+
+/* ------------------------------------------------------------
+   Modal simple para crear cliente nuevo
+   ------------------------------------------------------------ */
+function ModalNuevoCliente({ onCerrar, onCreado }){
+  const [nombre, setNombre] = useState("");
+  const [tipo, setTipo] = useState("Externo");
+  const [telefono, setTelefono] = useState("");
+  const [contacto, setContacto] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function guardar(){
+    if (!nombre.trim()){ setError("El nombre es obligatorio."); return; }
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerCrear("x_taller_cliente", {
+        x_name: nombre.trim(),
+        x_studio_tipo_cliente: tipo,
+        x_studio_telefono: telefono || false,
+        x_studio_contacto: contacto || false,
+      });
+      if (resp.ok) {
+        onCreado({ id: resp.id, x_name: nombre.trim(), x_studio_tipo_cliente: tipo });
+      } else {
+        setError(resp.error || "No se pudo crear el cliente.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "🧑‍🤝‍🧑 Nuevo Cliente"),
+      h("div", { className: "campo" },
+        h("label", null, "Nombre ", h("span", { className: "req" }, "*")),
+        h("input", { type: "text", value: nombre, autoFocus: true, onChange: e => setNombre(e.target.value) })
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Tipo de cliente"),
+        h("select", { value: tipo, onChange: e => setTipo(e.target.value) },
+          h("option", { value: "Interno" }, "Interno"),
+          h("option", { value: "Externo" }, "Externo")
+        )
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Contacto"),
+        h("input", { type: "text", value: contacto, onChange: e => setContacto(e.target.value) })
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Teléfono"),
+        h("input", { type: "text", value: telefono, onChange: e => setTelefono(e.target.value) })
+      ),
+      error && h("div", { className: "mensaje mensaje-error" }, error),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Crear cliente")
+      )
+    )
+  );
+}
+
+/* ------------------------------------------------------------
+   Modal simple para registrar equipo nuevo (de un cliente externo)
+   ------------------------------------------------------------ */
+function ModalNuevoEquipo({ cliente, onCerrar, onCreado }){
+  const [nombre, setNombre] = useState("");
+  const [tipoEquipo, setTipoEquipo] = useState("Tractor");
+  const [marca, setMarca] = useState("");
+  const [modelo, setModelo] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function guardar(){
+    if (!nombre.trim()){ setError("El nombre/identificación del equipo es obligatorio."); return; }
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerCrear("x_equiposagricolas", {
+        x_name: nombre.trim(),
+        x_studio_cliente_id: cliente.id,
+        x_studio_tipo_equipo: tipoEquipo,
+        x_studio_marca: marca || false,
+        x_studio_modelo: modelo || false,
+      });
+      if (resp.ok) {
+        onCreado({ id: resp.id, x_name: nombre.trim() });
+      } else {
+        setError(resp.error || "No se pudo registrar el equipo.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "🚜 Nuevo Equipo — ", cliente.x_name),
+      h("div", { className: "campo" },
+        h("label", null, "Identificación (marca + modelo, placa, etc.) ", h("span", { className: "req" }, "*")),
+        h("input", { type: "text", value: nombre, autoFocus: true, onChange: e => setNombre(e.target.value) })
+      ),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Tipo de equipo"),
+          h("select", { value: tipoEquipo, onChange: e => setTipoEquipo(e.target.value) },
+            ["Tractor","Implemento","Vehículo","Motor","Bomba","Otro"].map(t => h("option", { key: t, value: t }, t))
+          )
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Marca"),
+          h("input", { type: "text", value: marca, onChange: e => setMarca(e.target.value) })
+        )
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Modelo"),
+        h("input", { type: "text", value: modelo, onChange: e => setModelo(e.target.value) })
+      ),
+      error && h("div", { className: "mensaje mensaje-error" }, error),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Registrar equipo")
+      )
+    )
+  );
+}
+
+/* ------------------------------------------------------------
+   Pantalla principal de Recepción
+   ------------------------------------------------------------ */
+function Recepcion(){
+  const [sesion, setSesion] = useState(null);
+
+  const [cliente, setCliente] = useState(null);
+  const [equipo, setEquipo] = useState(null);
+  const [modalCliente, setModalCliente] = useState(false);
+  const [modalEquipo, setModalEquipo] = useState(false);
+
+  const [fechaRecepcion, setFechaRecepcion] = useState(() => fechaParaOdoo(new Date()));
+  const [fechaPrometida, setFechaPrometida] = useState("");
+  const [prioridad, setPrioridad] = useState("Normal");
+  const [problema, setProblema] = useState("");
+  const [horometro, setHorometro] = useState("");
+  const [kilometraje, setKilometraje] = useState("");
+
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+  const [folioCreado, setFolioCreado] = useState(null);
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) setSesion(s);
+  }, []);
+
+  async function buscarClientes(texto){
+    const filas = await tallerQuery("x_taller_cliente",
+      ["id","x_name","x_studio_tipo_cliente","x_studio_telefono"],
+      [["x_name","ilike",texto]], 15);
+    return filas;
+  }
+
+  async function buscarEquipos(texto){
+    const domain = [["x_name","ilike",texto]];
+    if (cliente){
+      if (cliente.x_studio_tipo_cliente === "Externo") {
+        domain.push(["x_studio_cliente_id","=",cliente.id]);
+      } else {
+        domain.push(["x_studio_cliente_id","=",false]);
+      }
+    }
+    const filas = await tallerQuery("x_equiposagricolas",
+      ["id","x_name","x_studio_tipo_equipo","x_studio_marca","x_studio_modelo"],
+      domain, 15);
+    return filas;
+  }
+
+  function reiniciarFormulario(){
+    setCliente(null); setEquipo(null);
+    setFechaRecepcion(fechaParaOdoo(new Date()));
+    setFechaPrometida(""); setPrioridad("Normal"); setProblema("");
+    setHorometro(""); setKilometraje("");
+    setFolioCreado(null); setError("");
+  }
+
+  async function registrar(){
+    setError("");
+    if (!cliente){ setError("Seleccioná un cliente."); return; }
+    if (!equipo){ setError("Seleccioná un equipo."); return; }
+    if (!problema.trim()){ setError("Describí el problema reportado por el cliente."); return; }
+
+    setGuardando(true);
+    try {
+      const folio = await tallerFolio("OT");
+      const resp = await tallerCrear("x_taller_orden", {
+        x_name: folio,
+        x_studio_cliente_id: cliente.id,
+        x_studio_equipo_id: equipo.id,
+        x_studio_fecha_recepcion: fechaRecepcion + " " + new Date().toTimeString().slice(0,8),
+        x_studio_fecha_prometida: fechaPrometida || false,
+        x_studio_estado: "Recibida",
+        x_studio_prioridad: prioridad,
+        x_studio_problema_reportado: problema.trim(),
+        x_studio_horometro_recepcion: horometro ? Number(horometro) : 0,
+        x_studio_kilometraje_recepcion: kilometraje ? Number(kilometraje) : 0,
+        x_studio_responsable_recepcion_id: sesion.id,
+        x_studio_requiere_presupuesto: true,
+      });
+      if (resp.ok) {
+        setFolioCreado(folio);
+      } else {
+        setError(resp.error || "No se pudo registrar la recepción.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  if (!sesion) return null;
+
+  if (folioCreado) {
+    return h("div", { className: "envoltura" },
+      h("div", { className: "panel exito-grande" },
+        h("div", null, "✅"),
+        h("div", { className: "folio" }, folioCreado),
+        h("div", null, "Orden de trabajo registrada correctamente."),
+        h("button", {
+          className: "btn-primario", style: { marginTop: "20px" },
+          onClick: reiniciarFormulario,
+        }, "Registrar otra recepción")
+      )
+    );
+  }
+
+  return h("div", { className: "envoltura" },
+
+    error && h("div", { className: "mensaje mensaje-error" }, error),
+
+    h("div", { className: "panel" },
+      h("h2", null, "🧑‍🤝‍🧑 Cliente"),
+      cliente
+        ? h("div", { className: "seleccionado" },
+            h("div", { className: "txt" },
+              h("strong", null, cliente.x_name,
+                h("span", { className: "badge " + (cliente.x_studio_tipo_cliente === "Externo" ? "badge-externo" : "badge-interno") }, cliente.x_studio_tipo_cliente)
+              ),
+              cliente.x_studio_telefono && h("span", { className: "sub" }, cliente.x_studio_telefono)
+            ),
+            h("button", { onClick: () => { setCliente(null); setEquipo(null); } }, "Cambiar")
+          )
+        : h(React.Fragment, null,
+            h(Buscador, {
+              placeholder: "Buscar cliente por nombre...",
+              buscar: buscarClientes,
+              onSeleccionar: c => { setCliente(c); setEquipo(null); },
+              renderItem: c => h(React.Fragment, null,
+                c.x_name,
+                h("span", { className: "badge " + (c.x_studio_tipo_cliente === "Externo" ? "badge-externo" : "badge-interno") }, c.x_studio_tipo_cliente)
+              ),
+            }),
+            h("div", { style: { marginTop: "8px" } },
+              h("button", { className: "link-chico", onClick: () => setModalCliente(true) }, "+ Crear cliente nuevo")
+            )
+          )
+    ),
+
+    h("div", { className: "panel" },
+      h("h2", null, "🚜 Equipo"),
+      !cliente
+        ? h("div", { className: "buscador-vacio" }, "Elegí primero un cliente.")
+        : equipo
+          ? h("div", { className: "seleccionado" },
+              h("div", { className: "txt" },
+                h("strong", null, equipo.x_name),
+                (equipo.x_studio_marca || equipo.x_studio_modelo) &&
+                  h("span", { className: "sub" }, [equipo.x_studio_marca, equipo.x_studio_modelo].filter(Boolean).join(" "))
+              ),
+              h("button", { onClick: () => setEquipo(null) }, "Cambiar")
+            )
+          : h(React.Fragment, null,
+              h(Buscador, {
+                placeholder: "Buscar equipo por nombre...",
+                buscar: buscarEquipos,
+                onSeleccionar: setEquipo,
+                renderItem: eq => h(React.Fragment, null,
+                  eq.x_name,
+                  h("div", { className: "sub" }, [eq.x_studio_tipo_equipo, eq.x_studio_marca, eq.x_studio_modelo].filter(Boolean).join(" · "))
+                ),
+              }),
+              cliente.x_studio_tipo_cliente === "Externo" &&
+                h("div", { style: { marginTop: "8px" } },
+                  h("button", { className: "link-chico", onClick: () => setModalEquipo(true) }, "+ Registrar equipo nuevo de este cliente")
+                )
+            )
+    ),
+
+    h("div", { className: "panel" },
+      h("h2", null, "📋 Detalle de la recepción"),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Fecha de recepción ", h("span", { className: "req" }, "*")),
+          h("input", { type: "date", value: fechaRecepcion, onChange: e => setFechaRecepcion(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Fecha prometida"),
+          h("input", { type: "date", value: fechaPrometida, onChange: e => setFechaPrometida(e.target.value) })
+        )
+      ),
+      h("div", { className: "fila-3" },
+        h("div", { className: "campo" },
+          h("label", null, "Prioridad"),
+          h("select", { value: prioridad, onChange: e => setPrioridad(e.target.value) },
+            INFOTALLER_PRIORIDADES.map(p => h("option", { key: p, value: p }, p))
+          )
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Horómetro de recepción"),
+          h("input", { type: "number", step: "0.1", value: horometro, onChange: e => setHorometro(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Kilometraje de recepción"),
+          h("input", { type: "number", step: "1", value: kilometraje, onChange: e => setKilometraje(e.target.value) })
+        )
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Problema reportado por el cliente ", h("span", { className: "req" }, "*")),
+        h("textarea", { value: problema, onChange: e => setProblema(e.target.value), placeholder: "Describí la falla tal como la reportó el cliente..." })
+      ),
+      h("div", { className: "campo", style: { marginBottom: "0" } },
+        h("label", null, "Recepcionado por"),
+        h("input", { type: "text", value: sesion.nombre, disabled: true })
+      )
+    ),
+
+    h("button", { className: "btn-primario", onClick: registrar, disabled: guardando },
+      guardando ? "Registrando..." : "✅ Registrar recepción"
+    ),
+
+    modalCliente && h(ModalNuevoCliente, {
+      onCerrar: () => setModalCliente(false),
+      onCreado: c => { setCliente(c); setModalCliente(false); },
+    }),
+    modalEquipo && cliente && h(ModalNuevoEquipo, {
+      cliente,
+      onCerrar: () => setModalEquipo(false),
+      onCreado: eq => { setEquipo(eq); setModalEquipo(false); },
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(Recepcion));
+</script>
+</body>
+</html>
