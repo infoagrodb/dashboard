@@ -301,8 +301,30 @@ function Recepcion(){
 
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const [errorHorometro, setErrorHorometro] = useState("");
   const [folioCreado, setFolioCreado] = useState(null);
   const [respuestaCruda, setRespuestaCruda] = useState(null);
+
+  function validarHorometro(valor){
+    if (valor === "" || valor === null || valor === undefined){
+      const msg = "Obligatorio.";
+      setErrorHorometro(msg);
+      return msg;
+    }
+    const num = Number(valor);
+    if (isNaN(num) || num < 0){
+      const msg = "No es un número válido.";
+      setErrorHorometro(msg);
+      return msg;
+    }
+    if (equipo && equipo.x_studio_horometro_actual > 0 && num < equipo.x_studio_horometro_actual){
+      const msg = `No puede ser menor al último registrado (${equipo.x_studio_horometro_actual}).`;
+      setErrorHorometro(msg);
+      return msg;
+    }
+    setErrorHorometro("");
+    return "";
+  }
 
   useEffect(() => {
     const s = exigirSesion();
@@ -344,19 +366,12 @@ function Recepcion(){
     if (!cliente){ setError("Seleccioná un cliente."); return; }
     if (!equipo){ setError("Seleccioná un equipo."); return; }
     if (!problema.trim()){ setError("Describí el problema reportado por el cliente."); return; }
-    if (horometro === "" || horometro === null || horometro === undefined){
-      setError("El horómetro de recepción es obligatorio.");
+    const msgHorometro = validarHorometro(horometro);
+    if (msgHorometro){
+      document.getElementById("campoHorometro")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     const horometroNum = Number(horometro);
-    if (isNaN(horometroNum) || horometroNum < 0){
-      setError("El horómetro de recepción no es un número válido.");
-      return;
-    }
-    if (equipo.x_studio_horometro_actual > 0 && horometroNum < equipo.x_studio_horometro_actual){
-      setError(`El horómetro (${horometroNum}) no puede ser menor al último registrado para este equipo (${equipo.x_studio_horometro_actual}).`);
-      return;
-    }
 
     setGuardando(true);
     try {
@@ -504,10 +519,17 @@ function Recepcion(){
         ),
         h("div", { className: "campo" },
           h("label", null, "Horómetro de recepción ", h("span", { className: "req" }, "*")),
-          h("input", { type: "number", step: "0.1", value: horometro, onChange: e => setHorometro(e.target.value) }),
-          equipo && equipo.x_studio_horometro_actual > 0 &&
-            h("div", { style: { fontSize:"11px", color:"var(--color-texto-suave)", marginTop:"3px" } },
-              "Último registrado: " + equipo.x_studio_horometro_actual)
+          h("input", {
+            id: "campoHorometro", type: "number", step: "0.1", value: horometro,
+            style: errorHorometro ? { borderColor: "var(--color-peligro)", background: "#FEF2F2" } : null,
+            onChange: e => { setHorometro(e.target.value); if (errorHorometro) validarHorometro(e.target.value); },
+            onBlur: e => validarHorometro(e.target.value),
+          }),
+          errorHorometro
+            ? h("div", { style: { fontSize:"11.5px", color:"var(--color-peligro)", marginTop:"3px", fontWeight:"600" } }, "⚠️ " + errorHorometro)
+            : equipo && equipo.x_studio_horometro_actual > 0 &&
+              h("div", { style: { fontSize:"11px", color:"var(--color-texto-suave)", marginTop:"3px" } },
+                "Último registrado: " + equipo.x_studio_horometro_actual)
         ),
         h("div", { className: "campo" },
           h("label", null, "Kilometraje de recepción"),
