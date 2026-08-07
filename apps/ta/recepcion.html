@@ -153,10 +153,11 @@ function ModalNuevoCliente({ onCerrar, onCreado }){
   const [contacto, setContacto] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  const [crudo, setCrudo] = useState(null);
 
   async function guardar(){
     if (!nombre.trim()){ setError("El nombre es obligatorio."); return; }
-    setGuardando(true); setError("");
+    setGuardando(true); setError(""); setCrudo(null);
     try {
       const resp = await tallerCrear("x_taller_cliente", {
         x_name: nombre.trim(),
@@ -164,6 +165,7 @@ function ModalNuevoCliente({ onCerrar, onCreado }){
         x_studio_telefono: telefono || false,
         x_studio_contacto: contacto || false,
       });
+      setCrudo(resp);
       if (resp.ok) {
         onCreado({ id: resp.id, x_name: nombre.trim(), x_studio_tipo_cliente: tipo });
       } else {
@@ -171,6 +173,7 @@ function ModalNuevoCliente({ onCerrar, onCreado }){
       }
     } catch(e) {
       setError("Error: " + e.message);
+      setCrudo({ excepcion: e.message });
     } finally {
       setGuardando(false);
     }
@@ -181,27 +184,32 @@ function ModalNuevoCliente({ onCerrar, onCreado }){
       h("h3", null, "🧑‍🤝‍🧑 Nuevo Cliente"),
       h("div", { className: "campo" },
         h("label", null, "Nombre ", h("span", { className: "req" }, "*")),
-        h("input", { type: "text", value: nombre, autoFocus: true, onChange: e => setNombre(e.target.value) })
+        h("input", { type: "text", value: nombre, autoFocus: true, disabled: !!crudo, onChange: e => setNombre(e.target.value) })
       ),
       h("div", { className: "campo" },
         h("label", null, "Tipo de cliente"),
-        h("select", { value: tipo, onChange: e => setTipo(e.target.value) },
+        h("select", { value: tipo, disabled: !!crudo, onChange: e => setTipo(e.target.value) },
           h("option", { value: "Interno" }, "Interno"),
           h("option", { value: "Externo" }, "Externo")
         )
       ),
       h("div", { className: "campo" },
         h("label", null, "Contacto"),
-        h("input", { type: "text", value: contacto, onChange: e => setContacto(e.target.value) })
+        h("input", { type: "text", value: contacto, disabled: !!crudo, onChange: e => setContacto(e.target.value) })
       ),
       h("div", { className: "campo" },
         h("label", null, "Teléfono"),
-        h("input", { type: "text", value: telefono, onChange: e => setTelefono(e.target.value) })
+        h("input", { type: "text", value: telefono, disabled: !!crudo, onChange: e => setTelefono(e.target.value) })
       ),
       error && h("div", { className: "mensaje mensaje-error" }, error),
+      crudo && h("pre", { style: { background:"#111827", color:"#D1FAE5", padding:"10px", borderRadius:"7px", fontSize:"10.5px", whiteSpace:"pre-wrap", wordBreak:"break-all" } }, JSON.stringify(crudo, null, 2)),
       h("div", { className: "modal-botones" },
-        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
-        h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Crear cliente")
+        crudo && crudo.ok
+          ? h("button", { className: "btn-primario", onClick: () => onCreado({ id: crudo.id, x_name: nombre.trim(), x_studio_tipo_cliente: tipo }) }, "Continuar →")
+          : h(React.Fragment, null,
+              h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+              h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Crear cliente")
+            )
       )
     )
   );
@@ -294,6 +302,7 @@ function Recepcion(){
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [folioCreado, setFolioCreado] = useState(null);
+  const [respuestaCruda, setRespuestaCruda] = useState(null);
 
   useEffect(() => {
     const s = exigirSesion();
@@ -339,7 +348,7 @@ function Recepcion(){
     setGuardando(true);
     try {
       const folio = await tallerFolio("OT");
-      const resp = await tallerCrear("x_taller_orden", {
+      const payload = {
         x_name: folio,
         x_studio_cliente_id: cliente.id,
         x_studio_equipo_id: equipo.id,
@@ -352,7 +361,9 @@ function Recepcion(){
         x_studio_kilometraje_recepcion: kilometraje ? Number(kilometraje) : 0,
         x_studio_responsable_recepcion_id: sesion.id,
         x_studio_requiere_presupuesto: true,
-      });
+      };
+      const resp = await tallerCrear("x_taller_orden", payload);
+      setRespuestaCruda({ folio, payload_enviado: payload, respuesta_servidor: resp });
       if (resp.ok) {
         setFolioCreado(folio);
       } else {
@@ -360,6 +371,7 @@ function Recepcion(){
       }
     } catch(e) {
       setError("Error: " + e.message);
+      setRespuestaCruda({ excepcion: e.message });
     } finally {
       setGuardando(false);
     }
@@ -373,6 +385,11 @@ function Recepcion(){
         h("div", null, "✅"),
         h("div", { className: "folio" }, folioCreado),
         h("div", null, "Orden de trabajo registrada correctamente."),
+        respuestaCruda && h("div", { style: { marginTop:"16px", textAlign:"left", background:"#111827", color:"#D1FAE5", padding:"12px", borderRadius:"8px", fontSize:"11px", fontFamily:"monospace", whiteSpace:"pre-wrap", wordBreak:"break-all" } },
+          "ID real en Odoo: " + JSON.stringify(respuestaCruda.respuesta_servidor.id) + "\n" +
+          "cliente_id enviado: " + JSON.stringify(respuestaCruda.payload_enviado.x_studio_cliente_id) + "\n" +
+          "equipo_id enviado: " + JSON.stringify(respuestaCruda.payload_enviado.x_studio_equipo_id)
+        ),
         h("button", {
           className: "btn-primario", style: { marginTop: "20px" },
           onClick: reiniciarFormulario,
@@ -383,7 +400,10 @@ function Recepcion(){
 
   return h("div", { className: "envoltura" },
 
-    error && h("div", { className: "mensaje mensaje-error" }, error),
+    error && h("div", { className: "mensaje mensaje-error" },
+      error,
+      respuestaCruda && h("pre", { style: { marginTop:"8px", fontSize:"10.5px", whiteSpace:"pre-wrap", wordBreak:"break-all" } }, JSON.stringify(respuestaCruda, null, 2))
+    ),
 
     h("div", { className: "panel" },
       h("h2", null, "🧑‍🤝‍🧑 Cliente"),
