@@ -80,11 +80,14 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v2</div>
 
 <script>
 const h = React.createElement;
 const { useState, useEffect } = React;
+
+const ESTADOS_QUE_OCUPAN_BAHIA = ["Recibida","En diagnóstico","Pendiente de presupuesto","Presupuestada",
+  "Pendiente de aprobación","Aprobada","En reparación","Pendiente de repuesto"];
 
 function claseEstado(estado){
   return "badge-estado estado-" + String(estado).replace(/\s+/g, "-").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -96,8 +99,11 @@ function claseTexto(prefijo, valor){
 /* ------------------------------------------------------------
    Modal de detalle / cambio de estado
    ------------------------------------------------------------ */
-function ModalDetalleOrden({ orden, onCerrar, onActualizado }){
+function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActualizado }){
   const [nuevoEstado, setNuevoEstado] = useState(orden.x_studio_estado);
+  const [nuevaBahiaId, setNuevaBahiaId] = useState(
+    Array.isArray(orden.x_studio_bahia_id) ? String(orden.x_studio_bahia_id[0]) : ""
+  );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
@@ -106,14 +112,46 @@ function ModalDetalleOrden({ orden, onCerrar, onActualizado }){
     return Array.isArray(v) ? v[1] : (v || "—");
   }
 
-  async function guardarEstado(){
-    if (nuevoEstado === orden.x_studio_estado){ setError("Elegí un estado distinto al actual."); return; }
+  const bahiaActualId = Array.isArray(orden.x_studio_bahia_id) ? orden.x_studio_bahia_id[0] : null;
+
+  async function guardar(){
+    const cambios = {};
+    if (nuevoEstado !== orden.x_studio_estado) cambios.x_studio_estado = nuevoEstado;
+
+    const bahiaSeleccionadaId = nuevaBahiaId ? Number(nuevaBahiaId) : null;
+    const bahiaCambio = bahiaSeleccionadaId !== bahiaActualId;
+    if (bahiaCambio) {
+      cambios.x_studio_bahia_id = bahiaSeleccionadaId || false;
+    }
+
+    if (Object.keys(cambios).length === 0){
+      setError("No hay cambios para guardar.");
+      return;
+    }
+
+    // Validar capacidad SOLO si se está asignando una bahía nueva (no al quitarla)
+    if (bahiaCambio && bahiaSeleccionadaId) {
+      const bahia = bahias.find(b => b.id === bahiaSeleccionadaId);
+      const ocupados = ocupacionPorBahia[bahiaSeleccionadaId] || 0;
+      if (bahia && ocupados >= bahia.x_studio_capacidad) {
+        if (bahia.x_studio_modo_limite === "Bloquear al llegar al límite") {
+          setError(`"${bahia.x_name}" ya está al límite (${ocupados}/${bahia.x_studio_capacidad}). Esta bahía bloquea nuevas asignaciones al llegar al tope — elegí otra o libera espacio primero.`);
+          return;
+        } else {
+          setExito(""); // se muestra el aviso pero se deja continuar
+          if (!confirm(`"${bahia.x_name}" ya está al límite (${ocupados}/${bahia.x_studio_capacidad}). Esta bahía solo advierte, no bloquea — ¿asignar de todas formas?`)) {
+            return;
+          }
+        }
+      }
+    }
+
     setGuardando(true); setError(""); setExito("");
     try {
-      const resp = await tallerActualizar("x_taller_orden", orden.id, { x_studio_estado: nuevoEstado });
+      const resp = await tallerActualizar("x_taller_orden", orden.id, cambios);
       if (resp.ok) {
-        setExito("Estado actualizado.");
-        onActualizado({ ...orden, x_studio_estado: nuevoEstado });
+        setExito("Guardado correctamente.");
+        onActualizado({ ...orden, ...cambios, x_studio_bahia_id: bahiaSeleccionadaId ? [bahiaSeleccionadaId, bahias.find(b=>b.id===bahiaSeleccionadaId)?.x_name] : false });
       } else {
         setError(resp.error || "No se pudo actualizar.");
       }
@@ -139,25 +177,33 @@ function ModalDetalleOrden({ orden, onCerrar, onActualizado }){
           h("div", { className: "valor" }, m2oTexto(orden.x_studio_equipo_id))
         )
       ),
-      h("div", { className: "fila-detalle" },
-        h("div", { className: "campo-detalle" },
-          h("label", null, "Prioridad"),
-          h("div", { className: "valor" }, h("span", { className: claseTexto("badge-prioridad", orden.x_studio_prioridad) }, orden.x_studio_prioridad))
-        ),
-        h("div", { className: "campo-detalle" },
-          h("label", null, "Bahía"),
-          h("div", { className: "valor" }, m2oTexto(orden.x_studio_bahia_id))
-        )
+      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+        h("label", null, "Prioridad"),
+        h("div", { className: "valor" }, h("span", { className: claseTexto("badge-prioridad", orden.x_studio_prioridad) }, orden.x_studio_prioridad))
       ),
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
         h("label", null, "Problema reportado"),
         h("div", { className: "valor" }, orden.x_studio_problema_reportado || "—")
       ),
 
-      h("div", { className: "campo-detalle", style: { marginBottom: "0" } },
-        h("label", null, "Cambiar estado"),
-        h("select", { value: nuevoEstado, onChange: e => setNuevoEstado(e.target.value) },
-          INFOTALLER_ESTADOS_ORDEN.map(e => h("option", { key: e, value: e }, e))
+      h("div", { className: "fila-detalle" },
+        h("div", { className: "campo-detalle" },
+          h("label", null, "Cambiar estado"),
+          h("select", { value: nuevoEstado, onChange: e => setNuevoEstado(e.target.value) },
+            INFOTALLER_ESTADOS_ORDEN.map(e => h("option", { key: e, value: e }, e))
+          )
+        ),
+        h("div", { className: "campo-detalle", style: { marginBottom: "0" } },
+          h("label", null, "Asignar bahía"),
+          h("select", { value: nuevaBahiaId, onChange: e => setNuevaBahiaId(e.target.value) },
+            h("option", { value: "" }, "— Sin asignar —"),
+            bahias.map(b => {
+              const ocupados = ocupacionPorBahia[b.id] || 0;
+              return h("option", { key: b.id, value: b.id },
+                b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")"
+              );
+            })
+          )
         )
       ),
 
@@ -166,7 +212,7 @@ function ModalDetalleOrden({ orden, onCerrar, onActualizado }){
 
       h("div", { className: "modal-botones" },
         h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar"),
-        h("button", { className: "btn-primario", onClick: guardarEstado, disabled: guardando }, guardando ? "Guardando..." : "Guardar estado")
+        h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
       )
     )
   );
@@ -178,6 +224,7 @@ function ModalDetalleOrden({ orden, onCerrar, onActualizado }){
 function OrdenesDeTrabajo(){
   const [sesion, setSesion] = useState(null);
   const [ordenes, setOrdenes] = useState(null);
+  const [bahias, setBahias] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
@@ -190,12 +237,16 @@ function OrdenesDeTrabajo(){
   async function cargarOrdenes(){
     setCargando(true); setErrorCarga("");
     try {
-      const filas = await tallerQuery("x_taller_orden", [
-        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
-        "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
-        "x_studio_tecnico_responsable_id","x_studio_problema_reportado",
-      ], [], 1000, 0);
+      const [filas, filasBahias] = await Promise.all([
+        tallerQuery("x_taller_orden", [
+          "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
+          "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
+          "x_studio_tecnico_responsable_id","x_studio_problema_reportado",
+        ], [], 1000, 0),
+        tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite"], [], 500),
+      ]);
       setOrdenes(filas);
+      setBahias(filasBahias);
     } catch(e) {
       setErrorCarga("No se pudieron cargar las órdenes: " + e.message);
     } finally {
@@ -236,6 +287,8 @@ function OrdenesDeTrabajo(){
 
     ordenSeleccionada && h(ModalDetalleOrden, {
       orden: ordenSeleccionada,
+      bahias,
+      ocupacionPorBahia: calcularOcupacion(ordenes || [], ordenSeleccionada.id),
       onCerrar: () => setOrdenSeleccionada(null),
       onActualizado: actualizada => {
         setOrdenes(prev => prev.map(o => o.id === actualizada.id ? actualizada : o));
@@ -243,6 +296,20 @@ function OrdenesDeTrabajo(){
       },
     })
   );
+}
+
+// Cuenta cuántas órdenes activas ocupan cada bahía, EXCLUYENDO la orden que se está
+// editando (para que reasignarla a la misma bahía no se cuente contra sí misma).
+function calcularOcupacion(ordenes, idOrdenExcluir){
+  const conteo = {};
+  ordenes.forEach(o => {
+    if (o.id === idOrdenExcluir) return;
+    if (!ESTADOS_QUE_OCUPAN_BAHIA.includes(o.x_studio_estado)) return;
+    if (!o.x_studio_bahia_id) return;
+    const bId = Array.isArray(o.x_studio_bahia_id) ? o.x_studio_bahia_id[0] : o.x_studio_bahia_id;
+    conteo[bId] = (conteo[bId] || 0) + 1;
+  });
+  return conteo;
 }
 
 ReactDOM.createRoot(document.getElementById("raiz")).render(h(OrdenesDeTrabajo));
