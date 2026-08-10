@@ -47,7 +47,7 @@ jobs:
             -o _raw_lines.json
 
           if [ ! -s _raw_lines.json ] || jq -e '.error' _raw_lines.json > /dev/null 2>&1; then
-            echo "ERROR en respuesta Odoo (lines):"
+            echo "::error::ERROR en respuesta Odoo (lines):"
             cat _raw_lines.json
             exit 1
           fi
@@ -78,7 +78,7 @@ jobs:
             -o _raw_statements.json
 
           if [ ! -s _raw_statements.json ] || jq -e '.error' _raw_statements.json > /dev/null 2>&1; then
-            echo "ERROR en respuesta Odoo (statements):"
+            echo "::error::ERROR en respuesta Odoo (statements):"
             cat _raw_statements.json
             exit 1
           fi
@@ -109,10 +109,19 @@ jobs:
             -o _raw_clearing.json
 
           if [ ! -s _raw_clearing.json ] || jq -e '.error' _raw_clearing.json > /dev/null 2>&1; then
-            echo "ERROR en respuesta Odoo (clearing):"
+            echo "::error::ERROR en respuesta Odoo (clearing):"
             cat _raw_clearing.json
             exit 1
           fi
+
+          # Validar que exista el nodo .result antes de procesar
+          for f in _raw_lines.json _raw_statements.json _raw_clearing.json; do
+            if [ "$(jq '.result' "$f")" == "null" ]; then
+              echo "::error:: El nodo .result es null en $f. Respuesta obtenida:"
+              cat "$f"
+              exit 1
+            fi
+          done
 
           jq '.result' _raw_lines.json > _lines_result.json
           jq '.result' _raw_statements.json > _stmts_result.json
@@ -127,27 +136,41 @@ jobs:
               BNK1: {
                 label: "11103 Banpro Cta Cordoba 95447 (C$)",
                 currency: "C$",
-                lines: ($linesFile[0] | map(select(.journal_id[0]==6)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
-                statements: ($stmtsFile[0] | map(select(.journal_id[0]==6)) | sort_by(.date) | map({date: .date, real: .balance_end_real})),
-                clearing: ($clearingFile[0] | map(select(.account_id[0]==715 or .account_id[0]==716)) | sort_by(.date) | map(
-                  if .payment_id != false then
-                    ["P", .date, (.debit - .credit), (.partner_id[1] // ""), (.payment_id[1] // ""), (.matching_number // "")]
-                  else
-                    ["B", .date, (.debit - .credit), (.partner_id[1] // ""), (.statement_line_id[1] // ""), (.matching_number // "")]
-                  end
+                lines: ($linesFile[0] | map(select((.journal_id | type) == "array" and .journal_id[0] == 6)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
+                statements: ($stmtsFile[0] | map(select((.journal_id | type) == "array" and .journal_id[0] == 6)) | sort_by(.date) | map({date: .date, real: .balance_end_real})),
+                clearing: ($clearingFile[0] | map(select((.account_id | type) == "array" and (.account_id[0] == 715 or .account_id[0] == 716))) | sort_by(.date) | map(
+                  [
+                    (if .payment_id != false then "P" else "B" end),
+                    .date,
+                    (.debit - .credit),
+                    (if (.partner_id | type) == "array" then .partner_id[1] else "" end),
+                    (if .payment_id != false then 
+                      (if (.payment_id | type) == "array" then .payment_id[1] else "" end)
+                     else 
+                      (if (.statement_line_id | type) == "array" then .statement_line_id[1] else "" end)
+                     end),
+                    (if .matching_number != false then .matching_number else "" end)
+                  ]
                 ))
               },
               BNK2: {
                 label: "Banpro 48612 (USD)",
                 currency: "US$",
-                lines: ($linesFile[0] | map(select(.journal_id[0]==9)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
-                statements: ($stmtsFile[0] | map(select(.journal_id[0]==9)) | sort_by(.date) | map({date: .date, real: .balance_end_real})),
-                clearing: ($clearingFile[0] | map(select(.account_id[0]==730 or .account_id[0]==731)) | sort_by(.date) | map(
-                  if .payment_id != false then
-                    ["P", .date, (.debit - .credit), (.partner_id[1] // ""), (.payment_id[1] // ""), (.matching_number // "")]
-                  else
-                    ["B", .date, (.debit - .credit), (.partner_id[1] // ""), (.statement_line_id[1] // ""), (.matching_number // "")]
-                  end
+                lines: ($linesFile[0] | map(select((.journal_id | type) == "array" and .journal_id[0] == 9)) | sort_by(.date) | map([.date, .amount, .payment_ref])),
+                statements: ($stmtsFile[0] | map(select((.journal_id | type) == "array" and .journal_id[0] == 9)) | sort_by(.date) | map({date: .date, real: .balance_end_real})),
+                clearing: ($clearingFile[0] | map(select((.account_id | type) == "array" and (.account_id[0] == 730 or .account_id[0] == 731))) | sort_by(.date) | map(
+                  [
+                    (if .payment_id != false then "P" else "B" end),
+                    .date,
+                    (.debit - .credit),
+                    (if (.partner_id | type) == "array" then .partner_id[1] else "" end),
+                    (if .payment_id != false then 
+                      (if (.payment_id | type) == "array" then .payment_id[1] else "" end)
+                     else 
+                      (if (.statement_line_id | type) == "array" then .statement_line_id[1] else "" end)
+                     end),
+                    (if .matching_number != false then .matching_number else "" end)
+                  ]
                 ))
               }
             }' > gzp_ConciliacionBancaria.json
