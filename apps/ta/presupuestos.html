@@ -23,6 +23,8 @@
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf-autotable.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -114,7 +116,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v6</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v7 (PDF + compartir)</div>
 
 <script>
 const h = React.createElement;
@@ -488,6 +490,133 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
     }
   }
 
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+
+  function construirPDF(){
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "letter" });
+    const anchoPagina = doc.internal.pageSize.getWidth();
+    const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "—";
+    const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "—";
+
+    // Encabezado con marca
+    doc.setFillColor(22, 163, 74);
+    doc.rect(0, 0, anchoPagina, 24, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFont(undefined, "bold"); doc.setFontSize(16);
+    doc.text("INFOTALLER", 14, 12);
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 18);
+    doc.setFont(undefined, "bold"); doc.setFontSize(14);
+    doc.text("PRESUPUESTO", anchoPagina - 14, 12, { align: "right" });
+    doc.setFont(undefined, "normal"); doc.setFontSize(10);
+    doc.text(presupuesto.x_name, anchoPagina - 14, 18, { align: "right" });
+
+    // Datos de la orden / cliente / equipo
+    doc.setTextColor(17, 24, 39);
+    let y = 33;
+    const filaDato = (etiqueta, valor, x) => {
+      doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.text(etiqueta, x, y);
+      doc.setFont(undefined, "normal"); doc.text(String(valor || "—"), x, y + 5);
+    };
+    filaDato("ORDEN", orden ? orden.x_name : "—", 14);
+    filaDato("FECHA", formatearFecha(presupuesto.x_studio_fecha_presupuesto), 90);
+    filaDato("VIGENCIA", (presupuesto.x_studio_vigencia_dias || 0) + " días", 150);
+    y += 12;
+    filaDato("CLIENTE", clienteNombre, 14);
+    filaDato("EQUIPO", equipoNombre, 90);
+    y += 14;
+
+    // Tabla de líneas
+    doc.autoTable({
+      startY: y,
+      head: [["Tipo", "Descripción", "Cant.", "UM", "Costo Unit.", "Total"]],
+      body: lineas.map(l => [
+        l.x_studio_tipo_linea,
+        l.x_studio_descripcion,
+        num(l.x_studio_cantidad_presupuestada).toString(),
+        l.x_studio_unidad_medida || "",
+        moneda(l.x_studio_costo_manual),
+        moneda(num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual)),
+      ]),
+      headStyles: { fillColor: [22, 163, 74], textColor: 255, fontStyle: "bold", fontSize: 9 },
+      styles: { fontSize: 9, cellPadding: 3, textColor: [17, 24, 39] },
+      columnStyles: { 2: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 14, right: 14 },
+    });
+
+    let yFinal = doc.lastAutoTable.finalY + 8;
+
+    // Totales, alineados a la derecha
+    const xEtiqueta = anchoPagina - 80, xValor = anchoPagina - 14;
+    const filaTotal = (etiqueta, valor, grande) => {
+      doc.setFont(undefined, grande ? "bold" : "normal");
+      doc.setFontSize(grande ? 12 : 9.5);
+      doc.setTextColor(grande ? 21 : 55, grande ? 128 : 65, grande ? 61 : 81);
+      doc.text(etiqueta, xEtiqueta, yFinal);
+      doc.text(valor, xValor, yFinal, { align: "right" });
+      yFinal += grande ? 7 : 5.5;
+    };
+    filaTotal("Materiales/Repuestos", moneda(totales.subMateriales));
+    filaTotal("Mano de obra", moneda(totales.subManoObra));
+    filaTotal("Servicios", moneda(totales.subServicios));
+    filaTotal("Descuento", "-" + moneda(totales.descuento));
+    filaTotal("Impuestos", moneda(totales.impuestos));
+    doc.setDrawColor(228, 233, 238); doc.line(xEtiqueta, yFinal - 3, xValor, yFinal - 3);
+    filaTotal("TOTAL", moneda(totales.total), true);
+
+    // Sello de aprobado, si aplica
+    if (presupuesto.x_studio_estado === "Aprobado") {
+      doc.setTextColor(21, 128, 61);
+      doc.setFont(undefined, "bold"); doc.setFontSize(10);
+      doc.text("✔ APROBADO por " + presupuesto.x_studio_aprobado_por_cliente + " el " + formatearFecha(presupuesto.x_studio_fecha_aprobacion), 14, yFinal + 10);
+    }
+
+    // Pie: firma y generado por
+    const alturaPagina = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(228, 233, 238);
+    doc.line(14, alturaPagina - 30, 80, alturaPagina - 30);
+    doc.setTextColor(107, 114, 128); doc.setFont(undefined, "normal"); doc.setFontSize(8.5);
+    doc.text("Firma de aprobación", 14, alturaPagina - 25);
+    doc.text("Generado " + formatearFechaHora(new Date()) + " — Infotaller COMASA", 14, alturaPagina - 12);
+
+    return doc;
+  }
+
+  async function generarYCompartirPdf(){
+    setGenerandoPdf(true); setError("");
+    try {
+      const doc = construirPDF();
+      const nombreArchivo = presupuesto.x_name + ".pdf";
+      const blob = doc.output("blob");
+      const archivo = new File([blob], nombreArchivo, { type: "application/pdf" });
+
+      if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+        await navigator.share({
+          files: [archivo],
+          title: "Presupuesto " + presupuesto.x_name,
+          text: "Presupuesto " + presupuesto.x_name + " — total " + moneda(totales.total),
+        });
+      } else {
+        doc.save(nombreArchivo);
+      }
+    } catch(e) {
+      if (e.name !== "AbortError") setError("No se pudo generar/compartir el PDF: " + e.message);
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
+
+  function descargarPdf(){
+    try {
+      const doc = construirPDF();
+      doc.save(presupuesto.x_name + ".pdf");
+    } catch(e) {
+      setError("No se pudo generar el PDF: " + e.message);
+    }
+  }
+
   async function confirmarAprobacion(){
     if (!nombreAprobador.trim()){ setError("Escribí el nombre de quien aprueba."); return; }
     setAprobando(true); setError("");
@@ -645,7 +774,14 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
       error && h("div", { className: "mensaje-error" }, error),
       exito && h("div", { className: "mensaje-exito" }, exito),
 
-      !soloLectura && h("div", { className: "barra-botones", style: { marginTop: "16px" } },
+      h("div", { className: "barra-botones", style: { marginTop: "16px", marginBottom: soloLectura ? "0" : "10px" } },
+        h("button", { className: "btn-secundario", onClick: descargarPdf, disabled: generandoPdf || lineas.length === 0 },
+          "⬇️ Descargar PDF"),
+        h("button", { className: "btn-primario", onClick: generarYCompartirPdf, disabled: generandoPdf || lineas.length === 0 },
+          generandoPdf ? "Generando..." : "📤 Compartir PDF")
+      ),
+
+      !soloLectura && h("div", { className: "barra-botones" },
         h("button", { className: "btn-secundario", onClick: async () => {
             const resp = await tallerActualizar("x_taller_presupuesto", presupuestoId, {
               x_studio_descuento: num(presupuesto.x_studio_descuento), x_studio_impuestos: num(presupuesto.x_studio_impuestos),
