@@ -1,13 +1,18 @@
 name: gzp_ConciliacionBancaria
+
 on:
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   fetch:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Fetch lineas y estados de cuenta bancarios desde Odoo
         shell: bash
@@ -41,8 +46,9 @@ jobs:
             --data @_payload_lines.json \
             -o _raw_lines.json
 
-          if [ ! -s _raw_lines.json ]; then
-            echo "ERROR: respuesta vacia (lines)"
+          if [ ! -s _raw_lines.json ] || jq -e '.error' _raw_lines.json > /dev/null 2>&1; then
+            echo "ERROR en respuesta Odoo (lines):"
+            cat _raw_lines.json
             exit 1
           fi
 
@@ -71,12 +77,13 @@ jobs:
             --data @_payload_stmts.json \
             -o _raw_statements.json
 
-          if [ ! -s _raw_statements.json ]; then
-            echo "ERROR: respuesta vacia (statements)"
+          if [ ! -s _raw_statements.json ] || jq -e '.error' _raw_statements.json > /dev/null 2>&1; then
+            echo "ERROR en respuesta Odoo (statements):"
+            cat _raw_statements.json
             exit 1
           fi
 
-          echo "Descargando account.move.line de cuentas transitorias (conciliación real contador)..."
+          echo "Descargando account.move.line de cuentas transitorias..."
           jq -n --arg key "$GZP_API_KEY" '{
             jsonrpc: "2.0",
             method: "call",
@@ -101,8 +108,9 @@ jobs:
             --data @_payload_clearing.json \
             -o _raw_clearing.json
 
-          if [ ! -s _raw_clearing.json ]; then
-            echo "ERROR: respuesta vacia (clearing)"
+          if [ ! -s _raw_clearing.json ] || jq -e '.error' _raw_clearing.json > /dev/null 2>&1; then
+            echo "ERROR en respuesta Odoo (clearing):"
+            cat _raw_clearing.json
             exit 1
           fi
 
@@ -144,7 +152,7 @@ jobs:
               }
             }' > gzp_ConciliacionBancaria.json
 
-          rm -f _payload_lines.json _payload_stmts.json _payload_payments.json _payload_clearing.json _raw_lines.json _raw_statements.json _raw_payments.json _raw_clearing.json _lines_result.json _stmts_result.json _payments_result.json _clearing_result.json
+          rm -f _payload_*.json _raw_*.json _*_result.json
 
           N1=$(jq '.BNK1.lines | length' gzp_ConciliacionBancaria.json)
           N2=$(jq '.BNK2.lines | length' gzp_ConciliacionBancaria.json)
