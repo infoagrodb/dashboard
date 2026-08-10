@@ -116,7 +116,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v7 (PDF + compartir)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v8 (copia líneas al crear nueva versión)</div>
 
 <script>
 const h = React.createElement;
@@ -182,7 +182,8 @@ function ModalNuevoPresupuesto({ onCerrar, onCreado }){
     setCreando(true); setError("");
     try {
       const existentes = await tallerQuery("x_taller_presupuesto", ["id","x_studio_version"], [["x_studio_orden_id","=",orden.id]], 100);
-      const siguienteVersion = existentes.length ? Math.max(...existentes.map(p => p.x_studio_version)) + 1 : 1;
+      const versionAnterior = existentes.length ? existentes.sort((a,b) => b.x_studio_version - a.x_studio_version)[0] : null;
+      const siguienteVersion = versionAnterior ? versionAnterior.x_studio_version + 1 : 1;
       const nombre = orden.x_name + "-V" + siguienteVersion;
       const resp = await tallerCrear("x_taller_presupuesto", {
         x_name: nombre,
@@ -192,11 +193,36 @@ function ModalNuevoPresupuesto({ onCerrar, onCreado }){
         x_studio_estado: "Borrador",
         x_studio_vigencia_dias: 8,
       });
-      if (resp.ok) {
-        onCreado(resp.id);
-      } else {
+      if (!resp.ok) {
         setError(resp.error || "No se pudo crear el presupuesto.");
+        setCreando(false);
+        return;
       }
+
+      // Copiar las líneas de la versión anterior — la nueva versión no arranca en blanco.
+      if (versionAnterior) {
+        const lineasAnteriores = await tallerQuery("x_presupuesto_detalle", [
+          "x_name","x_studio_tipo_linea","x_studio_sku","x_studio_descripcion","x_studio_cantidad_presupuestada",
+          "x_studio_unidad_medida","x_studio_costo_manual","x_studio_costo_unitario_presupuestado",
+          "x_studio_origen_costo","x_studio_costo_inventario_consultado","x_studio_total_costo_presupuestado",
+        ], [["x_studio_presupuesto_id","=",versionAnterior.id]], 500);
+        await Promise.all(lineasAnteriores.map(l => tallerCrear("x_presupuesto_detalle", {
+          x_name: l.x_name,
+          x_studio_presupuesto_id: resp.id,
+          x_studio_tipo_linea: l.x_studio_tipo_linea,
+          x_studio_sku: l.x_studio_sku || false,
+          x_studio_descripcion: l.x_studio_descripcion,
+          x_studio_cantidad_presupuestada: l.x_studio_cantidad_presupuestada,
+          x_studio_unidad_medida: l.x_studio_unidad_medida,
+          x_studio_costo_manual: l.x_studio_costo_manual,
+          x_studio_costo_unitario_presupuestado: l.x_studio_costo_unitario_presupuestado,
+          x_studio_origen_costo: l.x_studio_origen_costo,
+          x_studio_costo_inventario_consultado: l.x_studio_costo_inventario_consultado || 0,
+          x_studio_total_costo_presupuestado: l.x_studio_total_costo_presupuestado,
+        })));
+      }
+
+      onCreado(resp.id);
     } catch(e) {
       setError("Error: " + e.message);
     } finally {
