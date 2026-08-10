@@ -69,8 +69,21 @@
 
   .tabbar-planta{
     display:flex;background:var(--blanco);border:1px solid var(--borde);border-radius:14px;
-    box-shadow:var(--sombra);overflow:hidden;position:sticky;bottom:10px;
+    box-shadow:var(--sombra);overflow:hidden;
+    /* Fijo al viewport (no "sticky" dentro del contenido): así siempre se ve en el mismo
+       lugar mientras el usuario hace scroll dentro de una evaluación larga, y nunca se
+       confunde con el final del formulario — antes, al ser sticky dentro del flujo, la
+       barra terminaba apareciendo pegada entre secciones intermedias (Plaga, Desarrollo
+       fenológico, etc.) dando la falsa impresión de haber llegado al final. */
+    position:fixed;left:50%;bottom:10px;
+    width:calc(100% - 32px);max-width:528px;z-index:15;
+    /* Oculta mientras el usuario todavía tiene campos por debajo sin ver — solo aparece
+       cuando realmente llega al final de la evaluación (ver actualizarVisibilidadTabbarPlanta
+       en el JS), para no tapar contenido ni sugerir falsamente que ya terminó. */
+    opacity:0;pointer-events:none;transform:translate(-50%,10px);
+    transition:opacity .18s ease, transform .18s ease;
   }
+  .tabbar-planta.visible{opacity:1;pointer-events:auto;transform:translate(-50%,0);}
   .tabbar-item{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     padding:10px 4px 9px;background:none;border:none;color:var(--texto-suave);
@@ -110,6 +123,11 @@
     display:flex; align-items:center; justify-content:center; border:1.5px solid var(--verde-oscuro);
   }
   main{flex:1;padding:16px;padding-bottom:100px;}
+  /* La barra Inicio/Borrador/Resumen ahora es fija (ver .tabbar-planta) y ya no reserva su
+     propio espacio dentro del flujo del documento — se agrega aquí para que el último grupo
+     de campos (Plaga, Desarrollo fenológico, etc.) siempre pueda desplazarse por completo
+     por encima de ella, en vez de quedar tapado. */
+  #screen-planta{padding-bottom:78px;}
   .screen{display:none;}
   .screen.active{display:block;animation:fadein .18s ease;}
   @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
@@ -213,6 +231,11 @@
     display:block;width:100%;background:var(--rojo);border:none;color:#fff;font-size:0.88rem;font-weight:700;
     padding:11px;margin-top:8px;border-radius:12px;
   }
+  .hint-compartir-pdf{
+    font-size:0.8rem;font-weight:600;text-align:center;margin:0 0 8px;padding:0;
+  }
+  .hint-compartir-pdf.pendiente{color:var(--ambar);}
+  .hint-compartir-pdf.listo{color:var(--verde);}
   .banner-actualizacion{
     background:var(--verde-oscuro); color:#fff; padding:10px 14px;
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
@@ -399,7 +422,6 @@
         <span class="topbar-back-arrow">←</span>
         <span class="topbar-back-title" id="topbarBackTitle">Título</span>
       </button>
-      <button class="topbar-icon-btn" onclick="irAInicio()" aria-label="Ir a Reportes" title="Ir a Reportes"><svg class="icono-svg"><use href="#ic-home"/></svg></button>
     </div>
     <button class="gps-chip" id="btnGpsPlanta" onclick="capturarGPSPlanta()" style="display:none;">
       <span id="gpsChipIcono" class="gps-chip-icono">📍</span>
@@ -526,7 +548,7 @@
         <button class="btn btn-primary" id="btnPlantaNext" onclick="cambiarPlanta(1)">+ Agregar evaluación</button>
       </div>
       <button class="btn-quitar-eval" id="btnQuitarEval" onclick="quitarEvaluacionActual()" style="display:none;">🗑 Quitar esta evaluación</button>
-      <div style="height:10px;"></div>
+      <div id="plantaScrollSentinel" style="height:1px;"></div>
       <div class="tabbar-planta">
         <button class="tabbar-item" onclick="irAInicio()">
           <svg class="icono-svg tabbar-icon"><use href="#ic-home"/></svg><span class="tabbar-label">Inicio</span>
@@ -563,12 +585,14 @@
         </div>
       </div>
 
-      <button class="btn btn-ghost" onclick="descargarPDF()">📄 Descargar PDF</button>
+      <button class="btn btn-ghost" onclick="descargarPDF()">📄 Vista previa del reporte</button>
       <div style="height:8px;"></div>
       <button class="btn btn-ghost" onclick="compartirPDF()">📤 Compartir PDF (WhatsApp, correo…)</button>
+      <!-- Oculto por el momento -->
+      <div style="height:8px;display:none;"></div>
+      <button class="btn btn-ghost" onclick="mostrarVistaPreviaTicket()" style="display:none;">🖨️ Imprimir ticket (Bluetooth)</button>
       <div style="height:8px;"></div>
-      <button class="btn btn-ghost" onclick="mostrarVistaPreviaTicket()">🖨️ Imprimir ticket (Bluetooth)</button>
-      <div style="height:8px;"></div>
+      <p id="pdfCompartidoHint" class="hint-compartir-pdf"></p>
       <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar y enviar a INFOAGRO ODOO</button>
     </section>
 
@@ -1588,6 +1612,7 @@ function nuevaSesion(){
     currentStation: 1,
     lines,
     gpsPorPlanta: {}, // { "1": {lat,lng,acc,timestamp}, "2": {...}, ... } — una coordenada por estación
+    pdfCompartido: false, // se pone en true cuando el técnico comparte (o descarga como respaldo) el PDF del reporte — se exige antes de poder guardar y enviar
     lastError: null
   };
 }
@@ -1610,6 +1635,8 @@ function goScreen(id){
   document.getElementById(id).classList.add('active');
   if(id==='screen-home') renderHome();
   if(id==='screen-config') renderConfig();
+  if(id==='screen-planta') requestAnimationFrame(actualizarVisibilidadTabbarPlanta);
+  else document.querySelector('#screen-planta .tabbar-planta')?.classList.remove('visible');
 
   const cfg = TOPBAR_CONFIG[id];
   document.getElementById('topbarHome').style.display = cfg ? 'none' : 'flex';
@@ -1978,12 +2005,22 @@ function pintarGpsPlanta(tipo, texto){
 }
 function capturarGPSPlanta(silencioso){
   if(esSoloLectura()) return;
+  const i = sesionActual.currentStation;
+  // Una vez que una evaluación ya tiene su ubicación GPS capturada, ese punto queda FIJO:
+  // el técnico se mueve por el campo mientras hace el conteo, y si el chip se pudiera volver
+  // a tocar sin más, la posición actual (ya lejos del punto de partida real) pisaría la
+  // coordenada original. Por eso, un toque manual sobre una ubicación ya capturada exige
+  // confirmación explícita antes de reemplazarla; la captura automática/silenciosa (al
+  // entrar por primera vez a esta evaluación) nunca pisa un valor existente.
+  if(!silencioso && sesionActual.gpsPorPlanta[i]){
+    const confirmar = confirm('Esta evaluación ya tiene una ubicación GPS capturada (el punto de partida). ¿Deseas reemplazarla por tu posición actual?');
+    if(!confirmar) return;
+  }
   if(!navigator.geolocation){
     pintarGpsPlanta('error', 'GPS no disponible');
     if(!silencioso) toast('GPS no disponible en este dispositivo', true);
     return;
   }
-  const i = sesionActual.currentStation;
   pintarGpsPlanta('capturando', 'Capturando…');
   navigator.geolocation.getCurrentPosition(pos=>{
     const {latitude:lat, longitude:lng, accuracy:acc} = pos.coords;
@@ -2149,9 +2186,25 @@ function renderPlanta(){
       filas.appendChild(fila);
     });
     det.appendChild(filas);
+    det.addEventListener('toggle', ()=> requestAnimationFrame(actualizarVisibilidadTabbarPlanta));
     cont.appendChild(det);
   });
+  requestAnimationFrame(actualizarVisibilidadTabbarPlanta);
 }
+/** Muestra la barra fija Inicio/Borrador/Resumen SOLO cuando el usuario realmente llegó al
+ *  final de la evaluación (el sentinel #plantaScrollSentinel, ubicado justo antes de la
+ *  barra, entra en el viewport). Mientras queden campos por debajo sin ver, la barra
+ *  permanece oculta para no taparlos ni sugerir falsamente que ya se llegó al final. */
+function actualizarVisibilidadTabbarPlanta(){
+  if(!document.getElementById('screen-planta')?.classList.contains('active')) return;
+  const sentinel = document.getElementById('plantaScrollSentinel');
+  const tabbar = document.querySelector('#screen-planta .tabbar-planta');
+  if(!sentinel || !tabbar) return;
+  const visible = sentinel.getBoundingClientRect().top < window.innerHeight - 4;
+  tabbar.classList.toggle('visible', visible);
+}
+window.addEventListener('scroll', actualizarVisibilidadTabbarPlanta, {passive:true});
+window.addEventListener('resize', actualizarVisibilidadTabbarPlanta);
 function onCampoPlanta(input, idr){
   if(esSoloLectura()) return;
   const i = sesionActual.currentStation;
@@ -2416,6 +2469,21 @@ function renderResumen(readOnly){
   document.querySelectorAll('#screen-resumen .firma-canvas').forEach(c=>{ c.style.opacity = readOnly ? '0.7' : '1'; c.style.touchAction = readOnly ? 'auto' : 'none'; });
   document.querySelectorAll('#screen-resumen .firma-label button').forEach(b=> b.style.display = readOnly ? 'none' : '');
   restaurarFirmas();
+  actualizarHintCompartirPDF();
+}
+/** Refleja junto al botón "Guardar y enviar" si el PDF del reporte ya se compartió (requisito
+ *  antes de poder enviarlo a Odoo) o si todavía falta — así el técnico ve el estado sin
+ *  necesidad de tocar el botón y toparse con el aviso bloqueante. */
+function actualizarHintCompartirPDF(){
+  const hint = document.getElementById('pdfCompartidoHint');
+  if(!hint || !sesionActual) return;
+  if(sesionActual.pdfCompartido){
+    hint.textContent = '✅ PDF compartido';
+    hint.className = 'hint-compartir-pdf listo';
+  } else {
+    hint.textContent = '⚠️ Comparte el PDF antes de guardar y enviar';
+    hint.className = 'hint-compartir-pdf pendiente';
+  }
 }
 
 /* =========================================================================
@@ -3202,6 +3270,9 @@ async function compartirPDF(){
     if(navigator.canShare && navigator.canShare({ files:[file] })){
       try{
         await navigator.share({ files:[file], title:'Hoja de Recuentos', text: folio });
+        sesionActual.pdfCompartido = true;
+        await idbPutSession(sesionActual);
+        actualizarHintCompartirPDF();
         return;
       }catch(e){
         if(e.name === 'AbortError') return; // el técnico canceló el panel de compartir
@@ -3213,6 +3284,9 @@ async function compartirPDF(){
     a.href = url; a.download = `${folio}.pdf`;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 8000);
+    sesionActual.pdfCompartido = true; // este navegador no soporta compartir archivos — se cuenta la descarga como respaldo cumplido
+    await idbPutSession(sesionActual);
+    actualizarHintCompartirPDF();
     toast('Este navegador no permite compartir el archivo directo — se descargó el PDF, compártelo desde tus Descargas.');
   }catch(e){
     toast('No se pudo generar el PDF: '+e.message, true);
@@ -3224,6 +3298,10 @@ async function guardarEvaluacionFinal(){
   const vacias = estacionesVacias();
   if(vacias.length>0){
     alert(`No se puede guardar/enviar el reporte: la${vacias.length===1?'':'s'} evaluación${vacias.length===1?'':'es'} ${vacias.join(', ')} ${vacias.length===1?'está':'están'} completamente en 0. Completa al menos un dato en cada evaluación, o quítala si se agregó por error.`);
+    return;
+  }
+  if(!sesionActual.pdfCompartido){
+    alert('Antes de guardar y enviar, comparte el PDF del reporte con el botón "📤 Compartir PDF (WhatsApp, correo…)" — así queda una copia entregada antes de sincronizarlo a INFOAGRO ODOO.');
     return;
   }
   sesionActual.status = 'pending_sync';
