@@ -712,9 +712,8 @@ const RANGO_DIAS_LLUVIA = 10;
 // Es un modelo chico (467 registros) así que se carga completo de una sola vez.
 async function cargarPadres(){
   try{
-    const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&limit=1000`);
-    const j = await r.json();
-    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const j = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_recuentos_estado_del&limit=1000`);
+    const recs = filasDe(j);
     const mapa = {};
     recs.forEach(r=>{
       mapa[r.id] = {
@@ -734,9 +733,8 @@ async function cargarOdoo(){
   try{
     let pagina = 0, totalEsperado = null;
     while(pagina < MAX_PAGINAS){
-      const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del_line_715c7&limit=1000&offset=${pagina*1000}`);
-      const j = await r.json();
-      let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+      const j = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_recuentos_estado_del_line_715c7&limit=1000&offset=${pagina*1000}`);
+      let recs = filasDe(j);
       if(j && typeof j.total === 'number') totalEsperado = j.total;
       if(!recs.length) break;
       recs.forEach(r=>{
@@ -832,9 +830,8 @@ function lluviaCercaDe(finca, fechaCentralStr, rango){
 }
 async function cargarFungicidas(){
   try{
-    const r = await fetch(`${WORKER}/query?base=info&model=x_orden_campo_line_662d7`);
-    const j = await r.json();
-    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const j = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_orden_campo_line_662d7&limit=8000`);
+    let recs = filasDe(j);
     const mapa = {};
     let total = 0;
     recs.forEach(r=>{
@@ -870,9 +867,8 @@ let LLUVIA_POR_FINCA_FECHA = {}; // "finca|YYYY-MM-DD" -> {mm, muestras}
 function claveLluvia(finca, fecha){ return `${normTxt(finca)}|${fecha}`; }
 async function cargarPluviosidad(){
   try{
-    const r = await fetch(`${WORKER}/query?base=info&model=x_pluviosidad`);
-    const j = await r.json();
-    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const j = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_pluviosidad&limit=8000`);
+    let recs = filasDe(j);
     const acumulado = {}; // clave -> {suma, n}
     recs.forEach(r=>{
       const finca = Array.isArray(r.x_studio_finca) ? r.x_studio_finca[1] : r.x_studio_finca;
@@ -1064,9 +1060,8 @@ let incluirFincasHistoricas = true; // acompaña a mostrarHistorico, que arranca
 async function cargarFincasConSiembra(){
   try{
     const domain = encodeURIComponent(JSON.stringify([['x_studio_activiadad_realizada.x_name','=','Siembra']]));
-    const r = await fetch(`${WORKER}/query?base=info&model=x_orden_campo_line_b660b&fields=x_studio_finca,x_studio_ciclo&domain=${domain}&limit=5000`);
-    const j = await r.json();
-    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const j = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_orden_campo_line_b660b&fields=x_studio_finca,x_studio_ciclo&domain=${domain}&limit=5000`);
+    let recs = filasDe(j);
     const mapa = {};
     recs.forEach(rec=>{
       const finca = Array.isArray(rec.x_studio_finca) ? rec.x_studio_finca[1] : rec.x_studio_finca;
@@ -1090,9 +1085,8 @@ async function cargarCicloAbiertoOdoo(){
     const domain = encodeURIComponent(JSON.stringify([
       ['x_studio_estado', '=', 'Abierto'], ['x_studio_cultivo.x_name', '=', 'Mani']
     ]));
-    const r = await fetch(`${WORKER}/query?base=info&model=x_cicloagricola&fields=id,x_name&domain=${domain}&limit=10`);
-    const j = await r.json();
-    let recs = Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
+    const r = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_cicloagricola&fields=id,x_name&domain=${domain}&limit=10`);
+    const recs = filasDe(r);
     const nombres = recs.map(rec => rec.x_name).filter(Boolean);
     if(!nombres.length) return null;
     // Si por algún motivo hay más de un ciclo de Maní Abierto a la vez, se queda con
@@ -2709,6 +2703,49 @@ function filasDe(j){
   return Array.isArray(j) ? j : (j.result ? (Array.isArray(j.result) ? j.result : j.result.records || []) : (j.records || []));
 }
 
+// fetch() con límite de tiempo — usado para las llamadas de fotos adjuntas, para que
+// una consulta puntual que se quede colgada (red lenta, imagen enorme, Worker/Odoo
+// sin responder) no bloquee el resto para siempre; a los `ms` cancela y tira un
+// error claro en vez de esperar indefinidamente.
+async function fetchConTimeout(url, ms=25000){
+  const control = new AbortController();
+  const t = setTimeout(()=>control.abort(), ms);
+  try{
+    return await fetch(url, { signal: control.signal });
+  }catch(e){
+    if(e.name === 'AbortError') throw new Error('tiempo de espera agotado');
+    throw e;
+  }finally{
+    clearTimeout(t);
+  }
+}
+
+// fetch() + parseo JSON con REINTENTOS automáticos (backoff corto) — el Worker
+// (weathered-recipe-d18c) devuelve 502 cuando odooRPC() falla, algo que pasa cada
+// tanto cuando varias consultas le pegan a Odoo AL MISMO TIEMPO (ej. al abrir la
+// pantalla, cargarTodo() dispara 5 en paralelo) y Odoo se satura puntualmente. Antes
+// el código no distinguía un 502/{error:...} de "0 registros": lo tomaba como
+// respuesta vacía y cortaba en silencio (por eso a veces "0 registros en vivo" sin
+// ningún aviso). Ahora se reintenta un par de veces con una pausa corta antes de
+// rendirse — la mayoría de estos 502 son transitorios y el segundo o tercer intento
+// sí responde bien.
+async function fetchJsonConReintentos(url, intentos=3){
+  let ultimoError;
+  for(let i=0; i<intentos; i++){
+    try{
+      const r = await fetchConTimeout(url);
+      const j = await r.json();
+      if(j && j.error) throw new Error(j.error);
+      if(!r.ok) throw new Error(`HTTP ${r.status}`);
+      return j;
+    }catch(e){
+      ultimoError = e;
+      if(i < intentos-1) await new Promise(res=>setTimeout(res, 600*(i+1))); // 600ms, 1200ms...
+    }
+  }
+  throw ultimoError;
+}
+
 // Candidatos típicos que usa Odoo Studio para el campo de "Etapas" (kanban stage) de
 // un modelo custom — se prueba cada uno con una consulta liviana (1 registro) y se
 // usa el primero que responda sin error y realmente tenga ese campo. Si ninguno
@@ -3076,8 +3113,10 @@ async function abrirModalFotos(){
   body.innerHTML = `<div class="detalle-estado-msg">Cargando fotos…</div>`;
 
   try{
-    const fotos = await obtenerFotosAdjuntas(id);
     const contador = document.getElementById('modalFotosContador');
+    const fotos = await obtenerFotosAdjuntas(id, (listas, total)=>{
+      if(contador) contador.textContent = `Cargando ${listas} / ${total}…`;
+    });
     if(contador) contador.textContent = `${fotos.length} foto${fotos.length!==1?'s':''}`;
 
     if(!fotos.length){
@@ -3194,7 +3233,9 @@ async function reimprimirReporte(id, folio, btnEl){
       // mismo PDF (un solo archivo, con mapa/firmas del original + fotos al final).
       try{
         btn.textContent = '⏳ Revisando fotos adjuntas…';
-        const fotos = await obtenerFotosAdjuntas(id);
+        const fotos = await obtenerFotosAdjuntas(id, (listas, total)=>{
+          if(total) btn.textContent = `⏳ Descargando fotos (${listas}/${total})…`;
+        });
         if(fotos.length){
           btn.textContent = '⏳ Uniendo fotos al PDF…';
           const bytesFusionados = await fusionarPdfConFotos(bytesOriginal, fotos, folio);
@@ -3206,7 +3247,9 @@ async function reimprimirReporte(id, folio, btnEl){
         // un PDF aparte para que de todas formas queden accesibles.
         console.warn('No se pudieron unir las fotos al PDF original, se descargan por separado:', e.message);
         try{
-          const fotos = await obtenerFotosAdjuntas(id);
+          const fotos = await obtenerFotosAdjuntas(id, (listas, total)=>{
+            if(total) btn.textContent = `⏳ Descargando fotos (${listas}/${total})…`;
+          });
           if(fotos.length){
             const { jsPDF } = window.jspdf;
             const docFotos = new jsPDF({ unit:'mm', format:'letter', orientation:'portrait' });
@@ -3226,7 +3269,7 @@ async function reimprimirReporte(id, folio, btnEl){
 
     // 2) Sin adjunto original: PDF de respaldo con los datos crudos de Odoo (sin firmas).
     btn.textContent = '⏳ No hay PDF original — generando uno de respaldo…';
-    await generarPdfRespaldoReporte(id, folio);
+    await generarPdfRespaldoReporte(id, folio, btn);
   }catch(e){
     console.error('Error reimprimiendo reporte:', e);
     alert('No se pudo reimprimir el reporte: '+e.message);
@@ -3235,7 +3278,7 @@ async function reimprimirReporte(id, folio, btnEl){
   }
 }
 
-async function generarPdfRespaldoReporte(id, folio){
+async function generarPdfRespaldoReporte(id, folio, btn){
   const datos = DETALLE_REPORTE_ACTUAL;
   if(!datos || !datos.header) throw new Error('No hay datos cargados de este reporte.');
   const h = datos.header, lineas = datos.lineas || [];
@@ -3324,7 +3367,9 @@ async function generarPdfRespaldoReporte(id, folio){
 
   // Fotos adjuntas en Odoo (ir.attachment), ordenadas de dos en dos.
   try{
-    const fotos = await obtenerFotosAdjuntas(id);
+    const fotos = await obtenerFotosAdjuntas(id, (listas, total)=>{
+      if(btn && total) btn.textContent = `⏳ Descargando fotos (${listas}/${total})…`;
+    });
     if(fotos.length){
       doc.addPage();
       dibujarGridFotos(doc, fotos, folio, marginX, pageW, doc.internal.pageSize.getHeight());
@@ -3380,17 +3425,14 @@ function dibujarMapaVectorialSimple(doc, puntos, folio, marginX, pageW){
   doc.text(nota, marginX, y);
 }
 
-// Trae las fotos adjuntas en Odoo (ir.attachment tipo imagen) para un recuento,
-// ya con el binario en base64 listo para insertarse en un PDF con doc.addImage().
-// Se usa tanto en el PDF de respaldo como en el complementario de fotos que se
-// genera cuando el PDF original sí existe pero fue subido antes de que la app
-// empezara a incrustar las fotos dentro del propio PDF.
-async function obtenerFotosAdjuntas(id){
+// Trae solo la METADATA liviana de las fotos adjuntas (id + name, SIN el binario) —
+// rápido porque no arrastra los megabytes de cada imagen en la respuesta.
+async function obtenerFotosMeta(id){
   const domainFotos = encodeURIComponent(JSON.stringify([
     ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','like','image/']
   ]));
-  const rF = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id,name,datas&domain=${domainFotos}&limit=40`);
-  const fotos = filasDe(await rF.json()).filter(f=>f.datas);
+  const rF = await fetchConTimeout(`${WORKER}/query?base=info&model=ir.attachment&fields=id,name&domain=${domainFotos}&limit=40`);
+  const fotos = filasDe(await rF.json());
   // El nombre de cada foto sigue el patrón "E<estación> - <fecha>.jpg" (ver
   // handleUploadFoto en el Worker) — se usa para ordenarlas por número de estación.
   fotos.sort((a,b)=>{
@@ -3399,6 +3441,44 @@ async function obtenerFotosAdjuntas(id){
     return ea - eb;
   });
   return fotos;
+}
+
+// Trae el binario (campo 'datas', base64) de UN adjunto puntual por su ID.
+async function obtenerFotoDatas(attachmentId){
+  const domain = encodeURIComponent(JSON.stringify([['id','=',attachmentId]]));
+  const r = await fetchConTimeout(`${WORKER}/query?base=info&model=ir.attachment&fields=datas&domain=${domain}&limit=1`);
+  const filas = filasDe(await r.json());
+  return filas[0]?.datas || null;
+}
+
+// Trae metadata + binario de TODAS las fotos de un recuento, ya con el binario en
+// base64 listo para insertarse en un PDF con doc.addImage(). Se usa tanto en el PDF
+// de respaldo como en el complementario de fotos que se genera cuando el PDF
+// original sí existe pero fue subido antes de que la app empezara a incrustar las
+// fotos dentro del propio PDF.
+//
+// IMPORTANTE: antes esto pedía el 'datas' (binario base64) de las 12+ fotos juntas
+// en UN SOLO request — con fotos de celular de varios MB cada una, esa respuesta se
+// volvía enorme y el Worker/Odoo tardaban una eternidad o directamente no
+// respondían (era la causa de que el modal de fotos y "Reimprimir reporte" se
+// quedaran colgados en "Cargando…"). Ahora primero se trae la lista liviana
+// (obtenerFotosMeta) y recién después el binario de CADA foto por separado — en
+// paralelo, pero cada request pesa lo de una sola imagen, no la suma de todas. Si
+// una foto puntual falla, no tumba a las demás (se descarta y sigue). onProgress(i,
+// total) es opcional, para ir mostrando un contador mientras van llegando.
+async function obtenerFotosAdjuntas(id, onProgress){
+  const meta = await obtenerFotosMeta(id);
+  if(!meta.length) return [];
+  let listas = 0;
+  const conDatos = await Promise.all(meta.map(async (f)=>{
+    let datas = null;
+    try{ datas = await obtenerFotoDatas(f.id); }
+    catch(e){ console.warn(`No se pudo traer la foto "${f.name||f.id}":`, e.message); }
+    listas++;
+    if(onProgress) onProgress(listas, meta.length);
+    return { ...f, datas };
+  }));
+  return conDatos.filter(f=>f.datas);
 }
 
 // Dibuja una cuadrícula de 2 columnas con las fotos ya traídas (obtenerFotosAdjuntas),
