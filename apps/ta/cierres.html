@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Cierres</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js?v=4"></script>
+<link rel="stylesheet" href="core.css?v=2">
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --color-alerta:#D97706; --color-alerta-suave:#FEF3C7;
+    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;}
+  .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .barra-superior h1{font-size:15px; margin:0;}
+  .barra-botones{display:flex; gap:8px;}
+  .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
+  .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .btn-chico{background:#fff; border:1px solid var(--color-borde); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--color-texto);}
+  .link-volver{background:none; border:none; color:var(--color-primario-oscuro); font-size:13px; cursor:pointer; padding:0; text-decoration:underline; margin-bottom:10px;}
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px; margin-bottom:14px;}
+  .cargando, .error-carga{text-align:center; padding:40px; color:var(--color-texto-suave);}
+  .campo{margin-bottom:14px;}
+  label{display:block; font-size:11.5px; color:var(--color-texto-suave); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+  input, select, textarea{width:100%; border:1px solid var(--color-borde); border-radius:7px; padding:8px 10px; font-size:13.5px; background:#fff; color:var(--color-texto); font-family:inherit;}
+  textarea{resize:vertical; min-height:60px;}
+  .fila{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .fila-3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px;}
+  .buscador{position:relative;}
+  .buscador-vacio{padding:10px; font-size:12.5px; color:var(--color-texto-suave); text-align:center;}
+  .comparativo{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin-bottom:16px;}
+  .caja-comparativo{background:#F8FAFC; border-radius:8px; padding:14px; text-align:center;}
+  .caja-comparativo .etiqueta{font-size:10.5px; text-transform:uppercase; color:var(--color-texto-suave); letter-spacing:.03em; margin-bottom:4px;}
+  .caja-comparativo .valor{font-size:19px; font-weight:700;}
+  .caja-comparativo.positiva .valor{color:var(--color-primario-oscuro);}
+  .caja-comparativo.negativa .valor{color:var(--color-peligro);}
+  .checklist{display:flex; flex-direction:column; gap:6px; margin-bottom:16px;}
+  .checklist-item{display:flex; align-items:center; gap:8px; font-size:12.5px; padding:6px 8px; border-radius:6px;}
+  .checklist-item.ok{color:var(--color-primario-oscuro);}
+  .checklist-item.falta{color:var(--color-alerta);}
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .badge-estado{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:10px; white-space:nowrap; background:#D1FAE5; color:#15803D;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v1</div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect, useMemo } = React;
+
+function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+function moneda(v){ return "$" + num(v).toFixed(2); }
+
+/* ------------------------------------------------------------
+   Elegir orden para cerrar (tabla completa, no buscador ciego)
+   ------------------------------------------------------------ */
+function SelectorOrden({ onSeleccionar }){
+  const [ordenes, setOrdenes] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    tallerQuery("x_taller_orden", [
+      "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado","x_studio_fecha_recepcion",
+    ], [["x_studio_estado","not in",["Cerrada","Cancelada"]]], 1000)
+      .then(setOrdenes)
+      .catch(e => setError("No se pudieron cargar las órdenes: " + e.message));
+  }, []);
+
+  const columnas = [
+    { clave: "x_name", titulo: "Folio" },
+    { clave: "x_studio_cliente_id", titulo: "Cliente" },
+    { clave: "x_studio_equipo_id", titulo: "Equipo" },
+    { clave: "x_studio_estado", titulo: "Estado" },
+    { clave: "x_studio_fecha_recepcion", titulo: "Recepción", formatear: formatearFecha },
+  ];
+
+  if (error) return h("div", { className: "error-carga" }, error);
+  if (!ordenes) return h("div", { className: "buscador-vacio" }, "Cargando órdenes...");
+
+  return TablaInfoAgro(h, { columnas, filas: ordenes, onFilaClick: onSeleccionar });
+}
+
+/* ------------------------------------------------------------
+   Formulario de cierre para una orden
+   ------------------------------------------------------------ */
+function FormularioCierre({ orden, onVolver, onCreado }){
+  const [presupuesto, setPresupuesto] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [yaExiste, setYaExiste] = useState(false);
+
+  const [totalPresupuestado, setTotalPresupuestado] = useState(0);
+  const [totalCostoReal, setTotalCostoReal] = useState(0);
+  const [diagnosticoFinal, setDiagnosticoFinal] = useState("");
+  const [trabajoRealizado, setTrabajoRealizado] = useState("");
+  const [pruebaRealizada, setPruebaRealizada] = useState("");
+  const [resultadoPrueba, setResultadoPrueba] = useState("Aprobado");
+  const [causaPrincipal, setCausaPrincipal] = useState("");
+  const [horometroSalida, setHorometroSalida] = useState("");
+  const [kilometrajeSalida, setKilometrajeSalida] = useState("");
+  const [aceptadoPorCliente, setAceptadoPorCliente] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  useEffect(() => { cargar(); }, [orden.id]);
+
+  async function cargar(){
+    setCargando(true); setError("");
+    try {
+      const [presRows, costoRealRows, cierresRows] = await Promise.all([
+        tallerQuery("x_taller_presupuesto", ["id","x_name","x_studio_version","x_studio_estado"],
+          [["x_studio_orden_id","=",orden.id],["x_studio_estado","=","Aprobado"]], 10, 0),
+        tallerQuery("x_costo_real_detalle", ["id","x_studio_total_costo_real"], [["x_studio_orden_id","=",orden.id]], 500),
+        tallerQuery("x_taller_cierre", ["id"], [["x_studio_orden_id","=",orden.id]], 1),
+      ]);
+      if (cierresRows.length) { setYaExiste(true); setCargando(false); return; }
+
+      if (presRows.length) {
+        const masReciente = presRows.sort((a,b) => b.x_studio_version - a.x_studio_version)[0];
+        setPresupuesto(masReciente);
+        const detalleLineas = await tallerQuery("x_presupuesto_detalle", ["x_studio_total_costo_presupuestado"],
+          [["x_studio_presupuesto_id","=",masReciente.id]], 500);
+        const total = detalleLineas.reduce((s,l) => s + num(l.x_studio_total_costo_presupuestado), 0);
+        setTotalPresupuestado(total);
+      }
+      const totalReal = costoRealRows.reduce((s,l) => s + num(l.x_studio_total_costo_real), 0);
+      setTotalCostoReal(totalReal);
+    } catch(e) {
+      setError("Error al cargar: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  const variacion = totalCostoReal - totalPresupuestado;
+  const porcentajeVariacion = totalPresupuestado > 0 ? (variacion / totalPresupuestado) * 100 : 0;
+
+  const checklist = [
+    { texto: "Diagnóstico final registrado", ok: diagnosticoFinal.trim().length > 0 },
+    { texto: "Trabajo realizado documentado", ok: trabajoRealizado.trim().length > 0 },
+    { texto: "Equipo probado", ok: pruebaRealizada.trim().length > 0 },
+    { texto: "Horómetro/kilometraje de salida registrado", ok: horometroSalida !== "" },
+    { texto: "Aceptación del cliente registrada", ok: aceptadoPorCliente.trim().length > 0 },
+    { texto: "Causa de la variación explicada", ok: Math.abs(porcentajeVariacion) < 5 || causaPrincipal !== "" },
+  ];
+  const listoParaCerrar = checklist.every(c => c.ok);
+
+  async function confirmarCierre(){
+    if (!listoParaCerrar){ setError("Completá el checklist antes de cerrar."); return; }
+    setGuardando(true); setError("");
+    try {
+      const nombreCierre = orden.x_name + "-CIERRE";
+      const resp = await tallerCrear("x_taller_cierre", {
+        x_name: nombreCierre,
+        x_studio_orden_id: orden.id,
+        x_studio_total_presupuestado: totalPresupuestado,
+        x_studio_total_costo_real: totalCostoReal,
+        x_studio_variacion_total: variacion,
+        x_studio_porcentaje_variacion: porcentajeVariacion,
+        x_studio_causa_principal: causaPrincipal || false,
+        x_studio_diagnostico_final: diagnosticoFinal,
+        x_studio_trabajo_realizado: trabajoRealizado,
+        x_studio_prueba_realizada: pruebaRealizada,
+        x_studio_resultado_prueba: resultadoPrueba,
+        x_studio_fecha_cierre: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+        x_studio_aceptado_por_cliente: aceptadoPorCliente,
+        x_studio_fecha_aceptacion_cliente: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+      });
+      if (!resp.ok) { setError(resp.error || "No se pudo crear el cierre."); setGuardando(false); return; }
+
+      const valoresOrden = { x_studio_estado: "Cerrada" };
+      if (horometroSalida !== "") valoresOrden.x_studio_horometro_salida = num(horometroSalida);
+      if (kilometrajeSalida !== "") valoresOrden.x_studio_kilometraje_salida = num(kilometrajeSalida);
+      await tallerActualizar("x_taller_orden", orden.id, valoresOrden);
+
+      onCreado();
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  if (cargando) return h("div", { className: "panel cargando" }, "Cargando datos de la orden...");
+
+  if (yaExiste) {
+    return h("div", null,
+      h("button", { className: "link-volver", onClick: onVolver }, "← Volver"),
+      h("div", { className: "panel error-carga" }, "Esta orden ya tiene un cierre registrado.")
+    );
+  }
+
+  return h("div", null,
+    h("button", { className: "link-volver", onClick: onVolver }, "← Volver"),
+
+    h("div", { className: "panel" },
+      h("h2", { style: { margin:"0 0 4px", fontSize:"16px" } }, "Cerrar " + orden.x_name),
+      h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"16px" } },
+        (Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "") + " · " +
+        (Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "") +
+        (presupuesto ? " · Presupuesto: " + presupuesto.x_name : " · ⚠️ Sin presupuesto aprobado encontrado")
+      ),
+
+      h("div", { className: "comparativo" },
+        h("div", { className: "caja-comparativo" },
+          h("div", { className: "etiqueta" }, "Presupuestado"),
+          h("div", { className: "valor" }, moneda(totalPresupuestado))
+        ),
+        h("div", { className: "caja-comparativo" },
+          h("div", { className: "etiqueta" }, "Costo real"),
+          h("input", { type: "number", step: "0.01", value: totalCostoReal, onChange: e => setTotalCostoReal(num(e.target.value)),
+            style: { textAlign:"center", fontSize:"16px", fontWeight:"700", border:"1px solid var(--color-borde)" } })
+        ),
+        h("div", { className: "caja-comparativo " + (variacion <= 0 ? "positiva" : "negativa") },
+          h("div", { className: "etiqueta" }, "Variación"),
+          h("div", { className: "valor" }, (variacion >= 0 ? "+" : "") + moneda(variacion) + " (" + porcentajeVariacion.toFixed(1) + "%)")
+        )
+      ),
+
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Horómetro de salida"),
+          h("input", { type: "number", step: "0.1", value: horometroSalida, onChange: e => setHorometroSalida(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Kilometraje de salida"),
+          h("input", { type: "number", step: "1", value: kilometrajeSalida, onChange: e => setKilometrajeSalida(e.target.value) })
+        )
+      ),
+
+      h("div", { className: "campo" },
+        h("label", null, "Diagnóstico final"),
+        h("textarea", { value: diagnosticoFinal, onChange: e => setDiagnosticoFinal(e.target.value) })
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Trabajo realizado"),
+        h("textarea", { value: trabajoRealizado, onChange: e => setTrabajoRealizado(e.target.value) })
+      ),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Prueba realizada"),
+          h("input", { type: "text", value: pruebaRealizada, onChange: e => setPruebaRealizada(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Resultado de la prueba"),
+          h("select", { value: resultadoPrueba, onChange: e => setResultadoPrueba(e.target.value) },
+            h("option", { value: "Aprobado" }, "Aprobado"),
+            h("option", { value: "No aprobado" }, "No aprobado")
+          )
+        )
+      ),
+
+      Math.abs(porcentajeVariacion) >= 5 && h("div", { className: "campo" },
+        h("label", null, "Causa principal de la variación"),
+        h("select", { value: causaPrincipal, onChange: e => setCausaPrincipal(e.target.value) },
+          h("option", { value: "" }, "— Elegí una causa —"),
+          INFOTALLER_CAUSAS_DESVIACION.map(c => h("option", { key: c, value: c }, c))
+        )
+      ),
+
+      h("div", { className: "campo", style: { marginBottom: "0" } },
+        h("label", null, "Aceptado por (cliente)"),
+        h("input", { type: "text", value: aceptadoPorCliente, onChange: e => setAceptadoPorCliente(e.target.value) })
+      ),
+
+      h("hr", { style: { border:"none", borderTop:"1px solid var(--color-borde)", margin:"18px 0 12px" } }),
+
+      h("div", { className: "checklist" },
+        checklist.map((c,i) => h("div", { key: i, className: "checklist-item " + (c.ok ? "ok" : "falta") },
+          c.ok ? "✅" : "⬜", " ", c.texto
+        ))
+      ),
+
+      error && h("div", { className: "mensaje-error" }, error),
+
+      h("button", { className: "btn-primario", onClick: confirmarCierre, disabled: guardando || !listoParaCerrar },
+        guardando ? "Cerrando..." : "🔒 Confirmar cierre de la orden")
+    )
+  );
+}
+
+/* ------------------------------------------------------------
+   Pantalla principal
+   ------------------------------------------------------------ */
+function Cierres(){
+  const [sesion, setSesion] = useState(null);
+  const [cierres, setCierres] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [modalSelector, setModalSelector] = useState(false);
+  const [ordenParaCerrar, setOrdenParaCerrar] = useState(null);
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) { setSesion(s); cargarLista(); }
+  }, []);
+
+  async function cargarLista(){
+    setCargando(true); setErrorCarga("");
+    try {
+      const filas = await tallerQuery("x_taller_cierre", [
+        "id","x_name","x_studio_orden_id","x_studio_total_presupuestado","x_studio_total_costo_real",
+        "x_studio_variacion_total","x_studio_porcentaje_variacion","x_studio_resultado_prueba","x_studio_fecha_cierre",
+      ], [], 1000);
+      setCierres(filas);
+    } catch(e) {
+      setErrorCarga("No se pudieron cargar los cierres: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  if (!sesion) return null;
+
+  if (ordenParaCerrar) {
+    return h(FormularioCierre, {
+      orden: ordenParaCerrar,
+      onVolver: () => setOrdenParaCerrar(null),
+      onCreado: () => { setOrdenParaCerrar(null); cargarLista(); },
+    });
+  }
+
+  const columnas = [
+    { clave: "x_name", titulo: "Cierre" },
+    { clave: "x_studio_orden_id", titulo: "Orden" },
+    { clave: "x_studio_total_presupuestado", titulo: "Presupuestado", formatear: moneda },
+    { clave: "x_studio_total_costo_real", titulo: "Costo Real", formatear: moneda },
+    { clave: "x_studio_porcentaje_variacion", titulo: "% Variación", formatear: v => num(v).toFixed(1) + "%" },
+    { clave: "x_studio_resultado_prueba", titulo: "Prueba" },
+    { clave: "x_studio_fecha_cierre", titulo: "Fecha", formatear: formatearFecha },
+  ];
+
+  return h("div", null,
+    h("div", { className: "barra-superior" },
+      h("h1", null, "✅ Cierres"),
+      h("div", { className: "barra-botones" },
+        h("button", { className: "btn-refrescar", onClick: cargarLista }, "↻ Refrescar"),
+        h("button", { className: "btn-primario", onClick: () => setModalSelector(true) }, "+ Cerrar una Orden")
+      )
+    ),
+    h("div", { className: "panel" },
+      cargando
+        ? h("div", { className: "cargando" }, "Cargando...")
+        : errorCarga
+          ? h("div", { className: "error-carga" }, errorCarga)
+          : cierres.length === 0
+            ? h("div", { className: "error-carga" }, "Todavía no hay cierres registrados.")
+            : TablaInfoAgro(h, { columnas, filas: cierres })
+    ),
+
+    modalSelector && h("div", { className: "modal-fondo", style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: () => setModalSelector(false) },
+      h("div", { style: { background:"#fff", borderRadius:"12px", padding:"22px", width:"100%", maxWidth:"680px", maxHeight:"85vh", overflowY:"auto", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
+        h("h3", { style: { margin:"0 0 14px", fontSize:"15px" } }, "Elegí la orden a cerrar"),
+        h(SelectorOrden, { onSeleccionar: o => { setModalSelector(false); setOrdenParaCerrar(o); } }),
+        h("div", { style: { display:"flex", justifyContent:"flex-end", marginTop:"14px" } },
+          h("button", { className: "btn-secundario", onClick: () => setModalSelector(false) }, "Cancelar")
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(Cierres));
+</script>
+</body>
+</html>

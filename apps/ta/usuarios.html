@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Usuarios</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js?v=4"></script>
+<link rel="stylesheet" href="core.css?v=2">
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;}
+  .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .barra-superior h1{font-size:15px; margin:0;}
+  .barra-botones{display:flex; gap:8px;}
+  .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
+  .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .btn-peligro{background:#fff; border:1px solid var(--color-peligro); color:var(--color-peligro); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer;}
+  .btn-peligro:hover{background:var(--color-peligro-suave);}
+  .btn-chico{background:#fff; border:1px solid var(--color-borde); border-radius:6px; padding:6px 10px; font-size:12px; cursor:pointer; color:var(--color-texto);}
+  .btn-chico:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px;}
+  .cargando, .error-carga, .acceso-denegado{text-align:center; padding:40px; color:var(--color-texto-suave);}
+  .badge-rol{font-size:10px; font-weight:600; padding:2px 8px; border-radius:10px; background:#E0E7FF; color:#4338CA;}
+  .badge-autoriza{font-size:9.5px; font-weight:700; padding:1px 6px; border-radius:8px; background:#D1FAE5; color:#15803D; margin-left:4px;}
+  .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:440px; box-shadow:0 20px 40px rgba(17,24,39,.25);}
+  .modal h3{margin:0 0 14px; font-size:15px;}
+  .campo{margin-bottom:14px;}
+  label{display:block; font-size:11.5px; color:var(--color-texto-suave); margin-bottom:4px; text-transform:uppercase; letter-spacing:.03em;}
+  input, select{width:100%; border:1px solid var(--color-borde); border-radius:7px; padding:8px 10px; font-size:13.5px; background:#fff; color:var(--color-texto); font-family:inherit;}
+  .fila{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .campo-check{display:flex; align-items:center; gap:8px; margin-bottom:14px;}
+  .campo-check input{width:auto;}
+  .campo-check label{margin:0; text-transform:none; font-size:13px; color:var(--color-texto);}
+  .modal-botones{display:flex; gap:8px; justify-content:space-between; margin-top:18px;}
+  .modal-botones-derecha{display:flex; gap:8px;}
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .separador{border:none; border-top:1px solid var(--color-borde); margin:16px 0;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">usuarios.html — v1</div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect } = React;
+
+function ModalUsuario({ usuario, onCerrar, onGuardado, onDesactivado }){
+  const esEdicion = !!usuario;
+  const [nombre, setNombre] = useState(usuario ? usuario.x_name : "");
+  const [login, setLogin] = useState(usuario ? usuario.x_studio_usuario : "");
+  const [rol, setRol] = useState(usuario ? usuario.x_studio_rol : "Técnico");
+  const [puedeAutorizar, setPuedeAutorizar] = useState(usuario ? !!usuario.x_studio_puede_autorizar : false);
+  const [especialidad, setEspecialidad] = useState(usuario ? usuario.x_studio_especialidad || "" : "");
+  const [correo, setCorreo] = useState(usuario ? usuario.x_studio_correo || "" : "");
+  const [telefono, setTelefono] = useState(usuario ? usuario.x_studio_telefono || "" : "");
+  const [claveNueva, setClaveNueva] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [guardandoClave, setGuardandoClave] = useState(false);
+  const [error, setError] = useState("");
+  const [errorClave, setErrorClave] = useState("");
+  const [exitoClave, setExitoClave] = useState("");
+
+  async function guardar(){
+    if (!nombre.trim()){ setError("El nombre es obligatorio."); return; }
+    if (!login.trim()){ setError("El usuario (login) es obligatorio."); return; }
+    setGuardando(true); setError("");
+    const valores = {
+      x_name: nombre.trim(),
+      x_studio_usuario: login.trim(),
+      x_studio_rol: rol,
+      x_studio_puede_autorizar: puedeAutorizar,
+      x_studio_especialidad: especialidad || false,
+      x_studio_correo: correo || false,
+      x_studio_telefono: telefono || false,
+    };
+    try {
+      const resp = esEdicion
+        ? await tallerActualizar("x_taller_usuario", usuario.id, valores)
+        : await tallerCrear("x_taller_usuario", valores);
+      if (resp.ok) onGuardado();
+      else setError(resp.error || "No se pudo guardar.");
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function fijarClave(){
+    if (claveNueva.length < 6){ setErrorClave("La clave debe tener al menos 6 caracteres."); return; }
+    setGuardandoClave(true); setErrorClave(""); setExitoClave("");
+    try {
+      const resp = await tallerFetch_usuarioClave(usuario.id, claveNueva);
+      if (resp.ok) { setExitoClave("Clave actualizada."); setClaveNueva(""); }
+      else setErrorClave(resp.error || "No se pudo fijar la clave.");
+    } catch(e) {
+      setErrorClave("Error: " + e.message);
+    } finally {
+      setGuardandoClave(false);
+    }
+  }
+
+  async function desactivar(){
+    if (!confirm(`¿Desactivar a "${usuario.x_name}"? No podrá volver a iniciar sesión.`)) return;
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerDesactivar("x_taller_usuario", usuario.id, "Desactivado desde el panel");
+      if (resp.ok) onDesactivado();
+      else setError(resp.error || "No se pudo desactivar.");
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, esEdicion ? "🔐 Editar Usuario" : "🔐 Nuevo Usuario"),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Nombre completo"),
+          h("input", { type: "text", value: nombre, autoFocus: true, onChange: e => setNombre(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Usuario (login)"),
+          h("input", { type: "text", value: login, onChange: e => setLogin(e.target.value) })
+        )
+      ),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Rol"),
+          h("select", { value: rol, onChange: e => setRol(e.target.value) },
+            INFOTALLER_ROLES.map(r => h("option", { key: r, value: r }, r))
+          )
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Especialidad (si es técnico)"),
+          h("select", { value: especialidad, onChange: e => setEspecialidad(e.target.value) },
+            h("option", { value: "" }, "—"),
+            ["Motor","Transmisión","Electricidad","Soldadura","Hidráulica"].map(e => h("option", { key: e, value: e }, e))
+          )
+        )
+      ),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Correo"),
+          h("input", { type: "text", value: correo, onChange: e => setCorreo(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Teléfono"),
+          h("input", { type: "text", value: telefono, onChange: e => setTelefono(e.target.value) })
+        )
+      ),
+      h("div", { className: "campo-check" },
+        h("input", { type: "checkbox", id: "chkAutoriza", checked: puedeAutorizar, onChange: e => setPuedeAutorizar(e.target.checked) }),
+        h("label", { htmlFor: "chkAutoriza" }, "Puede autorizar (presupuestos, cierres, órdenes de cambio)")
+      ),
+
+      error && h("div", { className: "mensaje-error" }, error),
+
+      h("div", { className: "modal-botones" },
+        esEdicion
+          ? h("button", { className: "btn-peligro", onClick: desactivar, disabled: guardando }, "Desactivar")
+          : h("span"),
+        h("div", { className: "modal-botones-derecha" },
+          h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+          h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar")
+        )
+      ),
+
+      esEdicion && h(React.Fragment, null,
+        h("hr", { className: "separador" }),
+        h("div", { className: "campo", style: { marginBottom: "8px" } },
+          h("label", null, "Fijar / resetear clave"),
+          h("input", { type: "text", placeholder: "Clave nueva (mínimo 6 caracteres)", value: claveNueva, onChange: e => setClaveNueva(e.target.value) })
+        ),
+        errorClave && h("div", { className: "mensaje-error" }, errorClave),
+        exitoClave && h("div", { className: "mensaje-exito" }, exitoClave),
+        h("button", { className: "btn-chico", onClick: fijarClave, disabled: guardandoClave || !claveNueva }, guardandoClave ? "Guardando..." : "Fijar clave")
+      )
+    )
+  );
+}
+
+// El Worker tiene una ruta dedicada solo para esto (hashea del lado servidor,
+// nunca se manda ni se guarda texto plano en ningún otro lado).
+async function tallerFetch_usuarioClave(usuario_id, clave_nueva){
+  return tallerFetch("/taller/usuarios/clave", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ usuario_id, clave_nueva }),
+  });
+}
+
+function Usuarios(){
+  const [sesion, setSesion] = useState(null);
+  const [usuarios, setUsuarios] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [usuarioEditando, setUsuarioEditando] = useState(null);
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) { setSesion(s); cargar(); }
+  }, []);
+
+  async function cargar(){
+    setCargando(true); setErrorCarga("");
+    try {
+      const filas = await tallerQuery("x_taller_usuario", [
+        "id","x_name","x_studio_usuario","x_studio_rol","x_studio_puede_autorizar",
+        "x_studio_especialidad","x_studio_correo","x_studio_telefono","x_studio_ultimo_acceso",
+      ], [], 500);
+      setUsuarios(filas);
+    } catch(e) {
+      setErrorCarga("No se pudieron cargar los usuarios: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  if (!sesion) return null;
+
+  if (sesion.rol !== "Administrador") {
+    return h("div", { className: "panel acceso-denegado" }, "🔒 Solo un Administrador puede gestionar usuarios.");
+  }
+
+  function abrirNuevo(){ setUsuarioEditando(null); setModalAbierto(true); }
+  function abrirEditar(u){ setUsuarioEditando(u); setModalAbierto(true); }
+  function cerrarModal(){ setModalAbierto(false); setUsuarioEditando(null); }
+  function alGuardar(){ cerrarModal(); cargar(); }
+
+  const columnas = [
+    { clave: "x_name", titulo: "Nombre" },
+    { clave: "x_studio_usuario", titulo: "Usuario" },
+    { clave: "x_studio_rol", titulo: "Rol" },
+    { clave: "x_studio_puede_autorizar", titulo: "Autoriza", formatear: v => v ? "Sí" : "No" },
+    { clave: "x_studio_especialidad", titulo: "Especialidad" },
+    { clave: "x_studio_ultimo_acceso", titulo: "Último acceso", formatear: formatearFechaHora },
+  ];
+
+  return h("div", null,
+    h("div", { className: "barra-superior" },
+      h("h1", null, "🔐 Usuarios"),
+      h("div", { className: "barra-botones" },
+        h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar"),
+        h("button", { className: "btn-primario", onClick: abrirNuevo }, "+ Nuevo Usuario")
+      )
+    ),
+    h("div", { className: "panel" },
+      cargando
+        ? h("div", { className: "cargando" }, "Cargando usuarios...")
+        : errorCarga
+          ? h("div", { className: "error-carga" }, errorCarga)
+          : TablaInfoAgro(h, { columnas, filas: usuarios || [], onFilaClick: abrirEditar })
+    ),
+    modalAbierto && h(ModalUsuario, {
+      usuario: usuarioEditando,
+      onCerrar: cerrarModal,
+      onGuardado: alGuardar,
+      onDesactivado: alGuardar,
+    })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(Usuarios));
+</script>
+</body>
+</html>
