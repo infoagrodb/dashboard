@@ -1413,14 +1413,14 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
   const GITHUB_FALLBACK = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_AvancesActividades.json";
 
-  // GitHub primero (estable, sync programado) — Worker como respaldo en vivo si el JSON de GitHub falla
+  // Conexión directa a infoagro.odoo.com a través del Worker — ya no pasa primero
+  // por el JSON cacheado de GitHub (que solo se actualiza con el sync programado y
+  // podía quedar desactualizado varias horas). Ahora siempre trae el dato en vivo.
+  // Se conserva el nombre de la función y su firma (githubUrl, workerUrl) para no
+  // tener que tocar cada llamado — el primer parámetro ya no se usa.
   async function fetchGithubPrimero(githubUrl, workerUrl) {
-    try {
-      const r = await fetch(githubUrl + "?cache=" + Date.now());
-      if (r.ok) return await r.json();
-    } catch(e) {}
-    const r2 = await fetch(workerUrl);
-    return r2.json();
+    const r = await fetch(workerUrl, { cache: "no-store" });
+    return r.json();
   }
 
   // Se conserva por compatibilidad — ya no se usa como ruta principal
@@ -1429,7 +1429,14 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   }
 
   async function loadData() {
-    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_b660b";
+    // limit=20000: con conexión directa (sin GitHub de por medio) hay que traer TODO
+    // el modelo en una sola consulta — x_orden_campo_line_662d7 (Insumos) ya tiene
+    // 8,483 registros a ago-2026, así que un límite de 8000 recortaba justo los más
+    // recientes. 20000 da margen para varios ciclos más; si en el futuro esto se
+    // vuelve a quedar corto, revisar acá primero (o pasar a paginar con offset).
+    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_b660b&fields=" + encodeURIComponent(
+      "id,x_orden_campo_id,x_studio_compaia,x_studio_proveedor_del_servicio,x_studio_sector_1,x_studio_ciclo,x_studio_finca,x_studio_lote_agricola,x_studio_activiadad_realizada,x_studio_grupo_de_siembra,x_studio_grupo_de_aplicacion,x_studio_turno,x_studio_avance_mzn,x_studio_fecha"
+    ) + "&limit=20000&_=" + Date.now();
     try {
       const json = await fetchGithubPrimero(GITHUB_FALLBACK, workerUrl);
       
@@ -1497,7 +1504,9 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   let COMBUSTIBLE_LOAD_ERROR = false;
 
   async function loadDataCombustible(esReintento) {
-    const workerUrl = WORKER + "/query?base=info&model=x_despacho_de_combusti_line_59f76";
+    const workerUrl = WORKER + "/query?base=info&model=x_despacho_de_combusti_line_59f76&fields=" + encodeURIComponent(
+      "id,x_studio_reporte,x_studio_compaia,x_studio_sector_1,x_studio_ciclo,x_studio_finca,x_studio_actividad,x_studio_cantidad_ltrs,x_studio_fecha"
+    ) + "&limit=20000&_=" + Date.now();
     try {
       const json = await fetchGithubPrimero(GITHUB_FALLBACK_COMB, workerUrl);
       let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
@@ -1530,7 +1539,9 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
   const GITHUB_FALLBACK_INS = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Insumos_Consumo.json";
 
   async function loadDataInsumos(esReintento) {
-    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_662d7";
+    const workerUrl = WORKER + "/query?base=info&model=x_orden_campo_line_662d7&fields=" + encodeURIComponent(
+      "id,x_orden_campo_id,x_studio_compaia,x_studio_sector_1,x_studio_ciclo,x_studio_keyfincainsumo,x_studio_lote_agricola,x_studio_insumo_utilizado,x_studio_categoria_insumo,x_studio_actividad_realizada,x_studio_um,x_studio_cantidad_gastada,x_studio_area_mzn_aplicada,x_studio_dosis_x_mzn,x_studio_related_field_4fc_1jq37tged,x_studio_productor,x_studio_fecha"
+    ) + "&limit=20000&_=" + Date.now();
     try {
       const json = await fetchGithubPrimero(GITHUB_FALLBACK_INS, workerUrl);
 
@@ -1541,7 +1552,8 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         const ordenArr = Array.isArray(r.x_orden_campo_id) ? r.x_orden_campo_id : [0, "—"];
         const cantidadVal = Number(r.x_studio_cantidad_gastada || 0);
         const areaVal = Number(r.x_studio_area_mzn_aplicada || 0);
-        // El export de GitHub no trae x_studio_dosis_x_mzn — se calcula Cantidad/Área como respaldo
+        // Conexión directa a Odoo — x_studio_dosis_x_mzn siempre viene informado;
+        // el cálculo Cantidad/Área queda solo como respaldo si algún registro puntual no lo trae.
         const dosisVal = (r.x_studio_dosis_x_mzn != null) ? Number(r.x_studio_dosis_x_mzn) : (areaVal > 0 ? cantidadVal / areaVal : 0);
         return {
           id: r.id,
@@ -4044,7 +4056,7 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
 
   function construirCalendarioAplicacion(){
     const todasFilas = filasBaseCA();
-    const filasSiembra = todasFilas.filter(r => normTxtCA(r.actividad)===normTxtCA('Siembra') && r.grupo_aplicacion);
+    const filasSiembra = todasFilas.filter(r => normTxtCA(r.actividad)===normTxtCA('Siembra') && r.grupo_aplicacion && grupoValidoCA(r.grupo_aplicacion));
     if(!filasSiembra.length) return null;
 
     function grupoDe(r){ return r.grupo_aplicacion || 'Sin Grupo'; }
