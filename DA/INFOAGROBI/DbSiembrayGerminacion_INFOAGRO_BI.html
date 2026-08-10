@@ -465,24 +465,6 @@
       <h1>Control de Siembra y Germinación</h1>
       <p>Matriz Pivot Tridimensional • Umbral Mínimo: 55% • Sincronización: <span id="fechaActualizacion">-</span></p>
     </div>
-    <div class="header-action-area">
-      <div class="header-quick-actions">
-        <button class="btn-toggle-filters btn-menu-mobile" id="btnToggleHeaderMenu" onclick="toggleHeaderMenu()">☰ Menú</button>
-      </div>
-      <div class="header-menu-panel collapsed" id="headerMenuPanel">
-        <div class="header-filter-group">
-          <div class="label-container">
-            <label>Compañía</label>
-            <button class="btn-clear-individual" id="btn_clear_compania" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'compania', 'dropCompania', 'optsCompania', 'btn_clear_compania')">
-              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
-            </button>
-          </div>
-          <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
-          <div class="multiselect-options" id="optsCompania"></div>
-        </div>
-        <button class="btn" onclick="cargarDatosDesdeGitHub()">🔄 Actualizar</button>
-      </div>
-    </div>
   </header>
 </div>
 
@@ -514,22 +496,6 @@
       <!-- Filtros bar -->
       <div class="alertas-filtros-bar" id="alertasFiltrosBar">
         <div class="af-group">
-          <label class="af-label">📅 CICLO</label>
-          <div class="af-ms-wrap">
-            <div class="af-ms-trigger" id="afTriggerCiclo" onclick="toggleAfDropdown('afDropCiclo')">
-              <span id="afTextCiclo">Todos</span><span class="af-arrow">▼</span>
-            </div>
-            <div class="af-ms-panel" id="afDropCiclo">
-              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCiclo')"></div>
-              <div class="af-ms-items" id="afItemsCiclo"></div>
-              <div class="af-ms-footer">
-                <button onclick="afAplicar('ciclo')">Aceptar</button>
-                <button onclick="afCerrar('afDropCiclo')">Cancelar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="af-group">
           <label class="af-label">🏢 COMPAÑÍA</label>
           <div class="af-ms-wrap">
             <div class="af-ms-trigger" id="afTriggerCompania" onclick="toggleAfDropdown('afDropCompania')">
@@ -557,6 +523,22 @@
               <div class="af-ms-footer">
                 <button onclick="afAplicar('sector')">Aceptar</button>
                 <button onclick="afCerrar('afDropSector')">Cancelar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="af-group">
+          <label class="af-label">📅 CICLO</label>
+          <div class="af-ms-wrap">
+            <div class="af-ms-trigger" id="afTriggerCiclo" onclick="toggleAfDropdown('afDropCiclo')">
+              <span id="afTextCiclo">Todos</span><span class="af-arrow">▼</span>
+            </div>
+            <div class="af-ms-panel" id="afDropCiclo">
+              <div class="af-ms-search"><input type="text" placeholder="Buscar..." oninput="afFiltrarItems(this,'afDropCiclo')"></div>
+              <div class="af-ms-items" id="afItemsCiclo"></div>
+              <div class="af-ms-footer">
+                <button onclick="afAplicar('ciclo')">Aceptar</button>
+                <button onclick="afCerrar('afDropCiclo')">Cancelar</button>
               </div>
             </div>
           </div>
@@ -817,6 +799,16 @@
 
     <div class="toolbar-wrapper" id="panelFiltrosWrapper">
       <div class="toolbar">
+        <div class="filter-group">
+          <div class="label-container">
+            <label>Compañía</label>
+            <button class="btn-clear-individual" id="btn_clear_compania" title="Quitar filtro" onclick="limpiarFiltroIndividual(event, 'compania', 'dropCompania', 'optsCompania', 'btn_clear_compania')">
+              <svg viewBox="0 0 24 24"><path d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/></svg>
+            </button>
+          </div>
+          <div class="multiselect-dropdown" id="dropCompania" onclick="toggleDropdown(event, 'optsCompania')">Todos</div>
+          <div class="multiselect-options" id="optsCompania"></div>
+        </div>
         <div class="filter-group">
           <div class="label-container">
             <label>Sector</label>
@@ -1529,9 +1521,22 @@ function afGetDatosBase() { return datosMaestrosUnificados; }
 
 function afGetValoresDisponibles(dim) {
   const otros = AF_DIMENSIONES.filter(d => d !== dim);
-  return [...new Set(afGetDatosBase().filter(item => {
+  const valores = [...new Set(afGetDatosBase().filter(item => {
     return otros.every(d => alertasFiltros[d].length === 0 || alertasFiltros[d].includes(item[d]));
-  }).map(item => item[dim]))].sort();
+  }).map(item => item[dim]))];
+  // Ciclo va descendente (el más reciente primero); el resto alfabético ascendente.
+  return dim === 'ciclo' ? valores.sort().reverse() : valores.sort();
+}
+
+// Quita de cada filtro (menos el que se acaba de aplicar) los valores que ya no
+// tienen datos posibles dado el resto de filtros activos — misma cascada que se
+// usa en el resto del dashboard, para que nunca quede seleccionado algo sin datos.
+function afPodarSeleccionesObsoletas(dimCambiada) {
+  AF_DIMENSIONES.forEach(d => {
+    if (d === dimCambiada || !alertasFiltros[d].length) return;
+    const disponibles = afGetValoresDisponibles(d);
+    alertasFiltros[d] = alertasFiltros[d].filter(v => disponibles.includes(v));
+  });
 }
 
 function afPoblarPanel(dim) {
@@ -1540,8 +1545,11 @@ function afPoblarPanel(dim) {
   const disponibles = afGetValoresDisponibles(dim);
   const seleccionados = alertasFiltros[dim];
   let html = `<div class="af-ms-item" onclick="afToggleTodos('${dim}')"><input type="checkbox" id="afTodos_${dim}" ${seleccionados.length === 0?'checked':''}><span>(Seleccionar todo)</span></div>`;
-  [...new Set(afGetDatosBase().map(d => d[dim]))].sort().forEach(v => {
-    html += `<div class="af-ms-item${!disponibles.includes(v)?' disabled':''}" onclick="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
+  // Solo se listan valores CON datos dado el resto de filtros activos — un valor
+  // sin datos posibles (ej. Sector 3 sin fincas en la Compañía elegida) ni siquiera
+  // aparece en la lista, en vez de mostrarse deshabilitado.
+  disponibles.forEach(v => {
+    html += `<div class="af-ms-item" onclick="afToggleItem(event,'${dim}','${v.replace(/'/g,"\\'")}')">
       <input type="checkbox" value="${v.replace(/"/g,'&quot;')}" ${seleccionados.length === 0 || seleccionados.includes(v)?'checked':''}><span>${v}</span>
     </div>`;
   });
@@ -1573,16 +1581,16 @@ function afToggleTodos(dim) {
 
 function afToggleItem(event, dim, valor) {
   event.stopPropagation();
-  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child) input`);
   const checkedVals = Array.from(items).filter(i => i.checked).map(i => i.value);
-  alertasFiltros[dim] = checkedVals.length === [...new Set(afGetDatosBase().map(d => d[dim]))].length ? [] : checkedVals;
+  alertasFiltros[dim] = checkedVals.length === afGetValoresDisponibles(dim).length ? [] : checkedVals;
   afActualizarTodosCheckbox(dim);
 }
 
 function afActualizarTodosCheckbox(dim) {
   const cb = document.getElementById(`afTodos_${dim}`);
   if (!cb) return;
-  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child) input`);
   const checked = Array.from(items).filter(i=>i.checked).length;
   cb.checked = checked === items.length; cb.indeterminate = checked > 0 && checked < items.length;
 }
@@ -1595,10 +1603,11 @@ function afFiltrarItems(input, panelId) {
 }
 
 function afAplicar(dim) {
-  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child):not(.disabled) input`);
+  const items = document.querySelectorAll(`#afItems${dim.charAt(0).toUpperCase()+dim.slice(1)} .af-ms-item:not(:first-child) input`);
   const marcados = Array.from(items).filter(i => i.checked).map(i => i.value);
-  alertasFiltros[dim] = marcados.length === [...new Set(afGetDatosBase().map(d => d[dim]))].length ? [] : marcados;
+  alertasFiltros[dim] = marcados.length === afGetValoresDisponibles(dim).length ? [] : marcados;
   document.getElementById(`afDrop${dim.charAt(0).toUpperCase()+dim.slice(1)}`).classList.remove('open');
+  afPodarSeleccionesObsoletas(dim);
   afActualizarTextos();
   AF_DIMENSIONES.forEach(d => { if (d !== dim) afPoblarPanel(d); });
   renderAlertas();
@@ -2102,21 +2111,39 @@ function filtrarTablaAlertas(tipo) {
 
 const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
-async function fetchLiveOrGitHub(workerUrl, githubUrl) {
-  try {
-    const r = await fetch(workerUrl);
-    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
-  } catch(e) {}
-  return fetch(githubUrl + "?cache=" + Date.now()).then(r => r.json());
+// Trae TODOS los registros de un modelo paginando en bloques de 500 (mismo límite ya
+// probado en la sección de Pluviosidad) — evita que un límite implícito del Worker/Odoo
+// trunque el dataset silenciosamente. Origen único: Worker → Odoo (infoagro.odoo.com,
+// base "info"), sin JSON estático ni respaldo de GitHub.
+async function fetchTodosRegistrosWorker(model, dominioExtra = '') {
+  const limit = 500;
+  const MAX_PAGINAS = 40; // tope de seguridad (40 x 500 = 20,000 registros) para evitar loop infinito
+  let offset = 0;
+  let acumulado = [];
+  let paginas = 0;
+  while (paginas < MAX_PAGINAS) {
+    const url = `${WORKER}/query?base=info&model=${model}&limit=${limit}&offset=${offset}${dominioExtra}`;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`Worker respondió ${r.status} para ${model}`);
+    const j = await r.json();
+    if (!j.ok) throw new Error(`Worker devolvió error para ${model}: ${j.error || 'sin detalle'}`);
+    const batch = j.result || [];
+    acumulado = acumulado.concat(batch);
+    paginas++;
+    if (batch.length < limit) break;
+    offset += limit;
+  }
+  console.log(`[Worker] ${model}: ${acumulado.length} registros en ${paginas} página(s) de ${limit}`);
+  return { ok: true, result: acumulado };
 }
 
-async function cargarDatosDesdeGitHub() {
+async function cargarDatosDesdeWorker() {
   const tbody = document.getElementById('pivotBody');
-  tbody.innerHTML = '<tr><td class="loading">Sincronizando orígenes de datos remotos y cruzando dimensiones...</td></tr>';
+  tbody.innerHTML = '<tr><td class="loading">Sincronizando datos en vivo desde el Worker y cruzando dimensiones...</td></tr>';
   try {
     const [siembraRes, germinacionRes] = await Promise.all([
-      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_siembra", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Siembra.json"),
-      fetchLiveOrGitHub(WORKER+"/query?base=info&model=x_germinaciones", "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Campo_Germinacion.json"),
+      fetchTodosRegistrosWorker('x_siembra'),
+      fetchTodosRegistrosWorker('x_germinaciones'),
     ]);
 
     const siembraData = siembraRes.result || [];
@@ -2179,7 +2206,7 @@ async function cargarDatosDesdeGitHub() {
     renderAlertas();
   } catch (e) {
     console.error(e);
-    tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar archivos desde GitHub.</td></tr>';
+    tbody.innerHTML = '<tr><td class="loading" style="color:#b45309;">Error crítico al sincronizar datos desde el Worker.</td></tr>';
   }
 }
 
@@ -2340,7 +2367,7 @@ function exportarTablaAExcel() {
   XLSX.writeFile(wb, `Reporte_Pivot_Fijo_Mani_${new Date().toLocaleDateString().replace(/\//g, '-')}.xlsx`);
 }
 
-cargarDatosDesdeGitHub();
+cargarDatosDesdeWorker();
 </script>
 </body>
 </html>
