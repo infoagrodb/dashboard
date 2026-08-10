@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v4 cargado correctamente (Exactus con costos reales)");
+console.log("core.js v5 cargado correctamente (búsqueda combinada Exactus+InfoAgro)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -263,6 +263,39 @@ async function buscarArticulosExactus(texto) {
   const existe = await dabFetchAll(`/EXISTENCIA_BODEGA?$filter=${encodeURIComponent(`(${filtroCodigos}) and (${filtroBodega})`)}`);
   const conStock = new Set(existe.map(e => e.ARTICULO));
   return arts.map(a => ({ ...a, TIENE_EXISTENCIA: conStock.has(a.ARTICULO) }));
+}
+
+/**
+ * Busca artículos ya creados localmente en x_taller_articulo (InfoAgro) —
+ * cubre los que se crearon porque todavía no existían en Exactus.
+ */
+async function buscarArticulosLocalTaller(texto) {
+  const filas = await tallerQuery("x_taller_articulo", [
+    "id","x_name","x_studio_codigo","x_studio_costo_promedio","x_studio_unidad_medida","x_studio_activo_en_erp",
+  ], [["x_name", "ilike", texto]], 10);
+  return filas.map(a => ({
+    ARTICULO: a.x_studio_codigo || ("LOCAL-" + a.id),
+    DESCRIPCION: a.x_name,
+    COSTO_PROM_DOL: a.x_studio_costo_promedio || 0,
+    COSTO_ULT_DOL: a.x_studio_costo_promedio || 0,
+    UNIDAD_ALMACEN: a.x_studio_unidad_medida || "",
+    TIENE_EXISTENCIA: false,
+    ORIGEN: a.x_studio_activo_en_erp ? "InfoAgro" : "InfoAgro (pendiente Exactus)",
+    _localId: a.id,
+  }));
+}
+
+/**
+ * Búsqueda combinada: Exactus primero, luego lo creado localmente en InfoAgro
+ * (para los artículos que todavía no existen del lado de Exactus). Si Exactus
+ * no responde, igual devuelve lo que haya en el espejo local — no bloquea.
+ */
+async function buscarArticulosCombinado(texto) {
+  const [exactus, local] = await Promise.all([
+    buscarArticulosExactus(texto).then(r => r.map(a => ({ ...a, ORIGEN: "Exactus" }))).catch(() => []),
+    buscarArticulosLocalTaller(texto).catch(() => []),
+  ]);
+  return [...exactus, ...local];
 }
 
 /* ------------------------------------------------------------

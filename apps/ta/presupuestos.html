@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=4"></script>
+<script src="core.js?v=5"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -48,6 +48,7 @@
   .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
   .btn-chico{background:#fff; border:1px solid var(--color-borde); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--color-texto);}
   .btn-chico:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .link-chico{background:none; border:none; color:var(--color-primario-oscuro); font-size:11.5px; cursor:pointer; padding:0; text-decoration:underline; display:block;}
   .link-volver{background:none; border:none; color:var(--color-primario-oscuro); font-size:13px; cursor:pointer; padding:0; text-decoration:underline; margin-bottom:10px;}
 
   .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px; margin-bottom:14px;}
@@ -113,7 +114,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v5</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v6</div>
 
 <script>
 const h = React.createElement;
@@ -270,6 +271,86 @@ function FilaLinea({ linea, soloLectura, onCambiar, onGuardar, onQuitar }){
   );
 }
 
+function ModalArticuloNuevo({ textoInicial, onCerrar, onCreado }){
+  const [descripcion, setDescripcion] = useState(textoInicial || "");
+  const [codigo, setCodigo] = useState("");
+  const [categoria, setCategoria] = useState("");
+  const [unidadMedida, setUnidadMedida] = useState("und");
+  const [costo, setCosto] = useState(0);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function guardar(){
+    if (!descripcion.trim()){ setError("La descripción es obligatoria."); return; }
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerCrear("x_taller_articulo", {
+        x_name: descripcion.trim(),
+        x_studio_codigo: codigo || false,
+        x_studio_categoria: categoria || false,
+        x_studio_unidad_medida: unidadMedida || false,
+        x_studio_costo_promedio: num(costo),
+        x_studio_origen_erp: "Otro",
+        x_studio_activo_en_erp: false,
+        x_studio_notas_internas: "Pendiente de creación en Exactus — solicitado desde presupuesto el " + formatearFecha(new Date()),
+      });
+      if (resp.ok) {
+        onCreado({
+          ARTICULO: codigo || ("LOCAL-" + resp.id),
+          DESCRIPCION: descripcion.trim(),
+          COSTO_PROM_DOL: num(costo),
+          COSTO_ULT_DOL: num(costo),
+          UNIDAD_ALMACEN: unidadMedida,
+        });
+      } else {
+        setError(resp.error || "No se pudo crear el artículo.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "📦 Crear Artículo Nuevo"),
+      h("div", { style: { background:"var(--color-alerta-suave)", border:"1px solid var(--color-alerta)", borderRadius:"7px", padding:"9px 11px", fontSize:"12px", color:"#92400E", marginBottom:"14px" } },
+        "Este artículo todavía no existe en Exactus. Se crea aquí para no detener el presupuesto — avisale al equipo de Exactus para que lo den de alta oficialmente allá."
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Descripción"),
+        h("input", { type: "text", value: descripcion, autoFocus: true, onChange: e => setDescripcion(e.target.value) })
+      ),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Código (si ya tenés uno pensado)"),
+          h("input", { type: "text", value: codigo, onChange: e => setCodigo(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Unidad de medida"),
+          h("input", { type: "text", value: unidadMedida, onChange: e => setUnidadMedida(e.target.value) })
+        )
+      ),
+      h("div", { className: "fila" },
+        h("div", { className: "campo" },
+          h("label", null, "Categoría"),
+          h("input", { type: "text", value: categoria, onChange: e => setCategoria(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Costo estimado (US$)"),
+          h("input", { type: "number", step: "0.01", value: costo, onChange: e => setCosto(e.target.value) })
+        )
+      ),
+      error && h("div", { className: "mensaje-error" }, error),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Creando..." : "Crear y usar en la línea")
+      )
+    )
+  );
+}
+
 function DetallePresupuesto({ presupuestoId, onVolver }){
   const [presupuesto, setPresupuesto] = useState(null);
   const [orden, setOrden] = useState(null);
@@ -279,6 +360,7 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
   const [exito, setExito] = useState("");
   const [nuevaLinea, setNuevaLinea] = useState(lineaVacia());
   const [guardandoNueva, setGuardandoNueva] = useState(false);
+  const [modalArticuloNuevo, setModalArticuloNuevo] = useState(false);
   const [aprobando, setAprobando] = useState(false);
   const [nombreAprobador, setNombreAprobador] = useState("");
   const [modalAprobar, setModalAprobar] = useState(false);
@@ -479,11 +561,11 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
           )
         ),
         h("div", { className: "campo-chico", style: { flex: "2" } },
-          h("label", null, "Descripción" + (["Repuesto","Material"].includes(nuevaLinea.x_studio_tipo_linea) ? " (Exactus)" : "")),
+          h("label", null, "Descripción" + (["Repuesto","Material"].includes(nuevaLinea.x_studio_tipo_linea) ? " (Exactus + InfoAgro)" : "")),
           ["Repuesto","Material"].includes(nuevaLinea.x_studio_tipo_linea)
             ? h(Buscador, {
-                placeholder: "Buscar artículo en Exactus (bodega 156/164)...",
-                buscar: async texto => (await buscarArticulosExactus(texto)).map(a => ({ ...a, id: a.ARTICULO })),
+                placeholder: "Buscar artículo...",
+                buscar: async texto => (await buscarArticulosCombinado(texto)).map(a => ({ ...a, id: a.ARTICULO })),
                 onSeleccionar: a => {
                   const costo = num(a.COSTO_PROM_DOL) > 0 ? num(a.COSTO_PROM_DOL) : num(a.COSTO_ULT_DOL);
                   setNuevaLinea({
@@ -491,16 +573,17 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
                     x_studio_descripcion: a.DESCRIPCION,
                     x_studio_sku: a.ARTICULO,
                     x_studio_costo_manual: costo,
-                    x_studio_origen_costo: "Inventario",
+                    x_studio_origen_costo: a.ORIGEN === "Exactus" ? "Inventario" : "Manual",
                     x_studio_unidad_medida: a.UNIDAD_ALMACEN || nuevaLinea.x_studio_unidad_medida,
                   });
                 },
                 renderItem: a => h(React.Fragment, null,
                   h("div", { style: { display:"flex", justifyContent:"space-between", gap:"8px" } },
                     h("span", null, a.DESCRIPCION),
-                    h("span", { style: { fontSize:"9.5px", fontWeight:700, padding:"1px 6px", borderRadius:"8px",
-                        background: a.TIENE_EXISTENCIA ? "#D1FAE5" : "#FEF3C7", color: a.TIENE_EXISTENCIA ? "#15803D" : "#B45309" } },
-                      a.TIENE_EXISTENCIA ? "En bodega" : "Sin existencia")
+                    h("span", { style: { fontSize:"9.5px", fontWeight:700, padding:"1px 6px", borderRadius:"8px", whiteSpace:"nowrap",
+                        background: a.ORIGEN === "Exactus" ? (a.TIENE_EXISTENCIA ? "#D1FAE5" : "#FEF3C7") : "#E0E7FF",
+                        color: a.ORIGEN === "Exactus" ? (a.TIENE_EXISTENCIA ? "#15803D" : "#B45309") : "#4338CA" } },
+                      a.ORIGEN === "Exactus" ? (a.TIENE_EXISTENCIA ? "Exactus · en bodega" : "Exactus · sin existencia") : a.ORIGEN)
                   ),
                   h("div", { className: "sub" },
                     a.ARTICULO + " · " + moneda(num(a.COSTO_PROM_DOL) > 0 ? a.COSTO_PROM_DOL : a.COSTO_ULT_DOL) +
@@ -509,8 +592,11 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
                 ),
               })
             : h("input", { type: "text", value: nuevaLinea.x_studio_descripcion, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_descripcion: e.target.value }) }),
+          ["Repuesto","Material"].includes(nuevaLinea.x_studio_tipo_linea) &&
+            h("button", { className: "link-chico", type: "button", onClick: () => setModalArticuloNuevo(true), style: { marginTop: "4px" } },
+              "¿No aparece? + Crear artículo nuevo"),
           nuevaLinea.x_studio_sku && h("div", { className: "sub", style: { marginTop: "3px" } },
-            "Código: " + nuevaLinea.x_studio_sku + (nuevaLinea.x_studio_origen_costo === "Inventario" ? " · costo de Exactus (ajustable abajo)" : "")
+            "Código: " + nuevaLinea.x_studio_sku + (nuevaLinea.x_studio_origen_costo === "Inventario" ? " · costo de Exactus (ajustable abajo)" : " · costo manual")
           )
         ),
         h("div", { className: "campo-chico" },
@@ -588,7 +674,23 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
           h("button", { className: "btn-primario", onClick: confirmarAprobacion, disabled: aprobando }, aprobando ? "Guardando..." : "Confirmar aprobación")
         )
       )
-    )
+    ),
+
+    modalArticuloNuevo && h(ModalArticuloNuevo, {
+      textoInicial: nuevaLinea.x_studio_descripcion,
+      onCerrar: () => setModalArticuloNuevo(false),
+      onCreado: a => {
+        setNuevaLinea({
+          ...nuevaLinea,
+          x_studio_descripcion: a.DESCRIPCION,
+          x_studio_sku: a.ARTICULO,
+          x_studio_costo_manual: a.COSTO_PROM_DOL,
+          x_studio_origen_costo: "Manual",
+          x_studio_unidad_medida: a.UNIDAD_ALMACEN || nuevaLinea.x_studio_unidad_medida,
+        });
+        setModalArticuloNuevo(false);
+      },
+    })
   );
 }
 
