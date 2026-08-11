@@ -71,7 +71,9 @@
 
 <script>
 const h = React.createElement;
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
+
+const ORDEN_TIPOS = { "Repuesto": 0, "Material": 1, "Servicio": 2, "Mano de obra": 3, "Otro": 4 };
 
 const WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -84,6 +86,60 @@ function formatearFecha(valor){
 function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
 function moneda(v){ return "$" + num(v).toFixed(2); }
 
+function PizarronFirma({ onCambio }){
+  const canvasRef = useRef(null);
+  const dibujandoRef = useRef(false);
+  const vacioRef = useRef(true);
+
+  function posicion(e, canvas){
+    const rect = canvas.getBoundingClientRect();
+    const punto = e.touches ? e.touches[0] : e;
+    return { x: punto.clientX - rect.left, y: punto.clientY - rect.top };
+  }
+
+  function empezar(e){
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const p = posicion(e, canvas);
+    dibujandoRef.current = true;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+  function mover(e){
+    if (!dibujandoRef.current) return;
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const p = posicion(e, canvas);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#111827";
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+    vacioRef.current = false;
+    onCambio(false);
+  }
+  function terminar(){ dibujandoRef.current = false; }
+
+  function limpiar(){
+    const canvas = canvasRef.current;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    vacioRef.current = true;
+    onCambio(true);
+  }
+
+  return h("div", null,
+    h("canvas", {
+      ref: canvasRef, width: 500, height: 160,
+      style: { width: "100%", height: "160px", border: "1px dashed var(--color-borde)", borderRadius: "8px", background: "#fff", touchAction: "none", cursor: "crosshair" },
+      onMouseDown: empezar, onMouseMove: mover, onMouseUp: terminar, onMouseLeave: terminar,
+      onTouchStart: empezar, onTouchMove: mover, onTouchEnd: terminar,
+    }),
+    h("button", { type: "button", onClick: limpiar, style: { marginTop: "6px", background: "none", border: "none", color: "var(--color-texto-suave)", fontSize: "12px", cursor: "pointer", textDecoration: "underline", padding: "0" } }, "Limpiar firma")
+  );
+}
+
 function AprobarPresupuesto(){
   const params = new URLSearchParams(window.location.search);
   const id = params.get("id");
@@ -93,8 +149,10 @@ function AprobarPresupuesto(){
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [nombreFirma, setNombreFirma] = useState("");
+  const [firmaVacia, setFirmaVacia] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [yaAprobado, setYaAprobado] = useState(false);
+  const canvasFirmaRef = useRef(null);
 
   useEffect(() => {
     if (!id || !token) { setError("Este link no es válido — faltan datos."); setCargando(false); return; }
@@ -118,12 +176,15 @@ function AprobarPresupuesto(){
 
   async function aprobar(){
     if (!nombreFirma.trim()){ setError("Escribí tu nombre completo para aprobar."); return; }
+    if (firmaVacia){ setError("Dibujá tu firma en el recuadro antes de aprobar."); return; }
     setEnviando(true); setError("");
     try {
+      const canvas = document.querySelector("canvas");
+      const firmaBase64 = canvas ? canvas.toDataURL("image/png") : null;
       const r = await fetch(WORKER_BASE + "/taller/presupuesto/aprobar-publico", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: Number(id), token: token, aprobado_por: nombreFirma.trim() }),
+        body: JSON.stringify({ id: Number(id), token: token, aprobado_por: nombreFirma.trim(), firma_base64: firmaBase64 }),
       });
       const j = await r.json();
       if (j.ok) {
@@ -163,6 +224,15 @@ function AprobarPresupuesto(){
   const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "";
   const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "";
 
+  // Agrupadas por tipo, mismo orden fijo que usa el PDF: Repuesto, Material, Servicio, Mano de obra, Otro
+  const grupos = {};
+  lineas.forEach(l => {
+    const t = l.x_studio_tipo_linea || "Otro";
+    if (!grupos[t]) grupos[t] = [];
+    grupos[t].push(l);
+  });
+  const tiposOrdenados = Object.keys(grupos).sort((a,b) => (ORDEN_TIPOS[a] ?? 99) - (ORDEN_TIPOS[b] ?? 99));
+
   return h("div", { className: "envoltura" },
     h("div", { className: "marca" }, "🔧 Infotaller — División Agrícola COMASA"),
 
@@ -176,18 +246,24 @@ function AprobarPresupuesto(){
         h("span", { className: "badge-estado estado-" + presupuesto.x_studio_estado.replace(/\s+/g,"") }, presupuesto.x_studio_estado)
       ),
 
-      h("table", { className: "tabla-lineas" },
-        h("thead", null, h("tr", null,
-          h("th", null, "Descripción"), h("th", null, "Cant."), h("th", { className: "texto-derecha" }, "Total")
-        )),
-        h("tbody", null,
-          lineas.map((l,i) => h("tr", { key: i },
-            h("td", null, l.x_studio_descripcion, h("div", { style: { fontSize:"10.5px", color:"var(--color-texto-suave)" } }, l.x_studio_tipo_linea)),
-            h("td", null, l.x_studio_cantidad_presupuestada + " " + (l.x_studio_unidad_medida || "")),
-            h("td", { className: "texto-derecha" }, moneda(num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual)))
-          ))
-        )
-      ),
+      tiposOrdenados.map(tipo => {
+        const subtotal = grupos[tipo].reduce((s,l) => s + num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual), 0);
+        return h("div", { key: tipo, style: { marginTop: "18px" } },
+          h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", background:"#F8FAFC", padding:"6px 10px", borderRadius:"6px", marginBottom:"4px" } },
+            h("strong", { style: { fontSize:"12px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-primario-oscuro)" } }, tipo),
+            h("span", { style: { fontSize:"12.5px", fontWeight:700 } }, moneda(subtotal))
+          ),
+          h("table", { className: "tabla-lineas", style: { marginTop: "0" } },
+            h("tbody", null,
+              grupos[tipo].map((l,i) => h("tr", { key: i },
+                h("td", null, l.x_studio_descripcion),
+                h("td", null, l.x_studio_cantidad_presupuestada + " " + (l.x_studio_unidad_medida || "")),
+                h("td", { className: "texto-derecha" }, moneda(num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual)))
+              ))
+            )
+          )
+        );
+      }),
 
       h("div", { className: "total-grande" },
         h("span", { className: "etiqueta" }, "TOTAL"),
@@ -205,11 +281,13 @@ function AprobarPresupuesto(){
             )
           )
         : h(React.Fragment, null,
-            h("label", null, "Tu nombre completo (firma)"),
+            h("label", null, "Tu nombre completo"),
             h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Escribí tu nombre completo" }),
+            h("label", { style: { marginTop: "14px" } }, "Firma"),
+            h(PizarronFirma, { onCambio: setFirmaVacia }),
             error && h("div", { className: "mensaje-error" }, error),
             h("button", { className: "btn-primario", onClick: aprobar, disabled: enviando }, enviando ? "Enviando..." : "✅ Aprobar este presupuesto"),
-            h("div", { className: "nota-legal" }, "Al escribir tu nombre y presionar \"Aprobar\", autorizás al taller a realizar el trabajo descrito por el monto indicado.")
+            h("div", { className: "nota-legal" }, "Al escribir tu nombre, firmar y presionar \"Aprobar\", autorizás al taller a realizar el trabajo descrito por el monto indicado.")
           )
     )
   );
