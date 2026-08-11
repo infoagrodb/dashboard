@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Reporte Resumido de Conciliación de Cuentas — Grupo ZP</title>
+<style>
+  *{box-sizing:border-box;}
+  body{margin:0;background:#d9d9d9;font-family:Calibri,Arial,sans-serif;color:#000;padding:28px 12px;font-size:13px;}
+  .sheet{max-width:900px;margin:0 auto;background:#fff;padding:36px 42px 44px;box-shadow:0 1px 3px rgba(0,0,0,.25);}
+  .doc-title{font-size:13px;margin:0 0 2px;}
+  .doc-sub{font-size:13px;margin:0 0 2px;}
+  .doc-report-by{font-size:13px;margin:0 0 10px;}
+  .controls{
+    display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end;
+    background:#f1f1f1; border:1px solid #bbb; padding:10px 14px; margin:0 0 18px;
+    font-family:Arial,sans-serif;
+  }
+  .field{display:flex; flex-direction:column; gap:3px;}
+  .field label{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:#555;}
+  .field select, .field input{font-size:12.5px; padding:5px 8px; border:1px solid #999; background:#fff; color:#000; min-width:150px; font-family:Arial,sans-serif;}
+  .field.account select{min-width:250px; font-weight:600;}
+  table.rpt{width:100%; border-collapse:collapse; font-size:13px;}
+  table.rpt td{padding:3px 4px; vertical-align:baseline;}
+  tr.hdr td{border-bottom:1px solid #000; font-weight:400;}
+  td.desc{width:56%;}
+  td.monto{text-align:right; width:22%; white-space:nowrap;}
+  td.total{text-align:right; width:22%; white-space:nowrap;}
+  tr.uline td.monto, tr.uline td.total{border-bottom:1px solid #000;}
+  tr.dbl td.total{border-top:1px solid #000; border-bottom:3px double #000; padding-top:3px; padding-bottom:3px;}
+  tr.blank td{height:14px;}
+  .neg::before{content:"(";} .neg::after{content:")";}
+  .final-num{margin-top:24px; text-align:right; padding-right:4%; font-size:13px; font-weight:700;}
+  .final-num.ok{color:#1f6f4a;}
+  .final-num.bad{color:#8a1f2b;}
+  .banner{font-family:Arial,sans-serif; font-size:11px; padding:8px 12px; margin-bottom:14px; border:1px solid;}
+  .banner.ok{background:#eaf5ef; border-color:#9ec9ac; color:#1f6f4a;}
+  .banner.warn{background:#fff8e6; border-color:#e0c060; color:#8a6d1f;}
+  .banner.load{background:#eef3fa; border-color:#a9c3e0; color:#1a5fa8;}
+  .banner.err{background:#fbecec; border-color:#e3b3b8; color:#8a1f2b;}
+  .footnote{font-family:Arial,sans-serif; font-size:10px; color:#999; margin-top:26px; text-align:center;}
+
+  .detail-toggle{
+    font-family:Arial,sans-serif; font-size:12px; color:#1a5fa8; cursor:pointer;
+    margin-top:22px; padding:6px 0; border-top:1px solid #ccc; user-select:none;
+  }
+  .detail-toggle:hover{text-decoration:underline;}
+  .detail-toggle .arrow{display:inline-block; width:14px;}
+  #detailBlock{display:none; margin-top:8px;}
+  .excel-controls{font-family:Arial,sans-serif; font-size:11px; margin-bottom:6px;}
+  .excel-controls button{
+    font-family:Arial,sans-serif; font-size:11px; padding:3px 9px; margin-right:6px;
+    border:1px solid #999; background:#f1f1f1; cursor:pointer; border-radius:2px;
+  }
+  .excel-controls button:hover{background:#e4e4e4;}
+  table.excel{width:100%; border-collapse:collapse; font-family:Calibri,Arial,sans-serif; font-size:12px; border:1px solid #bbb;}
+  table.excel th{background:#f2f2f2; border:1px solid #bbb; padding:4px 8px; text-align:left; font-weight:700; font-size:11px;}
+  table.excel th.num{text-align:right;}
+  tr.grp-header{background:#eef3fa; cursor:pointer;}
+  tr.grp-header:hover{background:#e2ebf7;}
+  tr.grp-header td{border:1px solid #bbb; padding:4px 8px; font-weight:700;}
+  tr.grp-header .toggle-ico{
+    display:inline-block; width:14px; height:14px; line-height:12px; text-align:center;
+    border:1px solid #888; background:#fff; margin-right:6px; font-size:10px; font-weight:700; border-radius:2px;
+  }
+  tr.grp-line{display:none;}
+  tr.grp-line.open{display:table-row;}
+  tr.grp-line td{border:1px solid #ddd; padding:3px 8px 3px 30px; font-size:11.5px; color:#333;}
+  tr.grp-line td.num, tr.grp-header td.num{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums;}
+  tr.grp-line td.ref{white-space:normal; word-break:break-word;}
+  tr.grp-total td{border:1px solid #bbb; padding:5px 8px; font-weight:700; background:#f7f7f7;}
+  .lineneg{color:#8a1f2b;}
+  .lineneg::before{content:"(";} .lineneg::after{content:")";}
+  @media print{ body{background:#fff;padding:0;} .sheet{box-shadow:none;padding:20px;} .controls{display:none;} }
+  @media (max-width:640px){ .sheet{padding:22px 16px;} .field select, .field input{min-width:120px;} .field.account select{min-width:100%;} }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="controls">
+    <div class="field account">
+      <label for="fAccount">Cuenta bancaria</label>
+      <select id="fAccount" disabled><option>Cargando...</option></select>
+    </div>
+    <div class="field">
+      <label for="fStart">Fecha inicio (libre)</label>
+      <input type="date" id="fStart" disabled>
+    </div>
+    <div class="field">
+      <label for="fEnd">Fecha fin (libre)</label>
+      <input type="date" id="fEnd" disabled>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button id="btnActualizar" style="font-family:Arial,sans-serif; font-size:12.5px; padding:6px 14px; border:1px solid #2e7d4f; background:#eaf5ef; color:#1f6f4a; cursor:pointer; border-radius:3px; font-weight:600;">&#8635; Recargar en vivo</button>
+    </div>
+  </div>
+
+  <div id="updateStatus" style="display:none;"></div>
+
+  <div id="loadStatus" class="banner load">Cargando datos actualizados desde GitHub Pages…</div>
+  <div id="report"></div>
+  <div class="detail-toggle" id="detailToggle" style="display:none;"><span class="arrow">&#9656;</span> Ver detalle de movimientos del periodo</div>
+  <div id="detailBlock"></div>
+
+  <p class="footnote" id="footnote"></p>
+</div>
+
+<script>
+const CLOUDFLARE_WORKER_URL = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+
+let ACCOUNTS = null;
+let CUR = 'C$';
+
+const fmt2 = n => Math.abs(n).toLocaleString('es-NI', {minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtCell = n => { if(n===null||n===undefined) return ''; const s=fmt2(n); return n<-0.004 ? '<span class="neg">'+s+'</span>' : s; };
+const fmtPlain = n => CUR+' '+fmt2(n);
+const fmtDate = iso => { const [y,m,d]=iso.split('-'); return d+'/'+m+'/'+y; };
+
+const accSel = document.getElementById('fAccount');
+const startInp = document.getElementById('fStart');
+const endInp = document.getElementById('fEnd');
+const reportDiv = document.getElementById('report');
+const footnote = document.getElementById('footnote');
+const loadStatus = document.getElementById('loadStatus');
+const detailToggle = document.getElementById('detailToggle');
+const detailBlockEl = document.getElementById('detailBlock');
+
+// Consulta en vivo al endpoint genérico /query del Worker (proxy hacia grupozp.odoo.com).
+async function odooQuery(model, fields, domain, limit){
+  const params = new URLSearchParams({
+    base: 'gzp',
+    model,
+    fields: fields.join(','),
+    domain: JSON.stringify(domain),
+    limit: String(limit || 20000),
+  });
+  const resp = await fetch(CLOUDFLARE_WORKER_URL + '/query?' + params.toString());
+  if (!resp.ok) throw new Error('HTTP ' + resp.status + ' consultando ' + model);
+  const data = await resp.json();
+  if (data.error) throw new Error(data.error);
+  return data.result || [];
+}
+
+function m2o1(raw){ return Array.isArray(raw) ? raw[1] : ''; }
+function m2o0(raw){ return Array.isArray(raw) ? raw[0] : null; }
+
+async function boot(){
+  loadStatus.className = 'banner load';
+  loadStatus.style.display = 'block';
+  loadStatus.textContent = 'Consultando datos en vivo desde grupozp.odoo.com…';
+  try {
+    const [lines, stmts, clearing] = await Promise.all([
+      odooQuery('account.bank.statement.line', ['id','date','amount','payment_ref','journal_id'], [['journal_id','in',[6,9]]]),
+      odooQuery('account.bank.statement', ['date','balance_end_real','journal_id'], [['journal_id','in',[6,9]]]),
+      odooQuery('account.move.line', ['date','debit','credit','matching_number','payment_id','statement_line_id','partner_id','account_id','journal_id'], [['account_id','in',[715,716,730,731]],['journal_id','in',[6,9]]]),
+    ]);
+
+    function buildAccount(label, currency, journalId, cuentasClearing){
+      const acctLinesRaw = lines.filter(l => m2o0(l.journal_id) === journalId);
+      const idToRef = {};
+      acctLinesRaw.forEach(l => { idToRef[l.id] = l.payment_ref || ''; });
+      const acctLines = acctLinesRaw
+        .sort((a,b)=> a.date < b.date ? -1 : 1)
+        .map(l => [l.date, l.amount, l.payment_ref || '', l.id]);
+      const acctStmts = stmts.filter(s => m2o0(s.journal_id) === journalId)
+        .sort((a,b)=> a.date < b.date ? -1 : 1)
+        .map(s => ({date: s.date, real: s.balance_end_real}));
+      const acctClearing = clearing.filter(c => cuentasClearing.includes(m2o0(c.account_id)) && m2o0(c.journal_id) === journalId)
+        .sort((a,b)=> a.date < b.date ? -1 : 1)
+        .map(c => {
+          const signed = c.debit - c.credit;
+          if (c.payment_id) return ['P', c.date, signed, m2o1(c.partner_id), m2o1(c.payment_id), c.matching_number || '', null];
+          const slId = m2o0(c.statement_line_id);
+          const bankDesc = idToRef[slId] || m2o1(c.statement_line_id);
+          return ['B', c.date, signed, m2o1(c.partner_id), bankDesc, c.matching_number || '', slId];
+        });
+      return { label, currency, lines: acctLines, statements: acctStmts, clearing: acctClearing };
+    }
+
+    ACCOUNTS = {
+      BNK1: buildAccount('11103 Banpro Cta Cordoba 95447', 'C$', 6, [715,716]),
+      BNK2: buildAccount('11104 Banpro Cta Dolar 48612', 'US$', 9, [730,731]),
+    };
+
+    populateAccounts();
+    accSel.disabled = false; startInp.disabled = false; endInp.disabled = false;
+    defaultDates();
+
+    loadStatus.className = 'banner ok';
+    loadStatus.textContent = 'Datos en vivo cargados — ' + new Date().toLocaleString('es-NI') + '.';
+
+    render();
+  } catch (err) {
+    ACCOUNTS = null;
+    loadStatus.className = 'banner err';
+    loadStatus.textContent = 'No se pudo consultar Odoo en vivo (' + err.message + '). Verifica el Worker o tu conexión.';
+  }
+}
+
+function populateAccounts(){
+  accSel.innerHTML = '';
+  Object.keys(ACCOUNTS).forEach(key=>{
+    const o=document.createElement('option'); o.value=key; o.textContent=ACCOUNTS[key].label;
+    accSel.appendChild(o);
+  });
+  accSel.value = Object.keys(ACCOUNTS)[0];
+}
+
+function defaultDates(){
+  const acc = ACCOUNTS[accSel.value];
+  if (!acc.lines.length) return;
+  const end = acc.lines[acc.lines.length-1][0];
+  const endDt = new Date(end+'T00:00:00');
+  const startDt = new Date(endDt); startDt.setDate(startDt.getDate()-29);
+  startInp.value = startDt.toISOString().slice(0,10);
+  endInp.value = end;
+}
+
+function row(desc, monto, total, opts){
+  opts = opts||{};
+  const cls = opts.cls ? ' class="'+opts.cls+'"' : '';
+  const mStr = monto===undefined?'':(opts.rawMonto ? monto : fmtCell(monto));
+  const tStr = total===undefined?'':(opts.rawTotal ? total : fmtCell(total));
+  return '<tr'+cls+'><td class="desc">'+(opts.indent?'&nbsp;&nbsp;&nbsp;&nbsp;':'')+desc+'</td><td class="monto">'+mStr+'</td><td class="total">'+tStr+'</td></tr>';
+}
+
+function render(){
+  if (!ACCOUNTS) return;
+  const acc = ACCOUNTS[accSel.value];
+  CUR = acc.currency;
+  const start = startInp.value, end = endInp.value;
+  if (!start || !end || end < start){ reportDiv.innerHTML = '<p style="font-family:Arial">Selecciona un rango de fechas válido (fin \u2265 inicio).</p>'; detailToggle.style.display='none'; return; }
+
+  const priorStmts = acc.statements.filter(s => s.date <= start).sort((a,b)=> a.date < b.date ? 1 : -1);
+  const anchor = priorStmts.length ? priorStmts[0] : null;
+  const anchorDate = anchor ? anchor.date : null;
+  const anchorReal = anchor ? anchor.real : 0;
+  const openingIsReal = anchor && anchor.date === start;
+
+  let openingAdj = 0;
+  let deposits = 0, retiros = 0;
+  acc.lines.forEach(([d,a])=>{
+    if (anchorDate !== null && d > anchorDate && d < start) openingAdj += a;
+    else if (anchorDate === null && d < start) openingAdj += a;
+    else if (d >= start && d <= end) { if (a>=0) deposits += a; else retiros += a; }
+  });
+  const opening = anchorReal + openingAdj;
+  const neto = deposits + retiros;
+  const closingCalc = opening + neto;
+
+  const officialStmts = acc.statements.filter(s => s.date === end);
+  let officialReal = null;
+  if (officialStmts.length === 1) officialReal = officialStmts[0].real;
+
+  // Conciliación REAL — la que realiza el contador en Odoo, vía matching_number en las
+  // cuentas transitorias 11108/11109 (NIO) y 11110/11111 (USD). Un pago (tipo "P") está
+  // confirmado por el banco si existe una línea tipo "B" con el mismo matching_number.
+  const clearing = acc.clearing || [];
+  const bankByMatching = {};
+  clearing.filter(c => c[0]==='B' && c[5]).forEach(c => { bankByMatching[c[5]] = {fecha: c[1], desc: c[4]}; });
+  const pagosEnRango = clearing
+    .filter(c => c[0]==='P' && c[1] >= start && c[1] <= end)
+    .map(([tipo,d,a,partner,doc,mn]) => {
+      const banco = mn !== '' ? bankByMatching[mn] : undefined;
+      return { d, a, partner, doc, confirmado: !!banco, bancoFecha: banco?banco.fecha:null, bancoDesc: banco?banco.desc:null };
+    })
+    .sort((x,y)=> x.d < y.d ? -1 : 1);
+
+  const pendientes = pagosEnRango.filter(p => !p.confirmado);
+  const depPend = pendientes.filter(p => p.a >= 0).reduce((s,p) => s+p.a, 0);
+  const retPend = pendientes.filter(p => p.a < 0).reduce((s,p) => s+p.a, 0);
+  const totalPend = depPend + retPend;
+  const balanceAjustado = closingCalc + totalPend;
+
+  // Movimientos flotantes: líneas del banco dentro del rango que NO tienen ninguna línea de
+  // conciliación (clearing) asociada — es decir, el banco registró algo que nunca pasó por
+  // el flujo de pagos/recibos pendientes del contador (comisiones, ajustes directos, etc.)
+  const matchedStatementIds = new Set(clearing.filter(c => c[0]==='B' && c[6]!=null).map(c => c[6]));
+  const flotantes = acc.lines
+    .filter(([d,a,ref,id]) => d >= start && d <= end && !matchedStatementIds.has(id))
+    .map(([d,a,ref]) => ({d,a,ref}))
+    .sort((x,y)=> x.d < y.d ? -1 : 1);
+
+  let h = '';
+  h += '<p class="doc-title">GRUPO ZP, S.A.</p>';
+  h += '<p class="doc-sub">Reporte Resumido de Conciliación de Cuentas '+fmtDate(start)+' al '+fmtDate(end)+'</p>';
+  h += '<p class="doc-report-by">Reporte por: Fecha de fin de estado de cuenta</p>';
+
+  if (officialReal !== null) {
+    const diff = balanceAjustado - officialReal;
+    const ok = Math.abs(diff) <= 0.02;
+    h += '<div class="banner '+(ok?'ok':'warn')+'">'+(ok
+      ? 'Fecha de fin coincide con un corte oficial del banco \u2014 diferencia verificada: '+fmtPlain(diff)
+      : 'Fecha de fin coincide con un corte oficial del banco \u2014 hay una diferencia real sin explicar de '+fmtPlain(Math.abs(diff)))+'</div>';
+  } else {
+    h += '<div class="banner warn">La fecha de fin no coincide con un corte oficial confirmado por el banco en Odoo. El "Balance Final" mostrado es el calculado según los movimientos registrados, sin confirmación bancaria para esa fecha exacta.</div>';
+  }
+
+  h += '<table class="rpt">';
+  h += '<tr class="hdr"><td class="desc"><b>Descripción</b></td><td class="monto">Monto</td><td class="total">Total</td></tr>';
+  h += row('Cuenta: '+acc.label);
+  h += row('Fecha de inicio de estado de cuenta:', undefined, fmtDate(start), {rawTotal:true});
+  h += row('Fecha de fin de estado de cuenta:', undefined, fmtDate(end), {rawTotal:true});
+  h += '<tr class="blank"><td colspan="3"></td></tr>';
+
+  h += row('Institución Financiera');
+  if (openingIsReal || Math.abs(openingAdj) <= 0.005) {
+    h += row('Traspaso de Saldo REAL confirmado por el banco al '+fmtDate(start)+':', undefined, opening);
+  } else if (anchorDate !== null) {
+    h += row('Último saldo real confirmado por el banco, al '+fmtDate(anchorDate)+':', undefined, anchorReal, {indent:false});
+    h += row('+ Movimientos registrados entre '+fmtDate(anchorDate)+' y '+fmtDate(start)+' (no confirmados aún por el banco)', openingAdj, undefined, {indent:true, cls:'uline'});
+    h += row('Traspaso de Saldo estimado al '+fmtDate(start)+':', undefined, opening);
+  } else {
+    h += row('Traspaso de Saldo al '+fmtDate(start)+' (sin corte oficial anterior en el sistema):', undefined, opening);
+  }
+  h += row('Transacciones del o antes del '+fmtDate(end));
+  h += row('Depósitos registrados', deposits, undefined, {indent:true});
+  h += row('Retiros registrados', retiros, undefined, {indent:true, cls:'uline'});
+  h += row('Total de Transacciones', undefined, neto);
+  h += row('Balance Final calculado al '+fmtDate(end)+':', undefined, closingCalc, {cls:'dbl'});
+  h += '<tr class="blank"><td colspan="3"></td></tr>';
+
+  h += row('Balance Final de Estado de Cuenta al '+fmtDate(end)+':', undefined, closingCalc);
+  h += row('Transacciones Pendientes del '+fmtDate(start)+' al '+fmtDate(end)+' (pagos sin conciliar por el contador)');
+  h += row('Depósitos Pendientes', depPend, undefined, {indent:true});
+  h += row('Retiros Pendientes', retPend, undefined, {indent:true, cls:'uline'});
+  h += row('Transacciones Pendientes Totales al '+fmtDate(end)+':', undefined, totalPend);
+  h += row('Balance Final de Estado de Cuenta Ajustado al '+fmtDate(end)+':', undefined, balanceAjustado, {cls:'dbl'});
+  h += '<tr class="blank"><td colspan="3"></td></tr>';
+
+  if (officialReal !== null) {
+    h += row('Balance Final REAL confirmado por el banco al '+fmtDate(end)+':', undefined, officialReal, {cls:'dbl'});
+  }
+  h += '</table>';
+
+  if (pagosEnRango.length) {
+    h += '<div class="rupturas" style="margin-top:14px;"><p class="section-title" style="font-family:Arial;font-size:10.5px;text-transform:uppercase;color:#666;">Pagos comparados contra la conciliación real del contador ('+fmtDate(start)+' \u2013 '+fmtDate(end)+')</p>';
+    h += '<table class="excel"><tr><th>Fecha</th><th>Socio</th><th>Documento</th><th>Descripción / No. de documento del banco</th><th class="num">Monto</th><th>Estado</th></tr>';
+    pagosEnRango.forEach(p => {
+      const estado = p.confirmado
+        ? '<span style="color:#1f6f4a;font-weight:700;">\u2713 Conciliado</span>'
+        : '<span style="color:#8a1f2b;font-weight:700;">\u2717 Pendiente</span>';
+      const bancoCol = p.confirmado
+        ? (p.bancoDesc||'') + (p.bancoFecha && p.bancoFecha !== p.d ? ' <span style="color:#888;font-size:11px;">('+fmtDate(p.bancoFecha)+')</span>' : '')
+        : '<span style="color:#aaa;">—</span>';
+      h += '<tr><td>'+fmtDate(p.d)+'</td><td>'+(p.partner||'')+'</td><td>'+(p.doc||'')+'</td><td class="ref">'+bancoCol+'</td><td class="num">'+fmtCell(p.a)+'</td><td>'+estado+'</td></tr>';
+    });
+    h += '</table></div>';
+  }
+
+  if (flotantes.length) {
+    const totalFlot = flotantes.reduce((s,f)=>s+f.a,0);
+    h += '<div class="rupturas" style="margin-top:14px;"><p class="section-title" style="font-family:Arial;font-size:10.5px;text-transform:uppercase;color:#666;">Movimientos flotantes (no conciliados) \u2014 en el banco pero sin v\u00ednculo de conciliaci\u00f3n ('+fmtDate(start)+' \u2013 '+fmtDate(end)+')</p>';
+    h += '<table class="excel"><tr><th>Fecha</th><th>Descripción / No. de documento del banco</th><th class="num">Monto</th></tr>';
+    flotantes.forEach(f => {
+      h += '<tr><td>'+fmtDate(f.d)+'</td><td class="ref">'+(f.ref||'(sin referencia)')+'</td><td class="num">'+fmtCell(f.a)+'</td></tr>';
+    });
+    h += '<tr class="grp-total"><td>Total flotante ('+flotantes.length+' movimiento'+(flotantes.length>1?'s':'')+')</td><td></td><td class="num">'+fmtCell(totalFlot)+'</td></tr>';
+    h += '</table></div>';
+  }
+
+  if (officialReal !== null) {
+    const diff = balanceAjustado - officialReal;
+    h += '<p class="final-num '+(Math.abs(diff)<=0.02?'ok':'bad')+'">Diferencia: '+fmtCell(diff)+'</p>';
+  }
+
+  reportDiv.innerHTML = h;
+  footnote.textContent = 'Consulta en vivo: account.bank.statement.line, account.bank.statement y account.move.line — grupozp.odoo.com vía Cloudflare Worker ('+acc.lines.length+' movimientos)';
+
+  detailToggle.style.display = 'block';
+  renderDetail(acc, start, end);
+}
+
+function renderDetail(acc, start, end){
+  const inRange = acc.lines.filter(([d,a]) => d >= start && d <= end);
+  if (!inRange.length){
+    detailBlockEl.innerHTML = '<p style="font-family:Arial; font-size:12px; color:#777;">No hay movimientos registrados en este rango.</p>';
+    return;
+  }
+
+  const byDate = {};
+  inRange.forEach(([d,a,ref]) => { (byDate[d] = byDate[d] || []).push([a, ref||'']); });
+  const dates = Object.keys(byDate).sort();
+
+  let totalDep = 0, totalRet = 0;
+  let html = '<div class="excel-controls">';
+  html += '<button id="btnExpandAll">+ Expandir todo</button>';
+  html += '<button id="btnCollapseAll">\u2212 Contraer todo</button>';
+  html += '</div>';
+  html += '<table class="excel"><tr><th>Fecha</th><th>Descripción / No. de documento</th><th class="num">Monto</th></tr>';
+
+  dates.forEach((d, gi) => {
+    const items = byDate[d];
+    const dayTotal = items.reduce((s,[a])=>s+a,0);
+    items.forEach(([a]) => a>=0 ? totalDep+=a : totalRet+=a);
+    const dayTotalStr = dayTotal<0 ? '<span class="lineneg">'+fmt2(dayTotal)+'</span>' : fmt2(dayTotal);
+    html += '<tr class="grp-header" data-grp="g'+gi+'"><td colspan="2"><span class="toggle-ico">+</span>'+fmtDate(d)+' ('+items.length+' movimiento'+(items.length>1?'s':'')+')</td><td class="num">'+dayTotalStr+'</td></tr>';
+    items.forEach(([a,ref]) => {
+      const aStr = a<0 ? '<span class="lineneg">'+fmt2(a)+'</span>' : fmt2(a);
+      html += '<tr class="grp-line" data-grp="g'+gi+'"><td>'+fmtDate(d)+'</td><td class="ref">'+(ref || '(sin referencia)')+'</td><td class="num">'+aStr+'</td></tr>';
+    });
+  });
+
+  html += '<tr class="grp-total"><td colspan="2">Total del periodo ('+inRange.length+' movimientos)</td><td class="num">'+(totalDep+totalRet<0?'<span class="lineneg">'+fmt2(totalDep+totalRet)+'</span>':fmt2(totalDep+totalRet))+'</td></tr>';
+  html += '</table>';
+
+  detailBlockEl.innerHTML = html;
+
+  document.querySelectorAll('#detailBlock tr.grp-header').forEach(h => {
+    h.addEventListener('click', () => {
+      const grp = h.getAttribute('data-grp');
+      const icon = h.querySelector('.toggle-ico');
+      const lines = document.querySelectorAll('#detailBlock tr.grp-line[data-grp="'+grp+'"]');
+      const willOpen = !lines[0].classList.contains('open');
+      lines.forEach(l => l.classList.toggle('open', willOpen));
+      icon.textContent = willOpen ? '\u2212' : '+';
+    });
+  });
+  const btnExp = document.getElementById('btnExpandAll');
+  const btnCol = document.getElementById('btnCollapseAll');
+  if (btnExp) btnExp.addEventListener('click', () => {
+    document.querySelectorAll('#detailBlock tr.grp-line').forEach(l => l.classList.add('open'));
+    document.querySelectorAll('#detailBlock .toggle-ico').forEach(i => i.textContent = '\u2212');
+  });
+  if (btnCol) btnCol.addEventListener('click', () => {
+    document.querySelectorAll('#detailBlock tr.grp-line').forEach(l => l.classList.remove('open'));
+    document.querySelectorAll('#detailBlock .toggle-ico').forEach(i => i.textContent = '+');
+  });
+}
+
+accSel.addEventListener('change', ()=>{ defaultDates(); render(); });
+startInp.addEventListener('change', render);
+endInp.addEventListener('change', render);
+
+let detailOpen = false;
+detailToggle.addEventListener('click', () => {
+  detailOpen = !detailOpen;
+  detailBlockEl.style.display = detailOpen ? 'block' : 'none';
+  detailToggle.querySelector('.arrow').innerHTML = detailOpen ? '&#9662;' : '&#9656;';
+});
+
+// ===================== ACTUALIZAR (recarga en vivo desde Odoo) =====================
+const btnActualizar = document.getElementById('btnActualizar');
+const updateStatus = document.getElementById('updateStatus');
+updateStatus.style.display = 'none';
+
+btnActualizar.addEventListener('click', async () => {
+  btnActualizar.disabled = true;
+  await boot();
+  btnActualizar.disabled = false;
+});
+
+boot();
+</script>
+</body>
+</html>
