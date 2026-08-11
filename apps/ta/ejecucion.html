@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -87,7 +87,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v2 (modales)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v3 (cargar líneas del presupuesto)</div>
 
 <script>
 const h = React.createElement;
@@ -158,11 +158,13 @@ function SelectorOrden({ onSeleccionar }){
 
 function EjecucionOrden({ orden, onVolver }){
   const [presupuestoAprobado, setPresupuestoAprobado] = useState(null);
+  const [lineasPresupuesto, setLineasPresupuesto] = useState([]);
   const [totalPresupuestado, setTotalPresupuestado] = useState(0);
   const [manoObra, setManoObra] = useState([]);
   const [tecnicos, setTecnicos] = useState([]);
   const [consumos, setConsumos] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [cargandoLineasPresupuesto, setCargandoLineasPresupuesto] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
 
@@ -191,14 +193,51 @@ function EjecucionOrden({ orden, onVolver }){
       if (presRows.length) {
         const masReciente = presRows.sort((a,b) => b.x_studio_version - a.x_studio_version)[0];
         setPresupuestoAprobado(masReciente);
-        const lineasPres = await tallerQuery("x_presupuesto_detalle", ["x_studio_total_costo_presupuestado"],
-          [["x_studio_presupuesto_id","=",masReciente.id]], 500);
+        const lineasPres = await tallerQuery("x_presupuesto_detalle", [
+          "id","x_name","x_studio_tipo_linea","x_studio_sku","x_studio_descripcion",
+          "x_studio_cantidad_presupuestada","x_studio_unidad_medida","x_studio_costo_manual",
+          "x_studio_origen_costo","x_studio_total_costo_presupuestado",
+        ], [["x_studio_presupuesto_id","=",masReciente.id]], 500);
+        setLineasPresupuesto(lineasPres);
         setTotalPresupuestado(lineasPres.reduce((s,l) => s + num(l.x_studio_total_costo_presupuestado), 0));
       }
     } catch(e) {
       setError("Error al cargar: " + e.message);
     } finally {
       setCargando(false);
+    }
+  }
+
+  async function cargarLineasDelPresupuesto(){
+    setCargandoLineasPresupuesto(true); setError(""); setExito("");
+    const nuevos = [];
+    try {
+      for (const l of lineasPresupuesto) {
+        const valores = {
+          x_name: l.x_name,
+          x_studio_orden_id: orden.id,
+          x_studio_presupuesto_detalle_id: l.id,
+          x_studio_tipo_linea: l.x_studio_tipo_linea,
+          x_studio_sku: l.x_studio_sku || false,
+          x_studio_descripcion: l.x_studio_descripcion,
+          x_studio_cantidad_real: l.x_studio_cantidad_presupuestada,
+          x_studio_unidad_medida: l.x_studio_unidad_medida,
+          x_studio_costo_unitario_real: l.x_studio_costo_manual,
+          x_studio_total_costo_real: num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual),
+          x_studio_origen: l.x_studio_origen_costo === "Inventario" ? "Inventario" : "Manual",
+          x_studio_es_linea_no_presupuestada: false,
+          x_studio_fecha_consumo: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+        };
+        const resp = await tallerCrear("x_costo_real_detalle", valores);
+        if (resp.ok) nuevos.push({ ...valores, id: resp.id });
+        else { setError("Se cargaron " + nuevos.length + " de " + lineasPresupuesto.length + " líneas — falló en: " + resp.error); break; }
+      }
+      setConsumos(prev => [...prev, ...nuevos]);
+      if (nuevos.length === lineasPresupuesto.length) setExito("Se cargaron las " + nuevos.length + " líneas del presupuesto. Ajustá cantidades/costos si algo cambió al ejecutar.");
+    } catch(e) {
+      setError("No se pudieron cargar las líneas: " + e.message);
+    } finally {
+      setCargandoLineasPresupuesto(false);
     }
   }
 
@@ -234,7 +273,16 @@ function EjecucionOrden({ orden, onVolver }){
         )
       ),
       error && h("div", { className: "mensaje-error" }, error),
-      exito && h("div", { className: "mensaje-exito" }, exito)
+      exito && h("div", { className: "mensaje-exito" }, exito),
+
+      consumos.length === 0 && presupuestoAprobado && lineasPresupuesto.length > 0 &&
+        h("div", { style: { background:"#F8FAFC", border:"1px dashed var(--color-primario)", borderRadius:"8px", padding:"14px", textAlign:"center" } },
+          h("div", { style: { fontSize:"12.5px", color:"var(--color-texto-suave)", marginBottom:"8px" } },
+            "Todavía no hay consumos registrados. Empezá desde lo cotizado en " + presupuestoAprobado.x_name + " (" + lineasPresupuesto.length + " línea" + (lineasPresupuesto.length === 1 ? "" : "s") + ") en vez de escribir todo de cero."
+          ),
+          h("button", { className: "btn-primario", onClick: cargarLineasDelPresupuesto, disabled: cargandoLineasPresupuesto },
+            cargandoLineasPresupuesto ? "Cargando..." : "📋 Cargar líneas del presupuesto aprobado")
+        )
     ),
 
     h(SeccionManoObra, { orden, tecnicos, manoObra, setManoObra, setExito, setError }),
