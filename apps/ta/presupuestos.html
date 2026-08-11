@@ -116,7 +116,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v10 (fix URL de jspdf-autotable)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v11 (PDF ordenado por tipo)</div>
 
 <script>
 const h = React.createElement;
@@ -559,11 +559,15 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
     filaDato("EQUIPO", equipoNombre, 90);
     y += 14;
 
-    // Tabla de líneas
+    // Tabla de líneas — ordenadas por tipo: Repuesto, Material, Servicio, Mano de obra, Otro
+    const ordenTipos = { "Repuesto": 0, "Material": 1, "Servicio": 2, "Mano de obra": 3, "Otro": 4 };
+    const lineasOrdenadas = [...lineas].sort((a, b) =>
+      (ordenTipos[a.x_studio_tipo_linea] ?? 99) - (ordenTipos[b.x_studio_tipo_linea] ?? 99)
+    );
     doc.autoTable({
       startY: y,
       head: [["Tipo", "Descripción", "Cant.", "UM", "Costo Unit.", "Total"]],
-      body: lineas.map(l => [
+      body: lineasOrdenadas.map(l => [
         l.x_studio_tipo_linea,
         l.x_studio_descripcion,
         num(l.x_studio_cantidad_presupuestada).toString(),
