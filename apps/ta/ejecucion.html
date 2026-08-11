@@ -75,11 +75,19 @@
   .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
   .campo-check{display:flex; align-items:center; gap:6px; font-size:12px;}
   .campo-check input{width:auto;}
+
+  .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:440px; max-height:88vh; overflow-y:auto; box-shadow:0 20px 40px rgba(17,24,39,.25);}
+  .modal.modal-ancho{max-width:600px;}
+  .modal h3{margin:0 0 14px; font-size:15px;}
+  .campo{margin-bottom:14px;}
+  .fila-modal{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:16px;}
 </style>
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v2 (modales)</div>
 
 <script>
 const h = React.createElement;
@@ -235,51 +243,7 @@ function EjecucionOrden({ orden, onVolver }){
 }
 
 function SeccionManoObra({ orden, tecnicos, manoObra, setManoObra, setExito, setError }){
-  const [tecnicoId, setTecnicoId] = useState("");
-  const [fecha, setFecha] = useState(fechaParaOdoo(new Date()));
-  const [horasNormales, setHorasNormales] = useState(1);
-  const [horasExtra, setHorasExtra] = useState(0);
-  const [tarifa, setTarifa] = useState(0);
-  const [actividad, setActividad] = useState("");
-  const [guardando, setGuardando] = useState(false);
-
-  function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
-
-  async function agregar(){
-    if (!tecnicoId){ setError("Elegí el técnico."); return; }
-    if (!actividad.trim()){ setError("Describí la actividad realizada."); return; }
-    setGuardando(true); setError(""); setExito("");
-    const costoTotal = (num(horasNormales) + num(horasExtra)) * num(tarifa);
-    const nombreTec = tecnicos.find(t => t.id === Number(tecnicoId))?.x_name || "";
-    try {
-      const resp = await tallerCrear("x_taller_mano_obra", {
-        x_name: orden.x_name + " — " + nombreTec + " — " + fecha,
-        x_studio_orden_id: orden.id,
-        x_studio_tecnico_id: Number(tecnicoId),
-        x_studio_fecha: fecha,
-        x_studio_horas_normales: num(horasNormales),
-        x_studio_horas_extra: num(horasExtra),
-        x_studio_tarifa_costo: num(tarifa),
-        x_studio_costo_total: costoTotal,
-        x_studio_actividad: actividad.trim(),
-      });
-      if (resp.ok) {
-        setManoObra(prev => [...prev, {
-          id: resp.id, x_studio_tecnico_id: [Number(tecnicoId), nombreTec], x_studio_fecha: fecha,
-          x_studio_horas_normales: num(horasNormales), x_studio_horas_extra: num(horasExtra),
-          x_studio_tarifa_costo: num(tarifa), x_studio_costo_total: costoTotal, x_studio_actividad: actividad.trim(),
-        }]);
-        setActividad(""); setHorasNormales(1); setHorasExtra(0);
-        setExito("Hora registrada.");
-      } else {
-        setError(resp.error || "No se pudo registrar.");
-      }
-    } catch(e) {
-      setError("Error: " + e.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   async function quitar(m, indice){
     if (!confirm("¿Quitar este registro de mano de obra?")) return;
@@ -288,8 +252,13 @@ function SeccionManoObra({ orden, tecnicos, manoObra, setManoObra, setExito, set
     setManoObra(prev => prev.filter((_,i) => i !== indice));
   }
 
+  function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+
   return h("div", { className: "panel" },
-    h("h2", null, "👷 Mano de Obra"),
+    h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" } },
+      h("h2", { style: { margin: "0" } }, "👷 Mano de Obra"),
+      h("button", { className: "btn-primario", onClick: () => setModalAbierto(true) }, "+ Registrar hora")
+    ),
     h("table", { className: "tabla-reg" },
       h("thead", null, h("tr", null,
         h("th", null, "Técnico"), h("th", null, "Fecha"), h("th", null, "Hrs. Norm."),
@@ -310,92 +279,103 @@ function SeccionManoObra({ orden, tecnicos, manoObra, setManoObra, setExito, set
         manoObra.length === 0 && h("tr", null, h("td", { colSpan: 8, style: { textAlign:"center", color:"var(--color-texto-suave)", padding:"12px" } }, "Sin horas registradas todavía."))
       )
     ),
-    h("div", { className: "form-nueva" },
-      h("div", { className: "campo-chico" },
-        h("label", null, "Técnico"),
-        h("select", { value: tecnicoId, onChange: e => setTecnicoId(e.target.value) },
-          h("option", { value: "" }, "—"),
-          tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
+    modalAbierto && h(ModalManoObra, {
+      orden, tecnicos, setError,
+      onCerrar: () => setModalAbierto(false),
+      onCreado: nuevaLinea => { setManoObra(prev => [...prev, nuevaLinea]); setExito("Hora registrada."); setModalAbierto(false); },
+    })
+  );
+}
+
+function ModalManoObra({ orden, tecnicos, onCerrar, onCreado, setError }){
+  const [tecnicoId, setTecnicoId] = useState("");
+  const [fecha, setFecha] = useState(fechaParaOdoo(new Date()));
+  const [horasNormales, setHorasNormales] = useState(1);
+  const [horasExtra, setHorasExtra] = useState(0);
+  const [tarifa, setTarifa] = useState(0);
+  const [actividad, setActividad] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [errorLocal, setErrorLocal] = useState("");
+
+  async function agregar(){
+    if (!tecnicoId){ setErrorLocal("Elegí el técnico."); return; }
+    if (!actividad.trim()){ setErrorLocal("Describí la actividad realizada."); return; }
+    setGuardando(true); setErrorLocal("");
+    const costoTotal = (num(horasNormales) + num(horasExtra)) * num(tarifa);
+    const nombreTec = tecnicos.find(t => t.id === Number(tecnicoId))?.x_name || "";
+    try {
+      const resp = await tallerCrear("x_taller_mano_obra", {
+        x_name: orden.x_name + " — " + nombreTec + " — " + fecha,
+        x_studio_orden_id: orden.id,
+        x_studio_tecnico_id: Number(tecnicoId),
+        x_studio_fecha: fecha,
+        x_studio_horas_normales: num(horasNormales),
+        x_studio_horas_extra: num(horasExtra),
+        x_studio_tarifa_costo: num(tarifa),
+        x_studio_costo_total: costoTotal,
+        x_studio_actividad: actividad.trim(),
+      });
+      if (resp.ok) {
+        onCreado({
+          id: resp.id, x_studio_tecnico_id: [Number(tecnicoId), nombreTec], x_studio_fecha: fecha,
+          x_studio_horas_normales: num(horasNormales), x_studio_horas_extra: num(horasExtra),
+          x_studio_tarifa_costo: num(tarifa), x_studio_costo_total: costoTotal, x_studio_actividad: actividad.trim(),
+        });
+      } else {
+        setErrorLocal(resp.error || "No se pudo registrar.");
+      }
+    } catch(e) {
+      setErrorLocal("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "👷 Registrar Mano de Obra"),
+      h("div", { className: "fila-modal" },
+        h("div", { className: "campo" },
+          h("label", null, "Técnico"),
+          h("select", { value: tecnicoId, autoFocus: true, onChange: e => setTecnicoId(e.target.value) },
+            h("option", { value: "" }, "—"),
+            tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
+          )
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Fecha"),
+          h("input", { type: "date", value: fecha, onChange: e => setFecha(e.target.value) })
         )
       ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Fecha"),
-        h("input", { type: "date", value: fecha, onChange: e => setFecha(e.target.value) })
+      h("div", { className: "fila-modal" },
+        h("div", { className: "campo" },
+          h("label", null, "Horas normales"),
+          h("input", { type: "number", step: "0.5", value: horasNormales, onChange: e => setHorasNormales(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Horas extra"),
+          h("input", { type: "number", step: "0.5", value: horasExtra, onChange: e => setHorasExtra(e.target.value) })
+        )
       ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Hrs. normales"),
-        h("input", { type: "number", step: "0.5", value: horasNormales, onChange: e => setHorasNormales(e.target.value) })
-      ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Hrs. extra"),
-        h("input", { type: "number", step: "0.5", value: horasExtra, onChange: e => setHorasExtra(e.target.value) })
-      ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Tarifa/hora"),
+      h("div", { className: "campo" },
+        h("label", null, "Tarifa por hora"),
         h("input", { type: "number", step: "0.01", value: tarifa, onChange: e => setTarifa(e.target.value) })
       ),
-      h("div", { className: "campo-chico", style: { flex: "2" } },
-        h("label", null, "Actividad"),
-        h("input", { type: "text", value: actividad, onChange: e => setActividad(e.target.value) })
+      h("div", { className: "campo", style: { marginBottom: "0" } },
+        h("label", null, "Actividad realizada"),
+        h("textarea", { value: actividad, rows: 2, onChange: e => setActividad(e.target.value) })
       ),
-      h("button", { className: "btn-primario", onClick: agregar, disabled: guardando }, guardando ? "..." : "+ Agregar")
+      errorLocal && h("div", { className: "mensaje-error" }, errorLocal),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: agregar, disabled: guardando }, guardando ? "Guardando..." : "Registrar")
+      )
     )
   );
 }
 
 function SeccionConsumos({ orden, consumos, setConsumos, setExito, setError }){
-  const [tipoLinea, setTipoLinea] = useState("Repuesto");
-  const [descripcion, setDescripcion] = useState("");
-  const [sku, setSku] = useState("");
-  const [cantidad, setCantidad] = useState(1);
-  const [um, setUm] = useState("und");
-  const [costoUnitario, setCostoUnitario] = useState(0);
-  const [origen, setOrigen] = useState("Inventario");
-  const [proveedor, setProveedor] = useState("");
-  const [noPresupuestada, setNoPresupuestada] = useState(false);
-  const [motivo, setMotivo] = useState("");
-  const [guardando, setGuardando] = useState(false);
-
-  async function agregar(){
-    if (!descripcion.trim()){ setError("Falta la descripción."); return; }
-    if (noPresupuestada && !motivo){ setError("Elegí el motivo — esta línea no estaba presupuestada."); return; }
-    setGuardando(true); setError(""); setExito("");
-    const total = num(cantidad) * num(costoUnitario);
-    try {
-      const resp = await tallerCrear("x_costo_real_detalle", {
-        x_name: descripcion.trim(),
-        x_studio_orden_id: orden.id,
-        x_studio_tipo_linea: tipoLinea,
-        x_studio_sku: sku || false,
-        x_studio_descripcion: descripcion.trim(),
-        x_studio_cantidad_real: num(cantidad),
-        x_studio_unidad_medida: um,
-        x_studio_costo_unitario_real: num(costoUnitario),
-        x_studio_total_costo_real: total,
-        x_studio_origen: origen,
-        x_studio_proveedor: proveedor || false,
-        x_studio_fecha_consumo: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
-        x_studio_es_linea_no_presupuestada: noPresupuestada,
-        x_studio_motivo_cambio: noPresupuestada ? motivo : false,
-      });
-      if (resp.ok) {
-        setConsumos(prev => [...prev, {
-          id: resp.id, x_studio_tipo_linea: tipoLinea, x_studio_sku: sku, x_studio_descripcion: descripcion.trim(),
-          x_studio_cantidad_real: num(cantidad), x_studio_unidad_medida: um, x_studio_costo_unitario_real: num(costoUnitario),
-          x_studio_total_costo_real: total, x_studio_origen: origen, x_studio_proveedor: proveedor,
-          x_studio_es_linea_no_presupuestada: noPresupuestada, x_studio_motivo_cambio: motivo,
-        }]);
-        setDescripcion(""); setSku(""); setCantidad(1); setCostoUnitario(0); setProveedor(""); setNoPresupuestada(false); setMotivo("");
-        setExito("Consumo registrado.");
-      } else {
-        setError(resp.error || "No se pudo registrar.");
-      }
-    } catch(e) {
-      setError("Error: " + e.message);
-    } finally {
-      setGuardando(false);
-    }
-  }
+  const [modalAbierto, setModalAbierto] = useState(false);
 
   async function quitar(c, indice){
     if (!confirm("¿Quitar este consumo?")) return;
@@ -405,7 +385,10 @@ function SeccionConsumos({ orden, consumos, setConsumos, setExito, setError }){
   }
 
   return h("div", { className: "panel" },
-    h("h2", null, "📦 Consumo Real de Materiales / Servicios"),
+    h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"12px" } },
+      h("h2", { style: { margin: "0" } }, "📦 Consumo Real de Materiales / Servicios"),
+      h("button", { className: "btn-primario", onClick: () => setModalAbierto(true) }, "+ Registrar consumo")
+    ),
     h("table", { className: "tabla-reg" },
       h("thead", null, h("tr", null,
         h("th", null, "Tipo"), h("th", null, "Descripción"), h("th", null, "Cant."), h("th", null, "UM"),
@@ -425,14 +408,85 @@ function SeccionConsumos({ orden, consumos, setConsumos, setExito, setError }){
         consumos.length === 0 && h("tr", null, h("td", { colSpan: 8, style: { textAlign:"center", color:"var(--color-texto-suave)", padding:"12px" } }, "Sin consumos registrados todavía."))
       )
     ),
-    h("div", { className: "form-nueva" },
-      h("div", { className: "campo-chico" },
-        h("label", null, "Tipo"),
-        h("select", { value: tipoLinea, onChange: e => setTipoLinea(e.target.value) },
-          ["Repuesto","Material","Servicio","Otro"].map(t => h("option", { key: t, value: t }, t))
+    modalAbierto && h(ModalConsumo, {
+      orden, setError,
+      onCerrar: () => setModalAbierto(false),
+      onCreado: nuevaLinea => { setConsumos(prev => [...prev, nuevaLinea]); setExito("Consumo registrado."); setModalAbierto(false); },
+    })
+  );
+}
+
+function ModalConsumo({ orden, onCerrar, onCreado, setError }){
+  const [tipoLinea, setTipoLinea] = useState("Repuesto");
+  const [descripcion, setDescripcion] = useState("");
+  const [sku, setSku] = useState("");
+  const [cantidad, setCantidad] = useState(1);
+  const [um, setUm] = useState("und");
+  const [costoUnitario, setCostoUnitario] = useState(0);
+  const [origen, setOrigen] = useState("Inventario");
+  const [proveedor, setProveedor] = useState("");
+  const [noPresupuestada, setNoPresupuestada] = useState(false);
+  const [motivo, setMotivo] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [errorLocal, setErrorLocal] = useState("");
+
+  async function agregar(){
+    if (!descripcion.trim()){ setErrorLocal("Falta la descripción."); return; }
+    if (noPresupuestada && !motivo){ setErrorLocal("Elegí el motivo — esta línea no estaba presupuestada."); return; }
+    setGuardando(true); setErrorLocal("");
+    const total = num(cantidad) * num(costoUnitario);
+    try {
+      const resp = await tallerCrear("x_costo_real_detalle", {
+        x_name: descripcion.trim(),
+        x_studio_orden_id: orden.id,
+        x_studio_tipo_linea: tipoLinea,
+        x_studio_sku: sku || false,
+        x_studio_descripcion: descripcion.trim(),
+        x_studio_cantidad_real: num(cantidad),
+        x_studio_unidad_medida: um,
+        x_studio_costo_unitario_real: num(costoUnitario),
+        x_studio_total_costo_real: total,
+        x_studio_origen: origen,
+        x_studio_proveedor: proveedor || false,
+        x_studio_fecha_consumo: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+        x_studio_es_linea_no_presupuestada: noPresupuestada,
+        x_studio_motivo_cambio: noPresupuestada ? motivo : false,
+      });
+      if (resp.ok) {
+        onCreado({
+          id: resp.id, x_studio_tipo_linea: tipoLinea, x_studio_sku: sku, x_studio_descripcion: descripcion.trim(),
+          x_studio_cantidad_real: num(cantidad), x_studio_unidad_medida: um, x_studio_costo_unitario_real: num(costoUnitario),
+          x_studio_total_costo_real: total, x_studio_origen: origen, x_studio_proveedor: proveedor,
+          x_studio_es_linea_no_presupuestada: noPresupuestada, x_studio_motivo_cambio: motivo,
+        });
+      } else {
+        setErrorLocal(resp.error || "No se pudo registrar.");
+      }
+    } catch(e) {
+      setErrorLocal("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal modal-ancho", onClick: e => e.stopPropagation() },
+      h("h3", null, "📦 Registrar Consumo Real"),
+      h("div", { className: "fila-modal" },
+        h("div", { className: "campo" },
+          h("label", null, "Tipo"),
+          h("select", { value: tipoLinea, onChange: e => setTipoLinea(e.target.value) },
+            ["Repuesto","Material","Servicio","Otro"].map(t => h("option", { key: t, value: t }, t))
+          )
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Origen"),
+          h("select", { value: origen, onChange: e => setOrigen(e.target.value) },
+            ["Inventario","Compra","Manual","Servicio"].map(o => h("option", { key: o, value: o }, o))
+          )
         )
       ),
-      h("div", { className: "campo-chico", style: { flex: "2" } },
+      h("div", { className: "campo" },
         h("label", null, "Descripción" + (["Repuesto","Material"].includes(tipoLinea) ? " (Exactus + InfoAgro)" : "")),
         ["Repuesto","Material"].includes(tipoLinea)
           ? h(Buscador, {
@@ -448,43 +502,42 @@ function SeccionConsumos({ orden, consumos, setConsumos, setExito, setError }){
                 h("div", { className: "sub" }, a.ARTICULO + " · " + moneda(num(a.COSTO_PROM_DOL) > 0 ? a.COSTO_PROM_DOL : a.COSTO_ULT_DOL))
               ),
             })
-          : h("input", { type: "text", value: descripcion, onChange: e => setDescripcion(e.target.value) })
+          : h("input", { type: "text", value: descripcion, autoFocus: true, onChange: e => setDescripcion(e.target.value) }),
+        sku && h("div", { className: "sub", style: { marginTop:"3px" } }, "Código: " + sku)
       ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Cantidad"),
-        h("input", { type: "number", step: "0.01", value: cantidad, onChange: e => setCantidad(e.target.value) })
-      ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "UM"),
-        h("input", { type: "text", value: um, onChange: e => setUm(e.target.value) })
-      ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Costo Unit."),
-        h("input", { type: "number", step: "0.01", value: costoUnitario, onChange: e => setCostoUnitario(e.target.value) })
-      ),
-      h("div", { className: "campo-chico" },
-        h("label", null, "Origen"),
-        h("select", { value: origen, onChange: e => setOrigen(e.target.value) },
-          ["Inventario","Compra","Manual","Servicio"].map(o => h("option", { key: o, value: o }, o))
+      h("div", { className: "fila-modal" },
+        h("div", { className: "campo" },
+          h("label", null, "Cantidad"),
+          h("input", { type: "number", step: "0.01", value: cantidad, onChange: e => setCantidad(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "UM"),
+          h("input", { type: "text", value: um, onChange: e => setUm(e.target.value) })
+        ),
+        h("div", { className: "campo" },
+          h("label", null, "Costo Unit."),
+          h("input", { type: "number", step: "0.01", value: costoUnitario, onChange: e => setCostoUnitario(e.target.value) })
         )
       ),
-      (origen === "Servicio" || origen === "Compra") && h("div", { className: "campo-chico" },
+      (origen === "Servicio" || origen === "Compra") && h("div", { className: "campo" },
         h("label", null, "Proveedor"),
         h("input", { type: "text", value: proveedor, onChange: e => setProveedor(e.target.value) })
       ),
-      h("button", { className: "btn-primario", onClick: agregar, disabled: guardando }, guardando ? "..." : "+ Agregar")
-    ),
-    h("div", { style: { marginTop: "10px" } },
-      h("label", { className: "campo-check" },
+      h("label", { className: "campo-check", style: { marginBottom: "8px" } },
         h("input", { type: "checkbox", checked: noPresupuestada, onChange: e => setNoPresupuestada(e.target.checked) }),
         " Esta línea NO estaba presupuestada (trabajo/repuesto adicional encontrado)"
       ),
-      noPresupuestada && h("div", { style: { marginTop: "8px", maxWidth: "320px" } },
+      noPresupuestada && h("div", { className: "campo", style: { marginBottom: "0" } },
         h("label", null, "Motivo"),
         h("select", { value: motivo, onChange: e => setMotivo(e.target.value) },
           h("option", { value: "" }, "— Elegí un motivo —"),
           INFOTALLER_CAUSAS_DESVIACION.map(c => h("option", { key: c, value: c }, c))
         )
+      ),
+      errorLocal && h("div", { className: "mensaje-error" }, errorLocal),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: agregar, disabled: guardando }, guardando ? "Guardando..." : "Registrar")
       )
     )
   );
