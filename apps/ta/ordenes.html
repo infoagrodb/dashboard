@@ -80,7 +80,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v2</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v3 (técnico + diagnóstico + entrega)</div>
 
 <script>
 const h = React.createElement;
@@ -99,11 +99,16 @@ function claseTexto(prefijo, valor){
 /* ------------------------------------------------------------
    Modal de detalle / cambio de estado
    ------------------------------------------------------------ */
-function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActualizado }){
+function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerrar, onActualizado }){
   const [nuevoEstado, setNuevoEstado] = useState(orden.x_studio_estado);
   const [nuevaBahiaId, setNuevaBahiaId] = useState(
     Array.isArray(orden.x_studio_bahia_id) ? String(orden.x_studio_bahia_id[0]) : ""
   );
+  const [nuevoTecnicoId, setNuevoTecnicoId] = useState(
+    Array.isArray(orden.x_studio_tecnico_responsable_id) ? String(orden.x_studio_tecnico_responsable_id[0]) : ""
+  );
+  const [diagnostico, setDiagnostico] = useState(orden.x_studio_diagnostico || "");
+  const [fechaEntrega, setFechaEntrega] = useState(orden.x_studio_fecha_entrega ? orden.x_studio_fecha_entrega.slice(0,10) : "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
@@ -113,6 +118,7 @@ function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActua
   }
 
   const bahiaActualId = Array.isArray(orden.x_studio_bahia_id) ? orden.x_studio_bahia_id[0] : null;
+  const tecnicoActualId = Array.isArray(orden.x_studio_tecnico_responsable_id) ? orden.x_studio_tecnico_responsable_id[0] : null;
 
   async function guardar(){
     const cambios = {};
@@ -120,8 +126,15 @@ function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActua
 
     const bahiaSeleccionadaId = nuevaBahiaId ? Number(nuevaBahiaId) : null;
     const bahiaCambio = bahiaSeleccionadaId !== bahiaActualId;
-    if (bahiaCambio) {
-      cambios.x_studio_bahia_id = bahiaSeleccionadaId || false;
+    if (bahiaCambio) cambios.x_studio_bahia_id = bahiaSeleccionadaId || false;
+
+    const tecnicoSeleccionadoId = nuevoTecnicoId ? Number(nuevoTecnicoId) : null;
+    if (tecnicoSeleccionadoId !== tecnicoActualId) cambios.x_studio_tecnico_responsable_id = tecnicoSeleccionadoId || false;
+
+    if (diagnostico !== (orden.x_studio_diagnostico || "")) cambios.x_studio_diagnostico = diagnostico;
+
+    if (fechaEntrega !== (orden.x_studio_fecha_entrega ? orden.x_studio_fecha_entrega.slice(0,10) : "")) {
+      cambios.x_studio_fecha_entrega = fechaEntrega ? fechaEntrega + " " + new Date().toTimeString().slice(0,8) : false;
     }
 
     if (Object.keys(cambios).length === 0){
@@ -138,7 +151,6 @@ function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActua
           setError(`"${bahia.x_name}" ya está al límite (${ocupados}/${bahia.x_studio_capacidad}). Esta bahía bloquea nuevas asignaciones al llegar al tope — elegí otra o libera espacio primero.`);
           return;
         } else {
-          setExito(""); // se muestra el aviso pero se deja continuar
           if (!confirm(`"${bahia.x_name}" ya está al límite (${ocupados}/${bahia.x_studio_capacidad}). Esta bahía solo advierte, no bloquea — ¿asignar de todas formas?`)) {
             return;
           }
@@ -151,7 +163,11 @@ function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActua
       const resp = await tallerActualizar("x_taller_orden", orden.id, cambios);
       if (resp.ok) {
         setExito("Guardado correctamente.");
-        onActualizado({ ...orden, ...cambios, x_studio_bahia_id: bahiaSeleccionadaId ? [bahiaSeleccionadaId, bahias.find(b=>b.id===bahiaSeleccionadaId)?.x_name] : false });
+        onActualizado({
+          ...orden, ...cambios,
+          x_studio_bahia_id: bahiaSeleccionadaId ? [bahiaSeleccionadaId, bahias.find(b=>b.id===bahiaSeleccionadaId)?.x_name] : false,
+          x_studio_tecnico_responsable_id: tecnicoSeleccionadoId ? [tecnicoSeleccionadoId, tecnicos.find(t=>t.id===tecnicoSeleccionadoId)?.x_name] : false,
+        });
       } else {
         setError(resp.error || "No se pudo actualizar.");
       }
@@ -182,8 +198,17 @@ function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActua
         h("div", { className: "valor" }, h("span", { className: claseTexto("badge-prioridad", orden.x_studio_prioridad) }, orden.x_studio_prioridad))
       ),
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
-        h("label", null, "Problema reportado"),
+        h("label", null, "Problema reportado por el cliente"),
         h("div", { className: "valor" }, orden.x_studio_problema_reportado || "—")
+      ),
+
+      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+        h("label", null, "Diagnóstico (causa raíz)"),
+        h("textarea", {
+          value: diagnostico, onChange: e => setDiagnostico(e.target.value), rows: 3,
+          placeholder: "Pruebas realizadas y causa raíz del problema...",
+          style: { width:"100%", border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"8px", fontSize:"13px", fontFamily:"inherit", resize:"vertical" },
+        })
       ),
 
       h("div", { className: "fila-detalle" },
@@ -193,17 +218,29 @@ function ModalDetalleOrden({ orden, bahias, ocupacionPorBahia, onCerrar, onActua
             INFOTALLER_ESTADOS_ORDEN.map(e => h("option", { key: e, value: e }, e))
           )
         ),
-        h("div", { className: "campo-detalle", style: { marginBottom: "0" } },
+        h("div", { className: "campo-detalle" },
           h("label", null, "Asignar bahía"),
           h("select", { value: nuevaBahiaId, onChange: e => setNuevaBahiaId(e.target.value) },
             h("option", { value: "" }, "— Sin asignar —"),
             bahias.map(b => {
               const ocupados = ocupacionPorBahia[b.id] || 0;
-              return h("option", { key: b.id, value: b.id },
-                b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")"
-              );
+              return h("option", { key: b.id, value: b.id }, b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")");
             })
           )
+        )
+      ),
+
+      h("div", { className: "fila-detalle" },
+        h("div", { className: "campo-detalle" },
+          h("label", null, "Técnico responsable"),
+          h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
+            h("option", { value: "" }, "— Sin asignar —"),
+            tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
+          )
+        ),
+        h("div", { className: "campo-detalle", style: { marginBottom: "0" } },
+          h("label", null, "Fecha de entrega"),
+          h("input", { type: "date", value: fechaEntrega, onChange: e => setFechaEntrega(e.target.value) })
         )
       ),
 
@@ -225,6 +262,7 @@ function OrdenesDeTrabajo(){
   const [sesion, setSesion] = useState(null);
   const [ordenes, setOrdenes] = useState(null);
   const [bahias, setBahias] = useState([]);
+  const [tecnicos, setTecnicos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
@@ -237,16 +275,19 @@ function OrdenesDeTrabajo(){
   async function cargarOrdenes(){
     setCargando(true); setErrorCarga("");
     try {
-      const [filas, filasBahias] = await Promise.all([
+      const [filas, filasBahias, filasTecnicos] = await Promise.all([
         tallerQuery("x_taller_orden", [
           "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
           "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
-          "x_studio_tecnico_responsable_id","x_studio_problema_reportado",
+          "x_studio_tecnico_responsable_id","x_studio_problema_reportado","x_studio_diagnostico",
+          "x_studio_fecha_entrega",
         ], [], 1000, 0),
         tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite"], [], 500),
+        tallerQuery("x_taller_usuario", ["id","x_name","x_studio_rol"], [["x_studio_rol","=","Técnico"]], 500),
       ]);
       setOrdenes(filas);
       setBahias(filasBahias);
+      setTecnicos(filasTecnicos);
     } catch(e) {
       setErrorCarga("No se pudieron cargar las órdenes: " + e.message);
     } finally {
@@ -288,6 +329,7 @@ function OrdenesDeTrabajo(){
     ordenSeleccionada && h(ModalDetalleOrden, {
       orden: ordenSeleccionada,
       bahias,
+      tecnicos,
       ocupacionPorBahia: calcularOcupacion(ordenes || [], ordenSeleccionada.id),
       onCerrar: () => setOrdenSeleccionada(null),
       onActualizado: actualizada => {
