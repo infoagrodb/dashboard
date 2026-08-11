@@ -72,7 +72,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v2 (cierre sin reparar)</div>
 
 <script>
 const h = React.createElement;
@@ -113,6 +113,94 @@ function SelectorOrden({ onSeleccionar }){
 /* ------------------------------------------------------------
    Formulario de cierre para una orden
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   Cierre sin reparar — cuando el cliente rechazó el presupuesto.
+   Solo se cobra el diagnóstico, no hay checklist de reparación.
+   ------------------------------------------------------------ */
+function CierreSinReparar({ orden, onVolver, onCreado }){
+  const [yaExiste, setYaExiste] = useState(false);
+  const [cargando, setCargando] = useState(true);
+  const [diagnosticoFinal, setDiagnosticoFinal] = useState("");
+  const [montoDiagnostico, setMontoDiagnostico] = useState(0);
+  const [aceptadoPorCliente, setAceptadoPorCliente] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    tallerQuery("x_taller_cierre", ["id"], [["x_studio_orden_id","=",orden.id]], 1)
+      .then(rows => { setYaExiste(rows.length > 0); setCargando(false); })
+      .catch(e => { setError("Error al cargar: " + e.message); setCargando(false); });
+  }, [orden.id]);
+
+  async function confirmarCierre(){
+    if (!diagnosticoFinal.trim()){ setError("Registrá el diagnóstico realizado."); return; }
+    if (!aceptadoPorCliente.trim()){ setError("Registrá quién del cliente quedó enterado/conforme con el cierre."); return; }
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerCrear("x_taller_cierre", {
+        x_name: orden.x_name + "-CIERRE-SIN-REPARAR",
+        x_studio_orden_id: orden.id,
+        x_studio_total_presupuestado: 0,
+        x_studio_total_costo_real: num(montoDiagnostico),
+        x_studio_variacion_total: num(montoDiagnostico),
+        x_studio_porcentaje_variacion: 0,
+        x_studio_causa_principal: "Cambio solicitado por el cliente",
+        x_studio_diagnostico_final: diagnosticoFinal,
+        x_studio_trabajo_realizado: "Sin reparación — cliente no autorizó el presupuesto. Se cobró únicamente el diagnóstico.",
+        x_studio_prueba_realizada: "No aplica — equipo no reparado",
+        x_studio_resultado_prueba: "No aprobado",
+        x_studio_fecha_cierre: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+        x_studio_aceptado_por_cliente: aceptadoPorCliente,
+        x_studio_fecha_aceptacion_cliente: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+      });
+      if (!resp.ok) { setError(resp.error || "No se pudo crear el cierre."); setGuardando(false); return; }
+      await tallerActualizar("x_taller_orden", orden.id, { x_studio_estado: "Cerrada" });
+      onCreado();
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  if (cargando) return h("div", { className: "panel cargando" }, "Cargando...");
+  if (yaExiste) {
+    return h("div", null,
+      h("button", { className: "link-volver", onClick: onVolver }, "← Volver"),
+      h("div", { className: "panel error-carga" }, "Esta orden ya tiene un cierre registrado.")
+    );
+  }
+
+  return h("div", null,
+    h("button", { className: "link-volver", onClick: onVolver }, "← Volver"),
+    h("div", { className: "panel" },
+      h("h2", { style: { margin:"0 0 4px", fontSize:"16px" } }, "❌ Cerrar sin reparar — " + orden.x_name),
+      h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"16px" } },
+        (Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "") + " · " +
+        (Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "")
+      ),
+      h("div", { style: { background:"var(--color-alerta-suave)", border:"1px solid var(--color-alerta)", borderRadius:"7px", padding:"10px 12px", fontSize:"12.5px", color:"#92400E", marginBottom:"16px" } },
+        "El cliente no autorizó el presupuesto. Este cierre no compara contra ningún presupuesto — solo cobra el diagnóstico realizado."
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Diagnóstico realizado"),
+        h("textarea", { value: diagnosticoFinal, onChange: e => setDiagnosticoFinal(e.target.value), placeholder: "Qué se revisó y qué se encontró..." })
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Monto a cobrar por el diagnóstico (US$)"),
+        h("input", { type: "number", step: "0.01", value: montoDiagnostico, onChange: e => setMontoDiagnostico(e.target.value) })
+      ),
+      h("div", { className: "campo", style: { marginBottom: "0" } },
+        h("label", null, "Notificado / conforme (cliente)"),
+        h("input", { type: "text", value: aceptadoPorCliente, onChange: e => setAceptadoPorCliente(e.target.value) })
+      ),
+      error && h("div", { className: "mensaje-error" }, error),
+      h("button", { className: "btn-primario", style: { marginTop: "16px" }, onClick: confirmarCierre, disabled: guardando },
+        guardando ? "Cerrando..." : "🔒 Confirmar cierre sin reparar")
+    )
+  );
+}
+
 function FormularioCierre({ orden, onVolver, onCreado }){
   const [presupuesto, setPresupuesto] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -342,7 +430,8 @@ function Cierres(){
   if (!sesion) return null;
 
   if (ordenParaCerrar) {
-    return h(FormularioCierre, {
+    const Componente = ordenParaCerrar.x_studio_estado === "Rechazada" ? CierreSinReparar : FormularioCierre;
+    return h(Componente, {
       orden: ordenParaCerrar,
       onVolver: () => setOrdenParaCerrar(null),
       onCreado: () => { setOrdenParaCerrar(null); cargarLista(); },
