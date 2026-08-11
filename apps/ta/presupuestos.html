@@ -116,7 +116,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v11 (PDF ordenado por tipo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v12 (modal para nueva línea)</div>
 
 <script>
 const h = React.createElement;
@@ -392,6 +392,7 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
   const [exito, setExito] = useState("");
   const [nuevaLinea, setNuevaLinea] = useState(lineaVacia());
   const [guardandoNueva, setGuardandoNueva] = useState(false);
+  const [modalNuevaLinea, setModalNuevaLinea] = useState(false);
   const [modalArticuloNuevo, setModalArticuloNuevo] = useState(false);
   const [aprobando, setAprobando] = useState(false);
   const [nombreAprobador, setNombreAprobador] = useState("");
@@ -510,6 +511,7 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
       if (resp.ok) {
         setLineas(prev => [...prev, { ...valores, id: resp.id }]);
         setNuevaLinea(lineaVacia());
+        setModalNuevaLinea(false);
       } else {
         setError(resp.error || "No se pudo agregar la línea.");
       }
@@ -699,6 +701,11 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
         "✅ Aprobado por " + presupuesto.x_studio_aprobado_por_cliente + " el " + formatearFecha(presupuesto.x_studio_fecha_aprobacion) + " — este presupuesto ya no se puede editar."
       ),
 
+      h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"8px" } },
+        h("span", { style: { fontSize:"12.5px", fontWeight:600, color:"var(--color-texto-suave)" } }, "Líneas del presupuesto"),
+        !soloLectura && h("button", { className: "btn-primario", onClick: () => setModalNuevaLinea(true) }, "+ Agregar línea")
+      ),
+
       h("table", { className: "tabla-lineas" },
         h("thead", null,
           h("tr", null,
@@ -718,7 +725,10 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
         )
       ),
 
-      !soloLectura && h("div", { className: "form-nueva-linea" },
+      modalNuevaLinea && h("div", { className: "modal-fondo", onClick: () => setModalNuevaLinea(false) },
+      h("div", { className: "modal modal-ancho", onClick: e => e.stopPropagation() },
+      h("h3", null, "+ Agregar Línea al Presupuesto"),
+      h("div", { className: "form-nueva-linea" },
         h("div", { className: "campo-chico" },
           h("label", null, "Tipo"),
           h("select", { value: nuevaLinea.x_studio_tipo_linea, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_tipo_linea: e.target.value, x_studio_sku: "", x_studio_origen_costo: "Manual" }) },
@@ -775,10 +785,14 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
         h("div", { className: "campo-chico" },
           h("label", null, "Costo Unit."),
           h("input", { type: "number", step: "0.01", value: nuevaLinea.x_studio_costo_manual, onChange: e => setNuevaLinea({ ...nuevaLinea, x_studio_costo_manual: e.target.value }) })
-        ),
-        h("button", { className: "btn-primario", onClick: agregarNuevaLinea, disabled: guardandoNueva || !nuevaLinea.x_studio_descripcion.trim() },
-          guardandoNueva ? "..." : "+ Agregar")
+        )
       ),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: () => setModalNuevaLinea(false), disabled: guardandoNueva }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: agregarNuevaLinea, disabled: guardandoNueva || !nuevaLinea.x_studio_descripcion.trim() },
+          guardandoNueva ? "Guardando..." : "+ Agregar")
+      )
+      )),
 
       h("div", { className: "totales-resumen" },
         h("div", { className: "totales-caja" },
