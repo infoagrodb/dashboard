@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v7 cargado correctamente (agrega estado Solicitada)");
+console.log("core.js v8 cargado correctamente (buscar artículo local por código)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -287,7 +287,7 @@ async function buscarArticulosExactus(texto) {
 async function buscarArticulosLocalTaller(texto) {
   const filas = await tallerQuery("x_taller_articulo", [
     "id","x_name","x_studio_codigo","x_studio_costo_promedio","x_studio_unidad_medida","x_studio_activo_en_erp",
-  ], [["x_name", "ilike", texto]], 10);
+  ], ["|", ["x_name", "ilike", texto], ["x_studio_codigo", "ilike", texto]], 10);
   return filas.map(a => ({
     ARTICULO: a.x_studio_codigo || ("LOCAL-" + a.id),
     DESCRIPCION: a.x_name,
