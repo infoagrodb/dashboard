@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=5"></script>
+<script src="core.js?v=6"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -74,13 +74,15 @@
   .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
   .btn-primario:disabled{opacity:.6; cursor:default;}
   .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .btn-peligro{background:#fff; border:1px solid var(--color-peligro); color:var(--color-peligro); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer;}
+  .btn-peligro:hover{background:var(--color-peligro-suave);}
   .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
   .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
 </style>
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v3 (técnico + diagnóstico + entrega)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v4 (reapertura por retrabajo)</div>
 
 <script>
 const h = React.createElement;
@@ -115,6 +117,34 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
 
   function m2oTexto(v){
     return Array.isArray(v) ? v[1] : (v || "—");
+  }
+
+  const [reabriendo, setReabriendo] = useState(false);
+  const [motivoReapertura, setMotivoReapertura] = useState("");
+  const [modalReapertura, setModalReapertura] = useState(false);
+
+  async function confirmarReapertura(){
+    if (!motivoReapertura.trim()){ setError("Escribí el motivo de la reapertura."); return; }
+    setReabriendo(true); setError("");
+    try {
+      const resp = await tallerActualizar("x_taller_orden", orden.id, {
+        x_studio_estado: "En reparación",
+        x_studio_veces_reabierta: (orden.x_studio_veces_reabierta || 0) + 1,
+        x_studio_observaciones: (orden.x_studio_observaciones || "") + "\nReabierta por retrabajo: " + motivoReapertura.trim(),
+      });
+      if (resp.ok) {
+        onActualizado({
+          ...orden, x_studio_estado: "En reparación",
+          x_studio_veces_reabierta: (orden.x_studio_veces_reabierta || 0) + 1,
+        });
+      } else {
+        setError(resp.error || "No se pudo reabrir.");
+      }
+    } catch(e) {
+      setError("Error: " + e.message);
+    } finally {
+      setReabriendo(false);
+    }
   }
 
   const bahiaActualId = Array.isArray(orden.x_studio_bahia_id) ? orden.x_studio_bahia_id[0] : null;
@@ -248,8 +278,33 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
       exito && h("div", { className: "mensaje-exito" }, exito),
 
       h("div", { className: "modal-botones" },
-        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar"),
-        h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
+        orden.x_studio_estado === "Cerrada"
+          ? h("button", { className: "btn-peligro", onClick: () => setModalReapertura(true) }, "🔓 Reabrir (retrabajo)")
+          : h("span"),
+        h("div", { style: { display:"flex", gap:"8px" } },
+          h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar"),
+          h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
+        )
+      ),
+
+      modalReapertura && h("div", { className: "modal-fondo", onClick: () => setModalReapertura(false) },
+        h("div", { className: "modal-detalle", style: { maxWidth: "420px" }, onClick: e => e.stopPropagation() },
+          h("h3", null, "🔓 Reabrir por retrabajo"),
+          h("p", { style: { fontSize:"12.5px", color:"var(--color-texto-suave)", marginTop:"0" } },
+            "La orden vuelve a estado \"En reparación\" y queda contada como retrabajo (indicador de calidad)."
+          ),
+          h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+            h("label", null, "Motivo de la reapertura"),
+            h("textarea", { value: motivoReapertura, autoFocus: true, rows: 3,
+              onChange: e => setMotivoReapertura(e.target.value),
+              style: { width:"100%", border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"8px", fontSize:"13px", fontFamily:"inherit", resize:"vertical" } })
+          ),
+          h("div", { className: "modal-botones" },
+            h("button", { className: "btn-secundario", onClick: () => setModalReapertura(false), disabled: reabriendo }, "Cancelar"),
+            h("button", { className: "btn-peligro", onClick: async () => { await confirmarReapertura(); setModalReapertura(false); }, disabled: reabriendo },
+              reabriendo ? "Guardando..." : "Confirmar reapertura")
+          )
+        )
       )
     )
   );

@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=5"></script>
+<script src="core.js?v=6"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -94,7 +94,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v3</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v4 (acta + fotos)</div>
 <div id="raiz"></div>
 
 <script>
@@ -306,6 +306,24 @@ function Recepcion(){
   const [folioCreado, setFolioCreado] = useState(null);
   const [respuestaCruda, setRespuestaCruda] = useState(null);
 
+  const ELEMENTOS_ACTA = ["Llantas en buen estado","Espejos","Batería","Herramientas/gata","Combustible","Extintor","Radio/GPS","Sin daños visibles adicionales"];
+  const [elementosPresentes, setElementosPresentes] = useState([]);
+  const [notasActa, setNotasActa] = useState("");
+  const [fotos, setFotos] = useState([]);
+  const [subiendoFotos, setSubiendoFotos] = useState(false);
+
+  function alternarElemento(item){
+    setElementosPresentes(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
+  }
+
+  function agregarFotos(archivos){
+    setFotos(prev => [...prev, ...Array.from(archivos)]);
+  }
+
+  function quitarFoto(indice){
+    setFotos(prev => prev.filter((_,i) => i !== indice));
+  }
+
   function validarHorometro(valor){
     if (valor === "" || valor === null || valor === undefined){
       const msg = "Obligatorio.";
@@ -377,6 +395,9 @@ function Recepcion(){
     setGuardando(true);
     try {
       const folio = await tallerFolio("OT");
+      const textoActa = "ACTA DE RECEPCIÓN\nElementos presentes: " +
+        (elementosPresentes.length ? elementosPresentes.join(", ") : "ninguno marcado") +
+        (notasActa.trim() ? "\nNotas: " + notasActa.trim() : "");
       const payload = {
         x_name: folio,
         x_studio_cliente_id: cliente.id,
@@ -390,6 +411,7 @@ function Recepcion(){
         x_studio_kilometraje_recepcion: kilometraje ? Number(kilometraje) : 0,
         x_studio_responsable_recepcion_id: sesion.id,
         x_studio_requiere_presupuesto: true,
+        x_studio_observaciones: textoActa,
       };
       const resp = await tallerCrear("x_taller_orden", payload);
       setRespuestaCruda({ folio, payload_enviado: payload, respuesta_servidor: resp });
@@ -401,6 +423,16 @@ function Recepcion(){
           if (kilometraje) actualizacionEquipo.x_studio_kilometraje_actual = Number(kilometraje);
           await tallerActualizar("x_equiposagricolas", equipo.id, actualizacionEquipo);
         } catch(e) { /* no bloquea el flujo si esto falla — la orden ya quedó registrada */ }
+
+        // Subir las fotos del acta, una por una (no en paralelo, mismo motivo que en Presupuestos).
+        if (fotos.length) {
+          setSubiendoFotos(true);
+          for (const foto of fotos) {
+            try { await tallerSubirAdjunto("x_taller_orden", resp.id, foto); }
+            catch(e) { /* si una foto falla no se pierde la orden ya creada, solo se avisa */ setError(prev => (prev ? prev + " " : "") + "Una foto no se pudo subir: " + e.message); }
+          }
+          setSubiendoFotos(false);
+        }
         setFolioCreado(folio);
       } else {
         setError(resp.error || "No se pudo registrar la recepción.");
@@ -550,8 +582,41 @@ function Recepcion(){
       )
     ),
 
-    h("button", { className: "btn-primario", onClick: registrar, disabled: guardando },
-      guardando ? "Registrando..." : "✅ Registrar recepción"
+    h("div", { className: "panel" },
+      h("h2", null, "📋 Acta de Check-in"),
+      h("label", null, "Elementos presentes al recibir"),
+      h("div", { style: { display:"flex", flexWrap:"wrap", gap:"6px", marginBottom:"14px" } },
+        ELEMENTOS_ACTA.map(item => h("button", {
+          key: item, type: "button",
+          onClick: () => alternarElemento(item),
+          style: {
+            fontSize:"12px", padding:"6px 12px", borderRadius:"16px", cursor:"pointer",
+            border: elementosPresentes.includes(item) ? "1px solid var(--color-primario)" : "1px solid var(--color-borde)",
+            background: elementosPresentes.includes(item) ? "var(--color-acento-suave)" : "#fff",
+            color: elementosPresentes.includes(item) ? "var(--color-primario-oscuro)" : "var(--color-texto)",
+          },
+        }, (elementosPresentes.includes(item) ? "✓ " : "") + item))
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Notas adicionales del acta (daños, observaciones)"),
+        h("textarea", { value: notasActa, onChange: e => setNotasActa(e.target.value), placeholder: "Rayón en la puerta izquierda, falta tapón de radiador..." })
+      ),
+      h("div", { className: "campo", style: { marginBottom: "0" } },
+        h("label", null, "Fotos"),
+        h("input", { type: "file", accept: "image/*", capture: "environment", multiple: true,
+          onChange: e => { agregarFotos(e.target.files); e.target.value = ""; } }),
+        fotos.length > 0 && h("div", { style: { display:"flex", flexWrap:"wrap", gap:"8px", marginTop:"10px" } },
+          fotos.map((f, i) => h("div", { key: i, style: { position:"relative" } },
+            h("img", { src: URL.createObjectURL(f), style: { width:"64px", height:"64px", objectFit:"cover", borderRadius:"6px", border:"1px solid var(--color-borde)" } }),
+            h("button", { type: "button", onClick: () => quitarFoto(i),
+              style: { position:"absolute", top:"-6px", right:"-6px", background:"var(--color-peligro)", color:"#fff", border:"none", borderRadius:"50%", width:"18px", height:"18px", fontSize:"11px", cursor:"pointer", lineHeight:"1" } }, "✕")
+          ))
+        )
+      )
+    ),
+
+    h("button", { className: "btn-primario", onClick: registrar, disabled: guardando || subiendoFotos },
+      subiendoFotos ? "Subiendo fotos..." : guardando ? "Registrando..." : "✅ Registrar recepción"
     ),
 
     modalCliente && h(ModalNuevoCliente, {

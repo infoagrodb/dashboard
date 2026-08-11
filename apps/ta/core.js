@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v5 cargado correctamente (búsqueda combinada Exactus+InfoAgro)");
+console.log("core.js v6 cargado correctamente (subida de adjuntos)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -169,6 +169,21 @@ async function tallerDesactivar(model, id, motivo) {
 async function tallerFolio(prefijo) {
   const j = await tallerFetch(`/taller/folio?prefijo=${encodeURIComponent(prefijo || "OT")}`);
   return j.folio;
+}
+
+/** Sube un archivo (foto, PDF) como adjunto de cualquier registro x_taller_*. */
+async function tallerSubirAdjunto(model, resId, file) {
+  const form = new FormData();
+  form.append("file", file);
+  form.append("model", model);
+  form.append("res_id", resId);
+  form.append("filename", file.name);
+  const r = await fetch(INFOTALLER_WORKER_BASE + "/taller/adjunto", { method: "POST", body: form });
+  let j;
+  try { j = await r.json(); }
+  catch (e) { throw new Error(`Respuesta no válida del servidor (HTTP ${r.status})`); }
+  if (!r.ok && !j.ok) throw new Error(j.error || `Error HTTP ${r.status}`);
+  return j;
 }
 
 /* ------------------------------------------------------------
