@@ -150,8 +150,10 @@ function AprobarPresupuesto(){
   const [error, setError] = useState("");
   const [nombreFirma, setNombreFirma] = useState("");
   const [firmaVacia, setFirmaVacia] = useState(true);
+  const [comentario, setComentario] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [yaAprobado, setYaAprobado] = useState(false);
+  const [yaRechazado, setYaRechazado] = useState(false);
   const canvasFirmaRef = useRef(null);
 
   useEffect(() => {
@@ -167,6 +169,7 @@ function AprobarPresupuesto(){
       if (!j.ok) { setError(j.error || "No se pudo cargar el presupuesto."); setCargando(false); return; }
       setDatos(j);
       if (j.presupuesto.x_studio_estado === "Aprobado") setYaAprobado(true);
+      if (j.presupuesto.x_studio_estado === "Rechazado") setYaRechazado(true);
     } catch(e) {
       setError("No se pudo conectar: " + e.message);
     } finally {
@@ -191,6 +194,28 @@ function AprobarPresupuesto(){
         setYaAprobado(true);
       } else {
         setError(j.error || "No se pudo aprobar.");
+      }
+    } catch(e) {
+      setError("No se pudo conectar: " + e.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function rechazar(){
+    if (!comentario.trim()){ setError("Contanos brevemente por qué no aprobás — ayuda al taller a ajustar el presupuesto."); return; }
+    setEnviando(true); setError("");
+    try {
+      const r = await fetch(WORKER_BASE + "/taller/presupuesto/rechazar-publico", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(id), token: token, comentario: comentario.trim() }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setYaRechazado(true);
+      } else {
+        setError(j.error || "No se pudo enviar el rechazo.");
       }
     } catch(e) {
       setError("No se pudo conectar: " + e.message);
@@ -280,15 +305,33 @@ function AprobarPresupuesto(){
               "Gracias" + (presupuesto.x_studio_aprobado_por_cliente ? ", " + presupuesto.x_studio_aprobado_por_cliente : "") + ". El taller ya fue notificado y va a continuar con el trabajo."
             )
           )
-        : h(React.Fragment, null,
-            h("label", null, "Tu nombre completo"),
-            h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Escribí tu nombre completo" }),
-            h("label", { style: { marginTop: "14px" } }, "Firma"),
-            h(PizarronFirma, { onCambio: setFirmaVacia }),
-            error && h("div", { className: "mensaje-error" }, error),
-            h("button", { className: "btn-primario", onClick: aprobar, disabled: enviando }, enviando ? "Enviando..." : "✅ Aprobar este presupuesto"),
-            h("div", { className: "nota-legal" }, "Al escribir tu nombre, firmar y presionar \"Aprobar\", autorizás al taller a realizar el trabajo descrito por el monto indicado.")
-          )
+        : yaRechazado
+          ? h("div", { className: "aprobado-caja" },
+              h("div", { className: "icono" }, "🚫"),
+              h("h2", { style: { margin: "0 0 6px", fontSize: "17px" } }, "Presupuesto rechazado"),
+              h("div", { style: { color: "var(--color-texto-suave)", fontSize: "13px" } },
+                "Se notificó al taller que no autorizás este trabajo. Si querés retomarlo más adelante, contactá directamente al taller."
+              )
+            )
+          : h(React.Fragment, null,
+              h("label", null, "Tu nombre completo"),
+              h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Escribí tu nombre completo" }),
+              h("label", { style: { marginTop: "14px" } }, "Firma"),
+              h(PizarronFirma, { onCambio: setFirmaVacia }),
+              h("label", { style: { marginTop: "14px" } }, "Comentario (obligatorio si rechazás)"),
+              h("textarea", {
+                value: comentario, onChange: e => setComentario(e.target.value),
+                placeholder: "Alguna nota, pregunta o el motivo si no aprobás...",
+                style: { width:"100%", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"10px 12px", fontSize:"14px", fontFamily:"inherit", resize:"vertical", minHeight:"70px" },
+              }),
+              error && h("div", { className: "mensaje-error" }, error),
+              h("button", { className: "btn-primario", onClick: aprobar, disabled: enviando }, enviando ? "Enviando..." : "✅ Aprobar este presupuesto"),
+              h("button", {
+                onClick: rechazar, disabled: enviando,
+                style: { width:"100%", background:"#fff", border:"1px solid var(--color-peligro)", color:"var(--color-peligro)", borderRadius:"10px", padding:"13px", fontSize:"14.5px", fontWeight:"700", cursor:"pointer", marginTop:"8px" },
+              }, enviando ? "Enviando..." : "❌ No autorizo este presupuesto"),
+              h("div", { className: "nota-legal" }, "Al escribir tu nombre, firmar y presionar \"Aprobar\", autorizás al taller a realizar el trabajo descrito por el monto indicado.")
+            )
     )
   );
 }
