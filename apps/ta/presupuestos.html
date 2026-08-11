@@ -118,7 +118,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v13 (rechazar presupuesto)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v14 (link público de aprobación)</div>
 
 <script>
 const h = React.createElement;
@@ -527,6 +527,37 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
   }
 
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [generandoLink, setGenerandoLink] = useState(false);
+
+  async function generarLinkAprobacion(){
+    setGenerandoLink(true); setError(""); setExito("");
+    try {
+      const resp = await tallerFetch("/taller/presupuesto/compartir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ presupuesto_id: presupuestoId }),
+      });
+      if (!resp.ok) { setError(resp.error || "No se pudo generar el link."); return; }
+      const url = window.location.href.replace(/presupuestos\.html.*$/, "aprobar.html") + "?id=" + presupuestoId + "&token=" + resp.token;
+      const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "";
+      if (navigator.share) {
+        await navigator.share({
+          title: "Presupuesto " + presupuesto.x_name,
+          text: "Hola" + (clienteNombre ? " " + clienteNombre : "") + ", te comparto el presupuesto " + presupuesto.x_name + " (" + moneda(totales.total) + ") para tu revisión y aprobación.",
+          url,
+        });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setExito("Link copiado al portapapeles: " + url);
+      } else {
+        setExito("Link: " + url);
+      }
+    } catch(e) {
+      if (e.name !== "AbortError") setError("Error: " + e.message);
+    } finally {
+      setGenerandoLink(false);
+    }
+  }
 
   function construirPDF(){
     if (!window.jspdf) throw new Error("La librería de PDF no cargó (revisá tu conexión y recargá la página).");
@@ -852,8 +883,10 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
       h("div", { className: "barra-botones", style: { marginTop: "16px", marginBottom: soloLectura ? "0" : "10px" } },
         h("button", { className: "btn-secundario", onClick: descargarPdf, disabled: generandoPdf || lineas.length === 0 },
           "⬇️ Descargar PDF"),
-        h("button", { className: "btn-primario", onClick: generarYCompartirPdf, disabled: generandoPdf || lineas.length === 0 },
-          generandoPdf ? "Generando..." : "📤 Compartir PDF")
+        h("button", { className: "btn-secundario", onClick: generarYCompartirPdf, disabled: generandoPdf || lineas.length === 0 },
+          generandoPdf ? "Generando..." : "📤 Compartir PDF"),
+        presupuesto.x_studio_estado !== "Aprobado" && h("button", { className: "btn-primario", onClick: generarLinkAprobacion, disabled: generandoLink || lineas.length === 0 },
+          generandoLink ? "Generando link..." : "🔗 Enviar a cliente para aprobar")
       ),
 
       !soloLectura && h("div", { className: "barra-botones" },
