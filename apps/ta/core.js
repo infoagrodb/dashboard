@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v6 cargado correctamente (subida de adjuntos)");
+console.log("core.js v7 cargado correctamente (agrega estado Solicitada)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -192,7 +192,7 @@ async function tallerSubirAdjunto(model, resId, file) {
    ------------------------------------------------------------ */
 const INFOTALLER_ROLES = ["Recepción","Técnico","Presupuestador","Bodega","Compras","Supervisor","Administrador","Auditor"];
 const INFOTALLER_ESTADOS_ORDEN = [
-  "Recibida","En diagnóstico","Pendiente de presupuesto","Presupuestada",
+  "Solicitada","Recibida","En diagnóstico","Pendiente de presupuesto","Presupuestada",
   "Pendiente de aprobación","Aprobada","Rechazada","En reparación",
   "Pendiente de repuesto","Terminada","Entregada","Cerrada","Cancelada",
 ];

@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=6"></script>
+<script src="core.js?v=7"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -288,6 +288,11 @@ function ModalNuevoEquipo({ cliente, onCerrar, onCreado }){
 function Recepcion(){
   const [sesion, setSesion] = useState(null);
 
+  const paramsUrl = new URLSearchParams(window.location.search);
+  const idAConvertir = paramsUrl.get("convertir");
+  const [cargandoSolicitud, setCargandoSolicitud] = useState(!!idAConvertir);
+  const [ordenOriginal, setOrdenOriginal] = useState(null);
+
   const [cliente, setCliente] = useState(null);
   const [equipo, setEquipo] = useState(null);
   const [modalCliente, setModalCliente] = useState(false);
@@ -311,6 +316,31 @@ function Recepcion(){
   const [notasActa, setNotasActa] = useState("");
   const [fotos, setFotos] = useState([]);
   const [subiendoFotos, setSubiendoFotos] = useState(false);
+
+  useEffect(() => {
+    if (!idAConvertir) return;
+    (async () => {
+      try {
+        const filas = await tallerQuery("x_taller_orden", [
+          "id","x_name","x_studio_cliente_id","x_studio_problema_reportado",
+        ], [["id","=",Number(idAConvertir)]], 1);
+        if (filas.length) {
+          const o = filas[0];
+          setOrdenOriginal(o);
+          if (Array.isArray(o.x_studio_cliente_id)) {
+            setCliente({ id: o.x_studio_cliente_id[0], x_name: o.x_studio_cliente_id[1], x_studio_tipo_cliente: "Externo" });
+          }
+          setProblema(o.x_studio_problema_reportado || "");
+        } else {
+          setError("No se encontró la solicitud a convertir.");
+        }
+      } catch(e) {
+        setError("No se pudo cargar la solicitud: " + e.message);
+      } finally {
+        setCargandoSolicitud(false);
+      }
+    })();
+  }, []);
 
   function alternarElemento(item){
     setElementosPresentes(prev => prev.includes(item) ? prev.filter(x => x !== item) : [...prev, item]);
@@ -394,7 +424,8 @@ function Recepcion(){
 
     setGuardando(true);
     try {
-      const folio = await tallerFolio("OT");
+      const esConversion = !!ordenOriginal;
+      const folio = esConversion ? ordenOriginal.x_name : await tallerFolio("OT");
       const textoActa = "ACTA DE RECEPCIÓN\nElementos presentes: " +
         (elementosPresentes.length ? elementosPresentes.join(", ") : "ninguno marcado") +
         (notasActa.trim() ? "\nNotas: " + notasActa.trim() : "");
@@ -413,7 +444,10 @@ function Recepcion(){
         x_studio_requiere_presupuesto: true,
         x_studio_observaciones: textoActa,
       };
-      const resp = await tallerCrear("x_taller_orden", payload);
+      const resp = esConversion
+        ? await tallerActualizar("x_taller_orden", ordenOriginal.id, payload)
+        : await tallerCrear("x_taller_orden", payload);
+      const idOrden = esConversion ? ordenOriginal.id : resp.id;
       setRespuestaCruda({ folio, payload_enviado: payload, respuesta_servidor: resp });
       if (resp.ok) {
         // Actualiza el horómetro/kilometraje "vigente" del equipo con esta lectura más reciente,
@@ -428,7 +462,7 @@ function Recepcion(){
         if (fotos.length) {
           setSubiendoFotos(true);
           for (const foto of fotos) {
-            try { await tallerSubirAdjunto("x_taller_orden", resp.id, foto); }
+            try { await tallerSubirAdjunto("x_taller_orden", idOrden, foto); }
             catch(e) { /* si una foto falla no se pierde la orden ya creada, solo se avisa */ setError(prev => (prev ? prev + " " : "") + "Una foto no se pudo subir: " + e.message); }
           }
           setSubiendoFotos(false);
@@ -446,6 +480,7 @@ function Recepcion(){
   }
 
   if (!sesion) return null;
+  if (cargandoSolicitud) return h("div", { className: "envoltura" }, h("div", { className: "panel" }, "Cargando solicitud..."));
 
   if (folioCreado) {
     return h("div", { className: "envoltura" },

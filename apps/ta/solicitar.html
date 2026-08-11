@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitar Servicio — Infotaller COMASA</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --radio:12px; --sombra:0 4px 16px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:linear-gradient(160deg,#F8FAFC 0%,#D1FAE5 100%); color:var(--color-texto); font-size:14px; min-height:100vh;
+  }
+  .envoltura{max-width:520px; margin:0 auto;}
+  .marca{display:flex; align-items:center; gap:8px; justify-content:center; padding:16px 0 20px; font-weight:700; color:var(--color-primario-oscuro); font-size:16px;}
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:22px;}
+  h1{font-size:18px; margin:0 0 4px;}
+  .sub{font-size:12.5px; color:var(--color-texto-suave); margin-bottom:18px;}
+  label{display:block; font-size:11.5px; color:var(--color-texto-suave); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  input, select, textarea{width:100%; border:1px solid var(--color-borde); border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; color:var(--color-texto); font-family:inherit; margin-bottom:14px;}
+  textarea{resize:vertical; min-height:80px;}
+  .btn-primario{width:100%; background:var(--color-primario); color:#fff; border:none; border-radius:10px; padding:14px; font-size:15px; font-weight:700; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-bottom:14px;}
+  .exito-caja{text-align:center; padding:20px;}
+  .exito-caja .icono{font-size:44px; margin-bottom:10px;}
+  .exito-caja .folio{font-size:22px; font-weight:700; color:var(--color-primario-oscuro); margin:8px 0;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+
+<script>
+const h = React.createElement;
+const { useState } = React;
+
+const WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
+
+async function llamarWorker(ruta, body){
+  const r = await fetch(WORKER_BASE + ruta, {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  let j;
+  try { j = await r.json(); }
+  catch(e) { throw new Error("Respuesta no válida del servidor (HTTP " + r.status + ")"); }
+  if (!r.ok && !j.ok) throw new Error(j.error || "Error HTTP " + r.status);
+  return j;
+}
+
+function SolicitarServicio(){
+  const [nombre, setNombre] = useState("");
+  const [telefono, setTelefono] = useState("");
+  const [equipo, setEquipo] = useState("");
+  const [problema, setProblema] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState("");
+  const [folioCreado, setFolioCreado] = useState(null);
+
+  async function enviar(){
+    if (!nombre.trim()){ setError("Escribí tu nombre."); return; }
+    if (!telefono.trim()){ setError("Escribí un teléfono de contacto."); return; }
+    if (!equipo.trim()){ setError("Contanos qué equipo necesita servicio."); return; }
+    if (!problema.trim()){ setError("Contanos qué problema tiene."); return; }
+    setEnviando(true); setError("");
+    try {
+      // Busca si ya existe un cliente con ese teléfono, para no duplicarlo cada vez que escribe.
+      let clienteId = null;
+      const rBusq = await fetch(WORKER_BASE + "/query?base=info&model=x_taller_cliente&fields=id,x_name&domain=" + encodeURIComponent(JSON.stringify([["x_studio_telefono","=",telefono.trim()]])) + "&limit=1");
+      const jBusq = await rBusq.json();
+      if (jBusq.ok && jBusq.result && jBusq.result.length) {
+        clienteId = jBusq.result[0].id;
+      } else {
+        const rCliente = await llamarWorker("/taller/crear", {
+          model: "x_taller_cliente",
+          values: { x_name: nombre.trim(), x_studio_tipo_cliente: "Externo", x_studio_telefono: telefono.trim() },
+        });
+        if (!rCliente.ok) { setError(rCliente.error || "No se pudo registrar tu solicitud."); setEnviando(false); return; }
+        clienteId = rCliente.id;
+      }
+
+      const rFolio = await fetch(WORKER_BASE + "/taller/folio?prefijo=OT");
+      const jFolio = await rFolio.json();
+      if (!jFolio.ok) { setError("No se pudo generar el número de solicitud."); setEnviando(false); return; }
+
+      const rOrden = await llamarWorker("/taller/crear", {
+        model: "x_taller_orden",
+        values: {
+          x_name: jFolio.folio,
+          x_studio_cliente_id: clienteId,
+          x_studio_estado: "Solicitada",
+          x_studio_prioridad: "Normal",
+          x_studio_problema_reportado: "Equipo (según el cliente): " + equipo.trim() + "\n\nProblema reportado: " + problema.trim(),
+          x_studio_requiere_presupuesto: true,
+          x_studio_observaciones: "Solicitud enviada por el cliente vía link público.",
+        },
+      });
+      if (rOrden.ok) {
+        setFolioCreado(jFolio.folio);
+      } else {
+        setError(rOrden.error || "No se pudo registrar tu solicitud.");
+      }
+    } catch(e) {
+      setError("No se pudo conectar: " + e.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return h("div", { className: "envoltura" },
+    h("div", { className: "marca" }, "🔧 Infotaller — División Agrícola COMASA"),
+    h("div", { className: "panel" },
+      folioCreado
+        ? h("div", { className: "exito-caja" },
+            h("div", { className: "icono" }, "✅"),
+            h("h1", null, "¡Listo!"),
+            h("div", { className: "folio" }, folioCreado),
+            h("div", { style: { color: "var(--color-texto-suave)", fontSize: "13px" } }, "Recibimos tu solicitud. El taller te va a contactar pronto para coordinar la recepción del equipo.")
+          )
+        : h(React.Fragment, null,
+            h("h1", null, "Solicitar servicio"),
+            h("div", { className: "sub" }, "Contanos qué necesitás y te contactamos para coordinar."),
+            error && h("div", { className: "mensaje-error" }, error),
+            h("label", null, "Tu nombre"),
+            h("input", { type: "text", value: nombre, onChange: e => setNombre(e.target.value) }),
+            h("label", null, "Teléfono de contacto"),
+            h("input", { type: "tel", value: telefono, onChange: e => setTelefono(e.target.value) }),
+            h("label", null, "Equipo que necesita servicio"),
+            h("input", { type: "text", value: equipo, onChange: e => setEquipo(e.target.value), placeholder: "Ej: Tractor Case, Camión Ford..." }),
+            h("label", null, "¿Qué problema tiene?"),
+            h("textarea", { value: problema, onChange: e => setProblema(e.target.value) }),
+            h("button", { className: "btn-primario", onClick: enviar, disabled: enviando }, enviando ? "Enviando..." : "Enviar solicitud")
+          )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(SolicitarServicio));
+</script>
+</body>
+</html>
