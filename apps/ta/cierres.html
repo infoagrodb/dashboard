@@ -23,6 +23,8 @@
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -72,7 +74,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v2 (cierre sin reparar)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v3 (documento de soporte + facturación)</div>
 
 <script>
 const h = React.createElement;
@@ -399,6 +401,204 @@ function FormularioCierre({ orden, onVolver, onCreado }){
 /* ------------------------------------------------------------
    Pantalla principal
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   Detalle de un cierre existente — documento de soporte para
+   asignar al centro de costo (interno) o cuenta por cobrar (externo)
+   ------------------------------------------------------------ */
+function DetalleCierre({ cierreId, onVolver }){
+  const [cierre, setCierre] = useState(null);
+  const [orden, setOrden] = useState(null);
+  const [cliente, setCliente] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+
+  useEffect(() => { cargar(); }, [cierreId]);
+
+  async function cargar(){
+    setCargando(true); setError("");
+    try {
+      const cierreRows = await tallerQuery("x_taller_cierre", [
+        "id","x_name","x_studio_orden_id","x_studio_total_presupuestado","x_studio_total_costo_real",
+        "x_studio_variacion_total","x_studio_porcentaje_variacion","x_studio_causa_principal",
+        "x_studio_diagnostico_final","x_studio_trabajo_realizado","x_studio_resultado_prueba",
+        "x_studio_fecha_cierre","x_studio_aceptado_por_cliente","x_studio_fecha_aceptacion_cliente",
+      ], [["id","=",cierreId]], 1);
+      if (!cierreRows.length){ setError("No se encontró el cierre."); setCargando(false); return; }
+      const c = cierreRows[0];
+      setCierre(c);
+
+      if (Array.isArray(c.x_studio_orden_id)) {
+        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id"], [["id","=",c.x_studio_orden_id[0]]], 1);
+        if (ordenRows.length) {
+          setOrden(ordenRows[0]);
+          if (Array.isArray(ordenRows[0].x_studio_cliente_id)) {
+            const clienteRows = await tallerQuery("x_taller_cliente", [
+              "id","x_name","x_studio_tipo_cliente","x_studio_codigo_cliente","x_studio_identificacion_fiscal",
+              "x_studio_contacto","x_studio_telefono","x_studio_centro_costo","x_studio_finca","x_studio_cultivo",
+              "x_studio_lote","x_studio_condiciones_pago",
+            ], [["id","=",ordenRows[0].x_studio_cliente_id[0]]], 1);
+            if (clienteRows.length) setCliente(clienteRows[0]);
+          }
+        }
+      }
+    } catch(e) {
+      setError("Error al cargar: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+
+  function construirPDF(){
+    if (!window.jspdf) throw new Error("La librería de PDF no cargó (revisá tu conexión y recargá la página).");
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "letter" });
+    if (typeof doc.autoTable !== "function") throw new Error("El complemento de tablas del PDF no cargó — recargá con Ctrl+Shift+R.");
+    const ancho = doc.internal.pageSize.getWidth();
+    const esInterno = cliente && cliente.x_studio_tipo_cliente === "Interno";
+
+    doc.setFillColor(22, 163, 74);
+    doc.rect(0, 0, ancho, 24, "F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined, "bold"); doc.setFontSize(16);
+    doc.text("INFOTALLER", 14, 12);
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 18);
+    doc.setFont(undefined, "bold"); doc.setFontSize(13);
+    doc.text("DOCUMENTO DE SOPORTE", ancho - 14, 12, { align: "right" });
+    doc.setFont(undefined, "normal"); doc.setFontSize(10);
+    doc.text(orden ? orden.x_name : "", ancho - 14, 18, { align: "right" });
+
+    doc.setTextColor(17,24,39);
+    let y = 34;
+    doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.text("CLIENTE", 14, y);
+    doc.setFont(undefined, "normal"); doc.text(cliente ? cliente.x_name : "—", 14, y + 5);
+    doc.setFont(undefined, "bold"); doc.text("EQUIPO", 110, y);
+    doc.setFont(undefined, "normal"); doc.text(orden ? m2oTexto(orden.x_studio_equipo_id) : "—", 110, y + 5);
+    y += 14;
+
+    // Bloque de cargo — distinto según interno/externo, que es justo lo que pidió el gerente
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, y, ancho - 28, esInterno ? 26 : 22, "F");
+    doc.setFont(undefined, "bold"); doc.setFontSize(9);
+    doc.text(esInterno ? "CARGAR A CENTRO DE COSTO" : "CUENTA POR COBRAR — CLIENTE EXTERNO", 18, y + 7);
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    if (esInterno) {
+      doc.text("Centro de costo: " + (cliente?.x_studio_centro_costo || "—"), 18, y + 13);
+      doc.text("Finca: " + m2oTexto(cliente?.x_studio_finca) + "   Cultivo: " + m2oTexto(cliente?.x_studio_cultivo) + "   Lote: " + m2oTexto(cliente?.x_studio_lote), 18, y + 19);
+    } else {
+      doc.text("Identificación fiscal: " + (cliente?.x_studio_identificacion_fiscal || "—"), 18, y + 13);
+      doc.text("Condiciones de pago: " + (cliente?.x_studio_condiciones_pago || "—") + "   Contacto: " + (cliente?.x_studio_contacto || "—"), 18, y + 19);
+    }
+    y += esInterno ? 34 : 30;
+
+    doc.autoTable({
+      startY: y,
+      head: [["Concepto", "Monto"]],
+      body: [
+        ["Total presupuestado", moneda(cierre.x_studio_total_presupuestado)],
+        ["Total costo real", moneda(cierre.x_studio_total_costo_real)],
+        ["Variación", (cierre.x_studio_variacion_total >= 0 ? "+" : "") + moneda(cierre.x_studio_variacion_total) + " (" + num(cierre.x_studio_porcentaje_variacion).toFixed(1) + "%)"],
+      ],
+      headStyles: { fillColor: [22,163,74], textColor: 255, fontStyle: "bold", fontSize: 9 },
+      styles: { fontSize: 9.5, cellPadding: 4, textColor: [17,24,39] },
+      columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
+      margin: { left: 14, right: 14 },
+    });
+    let yFinal = doc.lastAutoTable.finalY + 10;
+
+    doc.setFillColor(22, 163, 74);
+    doc.rect(14, yFinal, ancho - 28, 14, "F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined, "bold"); doc.setFontSize(12);
+    doc.text("TOTAL A " + (esInterno ? "CARGAR" : "FACTURAR") + ":", 18, yFinal + 9);
+    doc.text(moneda(cierre.x_studio_total_costo_real), ancho - 18, yFinal + 9, { align: "right" });
+    yFinal += 24;
+
+    doc.setTextColor(17,24,39); doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("Diagnóstico: " + (cierre.x_studio_diagnostico_final || "—").slice(0, 110), 14, yFinal);
+    yFinal += 6;
+    doc.text("Resultado de prueba: " + (cierre.x_studio_resultado_prueba || "—") + "   Aceptado por: " + (cierre.x_studio_aceptado_por_cliente || "—"), 14, yFinal);
+
+    const alturaPagina = doc.internal.pageSize.getHeight();
+    doc.setDrawColor(228,233,238);
+    doc.line(14, alturaPagina - 30, 80, alturaPagina - 30);
+    doc.setTextColor(107,114,128); doc.setFontSize(8.5);
+    doc.text("Firma de conformidad", 14, alturaPagina - 25);
+    doc.text("Cerrado " + formatearFecha(cierre.x_studio_fecha_cierre) + " — Infotaller COMASA", 14, alturaPagina - 12);
+
+    return doc;
+  }
+
+  async function generarYCompartir(){
+    setGenerandoPdf(true); setError("");
+    try {
+      const doc = construirPDF();
+      const nombreArchivo = cierre.x_name + "-soporte.pdf";
+      const blob = doc.output("blob");
+      const archivo = new File([blob], nombreArchivo, { type: "application/pdf" });
+      if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+        await navigator.share({ files: [archivo], title: "Documento de soporte " + cierre.x_name });
+      } else {
+        doc.save(nombreArchivo);
+      }
+    } catch(e) {
+      if (e.name !== "AbortError") setError("No se pudo generar/compartir: " + e.message);
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
+
+  function descargar(){
+    try { construirPDF().save(cierre.x_name + "-soporte.pdf"); }
+    catch(e) { setError("No se pudo generar el PDF: " + e.message); }
+  }
+
+  if (cargando) return h("div", { className: "panel cargando" }, "Cargando...");
+  if (error && !cierre) return h("div", { className: "panel error-carga" }, error);
+  if (!cierre) return null;
+
+  const esInterno = cliente && cliente.x_studio_tipo_cliente === "Interno";
+
+  return h("div", null,
+    h("button", { className: "link-volver", onClick: onVolver }, "← Volver"),
+    h("div", { className: "panel" },
+      h("h2", { style: { margin:"0 0 4px", fontSize:"16px" } }, cierre.x_name),
+      h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"16px" } },
+        (orden ? orden.x_name : "") + " · " + (cliente ? cliente.x_name : "") + " · " + formatearFecha(cierre.x_studio_fecha_cierre)
+      ),
+      h("div", { className: "comparativo" },
+        h("div", { className: "caja-comparativo" },
+          h("div", { className: "etiqueta" }, "Presupuestado"),
+          h("div", { className: "valor" }, moneda(cierre.x_studio_total_presupuestado))
+        ),
+        h("div", { className: "caja-comparativo" },
+          h("div", { className: "etiqueta" }, "Costo Real / Total a " + (esInterno ? "cargar" : "facturar")),
+          h("div", { className: "valor" }, moneda(cierre.x_studio_total_costo_real))
+        ),
+        h("div", { className: "caja-comparativo " + (cierre.x_studio_variacion_total <= 0 ? "positiva" : "negativa") },
+          h("div", { className: "etiqueta" }, "Variación"),
+          h("div", { className: "valor" }, (cierre.x_studio_variacion_total >= 0 ? "+" : "") + moneda(cierre.x_studio_variacion_total))
+        )
+      ),
+      cliente && h("div", { style: { background:"#F8FAFC", borderRadius:"8px", padding:"12px", fontSize:"12.5px", marginBottom:"14px" } },
+        h("strong", null, esInterno ? "Cargar a centro de costo" : "Cuenta por cobrar — cliente externo"),
+        h("div", { style: { marginTop:"4px", color:"var(--color-texto-suave)" } },
+          esInterno
+            ? "Centro de costo: " + (cliente.x_studio_centro_costo || "—") + " · Finca: " + m2oTexto(cliente.x_studio_finca) + " · Cultivo: " + m2oTexto(cliente.x_studio_cultivo) + " · Lote: " + m2oTexto(cliente.x_studio_lote)
+            : "RUC: " + (cliente.x_studio_identificacion_fiscal || "—") + " · Condiciones de pago: " + (cliente.x_studio_condiciones_pago || "—")
+        )
+      ),
+      error && h("div", { className: "mensaje-error" }, error),
+      h("div", { className: "barra-botones" },
+        h("button", { className: "btn-secundario", onClick: descargar, disabled: generandoPdf }, "⬇️ Descargar PDF"),
+        h("button", { className: "btn-primario", onClick: generarYCompartir, disabled: generandoPdf },
+          generandoPdf ? "Generando..." : "📤 Compartir Documento de Soporte")
+      )
+    )
+  );
+}
+
 function Cierres(){
   const [sesion, setSesion] = useState(null);
   const [cierres, setCierres] = useState(null);
@@ -406,6 +606,7 @@ function Cierres(){
   const [errorCarga, setErrorCarga] = useState("");
   const [modalSelector, setModalSelector] = useState(false);
   const [ordenParaCerrar, setOrdenParaCerrar] = useState(null);
+  const [cierreSeleccionado, setCierreSeleccionado] = useState(null);
 
   useEffect(() => {
     const s = exigirSesion();
@@ -438,6 +639,10 @@ function Cierres(){
     });
   }
 
+  if (cierreSeleccionado) {
+    return h(DetalleCierre, { cierreId: cierreSeleccionado, onVolver: () => setCierreSeleccionado(null) });
+  }
+
   const columnas = [
     { clave: "x_name", titulo: "Cierre" },
     { clave: "x_studio_orden_id", titulo: "Orden" },
@@ -463,7 +668,7 @@ function Cierres(){
           ? h("div", { className: "error-carga" }, errorCarga)
           : cierres.length === 0
             ? h("div", { className: "error-carga" }, "Todavía no hay cierres registrados.")
-            : TablaInfoAgro(h, { columnas, filas: cierres })
+            : TablaInfoAgro(h, { columnas, filas: cierres, onFilaClick: c => setCierreSeleccionado(c.id) })
     ),
 
     modalSelector && h("div", { className: "modal-fondo", style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: () => setModalSelector(false) },
