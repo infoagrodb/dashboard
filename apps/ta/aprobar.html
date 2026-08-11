@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Presupuesto — Infotaller COMASA</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-peligro-suave:#FEE2E2;
+    --radio:12px; --sombra:0 4px 16px rgba(17,24,39,.08);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; padding:16px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:linear-gradient(160deg,#F8FAFC 0%,#D1FAE5 100%); color:var(--color-texto); font-size:14px; min-height:100vh;
+  }
+  .envoltura{max-width:560px; margin:0 auto;}
+  .marca{display:flex; align-items:center; gap:8px; justify-content:center; padding:16px 0 20px; font-weight:700; color:var(--color-primario-oscuro); font-size:16px;}
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:22px; margin-bottom:16px;}
+  .cargando, .error-grande{text-align:center; padding:60px 20px; color:var(--color-texto-suave);}
+  .error-grande .icono{font-size:40px; margin-bottom:12px;}
+
+  .cabecera h1{font-size:19px; margin:0 0 4px;}
+  .cabecera .sub{font-size:12.5px; color:var(--color-texto-suave);}
+  .badge-estado{display:inline-block; font-size:11px; font-weight:700; padding:3px 10px; border-radius:10px; margin-top:8px;}
+  .estado-Aprobado{background:#D1FAE5; color:#15803D;}
+  .estado-Borrador, .estado-Enviado{background:#FEF3C7; color:#B45309;}
+
+  table.tabla-lineas{width:100%; border-collapse:collapse; font-size:13px; margin-top:16px;}
+  table.tabla-lineas th{background:#F8FAFC; text-align:left; padding:8px; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:#374151; border-bottom:2px solid var(--color-borde);}
+  table.tabla-lineas td{padding:8px; border-bottom:1px solid #F1F5F9;}
+  .texto-derecha{text-align:right;}
+
+  .total-grande{display:flex; justify-content:space-between; align-items:center; background:var(--color-primario); color:#fff; border-radius:10px; padding:16px 18px; margin-top:16px;}
+  .total-grande .etiqueta{font-size:12px; opacity:.9;}
+  .total-grande .monto{font-size:24px; font-weight:700;}
+
+  label{display:block; font-size:11.5px; color:var(--color-texto-suave); margin-bottom:5px; text-transform:uppercase; letter-spacing:.03em;}
+  input{width:100%; border:1px solid var(--color-borde); border-radius:8px; padding:11px 12px; font-size:15px; background:#fff; color:var(--color-texto); font-family:inherit;}
+  .btn-primario{width:100%; background:var(--color-primario); color:#fff; border:none; border-radius:10px; padding:14px; font-size:15px; font-weight:700; cursor:pointer; margin-top:14px;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-top:12px;}
+  .aprobado-caja{text-align:center; padding:20px;}
+  .aprobado-caja .icono{font-size:44px; margin-bottom:8px;}
+  .nota-legal{font-size:11px; color:var(--color-texto-suave); text-align:center; margin-top:8px; line-height:1.5;}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect } = React;
+
+const WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
+const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function formatearFecha(valor){
+  if (!valor) return "";
+  const d = new Date(String(valor).replace(" ", "T"));
+  if (isNaN(d.getTime())) return String(valor);
+  return String(d.getDate()).padStart(2,"0") + "-" + MESES[d.getMonth()] + "-" + d.getFullYear();
+}
+function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+function moneda(v){ return "$" + num(v).toFixed(2); }
+
+function AprobarPresupuesto(){
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get("id");
+  const token = params.get("token");
+
+  const [datos, setDatos] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [nombreFirma, setNombreFirma] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [yaAprobado, setYaAprobado] = useState(false);
+
+  useEffect(() => {
+    if (!id || !token) { setError("Este link no es válido — faltan datos."); setCargando(false); return; }
+    cargar();
+  }, []);
+
+  async function cargar(){
+    setCargando(true); setError("");
+    try {
+      const r = await fetch(WORKER_BASE + "/taller/presupuesto/publico?id=" + encodeURIComponent(id) + "&token=" + encodeURIComponent(token));
+      const j = await r.json();
+      if (!j.ok) { setError(j.error || "No se pudo cargar el presupuesto."); setCargando(false); return; }
+      setDatos(j);
+      if (j.presupuesto.x_studio_estado === "Aprobado") setYaAprobado(true);
+    } catch(e) {
+      setError("No se pudo conectar: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  async function aprobar(){
+    if (!nombreFirma.trim()){ setError("Escribí tu nombre completo para aprobar."); return; }
+    setEnviando(true); setError("");
+    try {
+      const r = await fetch(WORKER_BASE + "/taller/presupuesto/aprobar-publico", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: Number(id), token: token, aprobado_por: nombreFirma.trim() }),
+      });
+      const j = await r.json();
+      if (j.ok) {
+        setYaAprobado(true);
+      } else {
+        setError(j.error || "No se pudo aprobar.");
+      }
+    } catch(e) {
+      setError("No se pudo conectar: " + e.message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  if (cargando) {
+    return h("div", { className: "envoltura" },
+      h("div", { className: "marca" }, "🔧 Infotaller — COMASA"),
+      h("div", { className: "panel cargando" }, "Cargando presupuesto...")
+    );
+  }
+
+  if (error && !datos) {
+    return h("div", { className: "envoltura" },
+      h("div", { className: "marca" }, "🔧 Infotaller — COMASA"),
+      h("div", { className: "panel error-grande" },
+        h("div", { className: "icono" }, "⚠️"),
+        h("div", null, error)
+      )
+    );
+  }
+
+  const presupuesto = datos.presupuesto;
+  const lineas = datos.lineas;
+  const orden = datos.orden;
+  const total = lineas.reduce((s,l) => s + num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual), 0)
+    - num(presupuesto.x_studio_descuento) + num(presupuesto.x_studio_impuestos);
+  const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "";
+  const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "";
+
+  return h("div", { className: "envoltura" },
+    h("div", { className: "marca" }, "🔧 Infotaller — División Agrícola COMASA"),
+
+    h("div", { className: "panel" },
+      h("div", { className: "cabecera" },
+        h("h1", null, presupuesto.x_name),
+        h("div", { className: "sub" },
+          (orden ? orden.x_name : "") + (clienteNombre ? " · " + clienteNombre : "") + (equipoNombre ? " · " + equipoNombre : "")
+        ),
+        h("div", { className: "sub" }, formatearFecha(presupuesto.x_studio_fecha_presupuesto) + " · Vigencia " + (presupuesto.x_studio_vigencia_dias || 0) + " días"),
+        h("span", { className: "badge-estado estado-" + presupuesto.x_studio_estado.replace(/\s+/g,"") }, presupuesto.x_studio_estado)
+      ),
+
+      h("table", { className: "tabla-lineas" },
+        h("thead", null, h("tr", null,
+          h("th", null, "Descripción"), h("th", null, "Cant."), h("th", { className: "texto-derecha" }, "Total")
+        )),
+        h("tbody", null,
+          lineas.map((l,i) => h("tr", { key: i },
+            h("td", null, l.x_studio_descripcion, h("div", { style: { fontSize:"10.5px", color:"var(--color-texto-suave)" } }, l.x_studio_tipo_linea)),
+            h("td", null, l.x_studio_cantidad_presupuestada + " " + (l.x_studio_unidad_medida || "")),
+            h("td", { className: "texto-derecha" }, moneda(num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual)))
+          ))
+        )
+      ),
+
+      h("div", { className: "total-grande" },
+        h("span", { className: "etiqueta" }, "TOTAL"),
+        h("span", { className: "monto" }, moneda(total))
+      )
+    ),
+
+    h("div", { className: "panel" },
+      yaAprobado
+        ? h("div", { className: "aprobado-caja" },
+            h("div", { className: "icono" }, "✅"),
+            h("h2", { style: { margin: "0 0 6px", fontSize: "17px" } }, "Presupuesto aprobado"),
+            h("div", { style: { color: "var(--color-texto-suave)", fontSize: "13px" } },
+              "Gracias" + (presupuesto.x_studio_aprobado_por_cliente ? ", " + presupuesto.x_studio_aprobado_por_cliente : "") + ". El taller ya fue notificado y va a continuar con el trabajo."
+            )
+          )
+        : h(React.Fragment, null,
+            h("label", null, "Tu nombre completo (firma)"),
+            h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Escribí tu nombre completo" }),
+            error && h("div", { className: "mensaje-error" }, error),
+            h("button", { className: "btn-primario", onClick: aprobar, disabled: enviando }, enviando ? "Enviando..." : "✅ Aprobar este presupuesto"),
+            h("div", { className: "nota-legal" }, "Al escribir tu nombre y presionar \"Aprobar\", autorizás al taller a realizar el trabajo descrito por el monto indicado.")
+          )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(AprobarPresupuesto));
+</script>
+</body>
+</html>
