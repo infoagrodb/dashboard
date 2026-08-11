@@ -88,7 +88,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">bahias.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">bahias.html — v2 (detalle de equipos + botón config)</div>
 
 <script>
 const h = React.createElement;
@@ -210,6 +210,53 @@ function ModalBahia({ bahia, usuarios, onCerrar, onGuardado, onDesactivada }){
 /* ------------------------------------------------------------
    Pantalla principal
    ------------------------------------------------------------ */
+/* ------------------------------------------------------------
+   Detalle de una bahía — lista los equipos que están ahí ahora
+   ------------------------------------------------------------ */
+function DetalleBahia({ bahia, onVolver, onConfigurar }){
+  const [ordenes, setOrdenes] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    tallerQuery("x_taller_orden", [
+      "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
+      "x_studio_tecnico_responsable_id","x_studio_fecha_recepcion",
+    ], [["x_studio_bahia_id","=",bahia.id],["x_studio_estado","in",ESTADOS_QUE_OCUPAN_BAHIA]], 500)
+      .then(setOrdenes)
+      .catch(e => setError("No se pudieron cargar las órdenes: " + e.message));
+  }, [bahia.id]);
+
+  const columnas = [
+    { clave: "x_name", titulo: "Folio" },
+    { clave: "x_studio_cliente_id", titulo: "Cliente" },
+    { clave: "x_studio_equipo_id", titulo: "Equipo" },
+    { clave: "x_studio_estado", titulo: "Estado" },
+    { clave: "x_studio_tecnico_responsable_id", titulo: "Técnico" },
+    { clave: "x_studio_fecha_recepcion", titulo: "Recepción", formatear: formatearFecha },
+  ];
+
+  return h("div", null,
+    h("button", { className: "link-volver", onClick: onVolver, style: { background:"none", border:"none", color:"var(--color-primario-oscuro)", fontSize:"13px", cursor:"pointer", padding:"0", textDecoration:"underline", marginBottom:"10px", display:"block" } }, "← Volver a Bahías"),
+    h("div", { className: "barra-superior" },
+      h("h1", null, "🅿️ " + bahia.x_name),
+      h("button", { className: "btn-primario", onClick: onConfigurar }, "⚙️ Configurar")
+    ),
+    h("div", { className: "panel" },
+      h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"12px" } },
+        "Responsable: " + (Array.isArray(bahia.x_studio_responsable_id) ? bahia.x_studio_responsable_id[1] : "sin asignar") +
+        " · Capacidad: " + bahia.x_studio_capacidad + " · " + bahia.x_studio_modo_limite
+      ),
+      error
+        ? h("div", { className: "error-carga" }, error)
+        : !ordenes
+          ? h("div", { className: "cargando" }, "Cargando...")
+          : ordenes.length === 0
+            ? h("div", { className: "error-carga" }, "No hay equipos en esta bahía ahora mismo.")
+            : TablaInfoAgro(h, { columnas, filas: ordenes })
+    )
+  );
+}
+
 function Bahias(){
   const [sesion, setSesion] = useState(null);
   const [bahias, setBahias] = useState(null);
@@ -219,6 +266,7 @@ function Bahias(){
   const [errorCarga, setErrorCarga] = useState("");
   const [modalAbierto, setModalAbierto] = useState(false);
   const [bahiaEditando, setBahiaEditando] = useState(null);
+  const [bahiaViendoDetalle, setBahiaViendoDetalle] = useState(null);
 
   useEffect(() => {
     const s = exigirSesion();
@@ -242,6 +290,8 @@ function Bahias(){
       setBahias(filasBahias);
       setUsuarios(filasUsuarios);
       setOcupacionPorBahia(ocupacion);
+      // si estamos viendo el detalle de una bahía, refrescamos también su copia local
+      setBahiaViendoDetalle(prev => prev ? filasBahias.find(b => b.id === prev.id) || prev : prev);
     } catch(e) {
       setErrorCarga("No se pudieron cargar las bahías: " + e.message);
     } finally {
@@ -255,6 +305,22 @@ function Bahias(){
   function abrirEditar(b){ setBahiaEditando(b); setModalAbierto(true); }
   function cerrarModal(){ setModalAbierto(false); setBahiaEditando(null); }
   function alGuardar(){ cerrarModal(); cargarTodo(); }
+
+  if (bahiaViendoDetalle) {
+    return h(React.Fragment, null,
+      h(DetalleBahia, {
+        bahia: bahiaViendoDetalle,
+        onVolver: () => setBahiaViendoDetalle(null),
+        onConfigurar: () => abrirEditar(bahiaViendoDetalle),
+      }),
+      modalAbierto && h(ModalBahia, {
+        bahia: bahiaEditando, usuarios,
+        onCerrar: cerrarModal,
+        onGuardado: () => { cerrarModal(); cargarTodo(); },
+        onDesactivada: () => { cerrarModal(); setBahiaViendoDetalle(null); cargarTodo(); },
+      })
+    );
+  }
 
   return h("div", null,
     h("div", { className: "barra-superior" },
@@ -276,7 +342,12 @@ function Bahias(){
                 const ocupados = ocupacionPorBahia[b.id] || 0;
                 const nivel = nivelOcupacion(ocupados, b.x_studio_capacidad);
                 const pctAncho = Math.min(100, (ocupados / (b.x_studio_capacidad || 1)) * 100);
-                return h("div", { key: b.id, className: "tarjeta-bahia " + nivel, onClick: () => abrirEditar(b) },
+                return h("div", { key: b.id, className: "tarjeta-bahia " + nivel, onClick: () => setBahiaViendoDetalle(b), style: { position: "relative" } },
+                  h("button", {
+                    onClick: e => { e.stopPropagation(); abrirEditar(b); },
+                    title: "Configurar",
+                    style: { position:"absolute", top:"10px", right:"10px", background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"6px", width:"26px", height:"26px", cursor:"pointer", fontSize:"13px" },
+                  }, "⚙️"),
                   h("div", { className: "nombre" }, b.x_name),
                   h("div", { className: "responsable" },
                     "Responsable: " + (Array.isArray(b.x_studio_responsable_id) ? b.x_studio_responsable_id[1] : "sin asignar")
