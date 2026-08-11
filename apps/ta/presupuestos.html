@@ -24,7 +24,7 @@
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.3/dist/jspdf-autotable.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -116,7 +116,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v9 (copia secuencial, no en paralelo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v10 (fix URL de jspdf-autotable)</div>
 
 <script>
 const h = React.createElement;
@@ -523,8 +523,10 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
   const [generandoPdf, setGenerandoPdf] = useState(false);
 
   function construirPDF(){
+    if (!window.jspdf) throw new Error("La librería de PDF no cargó (revisá tu conexión y recargá la página).");
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "mm", format: "letter" });
+    if (typeof doc.autoTable !== "function") throw new Error("El complemento de tablas del PDF no cargó — recargá la página con Ctrl+Shift+R e intentá de nuevo.");
     const anchoPagina = doc.internal.pageSize.getWidth();
     const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "—";
     const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "—";
