@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=10"></script>
+<script src="core.js?v=11"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -74,7 +74,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v7 (envía link al cerrar, sin campo manual)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v8 (cliente confirma el cierre real)</div>
 
 <script>
 const h = React.createElement;
@@ -294,7 +294,9 @@ function FormularioCierre({ orden, onVolver, onCreado }){
       if (!resp.ok) { setError(resp.error || "No se pudo crear el cierre."); setGuardando(false); return; }
       const idCierre = resp.id;
 
-      const valoresOrden = { x_studio_estado: "Cerrada" };
+      // "Terminada", no "Cerrada" — el cierre real de la orden lo confirma el
+      // cliente al aprobar desde el link, no el técnico al presionar este botón.
+      const valoresOrden = { x_studio_estado: "Terminada" };
       if (horometroSalida !== "") valoresOrden.x_studio_horometro_salida = num(horometroSalida);
       if (kilometrajeSalida !== "") valoresOrden.x_studio_kilometraje_salida = num(kilometrajeSalida);
       await tallerActualizar("x_taller_orden", orden.id, valoresOrden);
@@ -414,10 +416,10 @@ function FormularioCierre({ orden, onVolver, onCreado }){
 
       enviado
         ? h("div", { style: { textAlign:"center", padding:"14px 0" } },
-            h("div", { style: { fontSize:"36px", marginBottom:"8px" } }, "✅"),
-            h("div", { style: { fontWeight:700, marginBottom:"4px" } }, "Orden cerrada y link enviado al cliente"),
+            h("div", { style: { fontSize:"36px", marginBottom:"8px" } }, "📤"),
+            h("div", { style: { fontWeight:700, marginBottom:"4px" } }, "Cierre enviado — pendiente de aprobación del cliente"),
             h("div", { style: { fontSize:"12.5px", color:"var(--color-texto-suave)", marginBottom:"14px" } },
-              "En cuanto el cliente dé el visto bueno (o comente algo), se va a reflejar acá."
+              "La orden queda en \"Terminada\" hasta que el cliente dé el visto bueno desde el link. Si aprueba, se cierra sola; si no acepta, vuelve a \"En reparación\" con su comentario."
             ),
             h("button", { className: "btn-primario", onClick: onCreado }, "Volver a la lista")
           )
