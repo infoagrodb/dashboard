@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v9 cargado correctamente (reintenta catálogo Exactus si falla)");
+console.log("core.js v10 cargado correctamente (sin intento a intranet insegura)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -206,29 +206,20 @@ const INFOTALLER_CAUSAS_DESVIACION = [
 
 /* ------------------------------------------------------------
    5. Conexión a Exactus (DAB) — solo para catálogo de artículos.
-      Mismo patrón ya usado en infotaller_mvp.html: intenta la
-      intranet directa primero (más rápido si estás en la oficina),
-      si no responde en 1.5s cae al proxy de Cloudflare.
+      Siempre vía el proxy de Cloudflare (HTTPS). No se intenta la
+      intranet directa (http://192.168.5.58) porque esta app corre
+      sobre GitHub Pages (HTTPS) y el navegador bloquea por Mixed
+      Content cualquier pedido a una URL sin cifrar desde una página
+      seguido — no es una falla intermitente, siempre falla.
    ------------------------------------------------------------ */
-const DAB_API_DIRECTO = "http://192.168.5.58:5000/api";
 const DAB_API_PROXY = "https://sia.comasa.com.ni/dab/api";
 let DAB_API = "";
-let dabBasePromise = null;
 
 async function dabResolverBase() {
-  if (!dabBasePromise) {
-    dabBasePromise = (async () => {
-      try {
-        const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 1500);
-        const r = await fetch(DAB_API_DIRECTO + "/ARTICULO?$first=1", { signal: ctrl.signal });
-        clearTimeout(t);
-        if (r.ok) return DAB_API_DIRECTO;
-      } catch (e) { /* intranet no disponible, se usa el proxy */ }
-      return DAB_API_PROXY;
-    })();
-  }
-  DAB_API = await dabBasePromise;
+  // Esta app corre siempre por HTTPS (GitHub Pages) — un navegador jamás va a
+  // dejar pasar una petición a http://192.168.5.58 (Mixed Content bloqueado
+  // por seguridad), así que ni se intenta: siempre se usa el proxy de Cloudflare.
+  DAB_API = DAB_API_PROXY;
   return DAB_API;
 }
 
