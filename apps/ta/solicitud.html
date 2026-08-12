@@ -77,7 +77,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">solicitud.html — v3 (orden y equipo derivado en historial)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">solicitud.html — v4 (equipo de la lista + fecha + compartir)</div>
 
 <script>
 const h = React.createElement;
@@ -159,11 +159,23 @@ function ModalNuevoCliente({ onCerrar, onCreado }){
 function ModalNuevaSolicitud({ onCerrar, onCreada }){
   const [cliente, setCliente] = useState(null);
   const [modalCliente, setModalCliente] = useState(false);
+  const [equiposDelCliente, setEquiposDelCliente] = useState(null);
+  const [cargandoEquipos, setCargandoEquipos] = useState(false);
+  const [equipoId, setEquipoId] = useState(""); // "" = nada, "OTRO" = no está en la lista
   const [descripcionEquipo, setDescripcionEquipo] = useState("");
   const [problema, setProblema] = useState("");
   const [prioridad, setPrioridad] = useState("Normal");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!cliente) { setEquiposDelCliente(null); return; }
+    setCargandoEquipos(true);
+    tallerQuery("x_equiposagricolas", ["id","x_name","x_studio_marca","x_studio_modelo"], [["x_studio_cliente_id","=",cliente.id]], 500)
+      .then(setEquiposDelCliente)
+      .catch(() => setEquiposDelCliente([]))
+      .finally(() => setCargandoEquipos(false));
+  }, [cliente?.id]);
 
   async function buscarClientes(texto){
     return tallerQuery("x_taller_cliente", ["id","x_name","x_studio_tipo_cliente","x_studio_telefono"], [["x_name","ilike",texto]], 15);
@@ -171,15 +183,18 @@ function ModalNuevaSolicitud({ onCerrar, onCreada }){
 
   async function guardar(){
     if (!cliente){ setError("Elegí o creá el cliente."); return; }
-    if (!descripcionEquipo.trim()){ setError("Describí el equipo (aunque sea por marca/tipo, se detalla mejor cuando llegue)."); return; }
+    if (!equipoId){ setError("Elegí el equipo de la lista, o \"No está en la lista\" para describirlo."); return; }
+    if (equipoId === "OTRO" && !descripcionEquipo.trim()){ setError("Describí el equipo (aunque sea por marca/tipo)."); return; }
     if (!problema.trim()){ setError("Describí el problema reportado."); return; }
     setGuardando(true); setError("");
     try {
       const folio = await tallerFolio("SOL");
+      const equipoElegido = equipoId !== "OTRO" ? equiposDelCliente.find(e => String(e.id) === equipoId) : null;
       const resp = await tallerCrear("x_taller_solicitud", {
         x_name: folio,
         x_studio_cliente_id: cliente.id,
-        x_studio_descripcion_equipo: descripcionEquipo.trim(),
+        x_studio_equipo_id: equipoElegido ? equipoElegido.id : false,
+        x_studio_descripcion_equipo: equipoElegido ? equipoElegido.x_name : descripcionEquipo.trim(),
         x_studio_problema_reportado: problema.trim(),
         x_studio_prioridad: prioridad,
         x_studio_estado: "Pendiente",
@@ -198,7 +213,7 @@ function ModalNuevaSolicitud({ onCerrar, onCreada }){
         cliente
           ? h("div", { className: "seleccionado" },
               h("div", null, h("strong", null, cliente.x_name)),
-              h("button", { className: "btn-chico", onClick: () => setCliente(null) }, "Cambiar")
+              h("button", { className: "btn-chico", onClick: () => { setCliente(null); setEquipoId(""); } }, "Cambiar")
             )
           : h(React.Fragment, null,
               h(Buscador, { placeholder: "Buscar cliente...", buscar: buscarClientes, onSeleccionar: setCliente,
@@ -207,8 +222,24 @@ function ModalNuevaSolicitud({ onCerrar, onCreada }){
             )
       ),
       h("div", { className: "campo" },
-        h("label", null, "Equipo (descripción — se detalla completo al recibirlo)"),
-        h("input", { type: "text", value: descripcionEquipo, onChange: e => setDescripcionEquipo(e.target.value), placeholder: "Ej: Tractor Case, Camión Ford..." })
+        h("label", null, "Equipo"),
+        !cliente
+          ? h("div", { style: { fontSize: "12.5px", color: "var(--color-texto-suave)" } }, "Elegí primero un cliente.")
+          : cargandoEquipos
+            ? h("div", { style: { fontSize: "12.5px", color: "var(--color-texto-suave)" } }, "Cargando equipos...")
+            : h(React.Fragment, null,
+                h("select", { value: equipoId, onChange: e => setEquipoId(e.target.value) },
+                  h("option", { value: "", disabled: true }, "— Elegí un equipo —"),
+                  (equiposDelCliente || []).map(eq => h("option", { key: eq.id, value: eq.id },
+                    eq.x_name + ([eq.x_studio_marca, eq.x_studio_modelo].filter(Boolean).length ? " (" + [eq.x_studio_marca, eq.x_studio_modelo].filter(Boolean).join(" ") + ")" : "")
+                  )),
+                  h("option", { value: "OTRO" }, "No está en la lista (equipo nuevo)")
+                ),
+                equipoId === "OTRO" && h("input", {
+                  type: "text", value: descripcionEquipo, onChange: e => setDescripcionEquipo(e.target.value),
+                  placeholder: "Ej: Tractor Case, Camión Ford...", style: { marginTop: "8px" },
+                })
+              )
       ),
       h("div", { className: "campo" },
         h("label", null, "Prioridad"),
@@ -274,6 +305,23 @@ function DetalleSolicitud({ solicitud, onVolver }){
     window.parent.postMessage({ tipo: "navegar", pestana: "recepcion", sufijo: "?desde_solicitud=" + solicitud.id }, "*");
   }
 
+  async function compartirConCliente(){
+    const clienteNombre = m2oTexto(solicitud.x_studio_cliente_id);
+    const texto = "Hola" + (clienteNombre !== "—" ? " " + clienteNombre : "") + ", te confirmamos tu solicitud de servicio.\n\n" +
+      "N.º de solicitud: " + solicitud.x_name + "\n" +
+      "Equipo: " + solicitud.x_studio_descripcion_equipo + "\n" +
+      "Problema reportado: " + solicitud.x_studio_problema_reportado + "\n" +
+      "Fecha: " + formatearFechaHora(solicitud.create_date) + "\n\n" +
+      "El taller te contacta para coordinar la recepción del equipo. — Infotaller, COMASA";
+    if (navigator.share) {
+      try { await navigator.share({ title: "Solicitud " + solicitud.x_name, text: texto }); }
+      catch(e) { /* si cancela el share, no es un error real */ }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(texto);
+      alert("Copiado al portapapeles — pegalo donde quieras enviarlo.");
+    }
+  }
+
   return h("div", null,
     h("button", { className: "btn-secundario", onClick: onVolver, style: { marginBottom: "10px" } }, "← Volver"),
     h("div", { className: "modal-detalle" },
@@ -282,7 +330,11 @@ function DetalleSolicitud({ solicitud, onVolver }){
         h("span", { className: "badge-estado estado-" + solicitud.x_studio_estado }, solicitud.x_studio_estado)
       ),
       h("div", { style: { fontSize: "12px", color: "var(--color-texto-suave)", marginBottom: "12px" } },
-        m2oTexto(solicitud.x_studio_cliente_id) + " · " + formatearFechaHora(solicitud.create_date)
+        m2oTexto(solicitud.x_studio_cliente_id)
+      ),
+      h("div", { className: "campo" },
+        h("label", null, "Fecha de la solicitud"),
+        h("div", { style: { fontSize: "13px" } }, formatearFechaHora(solicitud.create_date))
       ),
       h("div", { className: "campo" },
         h("label", null, "Equipo"),
@@ -296,8 +348,10 @@ function DetalleSolicitud({ solicitud, onVolver }){
         h("label", null, "Motivo de anulación"),
         h("div", { style: { fontSize: "13px" } }, solicitud.x_studio_motivo_anulacion)
       ),
+      h("button", { className: "btn-secundario", onClick: compartirConCliente, style: { width: "100%", marginTop: "6px" } },
+        "🔗 Enviar datos al cliente"),
       solicitud.x_studio_estado === "Pendiente" && h(React.Fragment, null,
-        h("button", { className: "btn-primario", onClick: convertir, style: { width: "100%", marginTop: "6px" } },
+        h("button", { className: "btn-primario", onClick: convertir, style: { width: "100%", marginTop: "8px" } },
           "🚜 El equipo llegó — Continuar a Recepción"),
         h("button", { className: "btn-peligro", onClick: () => setModalAnular(true), style: { width: "100%", marginTop: "8px" } },
           "🗑️ Anular solicitud")
