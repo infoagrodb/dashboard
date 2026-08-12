@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v10 cargado correctamente (sin intento a intranet insegura)");
+console.log("core.js v11 cargado correctamente (paginación segura + timeout Exactus)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -229,14 +229,34 @@ async function dabFetchAll(pathWithQuery) {
   let url = DAB_API + pathWithQuery;
   let guard = 0;
   while (url && guard < 50) {
-    const res = await fetch(url);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    let res;
+    try { res = await fetch(url, { signal: ctrl.signal }); }
+    finally { clearTimeout(t); }
     if (!res.ok) throw new Error("Exactus HTTP " + res.status + " en " + url);
     const d = await res.json();
     items = items.concat(d.value || []);
-    url = d.nextLink ? (d.nextLink.startsWith("http") ? d.nextLink : DAB_API + d.nextLink) : null;
+    url = d.nextLink ? (DAB_API + dabRutaDesdeLink(d.nextLink)) : null;
     guard++;
   }
   return items;
+}
+
+// El propio DAB a veces devuelve "nextLink" como URL absoluta apuntando a SU
+// dirección interna (http://192.168.5.58...) — nunca hay que usar eso tal
+// cual, porque el navegador lo bloquea (Mixed Content) al venir de una
+// página HTTPS. Se extrae solo la ruta+query y siempre se pega sobre el
+// proxy seguro (DAB_API), sin importar qué host venga en nextLink.
+function dabRutaDesdeLink(nextLink) {
+  try {
+    const u = new URL(nextLink, DAB_API_PROXY);
+    const i = u.pathname.indexOf("/api/");
+    const ruta = i >= 0 ? u.pathname.slice(i + 4) : u.pathname; // se salta el "/api" para no duplicarlo
+    return ruta + u.search;
+  } catch (e) {
+    return nextLink; // por si acaso ya viniera en el formato correcto
+  }
 }
 
 // El DAB no soporta "contains" en $filter, así que el catálogo (liviano,
