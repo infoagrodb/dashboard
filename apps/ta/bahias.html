@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=8"></script>
+<script src="core.js?v=11"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -88,7 +88,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">bahias.html — v3 (carga secuencial)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">bahias.html — v4 (menú de navegación desde orden)</div>
 
 <script>
 const h = React.createElement;
@@ -213,9 +213,28 @@ function ModalBahia({ bahia, usuarios, onCerrar, onGuardado, onDesactivada }){
 /* ------------------------------------------------------------
    Detalle de una bahía — lista los equipos que están ahí ahora
    ------------------------------------------------------------ */
+function MenuIrAOrden({ orden, onCerrar }){
+  function ir(pestana){
+    window.parent.postMessage({ tipo: "navegar", pestana, sufijo: "" }, "*");
+  }
+  return h("div", { style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: onCerrar },
+    h("div", { style: { background:"#fff", borderRadius:"12px", padding:"20px", width:"100%", maxWidth:"340px", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
+      h("h3", { style: { margin:"0 0 4px", fontSize:"15px" } }, orden.x_name),
+      h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"14px" } }, "¿A dónde querés ir?"),
+      h("div", { style: { display:"flex", flexDirection:"column", gap:"8px" } },
+        h("button", { style: { textAlign:"left", background:"#F8FAFC", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"11px 14px", fontSize:"13.5px", cursor:"pointer", color:"var(--color-texto)" }, onClick: () => ir("presupuestos") }, "💵 Cotización / Presupuesto"),
+        h("button", { style: { textAlign:"left", background:"#F8FAFC", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"11px 14px", fontSize:"13.5px", cursor:"pointer", color:"var(--color-texto)" }, onClick: () => ir("ordenes") }, "🛠️ Diagnóstico / Órdenes"),
+        h("button", { style: { textAlign:"left", background:"#F8FAFC", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"11px 14px", fontSize:"13.5px", cursor:"pointer", color:"var(--color-texto)" }, onClick: () => ir("ejecucion") }, "🔧 Ejecución del Trabajo")
+      ),
+      h("button", { style: { width:"100%", marginTop:"12px", background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"9px", fontSize:"13px", cursor:"pointer", color:"var(--color-texto-suave)" }, onClick: onCerrar }, "Cancelar")
+    )
+  );
+}
+
 function DetalleBahia({ bahia, onVolver, onConfigurar }){
   const [ordenes, setOrdenes] = useState(null);
   const [error, setError] = useState("");
+  const [ordenElegida, setOrdenElegida] = useState(null);
 
   useEffect(() => {
     tallerQuery("x_taller_orden", [
@@ -252,8 +271,9 @@ function DetalleBahia({ bahia, onVolver, onConfigurar }){
           ? h("div", { className: "cargando" }, "Cargando...")
           : ordenes.length === 0
             ? h("div", { className: "error-carga" }, "No hay equipos en esta bahía ahora mismo.")
-            : TablaInfoAgro(h, { columnas, filas: ordenes })
-    )
+            : TablaInfoAgro(h, { columnas, filas: ordenes, onFilaClick: setOrdenElegida })
+    ),
+    ordenElegida && h(MenuIrAOrden, { orden: ordenElegida, onCerrar: () => setOrdenElegida(null) })
   );
 }
 
