@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Estado de Cuenta</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js?v=11"></script>
+<link rel="stylesheet" href="core.css?v=2">
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626;
+    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;}
+  .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
+  .barra-superior h1{font-size:15px; margin:0;}
+  .barra-botones{display:flex; gap:8px; flex-wrap:wrap;}
+  .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
+  .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;}
+  .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
+  .btn-primario:disabled{opacity:.6; cursor:default;}
+  .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .link-volver{background:none; border:none; color:var(--color-primario-oscuro); font-size:13px; cursor:pointer; padding:0; text-decoration:underline; margin-bottom:10px; display:block;}
+  .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px; margin-bottom:14px;}
+  .panel h2{font-size:13.5px; margin:0 0 12px;}
+  .cargando, .error-carga{text-align:center; padding:40px; color:var(--color-texto-suave);}
+
+  .filtro-fecha{display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 16px;}
+  .chip-rango{font-size:12px; padding:6px 12px; border-radius:16px; cursor:pointer; border:1px solid var(--color-borde); background:#fff; color:var(--color-texto);}
+  .chip-rango.activo{border-color:var(--color-primario); background:var(--color-acento-suave); color:var(--color-primario-oscuro);}
+  .filtro-fecha input[type=date]{border:1px solid var(--color-borde); border-radius:7px; padding:6px 8px; font-size:12.5px;}
+
+  .kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:12px; margin-bottom:16px;}
+  .kpi{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:14px;}
+  .kpi .etiqueta{font-size:10.5px; text-transform:uppercase; color:var(--color-texto-suave); letter-spacing:.03em; margin-bottom:5px;}
+  .kpi .valor{font-size:20px; font-weight:700;}
+
+  .fila-barra{margin-bottom:9px;}
+  .fila-barra .encabezado{display:flex; justify-content:space-between; font-size:12px; margin-bottom:3px;}
+  .fila-barra .pista{height:8px; background:#F1F5F9; border-radius:4px; overflow:hidden;}
+  .fila-barra .relleno{height:100%; border-radius:4px; background:var(--color-primario);}
+
+  .cabecera-cliente{display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:flex-start; margin-bottom:6px;}
+  .cabecera-cliente h2{margin:0 0 4px; font-size:17px;}
+  .cabecera-cliente .sub{font-size:12.5px; color:var(--color-texto-suave);}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">estado_cuenta.html — v1</div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect, useMemo } = React;
+
+function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
+function moneda(v){ return "$" + num(v).toFixed(2); }
+function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+function m2oId(v){ return Array.isArray(v) ? v[0] : (v || null); }
+
+function BarraDistribucion({ datos, maximo, formatearValor }){
+  return h("div", null,
+    datos.map(([etiqueta, valor]) => h("div", { key: etiqueta, className: "fila-barra" },
+      h("div", { className: "encabezado" },
+        h("span", null, etiqueta),
+        h("span", null, formatearValor ? formatearValor(valor) : valor)
+      ),
+      h("div", { className: "pista" },
+        h("div", { className: "relleno", style: { width: (maximo > 0 ? (valor / maximo) * 100 : 0) + "%" } })
+      )
+    ))
+  );
+}
+
+function FiltroFecha({ rango, setRango, fechaDesde, setFechaDesde, fechaHasta, setFechaHasta }){
+  return h("div", { className: "panel filtro-fecha" },
+    h("span", { style: { fontSize:"12px", color:"var(--color-texto-suave)", fontWeight:600 } }, "Período:"),
+    [["todo","Todo el histórico"],["anio","Este año"],["mes","Este mes"],["personalizado","Rango personalizado"]].map(([valor,etiqueta]) =>
+      h("button", { key: valor, className: "chip-rango" + (rango === valor ? " activo" : ""), onClick: () => setRango(valor) }, etiqueta)
+    ),
+    rango === "personalizado" && h(React.Fragment, null,
+      h("input", { type: "date", value: fechaDesde, onChange: e => setFechaDesde(e.target.value) }),
+      h("span", { style: { fontSize:"12px", color:"var(--color-texto-suave)" } }, "hasta"),
+      h("input", { type: "date", value: fechaHasta, onChange: e => setFechaHasta(e.target.value) })
+    )
+  );
+}
+
+function EstadoDeCuenta({ cliente, cierres, desdeEfectivo, hastaEfectivo, etiquetaRango, onVolver }){
+  const cierresCliente = useMemo(() => {
+    return cierres.filter(c => {
+      if (m2oId(c._clienteId) !== cliente.id) return false;
+      if (!desdeEfectivo && !hastaEfectivo) return true;
+      if (!c.x_studio_fecha_cierre) return false;
+      const f = new Date(String(c.x_studio_fecha_cierre).replace(" ", "T"));
+      if (desdeEfectivo && f < desdeEfectivo) return false;
+      if (hastaEfectivo && f > hastaEfectivo) return false;
+      return true;
+    }).sort((a,b) => new Date(b.x_studio_fecha_cierre) - new Date(a.x_studio_fecha_cierre));
+  }, [cierres, cliente.id, desdeEfectivo, hastaEfectivo]);
+
+  const totalGastado = cierresCliente.reduce((s,c) => s + num(c.x_studio_total_costo_real), 0);
+  const totalOrdenes = cierresCliente.length;
+  const promedio = totalOrdenes ? totalGastado / totalOrdenes : 0;
+
+  const gastoPorFamilia = {};
+  cierresCliente.forEach(c => {
+    const fam = c._familiaEquipo || "Sin definir";
+    gastoPorFamilia[fam] = (gastoPorFamilia[fam] || 0) + num(c.x_studio_total_costo_real);
+  });
+  const distribucionFamilia = Object.entries(gastoPorFamilia).sort((a,b) => b[1]-a[1]);
+  const maxFamilia = Math.max(1, ...distribucionFamilia.map(([,v]) => v));
+
+  const columnas = [
+    { clave: "x_name", titulo: "Cierre" },
+    { clave: "_ordenNombre", titulo: "Orden" },
+    { clave: "_equipoNombre", titulo: "Equipo" },
+    { clave: "_familiaEquipo", titulo: "Familia" },
+    { clave: "x_studio_fecha_cierre", titulo: "Fecha", formatear: formatearFecha },
+    { clave: "x_studio_diagnostico_final", titulo: "Diagnóstico" },
+    { clave: "x_studio_total_costo_real", titulo: "Total", formatear: moneda },
+  ];
+
+  function construirPDF(){
+    if (!window.jspdf) { alert("La librería de PDF no cargó — recargá la página."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "letter" });
+    if (typeof doc.autoTable !== "function") { alert("El complemento de tablas no cargó — recargá la página."); return; }
+    const ancho = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(22,163,74); doc.rect(0,0,ancho,24,"F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(15);
+    doc.text("INFOTALLER", 14, 12);
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 18);
+    doc.setFont(undefined,"bold"); doc.setFontSize(13);
+    doc.text("ESTADO DE CUENTA", ancho-14, 12, { align:"right" });
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text(etiquetaRango, ancho-14, 18, { align:"right" });
+
+    doc.setTextColor(17,24,39);
+    let y = 33;
+    doc.setFont(undefined,"bold"); doc.setFontSize(12); doc.text(cliente.x_name, 14, y);
+    y += 6;
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text(cliente.x_studio_tipo_cliente === "Interno" ? "Cliente interno" : "Cliente externo", 14, y);
+    if (cliente.x_studio_centro_costo) doc.text("Centro de costo: " + cliente.x_studio_centro_costo, 80, y);
+    y += 10;
+
+    doc.autoTable({
+      startY: y,
+      head: [["Fecha","Orden","Equipo","Diagnóstico","Total"]],
+      body: cierresCliente.map(c => [
+        formatearFecha(c.x_studio_fecha_cierre), c._ordenNombre || "—", c._equipoNombre || "—",
+        (c.x_studio_diagnostico_final || "—").slice(0,60), moneda(c.x_studio_total_costo_real),
+      ]),
+      headStyles: { fillColor:[22,163,74], textColor:255, fontStyle:"bold", fontSize:9 },
+      styles: { fontSize:8, cellPadding:3 },
+      columnStyles: { 4:{halign:"right"} },
+      margin: { left:14, right:14 },
+    });
+    let yFinal = doc.lastAutoTable.finalY + 10;
+
+    if (yFinal > 240) { doc.addPage(); yFinal = 20; }
+    doc.setFillColor(22,163,74); doc.rect(14,yFinal,ancho-28,14,"F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(12);
+    doc.text("TOTAL DEL PERÍODO (" + totalOrdenes + " orden" + (totalOrdenes===1?"":"es") + "):", 18, yFinal+9);
+    doc.text(moneda(totalGastado), ancho-18, yFinal+9, { align:"right" });
+
+    doc.save("estado_cuenta_" + cliente.x_name.replace(/\s+/g,"_") + ".pdf");
+  }
+
+  function exportarExcel(){
+    if (!window.XLSX) { alert("La librería de Excel no cargó — recargá la página."); return; }
+    const filas = cierresCliente.map(c => ({
+      Cierre: c.x_name,
+      Orden: c._ordenNombre || "",
+      Equipo: c._equipoNombre || "",
+      Familia: c._familiaEquipo || "",
+      Fecha: formatearFecha(c.x_studio_fecha_cierre),
+      Diagnostico: c.x_studio_diagnostico_final || "",
+      Presupuestado: num(c.x_studio_total_presupuestado),
+      CostoReal: num(c.x_studio_total_costo_real),
+      Variacion: num(c.x_studio_variacion_total),
+    }));
+    filas.push({ Cierre:"", Orden:"", Equipo:"", Familia:"", Fecha:"", Diagnostico:"TOTAL", Presupuestado:"", CostoReal: totalGastado, Variacion:"" });
+    const hoja = XLSX.utils.json_to_sheet(filas);
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, "Estado de Cuenta");
+    XLSX.writeFile(libro, "estado_cuenta_" + cliente.x_name.replace(/\s+/g,"_") + ".xlsx");
+  }
+
+  return h("div", null,
+    h("button", { className: "link-volver", onClick: onVolver }, "← Volver al listado"),
+
+    h("div", { className: "panel" },
+      h("div", { className: "cabecera-cliente" },
+        h("div", null,
+          h("h2", null, cliente.x_name),
+          h("div", { className: "sub" },
+            (cliente.x_studio_tipo_cliente || "—") +
+            (cliente.x_studio_centro_costo ? " · Centro de costo: " + cliente.x_studio_centro_costo : "") +
+            " · " + etiquetaRango
+          )
+        ),
+        h("div", { className: "barra-botones" },
+          h("button", { className: "btn-secundario", onClick: exportarExcel }, "📊 Exportar Excel"),
+          h("button", { className: "btn-primario", onClick: construirPDF }, "⬇️ Descargar PDF")
+        )
+      )
+    ),
+
+    h("div", { className: "kpis" },
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total del período"), h("div", { className: "valor" }, moneda(totalGastado))),
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Órdenes cerradas"), h("div", { className: "valor" }, totalOrdenes)),
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Promedio por orden"), h("div", { className: "valor" }, moneda(promedio)))
+    ),
+
+    distribucionFamilia.length > 0 && h("div", { className: "panel" },
+      h("h2", null, "Gasto por familia de equipo"),
+      h(BarraDistribucion, { datos: distribucionFamilia, maximo: maxFamilia, formatearValor: moneda })
+    ),
+
+    h("div", { className: "panel" },
+      h("h2", null, "Detalle de reparaciones"),
+      cierresCliente.length === 0
+        ? h("div", { className: "error-carga" }, "Sin cierres registrados en este período.")
+        : TablaInfoAgro(h, { columnas, filas: cierresCliente })
+    )
+  );
+}
+
+function EstadoCuentaPrincipal(){
+  const [sesion, setSesion] = useState(null);
+  const [clientes, setClientes] = useState(null);
+  const [cierresBase, setCierresBase] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState("");
+  const [clienteAbierto, setClienteAbierto] = useState(null);
+  const [rango, setRango] = useState("todo");
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) { setSesion(s); cargar(); }
+  }, []);
+
+  async function cargar(){
+    setCargando(true); setErrorCarga("");
+    try {
+      const clientesRows = await tallerQuery("x_taller_cliente", ["id","x_name","x_studio_tipo_cliente","x_studio_centro_costo"], [], 3000);
+      const cierresRows = await tallerQuery("x_taller_cierre", [
+        "id","x_name","x_studio_orden_id","x_studio_total_presupuestado","x_studio_total_costo_real",
+        "x_studio_variacion_total","x_studio_diagnostico_final","x_studio_fecha_cierre",
+      ], [], 5000);
+      const idsOrdenes = [...new Set(cierresRows.filter(c => Array.isArray(c.x_studio_orden_id)).map(c => c.x_studio_orden_id[0]))];
+      let ordenesRows = [];
+      if (idsOrdenes.length) {
+        ordenesRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id"], [["id","in",idsOrdenes]], idsOrdenes.length);
+      }
+      const ordenPorId = {};
+      ordenesRows.forEach(o => { ordenPorId[o.id] = o; });
+
+      const idsEquipos = [...new Set(ordenesRows.filter(o => Array.isArray(o.x_studio_equipo_id)).map(o => o.x_studio_equipo_id[0]))];
+      let equiposRows = [];
+      if (idsEquipos.length) {
+        equiposRows = await tallerQuery("x_equiposagricolas", ["id","x_studio_tipo_equipo"], [["id","in",idsEquipos]], idsEquipos.length);
+      }
+      const familiaPorEquipo = {};
+      equiposRows.forEach(e => { familiaPorEquipo[e.id] = e.x_studio_tipo_equipo || "Sin definir"; });
+
+      const cierresEnriquecidos = cierresRows.map(c => {
+        const orden = Array.isArray(c.x_studio_orden_id) ? ordenPorId[c.x_studio_orden_id[0]] : null;
+        const idEquipo = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[0] : null;
+        return {
+          ...c,
+          _clienteId: orden ? orden.x_studio_cliente_id : null,
+          _ordenNombre: orden ? orden.x_name : "",
+          _equipoNombre: orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "",
+          _familiaEquipo: idEquipo ? (familiaPorEquipo[idEquipo] || "Sin definir") : "Sin definir",
+        };
+      });
+
+      setClientes(clientesRows);
+      setCierresBase(cierresEnriquecidos);
+    } catch(e) {
+      setErrorCarga("No se pudieron cargar los datos: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  const { desdeEfectivo, hastaEfectivo } = useMemo(() => {
+    const hoy = new Date();
+    if (rango === "anio") return { desdeEfectivo: new Date(hoy.getFullYear(), 0, 1), hastaEfectivo: null };
+    if (rango === "mes") return { desdeEfectivo: new Date(hoy.getFullYear(), hoy.getMonth(), 1), hastaEfectivo: null };
+    if (rango === "personalizado") {
+      return {
+        desdeEfectivo: fechaDesde ? new Date(fechaDesde + "T00:00:00") : null,
+        hastaEfectivo: fechaHasta ? new Date(fechaHasta + "T23:59:59") : null,
+      };
+    }
+    return { desdeEfectivo: null, hastaEfectivo: null };
+  }, [rango, fechaDesde, fechaHasta]);
+
+  const cierresFiltrados = useMemo(() => {
+    if (!cierresBase) return [];
+    if (!desdeEfectivo && !hastaEfectivo) return cierresBase;
+    return cierresBase.filter(c => {
+      if (!c.x_studio_fecha_cierre) return false;
+      const f = new Date(String(c.x_studio_fecha_cierre).replace(" ", "T"));
+      if (desdeEfectivo && f < desdeEfectivo) return false;
+      if (hastaEfectivo && f > hastaEfectivo) return false;
+      return true;
+    });
+  }, [cierresBase, desdeEfectivo, hastaEfectivo]);
+
+  const clientesConGasto = useMemo(() => {
+    const totalPorCliente = {};
+    const ordenesPorCliente = {};
+    cierresFiltrados.forEach(c => {
+      const idCliente = m2oId(c._clienteId);
+      if (idCliente === null) return;
+      totalPorCliente[idCliente] = (totalPorCliente[idCliente] || 0) + num(c.x_studio_total_costo_real);
+      ordenesPorCliente[idCliente] = (ordenesPorCliente[idCliente] || 0) + 1;
+    });
+    return (clientes || [])
+      .map(c => ({ ...c, _totalGastado: totalPorCliente[c.id] || 0, _ordenes: ordenesPorCliente[c.id] || 0 }))
+      .filter(c => c._ordenes > 0);
+  }, [clientes, cierresFiltrados]);
+
+  const etiquetaRango = rango === "todo" ? "Todo el histórico" : rango === "anio" ? "Este año" : rango === "mes" ? "Este mes" : "Rango personalizado";
+
+  if (!sesion) return null;
+
+  if (clienteAbierto) {
+    return h(EstadoDeCuenta, {
+      cliente: clienteAbierto,
+      cierres: cierresBase || [],
+      desdeEfectivo, hastaEfectivo, etiquetaRango,
+      onVolver: () => setClienteAbierto(null),
+    });
+  }
+
+  if (cargando) return h("div", { className: "panel cargando" }, "Cargando estado de cuenta...");
+  if (errorCarga) return h("div", { className: "panel error-carga" }, errorCarga);
+
+  const totalGeneral = clientesConGasto.reduce((s,c) => s + c._totalGastado, 0);
+
+  const gastoPorFamiliaGeneral = {};
+  cierresFiltrados.forEach(c => {
+    const fam = c._familiaEquipo || "Sin definir";
+    gastoPorFamiliaGeneral[fam] = (gastoPorFamiliaGeneral[fam] || 0) + num(c.x_studio_total_costo_real);
+  });
+  const distribucionFamiliaGeneral = Object.entries(gastoPorFamiliaGeneral).sort((a,b) => b[1]-a[1]);
+  const maxFamiliaGeneral = Math.max(1, ...distribucionFamiliaGeneral.map(([,v]) => v));
+
+  const columnas = [
+    { clave: "x_name", titulo: "Cliente" },
+    { clave: "x_studio_tipo_cliente", titulo: "Tipo" },
+    { clave: "x_studio_centro_costo", titulo: "Centro de Costo" },
+    { clave: "_ordenes", titulo: "# Órdenes" },
+    { clave: "_totalGastado", titulo: "Total Gastado", formatear: moneda },
+  ];
+
+  return h("div", null,
+    h("div", { className: "barra-superior" },
+      h("h1", null, "🧾 Estado de Cuenta"),
+      h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar")
+    ),
+
+    h(FiltroFecha, { rango, setRango, fechaDesde, setFechaDesde, fechaHasta, setFechaHasta }),
+
+    h("div", { className: "kpis" },
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Clientes con gasto"), h("div", { className: "valor" }, clientesConGasto.length)),
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total del período"), h("div", { className: "valor" }, moneda(totalGeneral))),
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Órdenes cerradas"), h("div", { className: "valor" }, cierresFiltrados.length))
+    ),
+
+    distribucionFamiliaGeneral.length > 0 && h("div", { className: "panel" },
+      h("h2", null, "Gasto por familia de equipo (todos los clientes)"),
+      h(BarraDistribucion, { datos: distribucionFamiliaGeneral, maximo: maxFamiliaGeneral, formatearValor: moneda })
+    ),
+
+    h("div", { className: "panel" },
+      h("h2", null, "Clientes"),
+      clientesConGasto.length === 0
+        ? h("div", { className: "error-carga" }, "No hay cierres registrados en este período.")
+        : TablaInfoAgro(h, { columnas, filas: clientesConGasto, onFilaClick: setClienteAbierto })
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(EstadoCuentaPrincipal));
+</script>
+</body>
+</html>
