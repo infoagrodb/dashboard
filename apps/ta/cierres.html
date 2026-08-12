@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -74,7 +74,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v3 (documento de soporte + facturación)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v4 (visto bueno público del cliente)</div>
 
 <script>
 const h = React.createElement;
@@ -411,7 +411,39 @@ function DetalleCierre({ cierreId, onVolver }){
   const [cliente, setCliente] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [exito, setExito] = useState("");
   const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [generandoLink, setGenerandoLink] = useState(false);
+
+  async function generarLinkVistoBueno(){
+    setGenerandoLink(true); setError("");
+    try {
+      const resp = await tallerFetch("/taller/cierre/compartir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cierre_id: cierreId }),
+      });
+      if (!resp.ok) { setError(resp.error || "No se pudo generar el link."); return; }
+      const url = window.location.href.replace(/cierres\.html.*$/, "aprobar-cierre.html") + "?id=" + cierreId + "&token=" + resp.token;
+      const clienteNombre = cliente ? cliente.x_name : "";
+      if (navigator.share) {
+        await navigator.share({
+          title: "Cierre " + cierre.x_name,
+          text: "Hola" + (clienteNombre ? " " + clienteNombre : "") + ", te comparto el cierre de tu orden " + (orden ? orden.x_name : "") + " para tu visto bueno.",
+          url,
+        });
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        setExito("Link copiado al portapapeles: " + url);
+      } else {
+        setExito("Link: " + url);
+      }
+    } catch(e) {
+      if (e.name !== "AbortError") setError("Error: " + e.message);
+    } finally {
+      setGenerandoLink(false);
+    }
+  }
 
   useEffect(() => { cargar(); }, [cierreId]);
 
@@ -590,10 +622,13 @@ function DetalleCierre({ cierreId, onVolver }){
         )
       ),
       error && h("div", { className: "mensaje-error" }, error),
+      exito && h("div", { className: "mensaje-exito" }, exito),
       h("div", { className: "barra-botones" },
         h("button", { className: "btn-secundario", onClick: descargar, disabled: generandoPdf }, "⬇️ Descargar PDF"),
-        h("button", { className: "btn-primario", onClick: generarYCompartir, disabled: generandoPdf },
-          generandoPdf ? "Generando..." : "📤 Compartir Documento de Soporte")
+        h("button", { className: "btn-secundario", onClick: generarYCompartir, disabled: generandoPdf },
+          generandoPdf ? "Generando..." : "📤 Compartir Documento de Soporte"),
+        h("button", { className: "btn-primario", onClick: generarLinkVistoBueno, disabled: generandoLink },
+          generandoLink ? "Generando link..." : "🔗 Enviar a cliente para visto bueno")
       )
     )
   );
