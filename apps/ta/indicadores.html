@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -59,7 +59,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">indicadores.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">indicadores.html — v2 (carga secuencial)</div>
 
 <script>
 const h = React.createElement;
@@ -99,12 +99,10 @@ function Indicadores(){
   async function cargar(){
     setCargando(true); setError("");
     try {
-      const [ordenes, cierres, bahias, presupuestosAprobados] = await Promise.all([
-        tallerQuery("x_taller_orden", ["id","x_studio_estado","x_studio_bahia_id","x_studio_veces_reabierta"], [], 5000),
-        tallerQuery("x_taller_cierre", ["id","x_studio_total_presupuestado","x_studio_total_costo_real","x_studio_porcentaje_variacion","x_studio_causa_principal"], [], 2000),
-        tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad"], [], 500),
-        tallerQuery("x_taller_presupuesto", ["id","x_studio_total_presupuesto"], [["x_studio_estado","=","Aprobado"]], 2000),
-      ]);
+      const ordenes = await tallerQuery("x_taller_orden", ["id","x_studio_estado","x_studio_bahia_id","x_studio_veces_reabierta"], [], 5000);
+      const cierres = await tallerQuery("x_taller_cierre", ["id","x_studio_total_presupuestado","x_studio_total_costo_real","x_studio_porcentaje_variacion","x_studio_causa_principal"], [], 2000);
+      const bahias = await tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad"], [], 500);
+      const presupuestosAprobados = await tallerQuery("x_taller_presupuesto", ["id","x_studio_total_presupuesto"], [["x_studio_estado","=","Aprobado"]], 2000);
       setDatos({ ordenes, cierres, bahias, presupuestosAprobados });
     } catch(e) {
       setError("No se pudieron cargar los indicadores: " + e.message);

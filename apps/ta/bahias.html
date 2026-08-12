@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -88,7 +88,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">bahias.html — v2 (detalle de equipos + botón config)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">bahias.html — v3 (carga secuencial)</div>
 
 <script>
 const h = React.createElement;
@@ -276,11 +276,9 @@ function Bahias(){
   async function cargarTodo(){
     setCargando(true); setErrorCarga("");
     try {
-      const [filasBahias, filasUsuarios, filasOrdenes] = await Promise.all([
-        tallerQuery("x_taller_bahia", ["id","x_name","x_studio_responsable_id","x_studio_capacidad","x_studio_modo_limite","x_studio_ubicacion"], [], 500),
-        tallerQuery("x_taller_usuario", ["id","x_name"], [], 500),
-        tallerQuery("x_taller_orden", ["id","x_studio_bahia_id","x_studio_estado"], [["x_studio_bahia_id","!=",false]], 2000),
-      ]);
+      const filasBahias = await tallerQuery("x_taller_bahia", ["id","x_name","x_studio_responsable_id","x_studio_capacidad","x_studio_modo_limite","x_studio_ubicacion"], [], 500);
+      const filasUsuarios = await tallerQuery("x_taller_usuario", ["id","x_name"], [], 500);
+      const filasOrdenes = await tallerQuery("x_taller_orden", ["id","x_studio_bahia_id","x_studio_estado"], [["x_studio_bahia_id","!=",false]], 2000);
       const ocupacion = {};
       filasOrdenes.forEach(o => {
         if (!ESTADOS_QUE_OCUPAN_BAHIA.includes(o.x_studio_estado)) return;

@@ -87,7 +87,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v3 (cargar líneas del presupuesto)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v4 (carga secuencial, no en paralelo)</div>
 
 <script>
 const h = React.createElement;
@@ -173,20 +173,18 @@ function EjecucionOrden({ orden, onVolver }){
   async function cargar(){
     setCargando(true); setError("");
     try {
-      const [presRows, moRows, consumoRows, tecRows] = await Promise.all([
-        tallerQuery("x_taller_presupuesto", ["id","x_name","x_studio_version"],
-          [["x_studio_orden_id","=",orden.id],["x_studio_estado","=","Aprobado"]], 10),
-        tallerQuery("x_taller_mano_obra", [
-          "id","x_studio_tecnico_id","x_studio_fecha","x_studio_horas_normales","x_studio_horas_extra",
-          "x_studio_tarifa_costo","x_studio_costo_total","x_studio_actividad",
-        ], [["x_studio_orden_id","=",orden.id]], 500),
-        tallerQuery("x_costo_real_detalle", [
-          "id","x_studio_tipo_linea","x_studio_sku","x_studio_descripcion","x_studio_cantidad_real",
-          "x_studio_unidad_medida","x_studio_costo_unitario_real","x_studio_total_costo_real","x_studio_origen",
-          "x_studio_proveedor","x_studio_es_linea_no_presupuestada","x_studio_motivo_cambio",
-        ], [["x_studio_orden_id","=",orden.id]], 500),
-        tallerQuery("x_taller_usuario", ["id","x_name"], [["x_studio_rol","=","Técnico"]], 500),
-      ]);
+      const presRows = await tallerQuery("x_taller_presupuesto", ["id","x_name","x_studio_version"],
+        [["x_studio_orden_id","=",orden.id],["x_studio_estado","=","Aprobado"]], 10);
+      const moRows = await tallerQuery("x_taller_mano_obra", [
+        "id","x_studio_tecnico_id","x_studio_fecha","x_studio_horas_normales","x_studio_horas_extra",
+        "x_studio_tarifa_costo","x_studio_costo_total","x_studio_actividad",
+      ], [["x_studio_orden_id","=",orden.id]], 500);
+      const consumoRows = await tallerQuery("x_costo_real_detalle", [
+        "id","x_studio_tipo_linea","x_studio_sku","x_studio_descripcion","x_studio_cantidad_real",
+        "x_studio_unidad_medida","x_studio_costo_unitario_real","x_studio_total_costo_real","x_studio_origen",
+        "x_studio_proveedor","x_studio_es_linea_no_presupuestada","x_studio_motivo_cambio",
+      ], [["x_studio_orden_id","=",orden.id]], 500);
+      const tecRows = await tallerQuery("x_taller_usuario", ["id","x_name"], [["x_studio_rol","=","Técnico"]], 500);
       setManoObra(moRows);
       setConsumos(consumoRows);
       setTecnicos(tecRows);

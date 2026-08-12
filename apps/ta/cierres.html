@@ -74,7 +74,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v4 (visto bueno público del cliente)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v5 (carga secuencial)</div>
 
 <script>
 const h = React.createElement;
@@ -226,12 +226,10 @@ function FormularioCierre({ orden, onVolver, onCreado }){
   async function cargar(){
     setCargando(true); setError("");
     try {
-      const [presRows, costoRealRows, cierresRows] = await Promise.all([
-        tallerQuery("x_taller_presupuesto", ["id","x_name","x_studio_version","x_studio_estado"],
-          [["x_studio_orden_id","=",orden.id],["x_studio_estado","=","Aprobado"]], 10, 0),
-        tallerQuery("x_costo_real_detalle", ["id","x_studio_total_costo_real"], [["x_studio_orden_id","=",orden.id]], 500),
-        tallerQuery("x_taller_cierre", ["id"], [["x_studio_orden_id","=",orden.id]], 1),
-      ]);
+      const presRows = await tallerQuery("x_taller_presupuesto", ["id","x_name","x_studio_version","x_studio_estado"],
+        [["x_studio_orden_id","=",orden.id],["x_studio_estado","=","Aprobado"]], 10, 0);
+      const costoRealRows = await tallerQuery("x_costo_real_detalle", ["id","x_studio_total_costo_real"], [["x_studio_orden_id","=",orden.id]], 500);
+      const cierresRows = await tallerQuery("x_taller_cierre", ["id"], [["x_studio_orden_id","=",orden.id]], 1);
       if (cierresRows.length) { setYaExiste(true); setCargando(false); return; }
 
       if (presRows.length) {

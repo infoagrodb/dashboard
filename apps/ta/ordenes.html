@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -330,16 +330,14 @@ function OrdenesDeTrabajo(){
   async function cargarOrdenes(){
     setCargando(true); setErrorCarga("");
     try {
-      const [filas, filasBahias, filasTecnicos] = await Promise.all([
-        tallerQuery("x_taller_orden", [
-          "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
-          "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
-          "x_studio_tecnico_responsable_id","x_studio_problema_reportado","x_studio_diagnostico",
-          "x_studio_fecha_entrega",
-        ], [], 1000, 0),
-        tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite"], [], 500),
-        tallerQuery("x_taller_usuario", ["id","x_name","x_studio_rol"], [["x_studio_rol","=","Técnico"]], 500),
-      ]);
+      const filas = await tallerQuery("x_taller_orden", [
+        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
+        "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
+        "x_studio_tecnico_responsable_id","x_studio_problema_reportado","x_studio_diagnostico",
+        "x_studio_fecha_entrega",
+      ], [], 1000, 0);
+      const filasBahias = await tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite"], [], 500);
+      const filasTecnicos = await tallerQuery("x_taller_usuario", ["id","x_name","x_studio_rol"], [["x_studio_rol","=","Técnico"]], 500);
       setOrdenes(filas);
       setBahias(filasBahias);
       setTecnicos(filasTecnicos);

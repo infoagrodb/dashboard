@@ -138,7 +138,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v16 (orden de campos: cantidad después de UM)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v17 (carga secuencial)</div>
 
 <script>
 const h = React.createElement;
@@ -431,17 +431,15 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
   async function cargar(){
     setCargando(true); setError("");
     try {
-      const [presRows, lineasRows] = await Promise.all([
-        tallerQuery("x_taller_presupuesto", [
-          "id","x_name","x_studio_orden_id","x_studio_version","x_studio_estado","x_studio_fecha_presupuesto",
-          "x_studio_descuento","x_studio_impuestos","x_studio_otros_costos","x_studio_vigencia_dias",
-          "x_studio_elaborado_por","x_studio_aprobado_por_cliente","x_studio_fecha_aprobacion","x_studio_observaciones",
-        ], [["id","=",presupuestoId]], 1),
-        tallerQuery("x_presupuesto_detalle", [
-          "id","x_studio_tipo_linea","x_studio_descripcion","x_studio_cantidad_presupuestada",
-          "x_studio_unidad_medida","x_studio_costo_manual","x_studio_origen_costo",
-        ], [["x_studio_presupuesto_id","=",presupuestoId]], 500),
-      ]);
+      const presRows = await tallerQuery("x_taller_presupuesto", [
+        "id","x_name","x_studio_orden_id","x_studio_version","x_studio_estado","x_studio_fecha_presupuesto",
+        "x_studio_descuento","x_studio_impuestos","x_studio_otros_costos","x_studio_vigencia_dias",
+        "x_studio_elaborado_por","x_studio_aprobado_por_cliente","x_studio_fecha_aprobacion","x_studio_observaciones",
+      ], [["id","=",presupuestoId]], 1);
+      const lineasRows = await tallerQuery("x_presupuesto_detalle", [
+        "id","x_studio_tipo_linea","x_studio_descripcion","x_studio_cantidad_presupuestada",
+        "x_studio_unidad_medida","x_studio_costo_manual","x_studio_origen_costo",
+      ], [["x_studio_presupuesto_id","=",presupuestoId]], 500);
       if (!presRows.length){ setError("No se encontró el presupuesto."); setCargando(false); return; }
       setPresupuesto(presRows[0]);
       setLineas(lineasRows);
