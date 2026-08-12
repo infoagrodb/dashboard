@@ -22,6 +22,8 @@
 <script src="core.js?v=11"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -94,7 +96,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v9 (precarga equipo formal de la solicitud)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v10 (trazabilidad + PDF de recepción)</div>
 <div id="raiz"></div>
 
 <script>
@@ -374,7 +376,7 @@ function Recepcion(){
     if (solicitudesPendientes !== null) return; // ya cargadas, no repetir la consulta
     try {
       const filas = await tallerQuery("x_taller_solicitud", [
-        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado","create_date",
       ], [["x_studio_estado","=","Pendiente"]], 500);
       setSolicitudesPendientes(filas);
     } catch(e) {
@@ -393,7 +395,7 @@ function Recepcion(){
     (async () => {
       try {
         const filas = await tallerQuery("x_taller_solicitud", [
-          "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+          "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado","create_date",
         ], [["id","=",Number(idSolicitud)]], 1);
         if (filas.length) {
           aplicarSolicitud(filas[0]);
@@ -470,6 +472,78 @@ function Recepcion(){
     } finally {
       setCargandoEquipos(false);
     }
+  }
+
+  function generarPDFRecepcion(){
+    if (!window.jspdf) { setError("La librería de PDF no cargó — recargá la página."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "letter" });
+    if (typeof doc.autoTable !== "function") { setError("El complemento de tablas no cargó — recargá la página."); return; }
+    const ancho = doc.internal.pageSize.getWidth();
+
+    doc.setFillColor(22,163,74); doc.rect(0,0,ancho,24,"F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(15);
+    doc.text("INFOTALLER", 14, 12);
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 18);
+    doc.setFont(undefined,"bold"); doc.setFontSize(13);
+    doc.text("ACTA DE RECEPCIÓN", ancho-14, 12, { align:"right" });
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text(folioCreado, ancho-14, 18, { align:"right" });
+
+    doc.setTextColor(17,24,39);
+    let y = 33;
+    doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("CLIENTE", 14, y);
+    doc.setFont(undefined,"normal"); doc.text(cliente ? cliente.x_name : "—", 14, y+5);
+    doc.setFont(undefined,"bold"); doc.text("FECHA DE RECEPCIÓN", 90, y);
+    doc.setFont(undefined,"normal"); doc.text(formatearFecha(fechaRecepcion), 90, y+5);
+    y += 12;
+    doc.setFont(undefined,"bold"); doc.text("EQUIPO", 14, y);
+    doc.setFont(undefined,"normal"); doc.text(equipo ? equipo.x_name : "—", 14, y+5);
+    doc.setFont(undefined,"bold"); doc.text("PRIORIDAD", 90, y);
+    doc.setFont(undefined,"normal"); doc.text(prioridad, 90, y+5);
+    y += 12;
+    doc.setFont(undefined,"bold"); doc.text("HORÓMETRO DE RECEPCIÓN", 14, y);
+    doc.setFont(undefined,"normal"); doc.text(String(horometro || "—"), 14, y+5);
+    doc.setFont(undefined,"bold"); doc.text("KILOMETRAJE DE RECEPCIÓN", 90, y);
+    doc.setFont(undefined,"normal"); doc.text(String(kilometraje || "—"), 90, y+5);
+    y += 12;
+    if (solicitudOrigen) {
+      doc.setFont(undefined,"bold"); doc.text("SOLICITUD DE ORIGEN", 14, y);
+      doc.setFont(undefined,"normal"); doc.text(solicitudOrigen.x_name + " · " + formatearFechaHora(solicitudOrigen.create_date), 14, y+5);
+      y += 12;
+    }
+
+    doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("PROBLEMA REPORTADO POR EL CLIENTE", 14, y); y += 5;
+    doc.setFont(undefined,"normal");
+    const probLineas = doc.splitTextToSize(problema || "—", ancho-28);
+    doc.text(probLineas, 14, y); y += probLineas.length * 4.5 + 8;
+
+    if (elementosPresentes.length || notasActa.trim()) {
+      doc.setFont(undefined,"bold"); doc.text("ELEMENTOS PRESENTES AL RECIBIR", 14, y); y += 5;
+      doc.setFont(undefined,"normal"); doc.setFontSize(8.5);
+      const elemTexto = elementosPresentes.length ? elementosPresentes.join(", ") : "Ninguno marcado";
+      const elemLineas = doc.splitTextToSize(elemTexto, ancho-28);
+      doc.text(elemLineas, 14, y); y += elemLineas.length * 4 + 4;
+      if (notasActa.trim()) {
+        doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("NOTAS DEL ACTA", 14, y); y += 5;
+        doc.setFont(undefined,"normal"); doc.setFontSize(8.5);
+        const notaLineas = doc.splitTextToSize(notasActa, ancho-28);
+        doc.text(notaLineas, 14, y); y += notaLineas.length * 4 + 4;
+      }
+      y += 6;
+    }
+
+    if (y > 220) { doc.addPage(); y = 20; }
+    doc.setFont(undefined,"normal"); doc.setFontSize(9); doc.setTextColor(17,24,39);
+    doc.text("Recepcionado por: " + (sesion ? sesion.nombre : "—"), 14, y); y += 20;
+    doc.line(14, y, 90, y);
+    doc.setFontSize(8); doc.setTextColor(107,114,128);
+    doc.text("Firma de quien recibe (taller)", 14, y+4);
+    doc.line(ancho-90, y, ancho-14, y);
+    doc.text("Firma de quien entrega (cliente)", ancho-90, y+4);
+
+    doc.save(folioCreado + "-acta-recepcion.pdf");
   }
 
   function reiniciarFormulario(){
@@ -569,7 +643,11 @@ function Recepcion(){
         h("div", { className: "folio" }, folioCreado),
         h("div", null, "Orden de trabajo registrada correctamente."),
         h("button", {
-          className: "btn-primario", style: { marginTop: "20px" },
+          className: "btn-secundario", style: { marginTop: "16px" },
+          onClick: generarPDFRecepcion,
+        }, "⬇️ Descargar Acta de Recepción (PDF)"),
+        h("button", {
+          className: "btn-primario", style: { marginTop: "10px" },
           onClick: reiniciarFormulario,
         }, "Registrar otra recepción")
       )
@@ -580,6 +658,17 @@ function Recepcion(){
 
     h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
       h("button", { className: "link-chico", onClick: abrirSolicitudesPendientes }, "📞 Ver Solicitudes de Servicio Pendientes")
+    ),
+
+    solicitudOrigen && h("div", { style: {
+        display: "flex", alignItems: "center", gap: "8px", background: "var(--color-acento-suave)", border: "1px solid #A7F3D0",
+        borderRadius: "8px", padding: "10px 14px", marginBottom: "12px", fontSize: "12.5px", color: "var(--color-texto)",
+      } },
+      h("span", null, "📞"),
+      h("span", null,
+        h("strong", null, "Proviene de la solicitud " + solicitudOrigen.x_name),
+        " · registrada el " + formatearFechaHora(solicitudOrigen.create_date)
+      )
     ),
 
     error && h("div", { className: "mensaje mensaje-error" }, error),
