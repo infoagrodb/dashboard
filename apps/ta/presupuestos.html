@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=8"></script>
+<script src="core.js?v=10"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -138,7 +138,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v17 (carga secuencial)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v18 (columna equipo + renombrar a Cotización)</div>
 
 <script>
 const h = React.createElement;
@@ -1008,7 +1008,20 @@ function Presupuestos(){
         "id","x_name","x_studio_orden_id","x_studio_version","x_studio_estado",
         "x_studio_fecha_presupuesto","x_studio_total_presupuesto","x_studio_elaborado_por",
       ], [], 1000);
-      setPresupuestos(filas);
+
+      // x_studio_equipo_id vive en la orden, no en el presupuesto — se trae aparte y se une.
+      const idsOrdenes = [...new Set(filas.filter(f => Array.isArray(f.x_studio_orden_id)).map(f => f.x_studio_orden_id[0]))];
+      let equipoPorOrden = {};
+      if (idsOrdenes.length) {
+        const ordenesRows = await tallerQuery("x_taller_orden", ["id","x_studio_equipo_id"], [["id","in",idsOrdenes]], idsOrdenes.length);
+        ordenesRows.forEach(o => { equipoPorOrden[o.id] = o.x_studio_equipo_id; });
+      }
+      const filasConEquipo = filas.map(f => ({
+        ...f,
+        x_studio_equipo_id: Array.isArray(f.x_studio_orden_id) ? (equipoPorOrden[f.x_studio_orden_id[0]] || false) : false,
+      }));
+
+      setPresupuestos(filasConEquipo);
     } catch(e) {
       setErrorCarga("No se pudieron cargar los presupuestos: " + e.message);
     } finally {
@@ -1023,8 +1036,9 @@ function Presupuestos(){
   }
 
   const columnas = [
-    { clave: "x_name", titulo: "Nombre" },
+    { clave: "x_name", titulo: "Cotización" },
     { clave: "x_studio_orden_id", titulo: "Orden" },
+    { clave: "x_studio_equipo_id", titulo: "Equipo" },
     { clave: "x_studio_version", titulo: "Versión" },
     { clave: "x_studio_estado", titulo: "Estado" },
     { clave: "x_studio_total_presupuesto", titulo: "Total", formatear: moneda },
