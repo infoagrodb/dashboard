@@ -218,7 +218,8 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
 
   return h("div", { className: "modal-fondo", onClick: onCerrar },
     h("div", { className: "modal-detalle", onClick: e => e.stopPropagation() },
-      h("h3", null, orden.x_name),
+      h("h3", null, "🛠️ Diagnóstico de Orden de Trabajo"),
+      h("div", { style: { fontSize: "13px", fontWeight: 600, marginTop: "-8px", marginBottom: "2px" } }, orden.x_name),
       h("div", { className: "folio-sub" }, "Recepcionado: " + formatearFecha(orden.x_studio_fecha_recepcion)),
 
       h("div", { className: "fila-detalle" },
@@ -258,7 +259,19 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
         ),
         h("div", { className: "campo-detalle" },
           h("label", null, "Asignar bahía"),
-          h("select", { value: nuevaBahiaId, onChange: e => setNuevaBahiaId(e.target.value) },
+          h("select", {
+            value: nuevaBahiaId,
+            onChange: e => {
+              const idElegido = e.target.value;
+              setNuevaBahiaId(idElegido);
+              // La bahía ya tiene su propio responsable — se trae solo, para no
+              // pedirlo dos veces (era ambiguo elegirlo aparte).
+              const bahiaElegida = bahias.find(b => String(b.id) === idElegido);
+              if (bahiaElegida && Array.isArray(bahiaElegida.x_studio_responsable_id)) {
+                setNuevoTecnicoId(String(bahiaElegida.x_studio_responsable_id[0]));
+              }
+            },
+          },
             h("option", { value: "" }, "— Sin asignar —"),
             bahias.map(b => {
               const ocupados = ocupacionPorBahia[b.id] || 0;
@@ -270,7 +283,7 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
 
       h("div", { className: "fila-detalle" },
         h("div", { className: "campo-detalle" },
-          h("label", null, "Técnico responsable"),
+          h("label", null, "Técnico responsable" + (nuevaBahiaId ? " (traído de la bahía — se puede cambiar)" : "")),
           h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
             h("option", { value: "" }, "— Sin asignar —"),
             tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
@@ -379,7 +392,7 @@ function OrdenesDeTrabajo(){
         "x_studio_tecnico_responsable_id","x_studio_problema_reportado","x_studio_diagnostico","x_studio_fecha_diagnostico",
         "x_studio_fecha_entrega",
       ], [], 1000, 0);
-      const filasBahias = await tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite"], [], 500);
+      const filasBahias = await tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite","x_studio_responsable_id"], [], 500);
       const filasTecnicos = await tallerQuery("x_taller_usuario", ["id","x_name","x_studio_rol"], [["x_studio_rol","=","Técnico"]], 500);
       setOrdenes(filas);
       setBahias(filasBahias);
