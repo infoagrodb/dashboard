@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=10"></script>
+<script src="core.js?v=11"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -65,11 +65,11 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v2 (fix orden de Hooks)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v3 (editar atributos del equipo)</div>
 
 <script>
 const h = React.createElement;
-const { useState, useEffect, useMemo } = React;
+const { useState, useEffect, useMemo, useRef } = React;
 
 function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
 function moneda(v){ return "$" + num(v).toFixed(2); }
@@ -90,11 +90,152 @@ function BarraDistribucion({ datos, maximo, formatearValor }){
   );
 }
 
-function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver }){
+const TIPOS_EQUIPO = ["Tractor","Implemento","Vehículo","Motor","Bomba","Otro"];
+
+function Buscador({ placeholder, buscar, renderItem, onSeleccionar }){
+  const [texto, setTexto] = useState("");
+  const [resultados, setResultados] = useState(null);
+  const [buscando, setBuscando] = useState(false);
+  const timerRef = useRef(null);
+
+  function cambiar(valor){
+    setTexto(valor);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    if (!valor.trim()){ setResultados(null); return; }
+    timerRef.current = setTimeout(async () => {
+      setBuscando(true);
+      try { setResultados(await buscar(valor.trim())); }
+      catch(e) { setResultados([]); }
+      finally { setBuscando(false); }
+    }, 300);
+  }
+
+  return h("div", { style: { position: "relative" } },
+    h("input", { type: "text", placeholder, value: texto, onChange: e => cambiar(e.target.value) }),
+    resultados !== null && h("div", { style: { position:"absolute", top:"100%", left:0, right:0, background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"7px", boxShadow:"var(--sombra)", maxHeight:"200px", overflowY:"auto", zIndex:50, marginTop:"4px" } },
+      buscando ? h("div", { style: { padding:"10px", fontSize:"12.5px", color:"var(--color-texto-suave)", textAlign:"center" } }, "Buscando...") :
+      resultados.length === 0 ? h("div", { style: { padding:"10px", fontSize:"12.5px", color:"var(--color-texto-suave)", textAlign:"center" } }, "Sin resultados") :
+      resultados.map(item => h("div", {
+          key: item.id, style: { padding:"8px 10px", cursor:"pointer", borderBottom:"1px solid var(--color-fondo)", fontSize:"13px" },
+          onClick: () => { onSeleccionar(item); setTexto(""); setResultados(null); },
+        }, renderItem(item))
+      )
+    )
+  );
+}
+
+function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
+  const [nombre, setNombre] = useState(equipo.x_name || "");
+  const [tipo, setTipo] = useState(equipo.x_studio_tipo_equipo || "Tractor");
+  const [marca, setMarca] = useState(equipo.x_studio_marca || "");
+  const [modelo, setModelo] = useState(equipo.x_studio_modelo || "");
+  const [serie, setSerie] = useState(equipo.x_studio_serie || "");
+  const [anio, setAnio] = useState(equipo.x_studio_anio || "");
+  const [cliente, setCliente] = useState(Array.isArray(equipo.x_studio_cliente_id) ? { id: equipo.x_studio_cliente_id[0], x_name: equipo.x_studio_cliente_id[1] } : null);
+  const [horometro, setHorometro] = useState(equipo.x_studio_horometro_actual || 0);
+  const [kilometraje, setKilometraje] = useState(equipo.x_studio_kilometraje_actual || 0);
+  const [descripcion, setDescripcion] = useState(equipo.x_studio_descripcion || "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function buscarClientes(texto){
+    return tallerQuery("x_taller_cliente", ["id","x_name"], [["x_name","ilike",texto]], 15);
+  }
+
+  async function guardar(){
+    if (!nombre.trim()){ setError("El nombre/código es obligatorio."); return; }
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerActualizar("x_equiposagricolas", equipo.id, {
+        x_name: nombre.trim(),
+        x_studio_tipo_equipo: tipo,
+        x_studio_marca: marca || false,
+        x_studio_modelo: modelo || false,
+        x_studio_serie: serie || false,
+        x_studio_anio: anio || false,
+        x_studio_cliente_id: cliente ? cliente.id : false,
+        x_studio_horometro_actual: num(horometro),
+        x_studio_kilometraje_actual: num(kilometraje),
+        x_studio_descripcion: descripcion || false,
+      });
+      if (resp.ok) onGuardado();
+      else setError(resp.error || "No se pudo guardar.");
+    } catch(e) { setError("Error: " + e.message); }
+    finally { setGuardando(false); }
+  }
+
+  return h("div", { style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: onCerrar },
+    h("div", { style: { background:"#fff", borderRadius:"12px", padding:"22px", width:"100%", maxWidth:"460px", maxHeight:"88vh", overflowY:"auto", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
+      h("h3", { style: { margin:"0 0 14px", fontSize:"15px" } }, "⚙️ Editar Equipo"),
+      h("div", { style: { marginBottom:"14px" } },
+        h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Nombre / Código"),
+        h("input", { type: "text", value: nombre, autoFocus: true, onChange: e => setNombre(e.target.value) })
+      ),
+      h("div", { style: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"14px" } },
+        h("div", null,
+          h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Familia / Tipo"),
+          h("select", { value: tipo, onChange: e => setTipo(e.target.value) },
+            TIPOS_EQUIPO.map(t => h("option", { key: t, value: t }, t))
+          )
+        ),
+        h("div", null,
+          h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Año"),
+          h("input", { type: "text", value: anio, onChange: e => setAnio(e.target.value) })
+        )
+      ),
+      h("div", { style: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"14px" } },
+        h("div", null,
+          h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Marca"),
+          h("input", { type: "text", value: marca, onChange: e => setMarca(e.target.value) })
+        ),
+        h("div", null,
+          h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Modelo"),
+          h("input", { type: "text", value: modelo, onChange: e => setModelo(e.target.value) })
+        )
+      ),
+      h("div", { style: { marginBottom:"14px" } },
+        h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Serie"),
+        h("input", { type: "text", value: serie, onChange: e => setSerie(e.target.value) })
+      ),
+      h("div", { style: { marginBottom:"14px" } },
+        h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Cliente dueño"),
+        cliente
+          ? h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"center", background:"var(--color-acento-suave)", border:"1px solid #A7F3D0", borderRadius:"7px", padding:"8px 10px" } },
+              h("strong", { style: { fontSize:"13px" } }, cliente.x_name),
+              h("button", { style: { background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"6px", padding:"4px 9px", fontSize:"12px", cursor:"pointer" }, onClick: () => setCliente(null) }, "Cambiar")
+            )
+          : h(Buscador, { placeholder: "Buscar cliente (vacío = equipo interno)...", buscar: buscarClientes, onSeleccionar: setCliente, renderItem: c => c.x_name })
+      ),
+      h("div", { style: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"14px" } },
+        h("div", null,
+          h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Horómetro actual"),
+          h("input", { type: "number", step: "0.1", value: horometro, onChange: e => setHorometro(e.target.value) })
+        ),
+        h("div", null,
+          h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Kilometraje actual"),
+          h("input", { type: "number", step: "1", value: kilometraje, onChange: e => setKilometraje(e.target.value) })
+        )
+      ),
+      h("div", { style: { marginBottom:"0" } },
+        h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Descripción / notas"),
+        h("textarea", { value: descripcion, onChange: e => setDescripcion(e.target.value), style: { width:"100%", border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"8px 10px", fontSize:"13.5px", fontFamily:"inherit", resize:"vertical", minHeight:"60px" } })
+      ),
+      error && h("div", { style: { background:"#FEE2E2", borderLeft:"3px solid var(--color-peligro)", color:"#991B1B", fontSize:"12px", padding:"8px 10px", borderRadius:"6px", marginTop:"10px" } }, error),
+      h("div", { style: { display:"flex", gap:"8px", justifyContent:"flex-end", marginTop:"16px" } },
+        h("button", { style: { background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"9px 14px", fontSize:"13px", cursor:"pointer" }, onClick: onCerrar, disabled: guardando }, "Cancelar"),
+        h("button", { style: { background:"var(--color-primario)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 16px", fontSize:"13px", fontWeight:"600", cursor:"pointer" }, onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
+      )
+    )
+  );
+}
+
+function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado }){
+  const [equipoLocal, setEquipoLocal] = useState(equipo);
   const [consumos, setConsumos] = useState(null);
   const [manoObra, setManoObra] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
+  const [modalEditar, setModalEditar] = useState(false);
 
   const idsOrdenes = ordenesDelEquipo.map(o => o.id);
 
@@ -143,21 +284,35 @@ function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver }){
     h("div", { className: "panel" },
       h("div", { className: "cabecera-equipo" },
         h("div", null,
-          h("h2", null, equipo.x_name),
+          h("h2", null, equipoLocal.x_name),
           h("div", { className: "sub" },
-            [equipo.x_studio_tipo_equipo, equipo.x_studio_marca, equipo.x_studio_modelo].filter(Boolean).join(" · ") +
-            (equipo.x_studio_cliente_id ? " · " + m2oTexto(equipo.x_studio_cliente_id) : "")
+            [equipoLocal.x_studio_tipo_equipo, equipoLocal.x_studio_marca, equipoLocal.x_studio_modelo].filter(Boolean).join(" · ") +
+            (equipoLocal.x_studio_cliente_id ? " · " + m2oTexto(equipoLocal.x_studio_cliente_id) : "")
           )
-        )
+        ),
+        h("button", {
+          style: { background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"7px 12px", fontSize:"12.5px", cursor:"pointer", flexShrink:0 },
+          onClick: () => setModalEditar(true),
+        }, "⚙️ Editar")
       ),
       h("div", { className: "grid-datos" },
-        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Serie"), h("div", { className: "valor" }, equipo.x_studio_serie || "—")),
-        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Año"), h("div", { className: "valor" }, equipo.x_studio_anio || "—")),
-        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Horómetro actual"), h("div", { className: "valor" }, equipo.x_studio_horometro_actual || "—")),
-        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Kilometraje actual"), h("div", { className: "valor" }, equipo.x_studio_kilometraje_actual || "—")),
+        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Serie"), h("div", { className: "valor" }, equipoLocal.x_studio_serie || "—")),
+        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Año"), h("div", { className: "valor" }, equipoLocal.x_studio_anio || "—")),
+        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Horómetro actual"), h("div", { className: "valor" }, equipoLocal.x_studio_horometro_actual || "—")),
+        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Kilometraje actual"), h("div", { className: "valor" }, equipoLocal.x_studio_kilometraje_actual || "—")),
         h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Órdenes de trabajo"), h("div", { className: "valor" }, ordenesDelEquipo.length))
       )
     ),
+
+    modalEditar && h(ModalEditarEquipo, {
+      equipo: equipoLocal,
+      onCerrar: () => setModalEditar(false),
+      onGuardado: () => {
+        setModalEditar(false);
+        if (onEquipoEditado) onEquipoEditado(); // refresca los datos del panel principal
+        onVolver(); // vuelve a la lista ya actualizada
+      },
+    }),
 
     h("div", { className: "kpis" },
       h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total repuestos/materiales"), h("div", { className: "valor" }, moneda(totalRepuestos))),
@@ -263,6 +418,7 @@ function Equipos(){
       equipo: equipoAbierto,
       ordenesDelEquipo: ordenesPorEquipo[equipoAbierto.id] || [],
       onVolver: () => setEquipoAbierto(null),
+      onEquipoEditado: cargar,
     });
   }
 
