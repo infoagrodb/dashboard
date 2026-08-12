@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=8"></script>
+<script src="core.js?v=9"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -74,7 +74,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v5 (carga secuencial)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v6 (parte de la cotización si no hay costo real)</div>
 
 <script>
 const h = React.createElement;
@@ -211,6 +211,7 @@ function FormularioCierre({ orden, onVolver, onCreado }){
 
   const [totalPresupuestado, setTotalPresupuestado] = useState(0);
   const [totalCostoReal, setTotalCostoReal] = useState(0);
+  const [costoRealVieneDeCotizacion, setCostoRealVieneDeCotizacion] = useState(false);
   const [diagnosticoFinal, setDiagnosticoFinal] = useState("");
   const [trabajoRealizado, setTrabajoRealizado] = useState("");
   const [pruebaRealizada, setPruebaRealizada] = useState("");
@@ -239,9 +240,17 @@ function FormularioCierre({ orden, onVolver, onCreado }){
           [["x_studio_presupuesto_id","=",masReciente.id]], 500);
         const total = detalleLineas.reduce((s,l) => s + num(l.x_studio_total_costo_presupuestado), 0);
         setTotalPresupuestado(total);
+        // Si en Ejecución todavía no se registró nada de costo real, parte de lo cotizado
+        // en vez de cero — es la base correcta, ajustable a mano si algo cambió.
+        if (costoRealRows.length === 0) {
+          setTotalCostoReal(total);
+          setCostoRealVieneDeCotizacion(true);
+        }
       }
-      const totalReal = costoRealRows.reduce((s,l) => s + num(l.x_studio_total_costo_real), 0);
-      setTotalCostoReal(totalReal);
+      if (costoRealRows.length > 0) {
+        const totalReal = costoRealRows.reduce((s,l) => s + num(l.x_studio_total_costo_real), 0);
+        setTotalCostoReal(totalReal);
+      }
     } catch(e) {
       setError("Error al cargar: " + e.message);
     } finally {
@@ -325,8 +334,12 @@ function FormularioCierre({ orden, onVolver, onCreado }){
         ),
         h("div", { className: "caja-comparativo" },
           h("div", { className: "etiqueta" }, "Costo real"),
-          h("input", { type: "number", step: "0.01", value: totalCostoReal, onChange: e => setTotalCostoReal(num(e.target.value)),
-            style: { textAlign:"center", fontSize:"16px", fontWeight:"700", border:"1px solid var(--color-borde)" } })
+          h("input", { type: "number", step: "0.01", value: totalCostoReal,
+            onChange: e => { setTotalCostoReal(num(e.target.value)); setCostoRealVieneDeCotizacion(false); },
+            style: { textAlign:"center", fontSize:"16px", fontWeight:"700", border:"1px solid var(--color-borde)" } }),
+          costoRealVieneDeCotizacion && h("div", { style: { fontSize:"10px", color:"var(--color-texto-suave)", marginTop:"3px" } },
+            "Tomado de la cotización — no se registró consumo real en Ejecución. Ajustá si cambió algo."
+          )
         ),
         h("div", { className: "caja-comparativo " + (variacion <= 0 ? "positiva" : "negativa") },
           h("div", { className: "etiqueta" }, "Variación"),
