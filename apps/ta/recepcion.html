@@ -94,7 +94,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v8 (combo de equipos del cliente + solicitudes pendientes)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v9 (precarga equipo formal de la solicitud)</div>
 <div id="raiz"></div>
 
 <script>
@@ -359,8 +359,12 @@ function Recepcion(){
     if (Array.isArray(s.x_studio_cliente_id)) {
       setCliente({ id: s.x_studio_cliente_id[0], x_name: s.x_studio_cliente_id[1], x_studio_tipo_cliente: "Externo" });
     }
+    // Si la solicitud ya trae el equipo formal vinculado (no solo la descripción libre), se precarga directo.
+    if (Array.isArray(s.x_studio_equipo_id)) {
+      setEquipo({ id: s.x_studio_equipo_id[0], x_name: s.x_studio_equipo_id[1] });
+    }
     setProblema(
-      (s.x_studio_descripcion_equipo ? "Equipo (según la solicitud): " + s.x_studio_descripcion_equipo + "\n\n" : "") +
+      (!Array.isArray(s.x_studio_equipo_id) && s.x_studio_descripcion_equipo ? "Equipo (según la solicitud): " + s.x_studio_descripcion_equipo + "\n\n" : "") +
       (s.x_studio_problema_reportado || "")
     );
   }
@@ -370,7 +374,7 @@ function Recepcion(){
     if (solicitudesPendientes !== null) return; // ya cargadas, no repetir la consulta
     try {
       const filas = await tallerQuery("x_taller_solicitud", [
-        "id","x_name","x_studio_cliente_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
       ], [["x_studio_estado","=","Pendiente"]], 500);
       setSolicitudesPendientes(filas);
     } catch(e) {
@@ -389,7 +393,7 @@ function Recepcion(){
     (async () => {
       try {
         const filas = await tallerQuery("x_taller_solicitud", [
-          "id","x_name","x_studio_cliente_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+          "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
         ], [["id","=",Number(idSolicitud)]], 1);
         if (filas.length) {
           aplicarSolicitud(filas[0]);
