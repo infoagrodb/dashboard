@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=9"></script>
+<script src="core.js?v=10"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -74,7 +74,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v6 (parte de la cotización si no hay costo real)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">cierres.html — v7 (envía link al cerrar, sin campo manual)</div>
 
 <script>
 const h = React.createElement;
@@ -219,8 +219,8 @@ function FormularioCierre({ orden, onVolver, onCreado }){
   const [causaPrincipal, setCausaPrincipal] = useState("");
   const [horometroSalida, setHorometroSalida] = useState("");
   const [kilometrajeSalida, setKilometrajeSalida] = useState("");
-  const [aceptadoPorCliente, setAceptadoPorCliente] = useState("");
   const [guardando, setGuardando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
 
   useEffect(() => { cargar(); }, [orden.id]);
 
@@ -266,7 +266,6 @@ function FormularioCierre({ orden, onVolver, onCreado }){
     { texto: "Trabajo realizado documentado", ok: trabajoRealizado.trim().length > 0 },
     { texto: "Equipo probado", ok: pruebaRealizada.trim().length > 0 },
     { texto: "Horómetro/kilometraje de salida registrado", ok: horometroSalida !== "" },
-    { texto: "Aceptación del cliente registrada", ok: aceptadoPorCliente.trim().length > 0 },
     { texto: "Causa de la variación explicada", ok: Math.abs(porcentajeVariacion) < 5 || causaPrincipal !== "" },
   ];
   const listoParaCerrar = checklist.every(c => c.ok);
@@ -289,17 +288,40 @@ function FormularioCierre({ orden, onVolver, onCreado }){
         x_studio_prueba_realizada: pruebaRealizada,
         x_studio_resultado_prueba: resultadoPrueba,
         x_studio_fecha_cierre: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
-        x_studio_aceptado_por_cliente: aceptadoPorCliente,
-        x_studio_fecha_aceptacion_cliente: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+        // aceptado_por_cliente / fecha_aceptacion_cliente quedan vacíos a propósito —
+        // los llena el cliente cuando aprueba desde el link, no el técnico de antemano.
       });
       if (!resp.ok) { setError(resp.error || "No se pudo crear el cierre."); setGuardando(false); return; }
+      const idCierre = resp.id;
 
       const valoresOrden = { x_studio_estado: "Cerrada" };
       if (horometroSalida !== "") valoresOrden.x_studio_horometro_salida = num(horometroSalida);
       if (kilometrajeSalida !== "") valoresOrden.x_studio_kilometraje_salida = num(kilometrajeSalida);
       await tallerActualizar("x_taller_orden", orden.id, valoresOrden);
 
-      onCreado();
+      // De una vez, genera el link y lo comparte — no hace falta un paso aparte.
+      const respToken = await tallerFetch("/taller/cierre/compartir", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cierre_id: idCierre }),
+      });
+      if (respToken.ok) {
+        const url = window.location.href.replace(/cierres\.html.*$/, "aprobar-cierre.html") + "?id=" + idCierre + "&token=" + respToken.token;
+        const clienteNombre = Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "";
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: "Cierre " + nombreCierre,
+              text: "Hola" + (clienteNombre ? " " + clienteNombre : "") + ", tu orden " + orden.x_name + " está lista. Te comparto el cierre para tu visto bueno.",
+              url,
+            });
+          } catch(e) { /* si cancela el share, no es un error real */ }
+        } else if (navigator.clipboard) {
+          await navigator.clipboard.writeText(url);
+        }
+      }
+
+      setEnviado(true);
     } catch(e) {
       setError("Error: " + e.message);
     } finally {
@@ -388,23 +410,27 @@ function FormularioCierre({ orden, onVolver, onCreado }){
         )
       ),
 
-      h("div", { className: "campo", style: { marginBottom: "0" } },
-        h("label", null, "Aceptado por (cliente)"),
-        h("input", { type: "text", value: aceptadoPorCliente, onChange: e => setAceptadoPorCliente(e.target.value) })
-      ),
-
       h("hr", { style: { border:"none", borderTop:"1px solid var(--color-borde)", margin:"18px 0 12px" } }),
 
-      h("div", { className: "checklist" },
-        checklist.map((c,i) => h("div", { key: i, className: "checklist-item " + (c.ok ? "ok" : "falta") },
-          c.ok ? "✅" : "⬜", " ", c.texto
-        ))
-      ),
-
-      error && h("div", { className: "mensaje-error" }, error),
-
-      h("button", { className: "btn-primario", onClick: confirmarCierre, disabled: guardando || !listoParaCerrar },
-        guardando ? "Cerrando..." : "🔒 Confirmar cierre de la orden")
+      enviado
+        ? h("div", { style: { textAlign:"center", padding:"14px 0" } },
+            h("div", { style: { fontSize:"36px", marginBottom:"8px" } }, "✅"),
+            h("div", { style: { fontWeight:700, marginBottom:"4px" } }, "Orden cerrada y link enviado al cliente"),
+            h("div", { style: { fontSize:"12.5px", color:"var(--color-texto-suave)", marginBottom:"14px" } },
+              "En cuanto el cliente dé el visto bueno (o comente algo), se va a reflejar acá."
+            ),
+            h("button", { className: "btn-primario", onClick: onCreado }, "Volver a la lista")
+          )
+        : h(React.Fragment, null,
+            h("div", { className: "checklist" },
+              checklist.map((c,i) => h("div", { key: i, className: "checklist-item " + (c.ok ? "ok" : "falta") },
+                c.ok ? "✅" : "⬜", " ", c.texto
+              ))
+            ),
+            error && h("div", { className: "mensaje-error" }, error),
+            h("button", { className: "btn-primario", onClick: confirmarCierre, disabled: guardando || !listoParaCerrar },
+              guardando ? "Registrando y enviando..." : "📤 Registrar cierre y enviar a cliente")
+          )
     )
   );
 }
