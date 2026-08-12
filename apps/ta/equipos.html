@@ -65,7 +65,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v6 (centro de costo propio del equipo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v7 (crear equipo nuevo)</div>
 
 <script>
 const h = React.createElement;
@@ -124,18 +124,19 @@ function Buscador({ placeholder, buscar, renderItem, onSeleccionar }){
   );
 }
 
-function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
-  const [nombre, setNombre] = useState(equipo.x_name || "");
-  const [tipo, setTipo] = useState(equipo.x_studio_tipo_equipo || "Tractor");
-  const [marca, setMarca] = useState(equipo.x_studio_marca || "");
-  const [modelo, setModelo] = useState(equipo.x_studio_modelo || "");
-  const [serie, setSerie] = useState(equipo.x_studio_serie || "");
-  const [anio, setAnio] = useState(equipo.x_studio_anio || "");
-  const [cliente, setCliente] = useState(Array.isArray(equipo.x_studio_cliente_id) ? { id: equipo.x_studio_cliente_id[0], x_name: equipo.x_studio_cliente_id[1] } : null);
-  const [centroCosto, setCentroCosto] = useState(equipo.x_studio_centro_costo || "");
-  const [horometro, setHorometro] = useState(equipo.x_studio_horometro_actual || 0);
-  const [kilometraje, setKilometraje] = useState(equipo.x_studio_kilometraje_actual || 0);
-  const [descripcion, setDescripcion] = useState(equipo.x_studio_descripcion || "");
+function ModalFormularioEquipo({ equipo, onCerrar, onGuardado }){
+  const esNuevo = !equipo;
+  const [nombre, setNombre] = useState(equipo?.x_name || "");
+  const [tipo, setTipo] = useState(equipo?.x_studio_tipo_equipo || "Tractor");
+  const [marca, setMarca] = useState(equipo?.x_studio_marca || "");
+  const [modelo, setModelo] = useState(equipo?.x_studio_modelo || "");
+  const [serie, setSerie] = useState(equipo?.x_studio_serie || "");
+  const [anio, setAnio] = useState(equipo?.x_studio_anio || "");
+  const [cliente, setCliente] = useState(Array.isArray(equipo?.x_studio_cliente_id) ? { id: equipo.x_studio_cliente_id[0], x_name: equipo.x_studio_cliente_id[1] } : null);
+  const [centroCosto, setCentroCosto] = useState(equipo?.x_studio_centro_costo || "");
+  const [horometro, setHorometro] = useState(equipo?.x_studio_horometro_actual || 0);
+  const [kilometraje, setKilometraje] = useState(equipo?.x_studio_kilometraje_actual || 0);
+  const [descripcion, setDescripcion] = useState(equipo?.x_studio_descripcion || "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
 
@@ -147,7 +148,7 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
     if (!nombre.trim()){ setError("El nombre/código es obligatorio."); return; }
     setGuardando(true); setError("");
     try {
-      const resp = await tallerActualizar("x_equiposagricolas", equipo.id, {
+      const valores = {
         x_name: nombre.trim(),
         x_studio_tipo_equipo: tipo,
         x_studio_marca: marca || false,
@@ -159,7 +160,10 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
         x_studio_horometro_actual: num(horometro),
         x_studio_kilometraje_actual: num(kilometraje),
         x_studio_descripcion: descripcion || false,
-      });
+      };
+      const resp = esNuevo
+        ? await tallerCrear("x_equiposagricolas", valores)
+        : await tallerActualizar("x_equiposagricolas", equipo.id, valores);
       if (resp.ok) onGuardado();
       else setError(resp.error || "No se pudo guardar.");
     } catch(e) { setError("Error: " + e.message); }
@@ -168,7 +172,7 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
 
   return h("div", { style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: onCerrar },
     h("div", { style: { background:"#fff", borderRadius:"12px", padding:"22px", width:"100%", maxWidth:"460px", maxHeight:"88vh", overflowY:"auto", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
-      h("h3", { style: { margin:"0 0 14px", fontSize:"15px" } }, "⚙️ Editar Equipo"),
+      h("h3", { style: { margin:"0 0 14px", fontSize:"15px" } }, esNuevo ? "🚜 Nuevo Equipo" : "⚙️ Editar Equipo"),
       h("div", { style: { marginBottom:"14px" } },
         h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Nombre / Código"),
         h("input", { type: "text", value: nombre, autoFocus: true, onChange: e => setNombre(e.target.value) })
@@ -229,7 +233,7 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
       error && h("div", { style: { background:"#FEE2E2", borderLeft:"3px solid var(--color-peligro)", color:"#991B1B", fontSize:"12px", padding:"8px 10px", borderRadius:"6px", marginTop:"10px" } }, error),
       h("div", { style: { display:"flex", gap:"8px", justifyContent:"flex-end", marginTop:"16px" } },
         h("button", { style: { background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"9px 14px", fontSize:"13px", cursor:"pointer" }, onClick: onCerrar, disabled: guardando }, "Cancelar"),
-        h("button", { style: { background:"var(--color-primario)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 16px", fontSize:"13px", fontWeight:"600", cursor:"pointer" }, onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
+        h("button", { style: { background:"var(--color-primario)", color:"#fff", border:"none", borderRadius:"8px", padding:"9px 16px", fontSize:"13px", fontWeight:"600", cursor:"pointer" }, onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : (esNuevo ? "Crear equipo" : "Guardar cambios"))
       )
     )
   );
@@ -323,7 +327,7 @@ function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado, de
       )
     ),
 
-    modalEditar && h(ModalEditarEquipo, {
+    modalEditar && h(ModalFormularioEquipo, {
       equipo: equipoLocal,
       onCerrar: () => setModalEditar(false),
       onGuardado: () => {
@@ -361,6 +365,7 @@ function Equipos(){
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [equipoAbierto, setEquipoAbierto] = useState(null);
+  const [modalNuevo, setModalNuevo] = useState(false);
   const [rango, setRango] = useState("todo"); // todo | anio | mes | personalizado
   const [fechaDesde, setFechaDesde] = useState("");
   const [fechaHasta, setFechaHasta] = useState("");
@@ -516,7 +521,10 @@ function Equipos(){
   return h("div", null,
     h("div", { className: "barra-superior" },
       h("h1", null, "🚜 Equipos"),
-      h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar")
+      h("div", { style: { display:"flex", gap:"8px" } },
+        h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar"),
+        h("button", { style: { background:"var(--color-primario)", color:"#fff", border:"none", borderRadius:"7px", padding:"7px 14px", fontSize:"12.5px", fontWeight:"600", cursor:"pointer" }, onClick: () => setModalNuevo(true) }, "+ Nuevo Equipo")
+      )
     ),
 
     h("div", { className: "panel", style: { display:"flex", flexWrap:"wrap", gap:"10px", alignItems:"center", padding:"12px 16px" } },
@@ -566,7 +574,13 @@ function Equipos(){
       equiposConGasto.length === 0
         ? h("div", { className: "error-carga" }, "No hay equipos registrados todavía.")
         : TablaInfoAgro(h, { columnas, filas: equiposConGasto, onFilaClick: setEquipoAbierto })
-    )
+    ),
+
+    modalNuevo && h(ModalFormularioEquipo, {
+      equipo: null,
+      onCerrar: () => setModalNuevo(false),
+      onGuardado: () => { setModalNuevo(false); cargar(); },
+    })
   );
 }
 
