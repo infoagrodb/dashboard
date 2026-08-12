@@ -321,6 +321,40 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
 /* ------------------------------------------------------------
    Pantalla principal
    ------------------------------------------------------------ */
+function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+
+function ModalSinDiagnostico({ ordenes, onCerrar, onElegir }){
+  const pendientes = ordenes.filter(o =>
+    !(o.x_studio_diagnostico || "").trim() &&
+    !["Cancelada","Cerrada","Rechazada","Solicitada"].includes(o.x_studio_estado)
+  );
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "🛠️ Lista de Recepciones sin Diagnóstico"),
+      h("div", { style: { fontSize: "12px", color: "var(--color-texto-suave)", marginBottom: "12px" } },
+        "Elegí una para abrir su detalle y registrar el diagnóstico."
+      ),
+      pendientes.length === 0
+        ? h("div", { className: "buscador-vacio" }, "No hay recepciones sin diagnóstico ahora mismo.")
+        : h("div", { style: { border: "1px solid var(--color-borde)", borderRadius: "8px", overflow: "hidden", maxHeight: "50vh", overflowY: "auto" } },
+            pendientes.map((o,i) => h("div", {
+                key: o.id, style: { padding: "10px 12px", cursor: "pointer", borderBottom: i < pendientes.length-1 ? "1px solid var(--color-fondo)" : "none" },
+                onClick: () => onElegir(o),
+              },
+                h("div", { style: { fontSize: "13px", fontWeight: 600 } }, o.x_name + " — " + m2oTexto(o.x_studio_cliente_id)),
+                h("div", { style: { fontSize: "11.5px", color: "var(--color-texto-suave)" } },
+                  m2oTexto(o.x_studio_equipo_id) + " · Recibida " + formatearFecha(o.x_studio_fecha_recepcion)
+                )
+              )
+            )
+          ),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar")
+      )
+    )
+  );
+}
+
 function OrdenesDeTrabajo(){
   const [sesion, setSesion] = useState(null);
   const [ordenes, setOrdenes] = useState(null);
@@ -329,6 +363,7 @@ function OrdenesDeTrabajo(){
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [ordenSeleccionada, setOrdenSeleccionada] = useState(null);
+  const [modalSinDiagnostico, setModalSinDiagnostico] = useState(false);
 
   useEffect(() => {
     const s = exigirSesion();
@@ -372,7 +407,10 @@ function OrdenesDeTrabajo(){
   return h("div", null,
     h("div", { className: "barra-superior" },
       h("h1", null, "🛠️ Órdenes de Trabajo"),
-      h("button", { className: "btn-refrescar", onClick: cargarOrdenes }, "↻ Refrescar")
+      h("div", { style: { display: "flex", gap: "8px" } },
+        h("button", { className: "btn-refrescar", onClick: () => setModalSinDiagnostico(true) }, "📋 Lista de recepciones sin diagnóstico"),
+        h("button", { className: "btn-refrescar", onClick: cargarOrdenes }, "↻ Refrescar")
+      )
     ),
 
     h("div", { className: "panel" },
@@ -397,6 +435,12 @@ function OrdenesDeTrabajo(){
         setOrdenes(prev => prev.map(o => o.id === actualizada.id ? actualizada : o));
         setOrdenSeleccionada(null);
       },
+    }),
+
+    modalSinDiagnostico && h(ModalSinDiagnostico, {
+      ordenes: ordenes || [],
+      onCerrar: () => setModalSinDiagnostico(false),
+      onElegir: o => { setModalSinDiagnostico(false); setOrdenSeleccionada(o); },
     })
   );
 }
