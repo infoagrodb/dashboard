@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v8 cargado correctamente (buscar artículo local por código)");
+console.log("core.js v9 cargado correctamente (reintenta catálogo Exactus si falla)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -256,7 +256,10 @@ function dabObtenerCatalogoArticulos() {
   if (!dabCatalogoArticulosPromise) {
     dabCatalogoArticulosPromise = dabFetchAll(
       "/ARTICULO?$select=ARTICULO,DESCRIPCION,CLASIFICACION_1,CLASIFICACION_2,COSTO_PROM_LOC,COSTO_PROM_DOL,COSTO_ULT_LOC,COSTO_ULT_DOL,UNIDAD_ALMACEN,ACTIVO&$filter=ACTIVO eq 'S'"
-    );
+    ).catch(e => {
+      dabCatalogoArticulosPromise = null; // no se queda el fallo guardado — la próxima búsqueda reintenta
+      throw e;
+    });
   }
   return dabCatalogoArticulosPromise;
 }
@@ -307,7 +310,8 @@ async function buscarArticulosLocalTaller(texto) {
  */
 async function buscarArticulosCombinado(texto) {
   const [exactus, local] = await Promise.all([
-    buscarArticulosExactus(texto).then(r => r.map(a => ({ ...a, ORIGEN: "Exactus" }))).catch(() => []),
+    buscarArticulosExactus(texto).then(r => r.map(a => ({ ...a, ORIGEN: "Exactus" })))
+      .catch(e => { console.error("Exactus no respondió (se sigue con InfoAgro):", e.message); return []; }),
     buscarArticulosLocalTaller(texto).catch(() => []),
   ]);
   return [...exactus, ...local];
