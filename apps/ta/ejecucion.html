@@ -87,7 +87,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v5 (modal para elegir líneas del presupuesto)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v6 (modal en formato tabla)</div>
 
 <script>
 const h = React.createElement;
@@ -174,28 +174,34 @@ function ModalElegirLineasPresupuesto({ lineasPendientes, cargando, onCerrar, on
   }
 
   return h("div", { style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: onCerrar },
-    h("div", { style: { background:"#fff", borderRadius:"12px", padding:"22px", width:"100%", maxWidth:"520px", maxHeight:"85vh", overflowY:"auto", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
+    h("div", { style: { background:"#fff", borderRadius:"12px", padding:"22px", width:"100%", maxWidth:"680px", maxHeight:"85vh", overflowY:"auto", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
       h("h3", { style: { margin:"0 0 4px", fontSize:"15px" } }, "📋 Elegir líneas para cargar"),
       h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"14px" } },
         "Marcá solo lo que ya se entregó o se va a usar. Podés cargar el resto más adelante — no hace falta traer todo de una vez."
       ),
-      h("div", { style: { border:"1px solid var(--color-borde)", borderRadius:"8px", overflow:"hidden" } },
-        lineasPendientes.map((l,i) => h("label", {
-            key: l.id,
-            style: {
-              display:"flex", alignItems:"flex-start", gap:"10px", padding:"10px 12px", cursor:"pointer",
-              borderBottom: i < lineasPendientes.length-1 ? "1px solid var(--color-fondo)" : "none",
-              background: seleccionadas.has(l.id) ? "var(--color-acento-suave)" : "#fff",
+      h("table", { style: { width:"100%", borderCollapse:"collapse", fontSize:"12.5px" } },
+        h("thead", null, h("tr", null,
+          h("th", { style: { textAlign:"left", padding:"7px 8px", fontSize:"10.5px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-texto-suave)", borderBottom:"2px solid var(--color-borde)", width:"32px" } }, ""),
+          h("th", { style: { textAlign:"left", padding:"7px 8px", fontSize:"10.5px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-texto-suave)", borderBottom:"2px solid var(--color-borde)" } }, "Descripción"),
+          h("th", { style: { textAlign:"left", padding:"7px 8px", fontSize:"10.5px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-texto-suave)", borderBottom:"2px solid var(--color-borde)" } }, "Tipo"),
+          h("th", { style: { textAlign:"right", padding:"7px 8px", fontSize:"10.5px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-texto-suave)", borderBottom:"2px solid var(--color-borde)" } }, "Cant."),
+          h("th", { style: { textAlign:"right", padding:"7px 8px", fontSize:"10.5px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-texto-suave)", borderBottom:"2px solid var(--color-borde)" } }, "Costo Unit."),
+          h("th", { style: { textAlign:"right", padding:"7px 8px", fontSize:"10.5px", textTransform:"uppercase", letterSpacing:".03em", color:"var(--color-texto-suave)", borderBottom:"2px solid var(--color-borde)" } }, "Total")
+        )),
+        h("tbody", null,
+          lineasPendientes.map(l => h("tr", {
+              key: l.id, onClick: () => alternar(l.id),
+              style: { cursor:"pointer", background: seleccionadas.has(l.id) ? "var(--color-acento-suave)" : "#fff" },
             },
-          },
-            h("input", { type: "checkbox", checked: seleccionadas.has(l.id), onChange: () => alternar(l.id), style: { marginTop:"3px" } }),
-            h("div", { style: { flex:1 } },
-              h("div", { style: { fontSize:"13px", fontWeight:600 } }, l.x_studio_descripcion),
-              h("div", { style: { fontSize:"11.5px", color:"var(--color-texto-suave)" } },
-                l.x_studio_tipo_linea + " · " + l.x_studio_cantidad_presupuestada + " " + (l.x_studio_unidad_medida||"") + " · " + moneda(l.x_studio_costo_manual) + " c/u"
-              )
-            )
-          )
+            h("td", { style: { padding:"8px", borderBottom:"1px solid var(--color-fondo)" } },
+              h("input", { type: "checkbox", checked: seleccionadas.has(l.id), onChange: () => alternar(l.id), onClick: e => e.stopPropagation() })
+            ),
+            h("td", { style: { padding:"8px", borderBottom:"1px solid var(--color-fondo)", fontWeight:600 } }, l.x_studio_descripcion),
+            h("td", { style: { padding:"8px", borderBottom:"1px solid var(--color-fondo)", color:"var(--color-texto-suave)" } }, l.x_studio_tipo_linea),
+            h("td", { style: { padding:"8px", borderBottom:"1px solid var(--color-fondo)", textAlign:"right" } }, l.x_studio_cantidad_presupuestada + " " + (l.x_studio_unidad_medida||"")),
+            h("td", { style: { padding:"8px", borderBottom:"1px solid var(--color-fondo)", textAlign:"right" } }, moneda(l.x_studio_costo_manual)),
+            h("td", { style: { padding:"8px", borderBottom:"1px solid var(--color-fondo)", textAlign:"right", fontWeight:600 } }, moneda(num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual)))
+          ))
         )
       ),
       h("div", { style: { display:"flex", gap:"8px", justifyContent:"flex-end", marginTop:"16px" } },
