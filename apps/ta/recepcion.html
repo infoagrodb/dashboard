@@ -96,7 +96,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v10 (trazabilidad + PDF de recepción)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v11 (banner en línea, sin ocultar el formulario)</div>
 <div id="raiz"></div>
 
 <script>
@@ -474,6 +474,23 @@ function Recepcion(){
     }
   }
 
+  async function compartirRecepcion(){
+    const texto = "Hola" + (cliente ? " " + cliente.x_name : "") + ", te confirmamos la recepción de tu equipo en el taller.\n\n" +
+      "N.º de orden: " + folioCreado + "\n" +
+      "Equipo: " + (equipo ? equipo.x_name : "—") + "\n" +
+      "Fecha de recepción: " + formatearFecha(fechaRecepcion) + "\n" +
+      "Problema reportado: " + (problema || "—") + "\n\n" +
+      "Te vamos a mantener al tanto del avance. — Infotaller, COMASA";
+    if (navigator.share) {
+      try { await navigator.share({ title: "Recepción " + folioCreado, text: texto }); }
+      catch(e) { /* si cancela el share, no es un error real */ }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(texto);
+      setError(""); // limpia cualquier error viejo
+      alert("Copiado al portapapeles — pegalo donde quieras enviarlo.");
+    }
+  }
+
   function generarPDFRecepcion(){
     if (!window.jspdf) { setError("La librería de PDF no cargó — recargá la página."); return; }
     const { jsPDF } = window.jspdf;
@@ -636,25 +653,22 @@ function Recepcion(){
   if (!sesion) return null;
   if (cargandoSolicitud) return h("div", { className: "envoltura" }, h("div", { className: "panel" }, "Cargando solicitud..."));
 
-  if (folioCreado) {
-    return h("div", { className: "envoltura" },
-      h("div", { className: "panel exito-grande" },
-        h("div", null, "✅"),
-        h("div", { className: "folio" }, folioCreado),
-        h("div", null, "Orden de trabajo registrada correctamente."),
-        h("button", {
-          className: "btn-secundario", style: { marginTop: "16px" },
-          onClick: generarPDFRecepcion,
-        }, "⬇️ Descargar Acta de Recepción (PDF)"),
-        h("button", {
-          className: "btn-primario", style: { marginTop: "10px" },
-          onClick: reiniciarFormulario,
-        }, "Registrar otra recepción")
-      )
-    );
-  }
-
   return h("div", { className: "envoltura" },
+
+    folioCreado && h("div", { style: {
+        background: "var(--color-acento-suave)", border: "1px solid #A7F3D0", borderRadius: "10px",
+        padding: "14px 16px", marginBottom: "14px",
+      } },
+      h("div", { style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px" } },
+        h("span", { style: { fontSize: "18px" } }, "✅"),
+        h("strong", { style: { fontSize: "14px", color: "var(--color-primario-oscuro)" } }, folioCreado + " registrada correctamente")
+      ),
+      h("div", { style: { display: "flex", gap: "8px", flexWrap: "wrap" } },
+        h("button", { className: "btn-secundario", onClick: generarPDFRecepcion }, "⬇️ Descargar Acta (PDF)"),
+        h("button", { className: "btn-secundario", onClick: compartirRecepcion }, "🔗 Compartir con cliente"),
+        h("button", { className: "btn-primario", onClick: reiniciarFormulario }, "+ Registrar otra recepción")
+      )
+    ),
 
     h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
       h("button", { className: "link-chico", onClick: abrirSolicitudesPendientes }, "📞 Ver Solicitudes de Servicio Pendientes")
@@ -821,7 +835,7 @@ function Recepcion(){
       )
     ),
 
-    h("button", { className: "btn-primario", onClick: registrar, disabled: guardando || subiendoFotos },
+    !folioCreado && h("button", { className: "btn-primario", onClick: registrar, disabled: guardando || subiendoFotos },
       subiendoFotos ? "Subiendo fotos..." : guardando ? "Registrando..." : "✅ Registrar recepción"
     ),
 
