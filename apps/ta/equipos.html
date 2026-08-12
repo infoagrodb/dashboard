@@ -65,7 +65,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v4 (encabezado responsive)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v5 (filtro de rango de fechas)</div>
 
 <script>
 const h = React.createElement;
@@ -229,7 +229,7 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
   );
 }
 
-function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado }){
+function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado, desdeEfectivo, hastaEfectivo, etiquetaRango }){
   const [equipoLocal, setEquipoLocal] = useState(equipo);
   const [consumos, setConsumos] = useState(null);
   const [manoObra, setManoObra] = useState(null);
@@ -262,10 +262,22 @@ function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado }){
     }
   }
 
-  const totalRepuestos = (consumos || []).reduce((s,c) => s + num(c.x_studio_total_costo_real), 0);
-  const totalManoObra = (manoObra || []).reduce((s,m) => s + num(m.x_studio_costo_total), 0);
+  function dentroDelRango(fechaStr){
+    if (!desdeEfectivo && !hastaEfectivo) return true;
+    if (!fechaStr) return false;
+    const f = new Date(String(fechaStr).replace(" ", "T"));
+    if (desdeEfectivo && f < desdeEfectivo) return false;
+    if (hastaEfectivo && f > hastaEfectivo) return false;
+    return true;
+  }
+
+  const consumosFiltrados = (consumos || []).filter(c => dentroDelRango(c.x_studio_fecha_consumo));
+  const manoObraFiltrada = (manoObra || []).filter(m => dentroDelRango(m.x_studio_fecha));
+
+  const totalRepuestos = consumosFiltrados.reduce((s,c) => s + num(c.x_studio_total_costo_real), 0);
+  const totalManoObra = manoObraFiltrada.reduce((s,m) => s + num(m.x_studio_costo_total), 0);
   const totalGeneral = totalRepuestos + totalManoObra;
-  const horasTotales = (manoObra || []).reduce((s,m) => s + num(m.x_studio_horas_normales) + num(m.x_studio_horas_extra), 0);
+  const horasTotales = manoObraFiltrada.reduce((s,m) => s + num(m.x_studio_horas_normales) + num(m.x_studio_horas_extra), 0);
 
   const columnasConsumos = [
     { clave: "x_studio_orden_id", titulo: "Orden" },
@@ -317,19 +329,19 @@ function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado }){
     h("div", { className: "kpis" },
       h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total repuestos/materiales"), h("div", { className: "valor" }, moneda(totalRepuestos))),
       h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total mano de obra"), h("div", { className: "valor" }, moneda(totalManoObra))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Gasto histórico total"), h("div", { className: "valor" }, moneda(totalGeneral))),
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Gasto del período"), h("div", { className: "valor" }, moneda(totalGeneral))),
       h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Horas de mano de obra"), h("div", { className: "valor" }, horasTotales.toFixed(1)))
     ),
 
     h("div", { className: "panel" },
-      h("h2", null, "🔧 Repuestos y materiales instalados"),
+      h("h2", null, "🔧 Repuestos y materiales instalados" + (etiquetaRango ? " — " + etiquetaRango : "")),
       cargando
         ? h("div", { className: "cargando" }, "Cargando historial...")
         : error
           ? h("div", { className: "error-carga" }, error)
-          : consumos.length === 0
-            ? h("div", { className: "error-carga" }, "Sin repuestos/materiales registrados todavía para este equipo.")
-            : TablaInfoAgro(h, { columnas: columnasConsumos, filas: consumos })
+          : consumosFiltrados.length === 0
+            ? h("div", { className: "error-carga" }, "Sin repuestos/materiales registrados en este período.")
+            : TablaInfoAgro(h, { columnas: columnasConsumos, filas: consumosFiltrados })
     )
   );
 }
@@ -342,6 +354,9 @@ function Equipos(){
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState("");
   const [equipoAbierto, setEquipoAbierto] = useState(null);
+  const [rango, setRango] = useState("todo"); // todo | anio | mes | personalizado
+  const [fechaDesde, setFechaDesde] = useState("");
+  const [fechaHasta, setFechaHasta] = useState("");
 
   useEffect(() => {
     const s = exigirSesion();
@@ -359,7 +374,7 @@ function Equipos(){
       const idsOrdenes = ordenesRows.map(o => o.id);
       let costosRows = [];
       if (idsOrdenes.length) {
-        costosRows = await tallerQuery("x_costo_real_detalle", ["id","x_studio_orden_id","x_studio_total_costo_real"], [["x_studio_orden_id","in",idsOrdenes]], 5000);
+        costosRows = await tallerQuery("x_costo_real_detalle", ["id","x_studio_orden_id","x_studio_total_costo_real","x_studio_fecha_consumo"], [["x_studio_orden_id","in",idsOrdenes]], 5000);
       }
       const idsClientes = [...new Set(equiposRows.filter(e => Array.isArray(e.x_studio_cliente_id)).map(e => e.x_studio_cliente_id[0]))];
       let clientesRows = [];
@@ -379,15 +394,43 @@ function Equipos(){
     }
   }
 
+  const { desdeEfectivo, hastaEfectivo } = useMemo(() => {
+    const hoy = new Date();
+    if (rango === "anio") {
+      return { desdeEfectivo: new Date(hoy.getFullYear(), 0, 1), hastaEfectivo: null };
+    }
+    if (rango === "mes") {
+      return { desdeEfectivo: new Date(hoy.getFullYear(), hoy.getMonth(), 1), hastaEfectivo: null };
+    }
+    if (rango === "personalizado") {
+      return {
+        desdeEfectivo: fechaDesde ? new Date(fechaDesde + "T00:00:00") : null,
+        hastaEfectivo: fechaHasta ? new Date(fechaHasta + "T23:59:59") : null,
+      };
+    }
+    return { desdeEfectivo: null, hastaEfectivo: null }; // "todo"
+  }, [rango, fechaDesde, fechaHasta]);
+
+  const costosFiltrados = useMemo(() => {
+    if (!desdeEfectivo && !hastaEfectivo) return costos || [];
+    return (costos || []).filter(c => {
+      if (!c.x_studio_fecha_consumo) return false;
+      const f = new Date(String(c.x_studio_fecha_consumo).replace(" ", "T"));
+      if (desdeEfectivo && f < desdeEfectivo) return false;
+      if (hastaEfectivo && f > hastaEfectivo) return false;
+      return true;
+    });
+  }, [costos, desdeEfectivo, hastaEfectivo]);
+
   const costoPorOrden = useMemo(() => {
     const mapa = {};
-    (costos || []).forEach(c => {
+    costosFiltrados.forEach(c => {
       const idOrden = m2oId(c.x_studio_orden_id);
       if (idOrden === null) return;
       mapa[idOrden] = (mapa[idOrden] || 0) + num(c.x_studio_total_costo_real);
     });
     return mapa;
-  }, [costos]);
+  }, [costosFiltrados]);
 
   const ordenesPorEquipo = useMemo(() => {
     const mapa = {};
@@ -419,6 +462,8 @@ function Equipos(){
       ordenesDelEquipo: ordenesPorEquipo[equipoAbierto.id] || [],
       onVolver: () => setEquipoAbierto(null),
       onEquipoEditado: cargar,
+      desdeEfectivo, hastaEfectivo,
+      etiquetaRango: rango === "todo" ? "Todo el histórico" : rango === "anio" ? "Este año" : rango === "mes" ? "Este mes" : "Rango personalizado",
     });
   }
 
@@ -461,9 +506,30 @@ function Equipos(){
       h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar")
     ),
 
+    h("div", { className: "panel", style: { display:"flex", flexWrap:"wrap", gap:"10px", alignItems:"center", padding:"12px 16px" } },
+      h("span", { style: { fontSize:"12px", color:"var(--color-texto-suave)", fontWeight:600 } }, "Período:"),
+      [["todo","Todo el histórico"],["anio","Este año"],["mes","Este mes"],["personalizado","Rango personalizado"]].map(([valor,etiqueta]) =>
+        h("button", {
+          key: valor,
+          onClick: () => setRango(valor),
+          style: {
+            fontSize:"12px", padding:"6px 12px", borderRadius:"16px", cursor:"pointer",
+            border: rango === valor ? "1px solid var(--color-primario)" : "1px solid var(--color-borde)",
+            background: rango === valor ? "var(--color-acento-suave)" : "#fff",
+            color: rango === valor ? "var(--color-primario-oscuro)" : "var(--color-texto)",
+          },
+        }, etiqueta)
+      ),
+      rango === "personalizado" && h(React.Fragment, null,
+        h("input", { type: "date", value: fechaDesde, onChange: e => setFechaDesde(e.target.value), style: { border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"6px 8px", fontSize:"12.5px" } }),
+        h("span", { style: { fontSize:"12px", color:"var(--color-texto-suave)" } }, "hasta"),
+        h("input", { type: "date", value: fechaHasta, onChange: e => setFechaHasta(e.target.value), style: { border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"6px 8px", fontSize:"12.5px" } })
+      )
+    ),
+
     h("div", { className: "kpis" },
       h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total de equipos"), h("div", { className: "valor" }, equiposConGasto.length)),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Gasto histórico total"), h("div", { className: "valor" }, moneda(totalGeneral))),
+      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Gasto del período"), h("div", { className: "valor" }, moneda(totalGeneral))),
       h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Promedio por equipo"), h("div", { className: "valor" }, moneda(promedioEquipo)))
     ),
 
