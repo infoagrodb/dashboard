@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=8"></script>
+<script src="core.js?v=11"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -161,7 +161,15 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
     const tecnicoSeleccionadoId = nuevoTecnicoId ? Number(nuevoTecnicoId) : null;
     if (tecnicoSeleccionadoId !== tecnicoActualId) cambios.x_studio_tecnico_responsable_id = tecnicoSeleccionadoId || false;
 
-    if (diagnostico !== (orden.x_studio_diagnostico || "")) cambios.x_studio_diagnostico = diagnostico;
+    const teniaDiagnosticoAntes = (orden.x_studio_diagnostico || "").trim().length > 0;
+    if (diagnostico !== (orden.x_studio_diagnostico || "")) {
+      cambios.x_studio_diagnostico = diagnostico;
+      // La fecha de recepción y la del diagnóstico real son distintas — se sella
+      // solo la primera vez que se completa, no cada edición posterior.
+      if (!teniaDiagnosticoAntes && diagnostico.trim()) {
+        cambios.x_studio_fecha_diagnostico = fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8);
+      }
+    }
 
     if (fechaEntrega !== (orden.x_studio_fecha_entrega ? orden.x_studio_fecha_entrega.slice(0,10) : "")) {
       cambios.x_studio_fecha_entrega = fechaEntrega ? fechaEntrega + " " + new Date().toTimeString().slice(0,8) : false;
@@ -333,7 +341,7 @@ function OrdenesDeTrabajo(){
       const filas = await tallerQuery("x_taller_orden", [
         "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado",
         "x_studio_prioridad","x_studio_fecha_recepcion","x_studio_bahia_id",
-        "x_studio_tecnico_responsable_id","x_studio_problema_reportado","x_studio_diagnostico",
+        "x_studio_tecnico_responsable_id","x_studio_problema_reportado","x_studio_diagnostico","x_studio_fecha_diagnostico",
         "x_studio_fecha_entrega",
       ], [], 1000, 0);
       const filasBahias = await tallerQuery("x_taller_bahia", ["id","x_name","x_studio_capacidad","x_studio_modo_limite"], [], 500);
