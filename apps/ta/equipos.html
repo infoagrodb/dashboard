@@ -65,7 +65,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v5 (filtro de rango de fechas)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v6 (centro de costo propio del equipo)</div>
 
 <script>
 const h = React.createElement;
@@ -132,6 +132,7 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
   const [serie, setSerie] = useState(equipo.x_studio_serie || "");
   const [anio, setAnio] = useState(equipo.x_studio_anio || "");
   const [cliente, setCliente] = useState(Array.isArray(equipo.x_studio_cliente_id) ? { id: equipo.x_studio_cliente_id[0], x_name: equipo.x_studio_cliente_id[1] } : null);
+  const [centroCosto, setCentroCosto] = useState(equipo.x_studio_centro_costo || "");
   const [horometro, setHorometro] = useState(equipo.x_studio_horometro_actual || 0);
   const [kilometraje, setKilometraje] = useState(equipo.x_studio_kilometraje_actual || 0);
   const [descripcion, setDescripcion] = useState(equipo.x_studio_descripcion || "");
@@ -154,6 +155,7 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
         x_studio_serie: serie || false,
         x_studio_anio: anio || false,
         x_studio_cliente_id: cliente ? cliente.id : false,
+        x_studio_centro_costo: centroCosto || false,
         x_studio_horometro_actual: num(horometro),
         x_studio_kilometraje_actual: num(kilometraje),
         x_studio_descripcion: descripcion || false,
@@ -205,6 +207,10 @@ function ModalEditarEquipo({ equipo, onCerrar, onGuardado }){
               h("button", { style: { background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"6px", padding:"4px 9px", fontSize:"12px", cursor:"pointer" }, onClick: () => setCliente(null) }, "Cambiar")
             )
           : h(Buscador, { placeholder: "Buscar cliente (vacío = equipo interno)...", buscar: buscarClientes, onSeleccionar: setCliente, renderItem: c => c.x_name })
+      ),
+      h("div", { style: { marginBottom:"14px" } },
+        h("label", { style: { display:"block", fontSize:"11.5px", color:"var(--color-texto-suave)", marginBottom:"4px", textTransform:"uppercase", letterSpacing:".03em" } }, "Centro de costo"),
+        h("input", { type: "text", value: centroCosto, onChange: e => setCentroCosto(e.target.value), placeholder: "Ej: 23-05-00" })
       ),
       h("div", { style: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"14px", marginBottom:"14px" } },
         h("div", null,
@@ -312,6 +318,7 @@ function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado, de
         h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Año"), h("div", { className: "valor" }, equipoLocal.x_studio_anio || "—")),
         h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Horómetro actual"), h("div", { className: "valor" }, equipoLocal.x_studio_horometro_actual || "—")),
         h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Kilometraje actual"), h("div", { className: "valor" }, equipoLocal.x_studio_kilometraje_actual || "—")),
+        h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Centro de costo"), h("div", { className: "valor" }, equipoLocal.x_studio_centro_costo || "—")),
         h("div", { className: "dato" }, h("div", { className: "etiqueta" }, "Órdenes de trabajo"), h("div", { className: "valor" }, ordenesDelEquipo.length))
       )
     ),
@@ -368,7 +375,7 @@ function Equipos(){
     try {
       const equiposRows = await tallerQuery("x_equiposagricolas", [
         "id","x_name","x_studio_tipo_equipo","x_studio_marca","x_studio_modelo","x_studio_serie",
-        "x_studio_anio","x_studio_horometro_actual","x_studio_kilometraje_actual","x_studio_cliente_id",
+        "x_studio_anio","x_studio_horometro_actual","x_studio_kilometraje_actual","x_studio_cliente_id","x_studio_centro_costo",
       ], [], 3000);
       const ordenesRows = await tallerQuery("x_taller_orden", ["id","x_studio_equipo_id","x_studio_estado"], [["x_studio_equipo_id","!=",false]], 3000);
       const idsOrdenes = ordenesRows.map(o => o.id);
@@ -384,7 +391,13 @@ function Equipos(){
       const centroCostoPorCliente = {};
       clientesRows.forEach(c => { centroCostoPorCliente[c.id] = c.x_studio_centro_costo || "Sin centro de costo"; });
 
-      setEquipos(equiposRows.map(e => ({ ...e, _centroCosto: Array.isArray(e.x_studio_cliente_id) ? (centroCostoPorCliente[e.x_studio_cliente_id[0]] || "Sin centro de costo") : "Sin cliente" })));
+      // Prioridad: centro de costo propio del equipo; si no tiene, el de su cliente.
+      setEquipos(equiposRows.map(e => ({
+        ...e,
+        _centroCosto: e.x_studio_centro_costo
+          || (Array.isArray(e.x_studio_cliente_id) ? centroCostoPorCliente[e.x_studio_cliente_id[0]] : null)
+          || "Sin centro de costo",
+      })));
       setOrdenes(ordenesRows);
       setCostos(costosRows);
     } catch(e) {
