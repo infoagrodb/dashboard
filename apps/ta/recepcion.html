@@ -96,7 +96,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v13 (órdenes pendientes de diagnóstico)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v14 (se quita el botón, va en Órdenes)</div>
 <div id="raiz"></div>
 
 <script>
@@ -320,41 +320,6 @@ function ModalSolicitudesPendientes({ solicitudes, cargando, onCerrar, onElegir 
 }
 function m2oTextoLocal(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
 
-function ModalOrdenesPendientesDiagnostico({ ordenes, cargando, onCerrar, onIrADiagnostico }){
-  return h("div", { className: "modal-fondo", onClick: onCerrar },
-    h("div", { className: "modal", onClick: e => e.stopPropagation() },
-      h("h3", null, "🛠️ Órdenes Pendientes de Diagnóstico"),
-      h("div", { style: { fontSize: "12px", color: "var(--color-texto-suave)", marginBottom: "12px" } },
-        "Recibidas pero sin diagnóstico registrado todavía. El diagnóstico se hace desde la pestaña Órdenes."
-      ),
-      cargando
-        ? h("div", { className: "buscador-vacio" }, "Cargando...")
-        : !ordenes || ordenes.length === 0
-          ? h("div", { className: "buscador-vacio" }, "No hay órdenes pendientes de diagnóstico ahora mismo.")
-          : h("div", { style: { border: "1px solid var(--color-borde)", borderRadius: "8px", overflow: "hidden", maxHeight: "50vh", overflowY: "auto" } },
-              ordenes.map((o,i) => h("div", {
-                  key: o.id,
-                  style: {
-                    padding: "10px 12px",
-                    borderBottom: i < ordenes.length-1 ? "1px solid var(--color-fondo)" : "none",
-                  },
-                },
-                  h("div", { style: { fontSize: "13px", fontWeight: 600 } }, o.x_name + " — " + m2oTextoLocal(o.x_studio_cliente_id)),
-                  h("div", { style: { fontSize: "11.5px", color: "var(--color-texto-suave)" } },
-                    m2oTextoLocal(o.x_studio_equipo_id) + " · Recibida " + formatearFecha(o.x_studio_fecha_recepcion)
-                  )
-                )
-              )
-            ),
-      h("div", { className: "modal-botones" },
-        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar"),
-        ordenes && ordenes.length > 0 &&
-          h("button", { className: "btn-primario", onClick: onIrADiagnostico }, "🛠️ Ir a Diagnóstico / Órdenes")
-      )
-    )
-  );
-}
-
 function Recepcion(){
   const [sesion, setSesion] = useState(null);
 
@@ -382,8 +347,6 @@ function Recepcion(){
   const [errorHorometro, setErrorHorometro] = useState("");
   const [folioCreado, setFolioCreado] = useState(null);
   const [modalSolicitudes, setModalSolicitudes] = useState(false);
-  const [modalOrdenesDiagnostico, setModalOrdenesDiagnostico] = useState(false);
-  const [ordenesPendientesDiagnostico, setOrdenesPendientesDiagnostico] = useState(null);
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
   const [respuestaCruda, setRespuestaCruda] = useState(null);
 
@@ -425,25 +388,6 @@ function Recepcion(){
   function elegirSolicitudPendiente(s){
     aplicarSolicitud(s);
     setModalSolicitudes(false);
-  }
-
-  async function abrirOrdenesPendientesDiagnostico(){
-    setModalOrdenesDiagnostico(true);
-    if (ordenesPendientesDiagnostico !== null) return; // ya cargadas, no repetir la consulta
-    try {
-      const filas = await tallerQuery("x_taller_orden", [
-        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_fecha_recepcion","x_studio_diagnostico",
-      ], [["x_studio_estado","not in",["Cancelada","Cerrada","Rechazada"]]], 1000);
-      setOrdenesPendientesDiagnostico(filas.filter(o => !(o.x_studio_diagnostico || "").trim()));
-    } catch(e) {
-      setError("No se pudieron cargar las órdenes pendientes de diagnóstico: " + e.message);
-      setOrdenesPendientesDiagnostico([]);
-    }
-  }
-
-  function irAHacerDiagnostico(){
-    // Navega a la pestaña Órdenes sin salirse del shell (misma técnica que Solicitud → Recepción).
-    window.parent.postMessage({ tipo: "navegar", pestana: "ordenes", sufijo: "" }, "*");
   }
 
   useEffect(() => {
@@ -727,8 +671,7 @@ function Recepcion(){
       )
     ),
 
-    h("div", { style: { display: "flex", justifyContent: "flex-end", gap: "16px", marginBottom: "10px", flexWrap: "wrap" } },
-      h("button", { className: "link-chico", onClick: abrirOrdenesPendientesDiagnostico }, "🛠️ Ver Órdenes Pendientes de Diagnóstico"),
+    h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
       h("button", { className: "link-chico", onClick: abrirSolicitudesPendientes }, "📞 Ver Solicitudes de Servicio Pendientes")
     ),
 
@@ -911,12 +854,6 @@ function Recepcion(){
       cargando: solicitudesPendientes === null,
       onCerrar: () => setModalSolicitudes(false),
       onElegir: elegirSolicitudPendiente,
-    }),
-    modalOrdenesDiagnostico && h(ModalOrdenesPendientesDiagnostico, {
-      ordenes: ordenesPendientesDiagnostico,
-      cargando: ordenesPendientesDiagnostico === null,
-      onCerrar: () => setModalOrdenesDiagnostico(false),
-      onIrADiagnostico: irAHacerDiagnostico,
     })
   );
 }
