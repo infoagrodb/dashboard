@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=8"></script>
+<script src="core.js?v=11"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -87,7 +87,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v4 (carga secuencial, no en paralelo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ejecucion.html — v5 (modal para elegir líneas del presupuesto)</div>
 
 <script>
 const h = React.createElement;
@@ -156,6 +156,57 @@ function SelectorOrden({ onSeleccionar }){
   return TablaInfoAgro(h, { columnas, filas: ordenes, onFilaClick: onSeleccionar });
 }
 
+function ModalElegirLineasPresupuesto({ lineasPendientes, cargando, onCerrar, onConfirmar }){
+  const [seleccionadas, setSeleccionadas] = useState(() => new Set(lineasPendientes.map(l => l.id)));
+
+  function alternar(id){
+    setSeleccionadas(prev => {
+      const copia = new Set(prev);
+      if (copia.has(id)) copia.delete(id); else copia.add(id);
+      return copia;
+    });
+  }
+
+  function confirmar(){
+    const elegidas = lineasPendientes.filter(l => seleccionadas.has(l.id));
+    if (elegidas.length === 0) return;
+    onConfirmar(elegidas);
+  }
+
+  return h("div", { style: { position:"fixed", inset:0, background:"rgba(17,24,39,.45)", display:"flex", alignItems:"center", justifyContent:"center", zIndex:500, padding:"20px" }, onClick: onCerrar },
+    h("div", { style: { background:"#fff", borderRadius:"12px", padding:"22px", width:"100%", maxWidth:"520px", maxHeight:"85vh", overflowY:"auto", boxShadow:"0 20px 40px rgba(17,24,39,.25)" }, onClick: e => e.stopPropagation() },
+      h("h3", { style: { margin:"0 0 4px", fontSize:"15px" } }, "📋 Elegir líneas para cargar"),
+      h("div", { style: { fontSize:"12px", color:"var(--color-texto-suave)", marginBottom:"14px" } },
+        "Marcá solo lo que ya se entregó o se va a usar. Podés cargar el resto más adelante — no hace falta traer todo de una vez."
+      ),
+      h("div", { style: { border:"1px solid var(--color-borde)", borderRadius:"8px", overflow:"hidden" } },
+        lineasPendientes.map((l,i) => h("label", {
+            key: l.id,
+            style: {
+              display:"flex", alignItems:"flex-start", gap:"10px", padding:"10px 12px", cursor:"pointer",
+              borderBottom: i < lineasPendientes.length-1 ? "1px solid var(--color-fondo)" : "none",
+              background: seleccionadas.has(l.id) ? "var(--color-acento-suave)" : "#fff",
+            },
+          },
+            h("input", { type: "checkbox", checked: seleccionadas.has(l.id), onChange: () => alternar(l.id), style: { marginTop:"3px" } }),
+            h("div", { style: { flex:1 } },
+              h("div", { style: { fontSize:"13px", fontWeight:600 } }, l.x_studio_descripcion),
+              h("div", { style: { fontSize:"11.5px", color:"var(--color-texto-suave)" } },
+                l.x_studio_tipo_linea + " · " + l.x_studio_cantidad_presupuestada + " " + (l.x_studio_unidad_medida||"") + " · " + moneda(l.x_studio_costo_manual) + " c/u"
+              )
+            )
+          )
+        )
+      ),
+      h("div", { style: { display:"flex", gap:"8px", justifyContent:"flex-end", marginTop:"16px" } },
+        h("button", { style: { background:"#fff", border:"1px solid var(--color-borde)", borderRadius:"8px", padding:"9px 14px", fontSize:"13px", cursor:"pointer" }, onClick: onCerrar, disabled: cargando }, "Cancelar"),
+        h("button", { className: "btn-primario", onClick: confirmar, disabled: cargando || seleccionadas.size === 0 },
+          cargando ? "Cargando..." : "Cargar " + seleccionadas.size + " línea" + (seleccionadas.size === 1 ? "" : "s"))
+      )
+    )
+  );
+}
+
 function EjecucionOrden({ orden, onVolver }){
   const [presupuestoAprobado, setPresupuestoAprobado] = useState(null);
   const [lineasPresupuesto, setLineasPresupuesto] = useState([]);
@@ -165,6 +216,7 @@ function EjecucionOrden({ orden, onVolver }){
   const [consumos, setConsumos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [cargandoLineasPresupuesto, setCargandoLineasPresupuesto] = useState(false);
+  const [modalCargarPresupuesto, setModalCargarPresupuesto] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
 
@@ -182,7 +234,7 @@ function EjecucionOrden({ orden, onVolver }){
       const consumoRows = await tallerQuery("x_costo_real_detalle", [
         "id","x_studio_tipo_linea","x_studio_sku","x_studio_descripcion","x_studio_cantidad_real",
         "x_studio_unidad_medida","x_studio_costo_unitario_real","x_studio_total_costo_real","x_studio_origen",
-        "x_studio_proveedor","x_studio_es_linea_no_presupuestada","x_studio_motivo_cambio",
+        "x_studio_proveedor","x_studio_es_linea_no_presupuestada","x_studio_motivo_cambio","x_studio_presupuesto_detalle_id",
       ], [["x_studio_orden_id","=",orden.id]], 500);
       const tecRows = await tallerQuery("x_taller_usuario", ["id","x_name"], [["x_studio_rol","=","Técnico"]], 500);
       setManoObra(moRows);
@@ -206,11 +258,11 @@ function EjecucionOrden({ orden, onVolver }){
     }
   }
 
-  async function cargarLineasDelPresupuesto(){
+  async function cargarLineasDelPresupuesto(lineasElegidas){
     setCargandoLineasPresupuesto(true); setError(""); setExito("");
     const nuevos = [];
     try {
-      for (const l of lineasPresupuesto) {
+      for (const l of lineasElegidas) {
         const valores = {
           x_name: l.x_name,
           x_studio_orden_id: orden.id,
@@ -228,14 +280,15 @@ function EjecucionOrden({ orden, onVolver }){
         };
         const resp = await tallerCrear("x_costo_real_detalle", valores);
         if (resp.ok) nuevos.push({ ...valores, id: resp.id });
-        else { setError("Se cargaron " + nuevos.length + " de " + lineasPresupuesto.length + " líneas — falló en: " + resp.error); break; }
+        else { setError("Se cargaron " + nuevos.length + " de " + lineasElegidas.length + " líneas — falló en: " + resp.error); break; }
       }
       setConsumos(prev => [...prev, ...nuevos]);
-      if (nuevos.length === lineasPresupuesto.length) setExito("Se cargaron las " + nuevos.length + " líneas del presupuesto. Ajustá cantidades/costos si algo cambió al ejecutar.");
+      if (nuevos.length === lineasElegidas.length && nuevos.length > 0) setExito("Se cargaron " + nuevos.length + " línea" + (nuevos.length===1?"":"s") + " del presupuesto. Ajustá cantidades/costos si algo cambió al ejecutar.");
     } catch(e) {
       setError("No se pudieron cargar las líneas: " + e.message);
     } finally {
       setCargandoLineasPresupuesto(false);
+      setModalCargarPresupuesto(false);
     }
   }
 
@@ -273,14 +326,23 @@ function EjecucionOrden({ orden, onVolver }){
       error && h("div", { className: "mensaje-error" }, error),
       exito && h("div", { className: "mensaje-exito" }, exito),
 
-      consumos.length === 0 && presupuestoAprobado && lineasPresupuesto.length > 0 &&
-        h("div", { style: { background:"#F8FAFC", border:"1px dashed var(--color-primario)", borderRadius:"8px", padding:"14px", textAlign:"center" } },
+      (() => {
+        const idsYaCargados = new Set(consumos.map(c => c.x_studio_presupuesto_detalle_id).filter(Boolean));
+        const lineasPendientes = lineasPresupuesto.filter(l => !idsYaCargados.has(l.id));
+        if (!presupuestoAprobado || lineasPendientes.length === 0) return null;
+        return h("div", { style: { background:"#F8FAFC", border:"1px dashed var(--color-primario)", borderRadius:"8px", padding:"14px", textAlign:"center" } },
           h("div", { style: { fontSize:"12.5px", color:"var(--color-texto-suave)", marginBottom:"8px" } },
-            "Todavía no hay consumos registrados. Empezá desde lo cotizado en " + presupuestoAprobado.x_name + " (" + lineasPresupuesto.length + " línea" + (lineasPresupuesto.length === 1 ? "" : "s") + ") en vez de escribir todo de cero."
+            "Quedan " + lineasPendientes.length + " línea" + (lineasPendientes.length === 1 ? "" : "s") + " de " + presupuestoAprobado.x_name + " sin cargar a la ejecución."
           ),
-          h("button", { className: "btn-primario", onClick: cargarLineasDelPresupuesto, disabled: cargandoLineasPresupuesto },
-            cargandoLineasPresupuesto ? "Cargando..." : "📋 Cargar líneas del presupuesto aprobado")
-        )
+          h("button", { className: "btn-primario", onClick: () => setModalCargarPresupuesto(true) },
+            "📋 Elegir líneas del presupuesto para cargar"),
+          modalCargarPresupuesto && h(ModalElegirLineasPresupuesto, {
+            lineasPendientes, cargando: cargandoLineasPresupuesto,
+            onCerrar: () => setModalCargarPresupuesto(false),
+            onConfirmar: cargarLineasDelPresupuesto,
+          })
+        );
+      })()
     ),
 
     h(SeccionManoObra, { orden, tecnicos, manoObra, setManoObra, setExito, setError }),
