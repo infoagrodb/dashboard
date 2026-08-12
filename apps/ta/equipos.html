@@ -65,7 +65,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">equipos.html — v2 (fix orden de Hooks)</div>
 
 <script>
 const h = React.createElement;
@@ -224,8 +224,6 @@ function Equipos(){
     }
   }
 
-  if (!sesion) return null;
-
   const costoPorOrden = useMemo(() => {
     const mapa = {};
     (costos || []).forEach(c => {
@@ -254,6 +252,11 @@ function Equipos(){
       return { ...e, _ordenes: ordenesDeEste.length, _totalGastado: totalGastado };
     });
   }, [equipos, ordenesPorEquipo, costoPorOrden]);
+
+  // El chequeo de sesión va DESPUÉS de todos los Hooks — nunca antes. Si un
+  // return condicional se cuela entre useState/useMemo, React llama distinta
+  // cantidad de Hooks entre renders y truena (regla de los Hooks).
+  if (!sesion) return null;
 
   if (equipoAbierto) {
     return h(DetalleEquipo, {
