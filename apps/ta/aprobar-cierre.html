@@ -21,6 +21,8 @@
 </script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root{
     --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
@@ -64,6 +66,19 @@
   .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12.5px; padding:10px 12px; border-radius:8px; margin-bottom:14px;}
   .exito-caja{text-align:center; padding:20px;}
   .exito-caja .icono{font-size:44px; margin-bottom:8px;}
+
+  .seccion-detalle{margin-top:16px;}
+  .seccion-detalle h3{font-size:12.5px; margin:0 0 8px; color:var(--color-primario-oscuro); text-transform:uppercase; letter-spacing:.03em;}
+  table.tabla-detalle{width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:6px;}
+  table.tabla-detalle th{background:#F8FAFC; text-align:left; padding:6px 8px; font-size:10px; text-transform:uppercase; letter-spacing:.03em; color:#374151; border-bottom:2px solid var(--color-borde);}
+  table.tabla-detalle td{padding:6px 8px; border-bottom:1px solid #F1F5F9;}
+  .texto-derecha{text-align:right;}
+  .subtotal-seccion{text-align:right; font-size:12px; font-weight:700; color:var(--color-texto-suave); padding:4px 8px;}
+
+  canvas.pizarron-firma{width:100%; height:150px; border:1px dashed var(--color-borde); border-radius:8px; background:#fff; touch-action:none; cursor:crosshair;}
+  .btn-limpiar-firma{margin-top:6px; background:none; border:none; color:var(--color-texto-suave); font-size:12px; cursor:pointer; text-decoration:underline; padding:0;}
+  .btn-secundario-pdf{width:100%; background:#fff; border:1px solid var(--color-borde); color:var(--color-texto); border-radius:10px; padding:12px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px;}
+  .btn-secundario-pdf:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
 </style>
 </head>
 <body>
@@ -71,7 +86,7 @@
 
 <script>
 const h = React.createElement;
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 const WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 const MESES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
@@ -83,6 +98,52 @@ function formatearFecha(valor){
 }
 function num(v){ const n = Number(v); return isNaN(n) ? 0 : n; }
 function moneda(v){ return "$" + num(v).toFixed(2); }
+function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+
+function PizarronFirma({ onCambio }){
+  const canvasRef = useRef(null);
+  const dibujandoRef = useRef(false);
+
+  function posicion(e, canvas){
+    const rect = canvas.getBoundingClientRect();
+    const punto = e.touches ? e.touches[0] : e;
+    return { x: punto.clientX - rect.left, y: punto.clientY - rect.top };
+  }
+  function empezar(e){
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const p = posicion(e, canvas);
+    dibujandoRef.current = true;
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  }
+  function mover(e){
+    if (!dibujandoRef.current) return;
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    const p = posicion(e, canvas);
+    ctx.lineWidth = 2.2; ctx.lineCap = "round"; ctx.strokeStyle = "#111827";
+    ctx.lineTo(p.x, p.y); ctx.stroke();
+    onCambio(false);
+  }
+  function terminar(){ dibujandoRef.current = false; }
+  function limpiar(){
+    const canvas = canvasRef.current;
+    canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+    onCambio(true);
+  }
+
+  return h("div", null,
+    h("canvas", {
+      ref: canvasRef, width: 500, height: 150, className: "pizarron-firma",
+      onMouseDown: empezar, onMouseMove: mover, onMouseUp: terminar, onMouseLeave: terminar,
+      onTouchStart: empezar, onTouchMove: mover, onTouchEnd: terminar,
+    }),
+    h("button", { type: "button", className: "btn-limpiar-firma", onClick: limpiar }, "Limpiar firma")
+  );
+}
 
 function AprobarCierre(){
   const params = new URLSearchParams(window.location.search);
@@ -93,11 +154,13 @@ function AprobarCierre(){
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
   const [nombre, setNombre] = useState("");
+  const [firmaVacia, setFirmaVacia] = useState(true);
   const [comentario, setComentario] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [yaAceptado, setYaAceptado] = useState(false);
   const [yaRechazado, setYaRechazado] = useState(false);
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
+  const [firmaGuardada, setFirmaGuardada] = useState(null);
 
   useEffect(() => {
     if (!id || !token) { setError("Este link no es válido — faltan datos."); setCargando(false); return; }
@@ -121,11 +184,15 @@ function AprobarCierre(){
 
   async function aceptar(){
     if (!nombre.trim()){ setError("Escribí tu nombre completo."); return; }
+    if (firmaVacia){ setError("Dibujá tu firma en el recuadro antes de continuar."); return; }
     setEnviando(true); setError("");
     try {
+      const canvas = document.querySelector("canvas.pizarron-firma");
+      const firmaBase64 = canvas ? canvas.toDataURL("image/png") : null;
+      setFirmaGuardada(firmaBase64);
       const r = await fetch(WORKER_BASE + "/taller/cierre/aprobar-publico", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: Number(id), token: token, aceptado_por: nombre.trim() }),
+        body: JSON.stringify({ id: Number(id), token: token, aceptado_por: nombre.trim(), firma_base64: firmaBase64 }),
       });
       const j = await r.json();
       if (j.ok) setYaAceptado(true);
@@ -153,6 +220,110 @@ function AprobarCierre(){
     } finally {
       setEnviando(false);
     }
+  }
+
+  function generarPDF(){
+    if (!window.jspdf) { setError("La librería de PDF no cargó — recargá la página."); return; }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "mm", format: "letter" });
+    if (typeof doc.autoTable !== "function") { setError("El complemento de tablas del PDF no cargó — recargá la página."); return; }
+    const ancho = doc.internal.pageSize.getWidth();
+    const cierre = datos.cierre;
+    const orden = datos.orden;
+    const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "";
+    const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "";
+
+    doc.setFillColor(22,163,74); doc.rect(0,0,ancho,24,"F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(15);
+    doc.text("INFOTALLER", 14, 12);
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 18);
+    doc.setFont(undefined,"bold"); doc.setFontSize(13);
+    doc.text("CIERRE DE ORDEN", ancho-14, 12, { align:"right" });
+    doc.setFont(undefined,"normal"); doc.setFontSize(10);
+    doc.text(cierre.x_name, ancho-14, 18, { align:"right" });
+
+    doc.setTextColor(17,24,39);
+    let y = 33;
+    doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("ORDEN", 14, y);
+    doc.setFont(undefined,"normal"); doc.text((orden ? orden.x_name : "—"), 14, y+5);
+    doc.setFont(undefined,"bold"); doc.text("CLIENTE", 90, y);
+    doc.setFont(undefined,"normal"); doc.text(clienteNombre || "—", 90, y+5);
+    y += 12;
+    doc.setFont(undefined,"bold"); doc.text("EQUIPO", 14, y);
+    doc.setFont(undefined,"normal"); doc.text(equipoNombre || "—", 14, y+5);
+    doc.setFont(undefined,"bold"); doc.text("FECHA DE CIERRE", 90, y);
+    doc.setFont(undefined,"normal"); doc.text(formatearFecha(cierre.x_studio_fecha_cierre), 90, y+5);
+    y += 14;
+
+    doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("DIAGNÓSTICO FINAL", 14, y); y += 5;
+    doc.setFont(undefined,"normal");
+    const diagLineas = doc.splitTextToSize(cierre.x_studio_diagnostico_final || "—", ancho-28);
+    doc.text(diagLineas, 14, y); y += diagLineas.length * 4.5 + 4;
+    doc.setFont(undefined,"bold"); doc.text("TRABAJO REALIZADO", 14, y); y += 5;
+    doc.setFont(undefined,"normal");
+    const trabLineas = doc.splitTextToSize(cierre.x_studio_trabajo_realizado || "—", ancho-28);
+    doc.text(trabLineas, 14, y); y += trabLineas.length * 4.5 + 6;
+
+    const consumos = datos.consumos || [];
+    const manoObra = datos.mano_obra || [];
+    if (consumos.length) {
+      doc.autoTable({
+        startY: y,
+        head: [["Tipo","Descripción","Cant.","Costo Unit.","Total"]],
+        body: consumos.map(c => [
+          c.x_studio_tipo_linea, c.x_studio_descripcion, c.x_studio_cantidad_real + " " + (c.x_studio_unidad_medida||""),
+          moneda(c.x_studio_costo_unitario_real), moneda(c.x_studio_total_costo_real),
+        ]),
+        headStyles: { fillColor:[22,163,74], textColor:255, fontStyle:"bold", fontSize:9 },
+        styles: { fontSize:8.5, cellPadding:3 },
+        columnStyles: { 3:{halign:"right"}, 4:{halign:"right"} },
+        margin: { left:14, right:14 },
+      });
+      y = doc.lastAutoTable.finalY + 8;
+    }
+    if (manoObra.length) {
+      if (y > 240) { doc.addPage(); y = 20; }
+      doc.autoTable({
+        startY: y,
+        head: [["Técnico","Fecha","Hrs.","Actividad","Total"]],
+        body: manoObra.map(m => [
+          m2oTexto(m.x_studio_tecnico_id), formatearFecha(m.x_studio_fecha),
+          (num(m.x_studio_horas_normales)+num(m.x_studio_horas_extra)).toString(),
+          m.x_studio_actividad || "", moneda(m.x_studio_costo_total),
+        ]),
+        headStyles: { fillColor:[22,163,74], textColor:255, fontStyle:"bold", fontSize:9 },
+        styles: { fontSize:8.5, cellPadding:3 },
+        columnStyles: { 4:{halign:"right"} },
+        margin: { left:14, right:14 },
+      });
+      y = doc.lastAutoTable.finalY + 10;
+    }
+
+    if (y > 230) { doc.addPage(); y = 20; }
+    doc.setFillColor(22,163,74); doc.rect(14,y,ancho-28,14,"F");
+    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(11);
+    doc.text("TOTAL COSTO REAL:", 18, y+9);
+    doc.text(moneda(cierre.x_studio_total_costo_real), ancho-18, y+9, { align:"right" });
+    y += 24;
+
+    doc.setTextColor(17,24,39); doc.setFont(undefined,"bold"); doc.setFontSize(10);
+    doc.text("VISTO BUENO DEL CLIENTE", 14, y); y += 6;
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("Aceptado por: " + (cierre.x_studio_aceptado_por_cliente || nombre || "—"), 14, y); y += 5;
+    doc.text("Fecha: " + formatearFecha(cierre.x_studio_fecha_aceptacion_cliente || new Date().toISOString()), 14, y); y += 8;
+
+    if (firmaGuardada) {
+      try {
+        doc.setDrawColor(228,233,238); doc.rect(14, y, 80, 30);
+        doc.addImage(firmaGuardada, "PNG", 15, y+1, 78, 28);
+        y += 34;
+        doc.setFontSize(8); doc.setTextColor(107,114,128);
+        doc.text("Firma", 14, y);
+      } catch(e) { /* si falla el dibujo de la firma, el PDF sigue sin ella */ }
+    }
+
+    doc.save(cierre.x_name + "-visto-bueno.pdf");
   }
 
   if (cargando) {
@@ -192,7 +363,41 @@ function AprobarCierre(){
       ),
 
       h("div", { className: "bloque-texto" }, h("label", null, "Diagnóstico final"), h("div", { className: "contenido" }, cierre.x_studio_diagnostico_final || "—")),
-      h("div", { className: "bloque-texto" }, h("label", null, "Trabajo realizado"), h("div", { className: "contenido" }, cierre.x_studio_trabajo_realizado || "—"))
+      h("div", { className: "bloque-texto" }, h("label", null, "Trabajo realizado"), h("div", { className: "contenido" }, cierre.x_studio_trabajo_realizado || "—")),
+
+      (datos.consumos || []).length > 0 && h("div", { className: "seccion-detalle" },
+        h("h3", null, "Repuestos, materiales y servicios"),
+        h("table", { className: "tabla-detalle" },
+          h("thead", null, h("tr", null,
+            h("th", null, "Descripción"), h("th", null, "Tipo"), h("th", null, "Cant."), h("th", { className: "texto-derecha" }, "Total")
+          )),
+          h("tbody", null,
+            datos.consumos.map((c,i) => h("tr", { key: i },
+              h("td", null, c.x_studio_descripcion),
+              h("td", null, c.x_studio_tipo_linea),
+              h("td", null, c.x_studio_cantidad_real + " " + (c.x_studio_unidad_medida || "")),
+              h("td", { className: "texto-derecha" }, moneda(c.x_studio_total_costo_real))
+            ))
+          )
+        )
+      ),
+
+      (datos.mano_obra || []).length > 0 && h("div", { className: "seccion-detalle" },
+        h("h3", null, "Mano de obra"),
+        h("table", { className: "tabla-detalle" },
+          h("thead", null, h("tr", null,
+            h("th", null, "Técnico"), h("th", null, "Fecha"), h("th", null, "Actividad"), h("th", { className: "texto-derecha" }, "Total")
+          )),
+          h("tbody", null,
+            datos.mano_obra.map((m,i) => h("tr", { key: i },
+              h("td", null, m2oTexto(m.x_studio_tecnico_id)),
+              h("td", null, formatearFecha(m.x_studio_fecha)),
+              h("td", null, m.x_studio_actividad || "—"),
+              h("td", { className: "texto-derecha" }, moneda(m.x_studio_costo_total))
+            ))
+          )
+        )
+      )
     ),
 
     h("div", { className: "panel" },
@@ -200,9 +405,10 @@ function AprobarCierre(){
         ? h("div", { className: "exito-caja" },
             h("div", { className: "icono" }, "✅"),
             h("h2", { style: { margin: "0 0 6px", fontSize: "17px" } }, "¡Gracias por tu visto bueno!"),
-            h("div", { style: { color: "var(--color-texto-suave)", fontSize: "13px" } },
+            h("div", { style: { color: "var(--color-texto-suave)", fontSize: "13px", marginBottom: "14px" } },
               "Quedó registrado" + (cierre.x_studio_aceptado_por_cliente ? " a nombre de " + cierre.x_studio_aceptado_por_cliente : "") + "."
-            )
+            ),
+            h("button", { className: "btn-secundario-pdf", onClick: generarPDF }, "⬇️ Descargar PDF del cierre")
           )
         : yaRechazado
           ? h("div", { className: "exito-caja" },
@@ -223,8 +429,10 @@ function AprobarCierre(){
             : h(React.Fragment, null,
                 h("label", { className: "campo-label" }, "Tu nombre completo"),
                 h("input", { type: "text", value: nombre, onChange: e => setNombre(e.target.value), placeholder: "Escribí tu nombre completo" }),
-                error && h("div", { className: "mensaje-error" }, error),
-                h("button", { className: "btn-primario", onClick: aceptar, disabled: enviando }, enviando ? "Enviando..." : "✅ Doy el visto bueno"),
+                h("label", { className: "campo-label", style: { marginTop: "10px" } }, "Firma"),
+                h(PizarronFirma, { onCambio: setFirmaVacia }),
+                error && h("div", { className: "mensaje-error", style: { marginTop: "12px" } }, error),
+                h("button", { className: "btn-primario", style: { marginTop: "14px" }, onClick: aceptar, disabled: enviando }, enviando ? "Enviando..." : "✅ Doy el visto bueno"),
                 h("button", { className: "btn-peligro", onClick: () => setMostrarRechazo(true), disabled: enviando }, "❌ Todavía no acepto")
               )
     )
