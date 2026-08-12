@@ -94,7 +94,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v7 (crear equipo también para clientes internos)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v8 (combo de equipos del cliente + solicitudes pendientes)</div>
 <div id="raiz"></div>
 
 <script>
@@ -285,6 +285,39 @@ function ModalNuevoEquipo({ cliente, onCerrar, onCreado }){
 /* ------------------------------------------------------------
    Pantalla principal de Recepción
    ------------------------------------------------------------ */
+function ModalSolicitudesPendientes({ solicitudes, cargando, onCerrar, onElegir }){
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "📞 Solicitudes de Servicio Pendientes"),
+      h("div", { style: { fontSize: "12px", color: "var(--color-texto-suave)", marginBottom: "12px" } },
+        "Elegí una para precargar el cliente y el problema reportado en la recepción."
+      ),
+      cargando
+        ? h("div", { className: "buscador-vacio" }, "Cargando...")
+        : !solicitudes || solicitudes.length === 0
+          ? h("div", { className: "buscador-vacio" }, "No hay solicitudes pendientes ahora mismo.")
+          : h("div", { style: { border: "1px solid var(--color-borde)", borderRadius: "8px", overflow: "hidden", maxHeight: "50vh", overflowY: "auto" } },
+              solicitudes.map((s,i) => h("div", {
+                  key: s.id,
+                  style: {
+                    padding: "10px 12px", cursor: "pointer",
+                    borderBottom: i < solicitudes.length-1 ? "1px solid var(--color-fondo)" : "none",
+                  },
+                  onClick: () => onElegir(s),
+                },
+                  h("div", { style: { fontSize: "13px", fontWeight: 600 } }, s.x_name + " — " + m2oTextoLocal(s.x_studio_cliente_id)),
+                  h("div", { style: { fontSize: "11.5px", color: "var(--color-texto-suave)" } }, s.x_studio_descripcion_equipo)
+                )
+              )
+            ),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar")
+      )
+    )
+  );
+}
+function m2oTextoLocal(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+
 function Recepcion(){
   const [sesion, setSesion] = useState(null);
 
@@ -295,6 +328,8 @@ function Recepcion(){
 
   const [cliente, setCliente] = useState(null);
   const [equipo, setEquipo] = useState(null);
+  const [equiposDelCliente, setEquiposDelCliente] = useState(null);
+  const [cargandoEquipos, setCargandoEquipos] = useState(false);
   const [modalCliente, setModalCliente] = useState(false);
   const [modalEquipo, setModalEquipo] = useState(false);
 
@@ -309,6 +344,8 @@ function Recepcion(){
   const [error, setError] = useState("");
   const [errorHorometro, setErrorHorometro] = useState("");
   const [folioCreado, setFolioCreado] = useState(null);
+  const [modalSolicitudes, setModalSolicitudes] = useState(false);
+  const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
   const [respuestaCruda, setRespuestaCruda] = useState(null);
 
   const ELEMENTOS_ACTA = ["Llantas en buen estado","Espejos","Batería","Herramientas/gata","Combustible","Extintor","Radio/GPS","Sin daños visibles adicionales"];
@@ -316,6 +353,36 @@ function Recepcion(){
   const [notasActa, setNotasActa] = useState("");
   const [fotos, setFotos] = useState([]);
   const [subiendoFotos, setSubiendoFotos] = useState(false);
+
+  function aplicarSolicitud(s){
+    setSolicitudOrigen(s);
+    if (Array.isArray(s.x_studio_cliente_id)) {
+      setCliente({ id: s.x_studio_cliente_id[0], x_name: s.x_studio_cliente_id[1], x_studio_tipo_cliente: "Externo" });
+    }
+    setProblema(
+      (s.x_studio_descripcion_equipo ? "Equipo (según la solicitud): " + s.x_studio_descripcion_equipo + "\n\n" : "") +
+      (s.x_studio_problema_reportado || "")
+    );
+  }
+
+  async function abrirSolicitudesPendientes(){
+    setModalSolicitudes(true);
+    if (solicitudesPendientes !== null) return; // ya cargadas, no repetir la consulta
+    try {
+      const filas = await tallerQuery("x_taller_solicitud", [
+        "id","x_name","x_studio_cliente_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+      ], [["x_studio_estado","=","Pendiente"]], 500);
+      setSolicitudesPendientes(filas);
+    } catch(e) {
+      setError("No se pudieron cargar las solicitudes pendientes: " + e.message);
+      setSolicitudesPendientes([]);
+    }
+  }
+
+  function elegirSolicitudPendiente(s){
+    aplicarSolicitud(s);
+    setModalSolicitudes(false);
+  }
 
   useEffect(() => {
     if (!idSolicitud) return;
@@ -325,15 +392,7 @@ function Recepcion(){
           "id","x_name","x_studio_cliente_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
         ], [["id","=",Number(idSolicitud)]], 1);
         if (filas.length) {
-          const s = filas[0];
-          setSolicitudOrigen(s);
-          if (Array.isArray(s.x_studio_cliente_id)) {
-            setCliente({ id: s.x_studio_cliente_id[0], x_name: s.x_studio_cliente_id[1], x_studio_tipo_cliente: "Externo" });
-          }
-          setProblema(
-            (s.x_studio_descripcion_equipo ? "Equipo (según la solicitud): " + s.x_studio_descripcion_equipo + "\n\n" : "") +
-            (s.x_studio_problema_reportado || "")
-          );
+          aplicarSolicitud(filas[0]);
         } else {
           setError("No se encontró la solicitud de origen.");
         }
@@ -390,19 +449,23 @@ function Recepcion(){
     return filas;
   }
 
-  async function buscarEquipos(texto){
-    const domain = [["x_name","ilike",texto]];
-    if (cliente){
-      if (cliente.x_studio_tipo_cliente === "Externo") {
-        domain.push(["x_studio_cliente_id","=",cliente.id]);
-      } else {
-        domain.push(["x_studio_cliente_id","=",false]);
-      }
+  useEffect(() => {
+    if (!cliente) { setEquiposDelCliente(null); return; }
+    cargarEquiposDelCliente(cliente.id);
+  }, [cliente?.id]);
+
+  async function cargarEquiposDelCliente(idCliente){
+    setCargandoEquipos(true);
+    try {
+      const filas = await tallerQuery("x_equiposagricolas",
+        ["id","x_name","x_studio_tipo_equipo","x_studio_marca","x_studio_modelo","x_studio_horometro_actual","x_studio_kilometraje_actual"],
+        [["x_studio_cliente_id","=",idCliente]], 500);
+      setEquiposDelCliente(filas);
+    } catch(e) {
+      setError("No se pudieron cargar los equipos del cliente: " + e.message);
+    } finally {
+      setCargandoEquipos(false);
     }
-    const filas = await tallerQuery("x_equiposagricolas",
-      ["id","x_name","x_studio_tipo_equipo","x_studio_marca","x_studio_modelo","x_studio_horometro_actual","x_studio_kilometraje_actual"],
-      domain, 15);
-    return filas;
   }
 
   function reiniciarFormulario(){
@@ -511,6 +574,10 @@ function Recepcion(){
 
   return h("div", { className: "envoltura" },
 
+    h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
+      h("button", { className: "link-chico", onClick: abrirSolicitudesPendientes }, "📞 Ver Solicitudes de Servicio Pendientes")
+    ),
+
     error && h("div", { className: "mensaje mensaje-error" }, error),
 
     h("div", { className: "panel" },
@@ -555,15 +622,22 @@ function Recepcion(){
               h("button", { onClick: () => setEquipo(null) }, "Cambiar")
             )
           : h(React.Fragment, null,
-              h(Buscador, {
-                placeholder: "Buscar equipo por nombre...",
-                buscar: buscarEquipos,
-                onSeleccionar: setEquipo,
-                renderItem: eq => h(React.Fragment, null,
-                  eq.x_name,
-                  h("div", { className: "sub" }, [eq.x_studio_tipo_equipo, eq.x_studio_marca, eq.x_studio_modelo].filter(Boolean).join(" · "))
-                ),
-              }),
+              cargandoEquipos
+                ? h("div", { className: "buscador-vacio" }, "Cargando equipos del cliente...")
+                : !equiposDelCliente || equiposDelCliente.length === 0
+                  ? h("div", { className: "buscador-vacio" }, "Este cliente todavía no tiene equipos registrados.")
+                  : h("select", {
+                      value: "",
+                      onChange: e => {
+                        const elegido = equiposDelCliente.find(eq => String(eq.id) === e.target.value);
+                        if (elegido) setEquipo(elegido);
+                      },
+                    },
+                      h("option", { value: "", disabled: true }, "— Elegí un equipo —"),
+                      equiposDelCliente.map(eq => h("option", { key: eq.id, value: eq.id },
+                        eq.x_name + ([eq.x_studio_marca, eq.x_studio_modelo].filter(Boolean).length ? " (" + [eq.x_studio_marca, eq.x_studio_modelo].filter(Boolean).join(" ") + ")" : "")
+                      ))
+                    ),
               h("div", { style: { marginTop: "8px" } },
                 h("button", { className: "link-chico", onClick: () => setModalEquipo(true) }, "+ Registrar equipo nuevo" + (cliente ? " de este cliente" : ""))
               )
@@ -665,7 +739,13 @@ function Recepcion(){
     modalEquipo && cliente && h(ModalNuevoEquipo, {
       cliente,
       onCerrar: () => setModalEquipo(false),
-      onCreado: eq => { setEquipo(eq); setModalEquipo(false); },
+      onCreado: eq => { setEquipo(eq); setModalEquipo(false); cargarEquiposDelCliente(cliente.id); },
+    }),
+    modalSolicitudes && h(ModalSolicitudesPendientes, {
+      solicitudes: solicitudesPendientes,
+      cargando: solicitudesPendientes === null,
+      onCerrar: () => setModalSolicitudes(false),
+      onElegir: elegirSolicitudPendiente,
     })
   );
 }
