@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -94,7 +94,7 @@
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v5 (sin caja técnica)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v6 (solicitud con modelo propio)</div>
 <div id="raiz"></div>
 
 <script>
@@ -289,9 +289,9 @@ function Recepcion(){
   const [sesion, setSesion] = useState(null);
 
   const paramsUrl = new URLSearchParams(window.location.search);
-  const idAConvertir = paramsUrl.get("convertir");
-  const [cargandoSolicitud, setCargandoSolicitud] = useState(!!idAConvertir);
-  const [ordenOriginal, setOrdenOriginal] = useState(null);
+  const idSolicitud = paramsUrl.get("desde_solicitud");
+  const [cargandoSolicitud, setCargandoSolicitud] = useState(!!idSolicitud);
+  const [solicitudOrigen, setSolicitudOrigen] = useState(null);
 
   const [cliente, setCliente] = useState(null);
   const [equipo, setEquipo] = useState(null);
@@ -318,21 +318,24 @@ function Recepcion(){
   const [subiendoFotos, setSubiendoFotos] = useState(false);
 
   useEffect(() => {
-    if (!idAConvertir) return;
+    if (!idSolicitud) return;
     (async () => {
       try {
-        const filas = await tallerQuery("x_taller_orden", [
-          "id","x_name","x_studio_cliente_id","x_studio_problema_reportado",
-        ], [["id","=",Number(idAConvertir)]], 1);
+        const filas = await tallerQuery("x_taller_solicitud", [
+          "id","x_name","x_studio_cliente_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+        ], [["id","=",Number(idSolicitud)]], 1);
         if (filas.length) {
-          const o = filas[0];
-          setOrdenOriginal(o);
-          if (Array.isArray(o.x_studio_cliente_id)) {
-            setCliente({ id: o.x_studio_cliente_id[0], x_name: o.x_studio_cliente_id[1], x_studio_tipo_cliente: "Externo" });
+          const s = filas[0];
+          setSolicitudOrigen(s);
+          if (Array.isArray(s.x_studio_cliente_id)) {
+            setCliente({ id: s.x_studio_cliente_id[0], x_name: s.x_studio_cliente_id[1], x_studio_tipo_cliente: "Externo" });
           }
-          setProblema(o.x_studio_problema_reportado || "");
+          setProblema(
+            (s.x_studio_descripcion_equipo ? "Equipo (según la solicitud): " + s.x_studio_descripcion_equipo + "\n\n" : "") +
+            (s.x_studio_problema_reportado || "")
+          );
         } else {
-          setError("No se encontró la solicitud a convertir.");
+          setError("No se encontró la solicitud de origen.");
         }
       } catch(e) {
         setError("No se pudo cargar la solicitud: " + e.message);
@@ -424,11 +427,11 @@ function Recepcion(){
 
     setGuardando(true);
     try {
-      const esConversion = !!ordenOriginal;
-      const folio = esConversion ? ordenOriginal.x_name : await tallerFolio("OT");
+      const folio = await tallerFolio("OT");
       const textoActa = "ACTA DE RECEPCIÓN\nElementos presentes: " +
         (elementosPresentes.length ? elementosPresentes.join(", ") : "ninguno marcado") +
-        (notasActa.trim() ? "\nNotas: " + notasActa.trim() : "");
+        (notasActa.trim() ? "\nNotas: " + notasActa.trim() : "") +
+        (solicitudOrigen ? "\nGenerada desde la solicitud " + solicitudOrigen.x_name : "");
       const payload = {
         x_name: folio,
         x_studio_cliente_id: cliente.id,
@@ -444,12 +447,22 @@ function Recepcion(){
         x_studio_requiere_presupuesto: true,
         x_studio_observaciones: textoActa,
       };
-      const resp = esConversion
-        ? await tallerActualizar("x_taller_orden", ordenOriginal.id, payload)
-        : await tallerCrear("x_taller_orden", payload);
-      const idOrden = esConversion ? ordenOriginal.id : resp.id;
+      const resp = await tallerCrear("x_taller_orden", payload);
       setRespuestaCruda({ folio, payload_enviado: payload, respuesta_servidor: resp });
       if (resp.ok) {
+        const idOrden = resp.id;
+
+        // Si esta recepción viene de una Solicitud de Servicio, la marca como
+        // Convertida y la enlaza a la orden que se acaba de crear.
+        if (solicitudOrigen) {
+          try {
+            await tallerActualizar("x_taller_solicitud", solicitudOrigen.id, {
+              x_studio_estado: "Convertida",
+              x_studio_orden_generada_id: idOrden,
+            });
+          } catch(e) { /* no bloquea el flujo — la orden ya quedó registrada */ }
+        }
+
         // Actualiza el horómetro/kilometraje "vigente" del equipo con esta lectura más reciente,
         // para que la próxima recepción compare contra el dato más nuevo.
         try {

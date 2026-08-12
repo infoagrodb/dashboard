@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <link rel="stylesheet" href="core.css?v=2">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -42,9 +42,14 @@
   .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
   .btn-primario:disabled{opacity:.6; cursor:default;}
   .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
+  .btn-peligro{background:#fff; border:1px solid var(--color-peligro); color:var(--color-peligro); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer;}
+  .btn-peligro:hover{background:var(--color-peligro-suave);}
   .btn-chico{background:#fff; border:1px solid var(--color-borde); border-radius:6px; padding:5px 10px; font-size:12px; cursor:pointer; color:var(--color-texto);}
   .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px; margin-bottom:14px;}
   .cargando, .error-carga, .acceso-denegado{text-align:center; padding:40px; color:var(--color-texto-suave);}
+  .pestanas{display:flex; gap:6px; margin-bottom:14px;}
+  .pestana{background:#fff; border:1px solid var(--color-borde); border-radius:7px; padding:7px 14px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
+  .pestana.activa{background:var(--color-primario); border-color:var(--color-primario); color:#fff; font-weight:600;}
 
   .buscador{position:relative;}
   .buscador-resultados{position:absolute; top:100%; left:0; right:0; background:#fff; border:1px solid var(--color-borde); border-radius:7px; box-shadow:var(--sombra); max-height:200px; overflow-y:auto; z-index:50; margin-top:4px;}
@@ -64,11 +69,15 @@
   textarea{resize:vertical; min-height:60px;}
   .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:16px;}
   .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .badge-estado{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:10px;}
+  .estado-Pendiente{background:#FEF3C7; color:#B45309;}
+  .estado-Convertida{background:#D1FAE5; color:#15803D;}
+  .estado-Anulada{background:#FEE2E2; color:#991B1B;}
 </style>
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">solicitud.html — v1</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">solicitud.html — v2 (modelo propio)</div>
 
 <script>
 const h = React.createElement;
@@ -166,15 +175,14 @@ function ModalNuevaSolicitud({ onCerrar, onCreada }){
     if (!problema.trim()){ setError("Describí el problema reportado."); return; }
     setGuardando(true); setError("");
     try {
-      const folio = await tallerFolio("OT");
-      const resp = await tallerCrear("x_taller_orden", {
+      const folio = await tallerFolio("SOL");
+      const resp = await tallerCrear("x_taller_solicitud", {
         x_name: folio,
         x_studio_cliente_id: cliente.id,
-        x_studio_estado: "Solicitada",
+        x_studio_descripcion_equipo: descripcionEquipo.trim(),
+        x_studio_problema_reportado: problema.trim(),
         x_studio_prioridad: prioridad,
-        x_studio_problema_reportado: "Equipo (según el cliente): " + descripcionEquipo.trim() + "\n\nProblema reportado: " + problema.trim(),
-        x_studio_requiere_presupuesto: true,
-        x_studio_observaciones: "Solicitud registrada internamente por el taller.",
+        x_studio_estado: "Pendiente",
       });
       if (resp.ok) onCreada();
       else setError(resp.error || "No se pudo registrar la solicitud.");
@@ -222,29 +230,79 @@ function ModalNuevaSolicitud({ onCerrar, onCreada }){
   );
 }
 
-function DetalleSolicitud({ orden, onVolver }){
-  const [convirtiendo, setConvirtiendo] = useState(false);
+function ModalAnular({ solicitud, onCerrar, onAnulada }){
+  const [motivo, setMotivo] = useState("");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  async function anular(){
+    if (!motivo.trim()){ setError("Escribí el motivo de la anulación."); return; }
+    setGuardando(true); setError("");
+    try {
+      const resp = await tallerActualizar("x_taller_solicitud", solicitud.id, {
+        x_studio_estado: "Anulada",
+        x_studio_motivo_anulacion: motivo.trim(),
+      });
+      if (resp.ok) onAnulada();
+      else setError(resp.error || "No se pudo anular.");
+    } catch(e) { setError("Error: " + e.message); }
+    finally { setGuardando(false); }
+  }
+
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal", onClick: e => e.stopPropagation() },
+      h("h3", null, "🗑️ Anular Solicitud"),
+      h("div", { className: "campo", style: { marginBottom: "0" } },
+        h("label", null, "Motivo"),
+        h("textarea", { value: motivo, autoFocus: true, onChange: e => setMotivo(e.target.value), placeholder: "El cliente ya no la necesita, se resolvió por su cuenta..." })
+      ),
+      error && h("div", { className: "mensaje-error" }, error),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Volver"),
+        h("button", { className: "btn-peligro", onClick: anular, disabled: guardando }, guardando ? "Guardando..." : "Confirmar anulación")
+      )
+    )
+  );
+}
+
+function DetalleSolicitud({ solicitud, onVolver }){
+  const [modalAnular, setModalAnular] = useState(false);
 
   function m2oTexto(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
 
   function convertir(){
-    setConvirtiendo(true);
-    (window.top || window).location.href = "recepcion.html?convertir=" + orden.id;
+    window.parent.postMessage({ tipo: "navegar", pestana: "recepcion", sufijo: "?desde_solicitud=" + solicitud.id }, "*");
   }
 
   return h("div", null,
     h("button", { className: "btn-secundario", onClick: onVolver, style: { marginBottom: "10px" } }, "← Volver"),
     h("div", { className: "modal-detalle" },
-      h("h3", null, orden.x_name),
+      h("div", { style: { display:"flex", justifyContent:"space-between", alignItems:"flex-start" } },
+        h("h3", null, solicitud.x_name),
+        h("span", { className: "badge-estado estado-" + solicitud.x_studio_estado }, solicitud.x_studio_estado)
+      ),
       h("div", { style: { fontSize: "12px", color: "var(--color-texto-suave)", marginBottom: "12px" } },
-        m2oTexto(orden.x_studio_cliente_id) + " · " + formatearFechaHora(orden.create_date)
+        m2oTexto(solicitud.x_studio_cliente_id) + " · " + formatearFechaHora(solicitud.create_date)
       ),
       h("div", { className: "campo" },
-        h("label", null, "Detalle de la solicitud"),
-        h("div", { style: { whiteSpace: "pre-wrap", fontSize: "13px" } }, orden.x_studio_problema_reportado)
+        h("label", null, "Equipo"),
+        h("div", { style: { fontSize: "13px" } }, solicitud.x_studio_descripcion_equipo)
       ),
-      h("button", { className: "btn-primario", onClick: convertir, disabled: convirtiendo, style: { width: "100%", marginTop: "10px" } },
-        convirtiendo ? "Abriendo..." : "🚜 El equipo llegó — Continuar a Recepción")
+      h("div", { className: "campo" },
+        h("label", null, "Problema reportado"),
+        h("div", { style: { whiteSpace: "pre-wrap", fontSize: "13px" } }, solicitud.x_studio_problema_reportado)
+      ),
+      solicitud.x_studio_estado === "Anulada" && h("div", { className: "campo" },
+        h("label", null, "Motivo de anulación"),
+        h("div", { style: { fontSize: "13px" } }, solicitud.x_studio_motivo_anulacion)
+      ),
+      solicitud.x_studio_estado === "Pendiente" && h(React.Fragment, null,
+        h("button", { className: "btn-primario", onClick: convertir, style: { width: "100%", marginTop: "6px" } },
+          "🚜 El equipo llegó — Continuar a Recepción"),
+        h("button", { className: "btn-peligro", onClick: () => setModalAnular(true), style: { width: "100%", marginTop: "8px" } },
+          "🗑️ Anular solicitud")
+      ),
+      modalAnular && h(ModalAnular, { solicitud, onCerrar: () => setModalAnular(false), onAnulada: onVolver })
     )
   );
 }
@@ -256,6 +314,7 @@ function SolicitudDeServicio(){
   const [errorCarga, setErrorCarga] = useState("");
   const [modalNueva, setModalNueva] = useState(false);
   const [solicitudAbierta, setSolicitudAbierta] = useState(null);
+  const [pestana, setPestana] = useState("pendientes");
 
   useEffect(() => {
     const s = exigirSesion();
@@ -265,9 +324,10 @@ function SolicitudDeServicio(){
   async function cargar(){
     setCargando(true); setErrorCarga("");
     try {
-      const filas = await tallerQuery("x_taller_orden", [
-        "id","x_name","x_studio_cliente_id","x_studio_prioridad","x_studio_problema_reportado","create_date",
-      ], [["x_studio_estado","=","Solicitada"]], 500);
+      const filas = await tallerQuery("x_taller_solicitud", [
+        "id","x_name","x_studio_cliente_id","x_studio_descripcion_equipo","x_studio_problema_reportado",
+        "x_studio_prioridad","x_studio_estado","x_studio_motivo_anulacion","create_date",
+      ], [], 1000);
       setSolicitudes(filas);
     } catch(e) {
       setErrorCarga("No se pudieron cargar las solicitudes: " + e.message);
@@ -283,15 +343,20 @@ function SolicitudDeServicio(){
   }
 
   if (solicitudAbierta) {
-    return h(DetalleSolicitud, { orden: solicitudAbierta, onVolver: () => setSolicitudAbierta(null) });
+    return h(DetalleSolicitud, { solicitud: solicitudAbierta, onVolver: () => { setSolicitudAbierta(null); cargar(); } });
   }
+
+  const pendientes = (solicitudes || []).filter(s => s.x_studio_estado === "Pendiente");
+  const otras = (solicitudes || []).filter(s => s.x_studio_estado !== "Pendiente");
 
   const columnas = [
     { clave: "x_name", titulo: "Folio" },
     { clave: "x_studio_cliente_id", titulo: "Cliente" },
+    { clave: "x_studio_descripcion_equipo", titulo: "Equipo" },
     { clave: "x_studio_prioridad", titulo: "Prioridad" },
     { clave: "create_date", titulo: "Fecha", formatear: formatearFechaHora },
   ];
+  const columnasOtras = [...columnas, { clave: "x_studio_estado", titulo: "Estado" }];
 
   return h("div", null,
     h("div", { className: "barra-superior" },
@@ -301,14 +366,24 @@ function SolicitudDeServicio(){
         h("button", { className: "btn-primario", onClick: () => setModalNueva(true) }, "+ Nueva Solicitud")
       )
     ),
+    h("div", { className: "pestanas" },
+      h("button", { className: "pestana" + (pestana === "pendientes" ? " activa" : ""), onClick: () => setPestana("pendientes") },
+        "Pendientes (" + pendientes.length + ")"),
+      h("button", { className: "pestana" + (pestana === "otras" ? " activa" : ""), onClick: () => setPestana("otras") },
+        "Convertidas / Anuladas (" + otras.length + ")")
+    ),
     h("div", { className: "panel" },
       cargando
         ? h("div", { className: "cargando" }, "Cargando...")
         : errorCarga
           ? h("div", { className: "error-carga" }, errorCarga)
-          : solicitudes.length === 0
-            ? h("div", { className: "error-carga" }, "No hay solicitudes pendientes ahora mismo.")
-            : TablaInfoAgro(h, { columnas, filas: solicitudes, onFilaClick: setSolicitudAbierta })
+          : pestana === "pendientes"
+            ? (pendientes.length === 0
+                ? h("div", { className: "error-carga" }, "No hay solicitudes pendientes ahora mismo.")
+                : TablaInfoAgro(h, { columnas, filas: pendientes, onFilaClick: setSolicitudAbierta }))
+            : (otras.length === 0
+                ? h("div", { className: "error-carga" }, "Sin historial todavía.")
+                : TablaInfoAgro(h, { columnas: columnasOtras, filas: otras, onFilaClick: setSolicitudAbierta }))
     ),
     modalNueva && h(ModalNuevaSolicitud, { onCerrar: () => setModalNueva(false), onCreada: () => { setModalNueva(false); cargar(); } })
   );

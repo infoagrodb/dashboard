@@ -102,26 +102,25 @@ function SolicitarServicio(){
         clienteId = rCliente.id;
       }
 
-      const rFolio = await fetch(WORKER_BASE + "/taller/folio?prefijo=OT");
+      const rFolio = await fetch(WORKER_BASE + "/taller/folio?prefijo=SOL");
       const jFolio = await rFolio.json();
       if (!jFolio.ok) { setError("No se pudo generar el número de solicitud."); setEnviando(false); return; }
 
-      const rOrden = await llamarWorker("/taller/crear", {
-        model: "x_taller_orden",
+      const rSolicitud = await llamarWorker("/taller/crear", {
+        model: "x_taller_solicitud",
         values: {
           x_name: jFolio.folio,
           x_studio_cliente_id: clienteId,
-          x_studio_estado: "Solicitada",
+          x_studio_descripcion_equipo: equipo.trim(),
+          x_studio_problema_reportado: problema.trim(),
           x_studio_prioridad: "Normal",
-          x_studio_problema_reportado: "Equipo (según el cliente): " + equipo.trim() + "\n\nProblema reportado: " + problema.trim(),
-          x_studio_requiere_presupuesto: true,
-          x_studio_observaciones: "Solicitud enviada por el cliente vía link público.",
+          x_studio_estado: "Pendiente",
         },
       });
-      if (rOrden.ok) {
+      if (rSolicitud.ok) {
         setFolioCreado(jFolio.folio);
       } else {
-        setError(rOrden.error || "No se pudo registrar tu solicitud.");
+        setError(rSolicitud.error || "No se pudo registrar tu solicitud.");
       }
     } catch(e) {
       setError("No se pudo conectar: " + e.message);

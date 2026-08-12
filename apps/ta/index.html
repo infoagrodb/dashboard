@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=7"></script>
+<script src="core.js?v=8"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -147,16 +147,30 @@ function App(){
   const [sesion, setSesion] = useState(null);
   const [pestanaActiva, setPestanaActiva] = useState(null);
   const [sidebarAbierta, setSidebarAbierta] = useState(false);
+  const [sufijoIframe, setSufijoIframe] = useState("");
 
   useEffect(() => {
     const s = exigirSesion();
     if (s) setSesion(s);
+
+    // Permite que una pestaña (dentro del iframe) le pida al panel navegar a otra
+    // pestaña sin salirse del shell — usado, por ejemplo, al convertir una
+    // Solicitud de Servicio en Recepción.
+    function alMensaje(e){
+      if (e.data && e.data.tipo === "navegar" && e.data.pestana) {
+        setPestanaActiva(e.data.pestana);
+        setSufijoIframe(e.data.sufijo || "");
+      }
+    }
+    window.addEventListener("message", alMensaje);
+    return () => window.removeEventListener("message", alMensaje);
   }, []);
 
   if (!sesion) return null;
 
   function elegirPestana(item){
     setPestanaActiva(item.id);
+    setSufijoIframe("");
     setSidebarAbierta(false);
   }
 
@@ -208,7 +222,7 @@ function App(){
       ),
       h("div", { className: "marco-host" },
         itemActual
-          ? h("iframe", { id: "marco", src: itemActual.href, title: itemActual.label })
+          ? h("iframe", { id: "marco", src: itemActual.href + sufijoIframe, title: itemActual.label })
           : h("div", { className: "bienvenida" },
               h("div", { className: "icono-grande" }, "🔧"),
               h("div", null, "Elegí una sección del menú para empezar.")
