@@ -233,18 +233,22 @@ function AprobarCierre(){
     const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "";
     const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "";
 
-    doc.setFillColor(22,163,74); doc.rect(0,0,ancho,24,"F");
-    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(15);
-    doc.text("INFOTALLER", 14, 12);
-    doc.setFont(undefined,"normal"); doc.setFontSize(9);
-    doc.text("División Agrícola — COMASA", 14, 18);
-    doc.setFont(undefined,"bold"); doc.setFontSize(13);
-    doc.text("CIERRE DE ORDEN", ancho-14, 12, { align:"right" });
-    doc.setFont(undefined,"normal"); doc.setFontSize(10);
-    doc.text(cierre.x_name, ancho-14, 18, { align:"right" });
-
     doc.setTextColor(17,24,39);
-    let y = 33;
+    doc.setFont(undefined,"bold"); doc.setFontSize(14);
+    doc.text("INFOTALLER", 14, 14);
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 19);
+    doc.text("Departamento de Taller", 14, 23.5);
+
+    doc.setFont(undefined,"bold"); doc.setFontSize(13);
+    doc.text("CIERRE DE ORDEN", ancho-14, 14, { align:"right" });
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("N.º: " + cierre.x_name, ancho-14, 19, { align:"right" });
+
+    doc.setDrawColor(17,24,39); doc.setLineWidth(0.5);
+    doc.line(14, 28, ancho-14, 28);
+
+    let y = 36;
     doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("ORDEN", 14, y);
     doc.setFont(undefined,"normal"); doc.text((orden ? orden.x_name : "—"), 14, y+5);
     doc.setFont(undefined,"bold"); doc.text("CLIENTE", 90, y);
@@ -254,6 +258,10 @@ function AprobarCierre(){
     doc.setFont(undefined,"normal"); doc.text(equipoNombre || "—", 14, y+5);
     doc.setFont(undefined,"bold"); doc.text("FECHA DE CIERRE", 90, y);
     doc.setFont(undefined,"normal"); doc.text(formatearFecha(cierre.x_studio_fecha_cierre), 90, y+5);
+    y += 12;
+    // Trazabilidad: fecha en que se recibió la orden originalmente
+    doc.setFont(undefined,"bold"); doc.text("FECHA DE LA ORDEN", 14, y);
+    doc.setFont(undefined,"normal"); doc.text(orden ? formatearFecha(orden.x_studio_fecha_recepcion) : "—", 14, y+5);
     y += 14;
 
     doc.setFont(undefined,"bold"); doc.setFontSize(9); doc.text("DIAGNÓSTICO FINAL", 14, y); y += 5;
@@ -275,8 +283,8 @@ function AprobarCierre(){
           c.x_studio_tipo_linea, c.x_studio_descripcion, c.x_studio_cantidad_real + " " + (c.x_studio_unidad_medida||""),
           moneda(c.x_studio_costo_unitario_real), moneda(c.x_studio_total_costo_real),
         ]),
-        headStyles: { fillColor:[22,163,74], textColor:255, fontStyle:"bold", fontSize:9 },
-        styles: { fontSize:8.5, cellPadding:3 },
+        headStyles: { fillColor:[255,255,255], textColor:[17,24,39], fontStyle:"bold", fontSize:9, lineWidth:0.3, lineColor:[17,24,39] },
+        styles: { fontSize:8.5, cellPadding:3, textColor:[17,24,39], lineWidth:0.15, lineColor:[200,200,200] },
         columnStyles: { 3:{halign:"right"}, 4:{halign:"right"} },
         margin: { left:14, right:14 },
       });
@@ -292,8 +300,8 @@ function AprobarCierre(){
           (num(m.x_studio_horas_normales)+num(m.x_studio_horas_extra)).toString(),
           m.x_studio_actividad || "", moneda(m.x_studio_costo_total),
         ]),
-        headStyles: { fillColor:[22,163,74], textColor:255, fontStyle:"bold", fontSize:9 },
-        styles: { fontSize:8.5, cellPadding:3 },
+        headStyles: { fillColor:[255,255,255], textColor:[17,24,39], fontStyle:"bold", fontSize:9, lineWidth:0.3, lineColor:[17,24,39] },
+        styles: { fontSize:8.5, cellPadding:3, textColor:[17,24,39], lineWidth:0.15, lineColor:[200,200,200] },
         columnStyles: { 4:{halign:"right"} },
         margin: { left:14, right:14 },
       });
@@ -301,13 +309,15 @@ function AprobarCierre(){
     }
 
     if (y > 230) { doc.addPage(); y = 20; }
-    doc.setFillColor(22,163,74); doc.rect(14,y,ancho-28,14,"F");
-    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(11);
-    doc.text("TOTAL COSTO REAL:", 18, y+9);
-    doc.text(moneda(cierre.x_studio_total_costo_real), ancho-18, y+9, { align:"right" });
-    y += 24;
+    doc.setDrawColor(17,24,39); doc.setLineWidth(0.4);
+    doc.line(14, y, ancho-14, y);
+    y += 7;
+    doc.setFont(undefined,"bold"); doc.setFontSize(11);
+    doc.text("TOTAL COSTO REAL:", 14, y);
+    doc.text(moneda(cierre.x_studio_total_costo_real), ancho-14, y, { align:"right" });
+    y += 14;
 
-    doc.setTextColor(17,24,39); doc.setFont(undefined,"bold"); doc.setFontSize(10);
+    doc.setFont(undefined,"bold"); doc.setFontSize(10);
     doc.text("VISTO BUENO DEL CLIENTE", 14, y); y += 6;
     doc.setFont(undefined,"normal"); doc.setFontSize(9);
     doc.text("Aceptado por: " + (cierre.x_studio_aceptado_por_cliente || nombre || "—"), 14, y); y += 5;

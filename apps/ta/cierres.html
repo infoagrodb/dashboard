@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=11"></script>
+<script src="core.js?v=13"></script>
 <link rel="stylesheet" href="core.css?v=4">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -447,6 +447,7 @@ function FormularioCierre({ orden, onVolver, onCreado }){
 function DetalleCierre({ cierreId, onVolver }){
   const [cierre, setCierre] = useState(null);
   const [orden, setOrden] = useState(null);
+  const [presupuestoUsado, setPresupuestoUsado] = useState(null);
   const [cliente, setCliente] = useState(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -500,7 +501,7 @@ function DetalleCierre({ cierreId, onVolver }){
       setCierre(c);
 
       if (Array.isArray(c.x_studio_orden_id)) {
-        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id"], [["id","=",c.x_studio_orden_id[0]]], 1);
+        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_fecha_recepcion"], [["id","=",c.x_studio_orden_id[0]]], 1);
         if (ordenRows.length) {
           setOrden(ordenRows[0]);
           if (Array.isArray(ordenRows[0].x_studio_cliente_id)) {
@@ -510,6 +511,11 @@ function DetalleCierre({ cierreId, onVolver }){
               "x_studio_lote","x_studio_condiciones_pago",
             ], [["id","=",ordenRows[0].x_studio_cliente_id[0]]], 1);
             if (clienteRows.length) setCliente(clienteRows[0]);
+          }
+          const presUsadoRows = await tallerQuery("x_taller_presupuesto", ["id","x_name","x_studio_version","x_studio_fecha_presupuesto"],
+            [["x_studio_orden_id","=",ordenRows[0].id],["x_studio_estado","=","Aprobado"]], 10);
+          if (presUsadoRows.length) {
+            setPresupuestoUsado(presUsadoRows.sort((a,b) => b.x_studio_version - a.x_studio_version)[0]);
           }
         }
       }
@@ -530,28 +536,39 @@ function DetalleCierre({ cierreId, onVolver }){
     const ancho = doc.internal.pageSize.getWidth();
     const esInterno = cliente && cliente.x_studio_tipo_cliente === "Interno";
 
-    doc.setFillColor(22, 163, 74);
-    doc.rect(0, 0, ancho, 24, "F");
-    doc.setTextColor(255,255,255); doc.setFont(undefined, "bold"); doc.setFontSize(16);
-    doc.text("INFOTALLER", 14, 12);
+    doc.setTextColor(17, 24, 39);
+    doc.setFont(undefined, "bold"); doc.setFontSize(14);
+    doc.text("INFOTALLER", 14, 14);
     doc.setFont(undefined, "normal"); doc.setFontSize(9);
-    doc.text("División Agrícola — COMASA", 14, 18);
-    doc.setFont(undefined, "bold"); doc.setFontSize(13);
-    doc.text("DOCUMENTO DE SOPORTE", ancho - 14, 12, { align: "right" });
-    doc.setFont(undefined, "normal"); doc.setFontSize(10);
-    doc.text(orden ? orden.x_name : "", ancho - 14, 18, { align: "right" });
+    doc.text("División Agrícola — COMASA", 14, 19);
+    doc.text("Departamento de Taller", 14, 23.5);
 
-    doc.setTextColor(17,24,39);
-    let y = 34;
+    doc.setFont(undefined, "bold"); doc.setFontSize(13);
+    doc.text("DOCUMENTO DE SOPORTE", ancho - 14, 14, { align: "right" });
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("Cierre: " + cierre.x_name, ancho - 14, 19, { align: "right" });
+    doc.text("Orden: " + (orden ? orden.x_name : "—"), ancho - 14, 23.5, { align: "right" });
+
+    doc.setDrawColor(17, 24, 39); doc.setLineWidth(0.5);
+    doc.line(14, 28, ancho - 14, 28);
+
+    let y = 36;
     doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.text("CLIENTE", 14, y);
     doc.setFont(undefined, "normal"); doc.text(cliente ? cliente.x_name : "—", 14, y + 5);
     doc.setFont(undefined, "bold"); doc.text("EQUIPO", 110, y);
     doc.setFont(undefined, "normal"); doc.text(orden ? m2oTexto(orden.x_studio_equipo_id) : "—", 110, y + 5);
+    y += 12;
+    // Trazabilidad: fecha en que se recibió la orden vs. fecha del presupuesto que se usó
+    doc.setFont(undefined, "bold"); doc.text("FECHA DE LA ORDEN", 14, y);
+    doc.setFont(undefined, "normal"); doc.text(orden ? formatearFecha(orden.x_studio_fecha_recepcion) : "—", 14, y + 5);
+    doc.setFont(undefined, "bold"); doc.text("PRESUPUESTO USADO", 110, y);
+    doc.setFont(undefined, "normal");
+    doc.text(presupuestoUsado ? presupuestoUsado.x_name + " (" + formatearFecha(presupuestoUsado.x_studio_fecha_presupuesto) + ")" : "—", 110, y + 5);
     y += 14;
 
     // Bloque de cargo — distinto según interno/externo, que es justo lo que pidió el gerente
-    doc.setFillColor(248, 250, 252);
-    doc.rect(14, y, ancho - 28, esInterno ? 26 : 22, "F");
+    doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.2);
+    doc.rect(14, y, ancho - 28, esInterno ? 26 : 22, "S");
     doc.setFont(undefined, "bold"); doc.setFontSize(9);
     doc.text(esInterno ? "CARGAR A CENTRO DE COSTO" : "CUENTA POR COBRAR — CLIENTE EXTERNO", 18, y + 7);
     doc.setFont(undefined, "normal"); doc.setFontSize(9);
@@ -572,21 +589,22 @@ function DetalleCierre({ cierreId, onVolver }){
         ["Total costo real", moneda(cierre.x_studio_total_costo_real)],
         ["Variación", (cierre.x_studio_variacion_total >= 0 ? "+" : "") + moneda(cierre.x_studio_variacion_total) + " (" + num(cierre.x_studio_porcentaje_variacion).toFixed(1) + "%)"],
       ],
-      headStyles: { fillColor: [22,163,74], textColor: 255, fontStyle: "bold", fontSize: 9 },
-      styles: { fontSize: 9.5, cellPadding: 4, textColor: [17,24,39] },
+      headStyles: { fillColor: [255,255,255], textColor: [17,24,39], fontStyle: "bold", fontSize: 9, lineWidth: 0.3, lineColor: [17,24,39] },
+      styles: { fontSize: 9.5, cellPadding: 4, textColor: [17,24,39], lineWidth: 0.15, lineColor: [200,200,200] },
       columnStyles: { 1: { halign: "right", fontStyle: "bold" } },
       margin: { left: 14, right: 14 },
     });
     let yFinal = doc.lastAutoTable.finalY + 10;
 
-    doc.setFillColor(22, 163, 74);
-    doc.rect(14, yFinal, ancho - 28, 14, "F");
-    doc.setTextColor(255,255,255); doc.setFont(undefined, "bold"); doc.setFontSize(12);
-    doc.text("TOTAL A " + (esInterno ? "CARGAR" : "FACTURAR") + ":", 18, yFinal + 9);
-    doc.text(moneda(cierre.x_studio_total_costo_real), ancho - 18, yFinal + 9, { align: "right" });
-    yFinal += 24;
+    doc.setDrawColor(17, 24, 39); doc.setLineWidth(0.4);
+    doc.line(14, yFinal, ancho - 14, yFinal);
+    yFinal += 7;
+    doc.setTextColor(17,24,39); doc.setFont(undefined, "bold"); doc.setFontSize(12);
+    doc.text("TOTAL A " + (esInterno ? "CARGAR" : "FACTURAR") + ":", 14, yFinal);
+    doc.text(moneda(cierre.x_studio_total_costo_real), ancho - 14, yFinal, { align: "right" });
+    yFinal += 14;
 
-    doc.setTextColor(17,24,39); doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
     doc.text("Diagnóstico: " + (cierre.x_studio_diagnostico_final || "—").slice(0, 110), 14, yFinal);
     yFinal += 6;
     doc.text("Resultado de prueba: " + (cierre.x_studio_resultado_prueba || "—") + "   Aceptado por: " + (cierre.x_studio_aceptado_por_cliente || "—"), 14, yFinal);

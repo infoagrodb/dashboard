@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=11"></script>
+<script src="core.js?v=13"></script>
 <link rel="stylesheet" href="core.css?v=4">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -155,18 +155,22 @@ function EstadoDeCuenta({ cliente, cierres, desdeEfectivo, hastaEfectivo, etique
     if (typeof doc.autoTable !== "function") { alert("El complemento de tablas no cargó — recargá la página."); return; }
     const ancho = doc.internal.pageSize.getWidth();
 
-    doc.setFillColor(22,163,74); doc.rect(0,0,ancho,24,"F");
-    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(15);
-    doc.text("INFOTALLER", 14, 12);
-    doc.setFont(undefined,"normal"); doc.setFontSize(9);
-    doc.text("División Agrícola — COMASA", 14, 18);
-    doc.setFont(undefined,"bold"); doc.setFontSize(13);
-    doc.text("ESTADO DE CUENTA", ancho-14, 12, { align:"right" });
-    doc.setFont(undefined,"normal"); doc.setFontSize(9);
-    doc.text(etiquetaRango, ancho-14, 18, { align:"right" });
-
     doc.setTextColor(17,24,39);
-    let y = 33;
+    doc.setFont(undefined,"bold"); doc.setFontSize(14);
+    doc.text("INFOTALLER", 14, 14);
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 19);
+    doc.text("Departamento de Taller", 14, 23.5);
+
+    doc.setFont(undefined,"bold"); doc.setFontSize(13);
+    doc.text("ESTADO DE CUENTA", ancho-14, 14, { align:"right" });
+    doc.setFont(undefined,"normal"); doc.setFontSize(9);
+    doc.text(etiquetaRango, ancho-14, 19, { align:"right" });
+
+    doc.setDrawColor(17,24,39); doc.setLineWidth(0.5);
+    doc.line(14, 28, ancho-14, 28);
+
+    let y = 36;
     doc.setFont(undefined,"bold"); doc.setFontSize(12); doc.text(cliente.x_name, 14, y);
     y += 6;
     doc.setFont(undefined,"normal"); doc.setFontSize(9);
@@ -181,18 +185,20 @@ function EstadoDeCuenta({ cliente, cierres, desdeEfectivo, hastaEfectivo, etique
         formatearFecha(c.x_studio_fecha_cierre), c._ordenNombre || "—", c._equipoNombre || "—",
         (c.x_studio_diagnostico_final || "—").slice(0,60), moneda(c.x_studio_total_costo_real),
       ]),
-      headStyles: { fillColor:[22,163,74], textColor:255, fontStyle:"bold", fontSize:9 },
-      styles: { fontSize:8, cellPadding:3 },
+      headStyles: { fillColor:[255,255,255], textColor:[17,24,39], fontStyle:"bold", fontSize:9, lineWidth:0.3, lineColor:[17,24,39] },
+      styles: { fontSize:8, cellPadding:3, textColor:[17,24,39], lineWidth:0.15, lineColor:[200,200,200] },
       columnStyles: { 4:{halign:"right"} },
       margin: { left:14, right:14 },
     });
     let yFinal = doc.lastAutoTable.finalY + 10;
 
     if (yFinal > 240) { doc.addPage(); yFinal = 20; }
-    doc.setFillColor(22,163,74); doc.rect(14,yFinal,ancho-28,14,"F");
-    doc.setTextColor(255,255,255); doc.setFont(undefined,"bold"); doc.setFontSize(12);
-    doc.text("TOTAL DEL PERÍODO (" + totalOrdenes + " orden" + (totalOrdenes===1?"":"es") + "):", 18, yFinal+9);
-    doc.text(moneda(totalGastado), ancho-18, yFinal+9, { align:"right" });
+    doc.setDrawColor(17,24,39); doc.setLineWidth(0.4);
+    doc.line(14, yFinal, ancho-14, yFinal);
+    yFinal += 7;
+    doc.setFont(undefined,"bold"); doc.setFontSize(12);
+    doc.text("TOTAL DEL PERÍODO (" + totalOrdenes + " orden" + (totalOrdenes===1?"":"es") + "):", 14, yFinal);
+    doc.text(moneda(totalGastado), ancho-14, yFinal, { align:"right" });
 
     doc.save("estado_cuenta_" + cliente.x_name.replace(/\s+/g,"_") + ".pdf");
   }

@@ -19,7 +19,7 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=11"></script>
+<script src="core.js?v=13"></script>
 <link rel="stylesheet" href="core.css?v=4">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
@@ -444,7 +444,7 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
       setPresupuesto(presRows[0]);
       setLineas(lineasRows);
       if (Array.isArray(presRows[0].x_studio_orden_id)) {
-        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id"], [["id","=",presRows[0].x_studio_orden_id[0]]], 1);
+        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_fecha_recepcion"], [["id","=",presRows[0].x_studio_orden_id[0]]], 1);
         if (ordenRows.length) setOrden(ordenRows[0]);
       }
     } catch(e) {
@@ -586,32 +586,38 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
     const clienteNombre = orden && Array.isArray(orden.x_studio_cliente_id) ? orden.x_studio_cliente_id[1] : "—";
     const equipoNombre = orden && Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "—";
 
-    // Encabezado con marca
-    doc.setFillColor(22, 163, 74);
-    doc.rect(0, 0, anchoPagina, 24, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont(undefined, "bold"); doc.setFontSize(16);
-    doc.text("INFOTALLER", 14, 12);
-    doc.setFont(undefined, "normal"); doc.setFontSize(9);
-    doc.text("División Agrícola — COMASA", 14, 18);
-    doc.setFont(undefined, "bold"); doc.setFontSize(14);
-    doc.text("PRESUPUESTO", anchoPagina - 14, 12, { align: "right" });
-    doc.setFont(undefined, "normal"); doc.setFontSize(10);
-    doc.text(presupuesto.x_name, anchoPagina - 14, 18, { align: "right" });
-
-    // Datos de la orden / cliente / equipo
+    // Encabezado plano — sin bloques de color, estilo cotización formal
     doc.setTextColor(17, 24, 39);
-    let y = 33;
+    doc.setFont(undefined, "bold"); doc.setFontSize(14);
+    doc.text("INFOTALLER", 14, 14);
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("División Agrícola — COMASA", 14, 19);
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("Departamento de Taller", 14, 23.5);
+
+    doc.setFont(undefined, "bold"); doc.setFontSize(13);
+    doc.text("PRESUPUESTO", anchoPagina - 14, 14, { align: "right" });
+    doc.setFont(undefined, "normal"); doc.setFontSize(9);
+    doc.text("N.º: " + presupuesto.x_name, anchoPagina - 14, 19, { align: "right" });
+    doc.text("Versión: " + presupuesto.x_studio_version, anchoPagina - 14, 23.5, { align: "right" });
+
+    doc.setDrawColor(17, 24, 39);
+    doc.setLineWidth(0.5);
+    doc.line(14, 28, anchoPagina - 14, 28);
+
+    // Datos de la orden / cliente / equipo — con trazabilidad de fechas (orden vs. versión del presupuesto)
+    let y = 36;
     const filaDato = (etiqueta, valor, x) => {
       doc.setFont(undefined, "bold"); doc.setFontSize(9); doc.text(etiqueta, x, y);
       doc.setFont(undefined, "normal"); doc.text(String(valor || "—"), x, y + 5);
     };
     filaDato("ORDEN", orden ? orden.x_name : "—", 14);
-    filaDato("FECHA", formatearFecha(presupuesto.x_studio_fecha_presupuesto), 90);
-    filaDato("VIGENCIA", (presupuesto.x_studio_vigencia_dias || 0) + " días", 150);
+    filaDato("FECHA DE LA ORDEN", orden ? formatearFecha(orden.x_studio_fecha_recepcion) : "—", 90);
+    filaDato("FECHA DE ESTA VERSIÓN", formatearFecha(presupuesto.x_studio_fecha_presupuesto), 150);
     y += 12;
     filaDato("CLIENTE", clienteNombre, 14);
     filaDato("EQUIPO", equipoNombre, 90);
+    filaDato("VIGENCIA", (presupuesto.x_studio_vigencia_dias || 0) + " días", 150);
     y += 14;
 
     // Tabla de líneas — ordenadas por tipo: Repuesto, Material, Servicio, Mano de obra, Otro
@@ -630,10 +636,9 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
         moneda(l.x_studio_costo_manual),
         moneda(num(l.x_studio_cantidad_presupuestada) * num(l.x_studio_costo_manual)),
       ]),
-      headStyles: { fillColor: [22, 163, 74], textColor: 255, fontStyle: "bold", fontSize: 9 },
-      styles: { fontSize: 9, cellPadding: 3, textColor: [17, 24, 39] },
+      headStyles: { fillColor: [255,255,255], textColor: [17,24,39], fontStyle: "bold", fontSize: 9, lineWidth: 0.3, lineColor: [17,24,39] },
+      styles: { fontSize: 9, cellPadding: 3, textColor: [17, 24, 39], lineWidth: 0.15, lineColor: [200,200,200] },
       columnStyles: { 2: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
       margin: { left: 14, right: 14 },
     });
 
