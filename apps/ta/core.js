@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v12 cargado correctamente (búsqueda global en tablas)");
+console.log("core.js v13 cargado correctamente (búsqueda por palabra, no frase completa)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -389,11 +389,14 @@ function TablaInfoAgro(h, props) {
 
     // Filas que pasan la búsqueda libre (todas las columnas a la vez) Y todos los filtros de columna activos
     const filasFiltradas = useMemo(() => {
-      const termino = busquedaGlobal.trim().toLocaleLowerCase("es");
+      const palabras = busquedaGlobal.trim().toLocaleLowerCase("es").split(/\s+/).filter(Boolean);
       return filas.filter(fila => {
-        if (termino) {
-          const coincide = columnas.some(col => valorDeCelda(fila, col).toLocaleLowerCase("es").includes(termino));
-          if (!coincide) return false;
+        if (palabras.length) {
+          // El texto de toda la fila junto — cada palabra puede estar en una columna distinta
+          // (ej. "nh 16" encuentra "Tractor NH 18" en una columna y "OT-000016" en otra).
+          const textoFila = columnas.map(col => valorDeCelda(fila, col).toLocaleLowerCase("es")).join(" | ");
+          const coincideTodas = palabras.every(p => textoFila.includes(p));
+          if (!coincideTodas) return false;
         }
         return columnas.every(col => {
           const set = filtros[col.clave];
