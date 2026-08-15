@@ -13,7 +13,7 @@
    build system, todo es copiar/pegar manual si hace falta
    replicarlo en otro proyecto.
    ============================================================ */
-console.log("core.js v11 cargado correctamente (paginación segura + timeout Exactus)");
+console.log("core.js v12 cargado correctamente (búsqueda global en tablas)");
 
 const INFOTALLER_WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
 
@@ -365,6 +365,7 @@ function TablaInfoAgro(h, props) {
     const [panelAbierto, setPanelAbierto] = useState(null); // clave de columna con el panel de filtro visible
     const [busquedaPanel, setBusquedaPanel] = useState("");
     const [seleccionTemp, setSeleccionTemp] = useState(null); // selección en edición dentro del panel abierto
+    const [busquedaGlobal, setBusquedaGlobal] = useState(""); // texto libre — busca en todas las columnas a la vez
     const contenedorRef = useRef(null);
 
     function valorDeCelda(fila, col) {
@@ -386,16 +387,21 @@ function TablaInfoAgro(h, props) {
       return () => document.removeEventListener("mousedown", alClicFuera);
     }, []);
 
-    // Filas que pasan TODOS los filtros activos
+    // Filas que pasan la búsqueda libre (todas las columnas a la vez) Y todos los filtros de columna activos
     const filasFiltradas = useMemo(() => {
-      return filas.filter(fila =>
-        columnas.every(col => {
+      const termino = busquedaGlobal.trim().toLocaleLowerCase("es");
+      return filas.filter(fila => {
+        if (termino) {
+          const coincide = columnas.some(col => valorDeCelda(fila, col).toLocaleLowerCase("es").includes(termino));
+          if (!coincide) return false;
+        }
+        return columnas.every(col => {
           const set = filtros[col.clave];
           if (!set) return true; // sin filtro en esta columna = pasa
           return set.has(valorDeCelda(fila, col));
-        })
-      );
-    }, [filas, filtros]);
+        });
+      });
+    }, [filas, filtros, busquedaGlobal]);
 
     const filasOrdenadas = useMemo(() => {
       if (!orden) return filasFiltradas;
@@ -469,6 +475,17 @@ function TablaInfoAgro(h, props) {
     const hayFiltrosActivos = Object.keys(filtros).length > 0;
 
     return h("div", { className: "tabla-infoagro-envoltura", ref: contenedorRef },
+      h("div", { className: "tabla-panel-busqueda" },
+        h("span", { className: "tabla-busqueda-icono" }, "🔍"),
+        h("input", {
+          type: "text", className: "tabla-busqueda-input",
+          placeholder: "Buscar en todos los campos...",
+          value: busquedaGlobal,
+          onChange: e => setBusquedaGlobal(e.target.value),
+        }),
+        busquedaGlobal && h("button", { className: "tabla-busqueda-limpiar", onClick: () => setBusquedaGlobal("") }, "✕"),
+        busquedaGlobal && h("span", { className: "tabla-busqueda-conteo" }, filasFiltradas.length + " de " + filas.length)
+      ),
       hayFiltrosActivos && h("div", { className: "tabla-barra-filtros" },
         h("span", null, "Filtros activos:"),
         Object.keys(filtros).map(clave => {
