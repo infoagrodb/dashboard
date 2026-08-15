@@ -20,7 +20,7 @@
   }, true);
 </script>
 <script src="core.js?v=11"></script>
-<link rel="stylesheet" href="core.css?v=2">
+<link rel="stylesheet" href="core.css?v=4">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
@@ -98,10 +98,12 @@ function BarraDistribucion({ datos, maximo, formatearValor }){
 }
 
 function FiltroFecha({ rango, setRango, fechaDesde, setFechaDesde, fechaHasta, setFechaHasta }){
-  return h("div", { className: "panel filtro-fecha" },
+  return h("div", { className: "ia-panel", style: { display:"flex", flexWrap:"wrap", gap:"12px", alignItems:"center" } },
     h("span", { style: { fontSize:"12px", color:"var(--color-texto-suave)", fontWeight:600 } }, "Período:"),
-    [["todo","Todo el histórico"],["anio","Este año"],["mes","Este mes"],["personalizado","Rango personalizado"]].map(([valor,etiqueta]) =>
-      h("button", { key: valor, className: "chip-rango" + (rango === valor ? " activo" : ""), onClick: () => setRango(valor) }, etiqueta)
+    h("div", { className: "ia-pildora-grupo" },
+      [["todo","Todo el histórico"],["anio","Este año"],["mes","Este mes"],["personalizado","Rango personalizado"]].map(([valor,etiqueta]) =>
+        h("button", { key: valor, className: "ia-pildora" + (rango === valor ? " activa" : ""), onClick: () => setRango(valor) }, etiqueta)
+      )
     ),
     rango === "personalizado" && h(React.Fragment, null,
       h("input", { type: "date", value: fechaDesde, onChange: e => setFechaDesde(e.target.value) }),
@@ -235,10 +237,21 @@ function EstadoDeCuenta({ cliente, cierres, desdeEfectivo, hastaEfectivo, etique
       )
     ),
 
-    h("div", { className: "kpis" },
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total del período"), h("div", { className: "valor" }, moneda(totalGastado))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Órdenes cerradas"), h("div", { className: "valor" }, totalOrdenes)),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Promedio por orden"), h("div", { className: "valor" }, moneda(promedio)))
+    h("div", { className: "ia-kpis" },
+      h("div", { className: "ia-kpi-destacada" },
+        h("div", { className: "ia-kpi-destacada-etiqueta" }, "Total del período"),
+        h("div", { className: "ia-kpi-destacada-valor" }, moneda(totalGastado))
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono azul" }, "✅"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Órdenes cerradas"),
+        h("div", { className: "ia-kpi-valor" }, totalOrdenes)
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono morado" }, "📊"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Promedio por orden"),
+        h("div", { className: "ia-kpi-valor" }, moneda(promedio))
+      )
     ),
 
     distribucionFamilia.length > 0 && h("div", { className: "panel" },
@@ -397,10 +410,21 @@ function EstadoCuentaPrincipal(){
 
     h(FiltroFecha, { rango, setRango, fechaDesde, setFechaDesde, fechaHasta, setFechaHasta }),
 
-    h("div", { className: "kpis" },
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Clientes con gasto"), h("div", { className: "valor" }, clientesConGasto.length)),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total del período"), h("div", { className: "valor" }, moneda(totalGeneral))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Órdenes cerradas"), h("div", { className: "valor" }, cierresFiltrados.length))
+    h("div", { className: "ia-kpis" },
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono azul" }, "🧑‍🤝‍🧑"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Clientes con gasto"),
+        h("div", { className: "ia-kpi-valor" }, clientesConGasto.length)
+      ),
+      h("div", { className: "ia-kpi-destacada" },
+        h("div", { className: "ia-kpi-destacada-etiqueta" }, "Total del período"),
+        h("div", { className: "ia-kpi-destacada-valor" }, moneda(totalGeneral))
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono morado" }, "✅"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Órdenes cerradas"),
+        h("div", { className: "ia-kpi-valor" }, cierresFiltrados.length)
+      )
     ),
 
     distribucionFamiliaGeneral.length > 0 && h("div", { className: "panel" },

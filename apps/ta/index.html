@@ -9,17 +9,6 @@
     var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
     var caja = document.getElementById('cajaErrorDiag');
     if (!caja) {
-      caja = document.createElement('div');<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Infotaller — Panel</title>
-<script>
-  window.addEventListener('error', function(e){
-    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
-    var caja = document.getElementById('cajaErrorDiag');
-    if (!caja) {
       caja = document.createElement('div');
       caja.id = 'cajaErrorDiag';
       caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
@@ -35,12 +24,12 @@
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
   :root{
-    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-fondo:#EEF1F5; --color-panel:#ffffff; --color-borde:#E4E9EE;
     --color-texto:#111827; --color-texto-suave:#6B7280;
     --color-primario:#16A34A; --color-primario-oscuro:#15803D;
     --color-acento:#22C55E; --color-acento-suave:#D1FAE5;
-    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
-    --ancho-sidebar:250px; --alto-header:56px;
+    --radio:18px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 8px 20px rgba(17,24,39,.06);
+    --ancho-sidebar:250px; --alto-header:64px;
   }
   *{box-sizing:border-box;}
   html,body,#raiz{height:100%; margin:0;}
@@ -49,67 +38,87 @@
     background:var(--color-fondo); color:var(--color-texto); font-size:14px;
   }
 
-  .app{display:flex; height:100vh; overflow:hidden;}
+  .app{display:flex; gap:14px; height:100vh; overflow:hidden; padding:14px;}
 
   .sidebar{
-    width:var(--ancho-sidebar); flex-shrink:0; background:#fff; border-right:1px solid var(--color-borde);
-    display:flex; flex-direction:column; transition:margin-left .2s;
+    width:var(--ancho-sidebar); flex-shrink:0; background:#fff; border-radius:var(--radio);
+    box-shadow:var(--sombra); display:flex; flex-direction:column; transition:margin-left .2s;
+    padding:16px 14px; overflow-y:auto;
   }
   .sidebar-marca{
-    display:flex; align-items:center; gap:8px; padding:16px; font-weight:700; font-size:15px;
-    color:var(--color-primario-oscuro); border-bottom:1px solid var(--color-borde);
+    display:flex; align-items:center; gap:10px; padding:6px 6px 18px; font-weight:800; font-size:16px;
+    color:var(--color-primario-oscuro); letter-spacing:-.01em;
   }
-  .sidebar-grupo{padding:14px 10px 4px;}
+  .sidebar-marca .marca-icono{
+    width:36px; height:36px; border-radius:11px; background:linear-gradient(135deg,#22C55E,#15803D);
+    display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; box-shadow:0 3px 8px rgba(22,163,74,.3);
+  }
+  .sidebar-grupo{padding:12px 2px 4px;}
   .sidebar-grupo-titulo{
-    font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-texto-suave);
-    padding:0 10px; margin-bottom:6px;
+    font-size:10px; text-transform:uppercase; letter-spacing:.06em; font-weight:700; color:#9CA3AF;
+    padding:0 12px; margin-bottom:8px;
   }
   .sidebar-item{
-    display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:none;
-    background:transparent; color:var(--color-texto); font-size:13.5px; padding:9px 12px;
-    border-radius:8px; cursor:pointer; margin-bottom:2px;
+    display:flex; align-items:center; gap:11px; width:100%; text-align:left; border:none;
+    background:transparent; color:#374151; font-size:13.5px; padding:10px 14px;
+    border-radius:999px; cursor:pointer; margin-bottom:3px; transition:background .12s;
   }
-  .sidebar-item:hover{background:var(--color-fondo);}
-  .sidebar-item.activo{background:var(--color-acento-suave); color:var(--color-primario-oscuro); font-weight:600;}
-  .sidebar-item .icono{font-size:15px; width:18px; text-align:center;}
+  .sidebar-item:hover{background:#F1F5F9;}
+  .sidebar-item.activo{
+    background:linear-gradient(135deg,#16A34A,#15803D); color:#fff; font-weight:700;
+    box-shadow:0 4px 10px rgba(22,163,74,.28);
+  }
+  .sidebar-item .icono{
+    font-size:14px; width:26px; height:26px; border-radius:50%; background:#F1F5F9; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .sidebar-item.activo .icono{ background:rgba(255,255,255,.22); }
 
-  .contenido{flex:1; display:flex; flex-direction:column; min-width:0;}
+  .contenido{flex:1; display:flex; flex-direction:column; min-width:0; gap:14px; min-height:0;}
   .header{
     height:var(--alto-header); flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
-    padding:0 20px; background:#fff; border-bottom:1px solid var(--color-borde); box-shadow:var(--sombra);
+    padding:0 22px; background:#fff; border-radius:999px; box-shadow:var(--sombra);
   }
-  .header-izq{display:flex; align-items:center;}
-  .header-titulo{font-size:15.5px; font-weight:600;}
+  .header-izq{display:flex; align-items:center; gap:14px; flex:1; min-width:0;}
+  .header-titulo{font-size:16px; font-weight:700;}
   .btn-hamburguesa{display:none; background:none; border:none; font-size:20px; cursor:pointer; margin-right:10px;}
-  .usuario-caja{display:flex; align-items:center; gap:10px;}
-  .usuario-nombre{font-size:13px; font-weight:600;}
+  .usuario-caja{display:flex; align-items:center; gap:11px; flex-shrink:0;}
+  .usuario-avatar{
+    width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,#93C5FD,#3B82F6);
+    display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;
+  }
+  .usuario-nombre{font-size:13px; font-weight:700;}
   .usuario-rol{
     font-size:10.5px; color:var(--color-primario-oscuro); background:var(--color-acento-suave);
-    padding:2px 8px; border-radius:10px; font-weight:600;
+    padding:2px 9px; border-radius:10px; font-weight:700;
   }
   .btn-salir{
-    border:1px solid var(--color-borde); background:#fff; border-radius:6px; padding:6px 10px;
-    font-size:12.5px; cursor:pointer; color:var(--color-texto);
+    border:1px solid var(--color-borde); background:#fff; border-radius:999px; padding:7px 14px;
+    font-size:12.5px; cursor:pointer; color:var(--color-texto); font-weight:600;
   }
-  .btn-salir:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .btn-salir:hover{border-color:#DC2626; color:#DC2626;}
 
-  .marco-host{flex:1; min-height:0;}
+  .marco-host{flex:1; min-height:0; background:#fff; border-radius:var(--radio); box-shadow:var(--sombra); overflow:hidden;}
   iframe{width:100%; height:100%; border:none; display:block;}
   .bienvenida{
     height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    color:var(--color-texto-suave); text-align:center; gap:6px;
+    color:var(--color-texto-suave); text-align:center; gap:8px;
   }
-  .bienvenida .icono-grande{font-size:44px;}
+  .bienvenida .icono-grande{font-size:48px;}
 
   .fondo-sidebar-movil{display:none;}
 
   @media (max-width:900px){
+    .app{padding:0; gap:0;}
     .sidebar{
       position:fixed; top:0; bottom:0; left:0; z-index:200; margin-left:calc(-1 * var(--ancho-sidebar));
-      box-shadow:0 0 0 rgba(0,0,0,0);
+      border-radius:0; box-shadow:0 0 0 rgba(0,0,0,0);
     }
     .sidebar.abierta{margin-left:0; box-shadow:8px 0 24px rgba(17,24,39,.18);}
     .btn-hamburguesa{display:inline-block;}
+    .header{border-radius:0;}
+    .marco-host{border-radius:0;}
+    .contenido{gap:0;}
     .fondo-sidebar-movil{
       display:none; position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:190;
     }
@@ -217,235 +226,10 @@ function App(){
     }),
 
     h("aside", { className: "sidebar" + (sidebarAbierta ? " abierta" : "") },
-      h("div", { className: "sidebar-marca" }, "🔧 Infotaller"),
-      ...gruposEl
-    ),
-
-    h("div", { className: "contenido" },
-      h("header", { className: "header" },
-        h("div", { className: "header-izq" },
-          h("button", { className: "btn-hamburguesa", onClick: () => setSidebarAbierta(v => !v) }, "☰"),
-          h("span", { className: "header-titulo" }, tituloDe(pestanaActiva))
-        ),
-        h("div", { className: "usuario-caja" },
-          h("span", { className: "usuario-nombre" }, sesion.nombre),
-          h("span", { className: "usuario-rol" }, sesion.rol),
-          h("button", { className: "btn-salir", onClick: salir }, "Salir")
-        )
+      h("div", { className: "sidebar-marca" },
+        h("span", { className: "marca-icono" }, "🔧"),
+        "Infotaller"
       ),
-      h("div", { className: "marco-host" },
-        itemActual
-          ? h("iframe", { id: "marco", src: itemActual.href + sufijoIframe, title: itemActual.label })
-          : h("div", { className: "bienvenida" },
-              h("div", { className: "icono-grande" }, "🔧"),
-              h("div", null, "Elegí una sección del menú para empezar.")
-            )
-      )
-    )
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("raiz")).render(h(App));
-</script>
-</body>
-</html>
-
-      caja.id = 'cajaErrorDiag';
-      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
-        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
-        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
-      document.body.appendChild(caja);
-    }
-    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
-  }, true);
-</script>
-<script src="core.js?v=10"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
-<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
-<style>
-  :root{
-    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
-    --color-texto:#111827; --color-texto-suave:#6B7280;
-    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
-    --color-acento:#22C55E; --color-acento-suave:#D1FAE5;
-    --radio:10px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 1px 3px rgba(17,24,39,.06);
-    --ancho-sidebar:250px; --alto-header:56px;
-  }
-  *{box-sizing:border-box;}
-  html,body,#raiz{height:100%; margin:0;}
-  body{
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
-    background:var(--color-fondo); color:var(--color-texto); font-size:14px;
-  }
-
-  .app{display:flex; height:100vh; overflow:hidden;}
-
-  .sidebar{
-    width:var(--ancho-sidebar); flex-shrink:0; background:#fff; border-right:1px solid var(--color-borde);
-    display:flex; flex-direction:column; transition:margin-left .2s;
-  }
-  .sidebar-marca{
-    display:flex; align-items:center; gap:8px; padding:16px; font-weight:700; font-size:15px;
-    color:var(--color-primario-oscuro); border-bottom:1px solid var(--color-borde);
-  }
-  .sidebar-grupo{padding:14px 10px 4px;}
-  .sidebar-grupo-titulo{
-    font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--color-texto-suave);
-    padding:0 10px; margin-bottom:6px;
-  }
-  .sidebar-item{
-    display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:none;
-    background:transparent; color:var(--color-texto); font-size:13.5px; padding:9px 12px;
-    border-radius:8px; cursor:pointer; margin-bottom:2px;
-  }
-  .sidebar-item:hover{background:var(--color-fondo);}
-  .sidebar-item.activo{background:var(--color-acento-suave); color:var(--color-primario-oscuro); font-weight:600;}
-  .sidebar-item .icono{font-size:15px; width:18px; text-align:center;}
-
-  .contenido{flex:1; display:flex; flex-direction:column; min-width:0;}
-  .header{
-    height:var(--alto-header); flex-shrink:0; display:flex; align-items:center; justify-content:space-between;
-    padding:0 20px; background:#fff; border-bottom:1px solid var(--color-borde); box-shadow:var(--sombra);
-  }
-  .header-izq{display:flex; align-items:center;}
-  .header-titulo{font-size:15.5px; font-weight:600;}
-  .btn-hamburguesa{display:none; background:none; border:none; font-size:20px; cursor:pointer; margin-right:10px;}
-  .usuario-caja{display:flex; align-items:center; gap:10px;}
-  .usuario-nombre{font-size:13px; font-weight:600;}
-  .usuario-rol{
-    font-size:10.5px; color:var(--color-primario-oscuro); background:var(--color-acento-suave);
-    padding:2px 8px; border-radius:10px; font-weight:600;
-  }
-  .btn-salir{
-    border:1px solid var(--color-borde); background:#fff; border-radius:6px; padding:6px 10px;
-    font-size:12.5px; cursor:pointer; color:var(--color-texto);
-  }
-  .btn-salir:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
-
-  .marco-host{flex:1; min-height:0;}
-  iframe{width:100%; height:100%; border:none; display:block;}
-  .bienvenida{
-    height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
-    color:var(--color-texto-suave); text-align:center; gap:6px;
-  }
-  .bienvenida .icono-grande{font-size:44px;}
-
-  .fondo-sidebar-movil{display:none;}
-
-  @media (max-width:900px){
-    .sidebar{
-      position:fixed; top:0; bottom:0; left:0; z-index:200; margin-left:calc(-1 * var(--ancho-sidebar));
-      box-shadow:0 0 0 rgba(0,0,0,0);
-    }
-    .sidebar.abierta{margin-left:0; box-shadow:8px 0 24px rgba(17,24,39,.18);}
-    .btn-hamburguesa{display:inline-block;}
-    .fondo-sidebar-movil{
-      display:none; position:fixed; inset:0; background:rgba(17,24,39,.35); z-index:190;
-    }
-    .fondo-sidebar-movil.visible{display:block;}
-  }
-</style>
-</head>
-<body>
-<div id="raiz"></div>
-
-<script>
-// Sin JSX ni Babel: React.createElement directo (misma razón que login.html).
-const h = React.createElement;
-const { useState, useEffect } = React;
-
-const MENU = [
-  {
-    grupo: "Flujo del Taller",
-    items: [
-      { id: "solicitud",    icono: "📞", label: "1. Solicitud de Servicio", href: "solicitud.html", rolMinimo: ["Recepción","Supervisor","Administrador"] },
-      { id: "recepcion",    icono: "📋", label: "2. Recepción",        href: "recepcion.html" },
-      { id: "ordenes",      icono: "🛠️", label: "3. Diagnóstico / Órdenes", href: "ordenes.html" },
-      { id: "presupuestos", icono: "💵", label: "4. Cotización",        href: "presupuestos.html" },
-      { id: "bahias",       icono: "🅿️", label: "5. Repuestos y Agenda (Bahías)", href: "bahias.html" },
-      { id: "ejecucion",    icono: "🔧", label: "6. Ejecución del Trabajo", href: "ejecucion.html" },
-      { id: "cierres",      icono: "✅", label: "7. Calidad, Entrega y Cierre", href: "cierres.html" },
-      { id: "seguimiento",  icono: "📞", label: "8. Seguimiento",       href: "seguimiento.html" },
-    ],
-  },
-  {
-    grupo: "Administración",
-    items: [
-      { id: "clientes",  icono: "🧑‍🤝‍🧑", label: "Clientes", href: "clientes.html" },
-      { id: "usuarios",  icono: "🔐", label: "Usuarios", href: "usuarios.html", rolMinimo: ["Administrador"] },
-      { id: "indicadores", icono: "📊", label: "Indicadores", href: "indicadores.html" },
-      { id: "equipos", icono: "🚜", label: "Equipos", href: "equipos.html" },
-    ],
-  },
-];
-
-function tituloDe(id){
-  for (const g of MENU) for (const it of g.items) if (it.id === id) return it.label;
-  return "Infotaller";
-}
-
-function App(){
-  const [sesion, setSesion] = useState(null);
-  const [pestanaActiva, setPestanaActiva] = useState(null);
-  const [sidebarAbierta, setSidebarAbierta] = useState(false);
-  const [sufijoIframe, setSufijoIframe] = useState("");
-
-  useEffect(() => {
-    const s = exigirSesion();
-    if (s) setSesion(s);
-
-    // Permite que una pestaña (dentro del iframe) le pida al panel navegar a otra
-    // pestaña sin salirse del shell — usado, por ejemplo, al convertir una
-    // Solicitud de Servicio en Recepción.
-    function alMensaje(e){
-      if (e.data && e.data.tipo === "navegar" && e.data.pestana) {
-        setPestanaActiva(e.data.pestana);
-        setSufijoIframe(e.data.sufijo || "");
-      }
-    }
-    window.addEventListener("message", alMensaje);
-    return () => window.removeEventListener("message", alMensaje);
-  }, []);
-
-  if (!sesion) return null;
-
-  function elegirPestana(item){
-    setPestanaActiva(item.id);
-    setSufijoIframe("");
-    setSidebarAbierta(false);
-  }
-
-  function salir(){
-    cerrarSesion();
-    window.location.href = "login.html";
-  }
-
-  const itemActual = MENU.flatMap(g => g.items).find(i => i.id === pestanaActiva);
-
-  const gruposEl = MENU.map(grupo => {
-    const visibles = grupo.items.filter(it => !it.rolMinimo || it.rolMinimo.includes(sesion.rol));
-    if (!visibles.length) return null;
-    return h("div", { className: "sidebar-grupo", key: grupo.grupo },
-      h("div", { className: "sidebar-grupo-titulo" }, grupo.grupo),
-      ...visibles.map(it => h("button", {
-          key: it.id,
-          className: "sidebar-item" + (pestanaActiva === it.id ? " activo" : ""),
-          onClick: () => elegirPestana(it),
-        },
-        h("span", { className: "icono" }, it.icono),
-        h("span", null, it.label)
-      ))
-    );
-  });
-
-  return h("div", { className: "app" },
-    h("div", {
-      className: "fondo-sidebar-movil" + (sidebarAbierta ? " visible" : ""),
-      onClick: () => setSidebarAbierta(false),
-    }),
-
-    h("aside", { className: "sidebar" + (sidebarAbierta ? " abierta" : "") },
-      h("div", { className: "sidebar-marca" }, "🔧 Infotaller"),
       ...gruposEl
     ),
 
@@ -456,6 +240,7 @@ function App(){
           h("span", { className: "header-titulo" }, tituloDe(pestanaActiva))
         ),
         h("div", { className: "usuario-caja" },
+          h("span", { className: "usuario-avatar" }, (sesion.nombre || "?").trim().charAt(0).toUpperCase()),
           h("span", { className: "usuario-nombre" }, sesion.nombre),
           h("span", { className: "usuario-rol" }, sesion.rol),
           h("button", { className: "btn-salir", onClick: salir }, "Salir")

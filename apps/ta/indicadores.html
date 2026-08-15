@@ -19,8 +19,8 @@
     caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
   }, true);
 </script>
-<script src="core.js?v=8"></script>
-<link rel="stylesheet" href="core.css?v=2">
+<script src="core.js?v=11"></script>
+<link rel="stylesheet" href="core.css?v=4">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -154,27 +154,31 @@ function Indicadores(){
       h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar")
     ),
 
-    h("div", { className: "kpis" },
-      h("div", { className: "kpi" },
-        h("div", { className: "etiqueta" }, "Órdenes activas"),
-        h("div", { className: "valor" }, ordenesActivas)
+    h("div", { className: "ia-kpis" },
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono azul" }, "🛠️"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Órdenes activas"),
+        h("div", { className: "ia-kpi-valor" }, ordenesActivas)
       ),
-      h("div", { className: "kpi" },
-        h("div", { className: "etiqueta" }, "Total aprobado"),
-        h("div", { className: "valor" }, moneda(totalAprobado))
+      h("div", { className: "ia-kpi-destacada" },
+        h("div", { className: "ia-kpi-destacada-etiqueta" }, "Total aprobado"),
+        h("div", { className: "ia-kpi-destacada-valor" }, moneda(totalAprobado)),
+        h("div", { className: "ia-kpi-destacada-sub" }, presupuestosAprobados.length + " presupuestos aprobados")
       ),
-      h("div", { className: "kpi" },
-        h("div", { className: "etiqueta" }, "Variación promedio"),
-        h("div", { className: "valor " + (promedioVariacion <= 0 ? "positiva" : "negativa") },
-          (promedioVariacion >= 0 ? "+" : "") + promedioVariacion.toFixed(1) + "%")
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono" + (promedioVariacion <= 0 ? " verde" : " ambar") }, "📈"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Variación promedio"),
+        h("div", { className: "ia-kpi-valor" }, (promedioVariacion >= 0 ? "+" : "") + promedioVariacion.toFixed(1) + "%")
       ),
-      h("div", { className: "kpi" },
-        h("div", { className: "etiqueta" }, "Órdenes cerradas"),
-        h("div", { className: "valor" }, cierres.length)
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono morado" }, "✅"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Órdenes cerradas"),
+        h("div", { className: "ia-kpi-valor" }, cierres.length)
       ),
-      h("div", { className: "kpi" },
-        h("div", { className: "etiqueta" }, "Retrabajo (reabiertas)"),
-        h("div", { className: "valor " + (ordenesReabiertas > 0 ? "negativa" : "") }, ordenesReabiertas)
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono" + (ordenesReabiertas > 0 ? " rosa" : " verde") }, "🔁"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Retrabajo (reabiertas)"),
+        h("div", { className: "ia-kpi-valor" }, ordenesReabiertas)
       )
     ),
 

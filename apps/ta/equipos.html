@@ -20,7 +20,7 @@
   }, true);
 </script>
 <script src="core.js?v=11"></script>
-<link rel="stylesheet" href="core.css?v=2">
+<link rel="stylesheet" href="core.css?v=4">
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
 <style>
@@ -337,11 +337,26 @@ function DetalleEquipo({ equipo, ordenesDelEquipo, onVolver, onEquipoEditado, de
       },
     }),
 
-    h("div", { className: "kpis" },
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total repuestos/materiales"), h("div", { className: "valor" }, moneda(totalRepuestos))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total mano de obra"), h("div", { className: "valor" }, moneda(totalManoObra))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Gasto del período"), h("div", { className: "valor" }, moneda(totalGeneral))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Horas de mano de obra"), h("div", { className: "valor" }, horasTotales.toFixed(1)))
+    h("div", { className: "ia-kpis" },
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono azul" }, "🔧"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Total repuestos/materiales"),
+        h("div", { className: "ia-kpi-valor" }, moneda(totalRepuestos))
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono morado" }, "👷"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Total mano de obra"),
+        h("div", { className: "ia-kpi-valor" }, moneda(totalManoObra))
+      ),
+      h("div", { className: "ia-kpi-destacada" },
+        h("div", { className: "ia-kpi-destacada-etiqueta" }, "Gasto del período"),
+        h("div", { className: "ia-kpi-destacada-valor" }, moneda(totalGeneral))
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono ambar" }, "⏱️"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Horas de mano de obra"),
+        h("div", { className: "ia-kpi-valor" }, horasTotales.toFixed(1))
+      )
     ),
 
     h("div", { className: "panel" },
@@ -527,19 +542,12 @@ function Equipos(){
       )
     ),
 
-    h("div", { className: "panel", style: { display:"flex", flexWrap:"wrap", gap:"10px", alignItems:"center", padding:"12px 16px" } },
+    h("div", { className: "ia-panel", style: { display:"flex", flexWrap:"wrap", gap:"12px", alignItems:"center" } },
       h("span", { style: { fontSize:"12px", color:"var(--color-texto-suave)", fontWeight:600 } }, "Período:"),
-      [["todo","Todo el histórico"],["anio","Este año"],["mes","Este mes"],["personalizado","Rango personalizado"]].map(([valor,etiqueta]) =>
-        h("button", {
-          key: valor,
-          onClick: () => setRango(valor),
-          style: {
-            fontSize:"12px", padding:"6px 12px", borderRadius:"16px", cursor:"pointer",
-            border: rango === valor ? "1px solid var(--color-primario)" : "1px solid var(--color-borde)",
-            background: rango === valor ? "var(--color-acento-suave)" : "#fff",
-            color: rango === valor ? "var(--color-primario-oscuro)" : "var(--color-texto)",
-          },
-        }, etiqueta)
+      h("div", { className: "ia-pildora-grupo" },
+        [["todo","Todo el histórico"],["anio","Este año"],["mes","Este mes"],["personalizado","Rango personalizado"]].map(([valor,etiqueta]) =>
+          h("button", { key: valor, className: "ia-pildora" + (rango === valor ? " activa" : ""), onClick: () => setRango(valor) }, etiqueta)
+        )
       ),
       rango === "personalizado" && h(React.Fragment, null,
         h("input", { type: "date", value: fechaDesde, onChange: e => setFechaDesde(e.target.value), style: { border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"6px 8px", fontSize:"12.5px" } }),
@@ -548,10 +556,21 @@ function Equipos(){
       )
     ),
 
-    h("div", { className: "kpis" },
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Total de equipos"), h("div", { className: "valor" }, equiposConGasto.length)),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Gasto del período"), h("div", { className: "valor" }, moneda(totalGeneral))),
-      h("div", { className: "kpi" }, h("div", { className: "etiqueta" }, "Promedio por equipo"), h("div", { className: "valor" }, moneda(promedioEquipo)))
+    h("div", { className: "ia-kpis" },
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono azul" }, "🚜"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Total de equipos"),
+        h("div", { className: "ia-kpi-valor" }, equiposConGasto.length)
+      ),
+      h("div", { className: "ia-kpi-destacada" },
+        h("div", { className: "ia-kpi-destacada-etiqueta" }, "Gasto del período"),
+        h("div", { className: "ia-kpi-destacada-valor" }, moneda(totalGeneral))
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono morado" }, "📊"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Promedio por equipo"),
+        h("div", { className: "ia-kpi-valor" }, moneda(promedioEquipo))
+      )
     ),
 
     h("div", { className: "paneles-2col" },
