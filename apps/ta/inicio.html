@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infotaller — Inicio</title>
+<script>
+  window.addEventListener('error', function(e){
+    var msg = e.message || (e.target && e.target.src ? 'No cargó: ' + e.target.src : 'Error desconocido');
+    var caja = document.getElementById('cajaErrorDiag');
+    if (!caja) {
+      caja = document.createElement('div');
+      caja.id = 'cajaErrorDiag';
+      caja.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#DC2626;color:#fff;'
+        + 'padding:12px 16px;font:12px/1.5 monospace;z-index:99999;white-space:pre-wrap;'
+        + 'box-shadow:0 2px 8px rgba(0,0,0,.3);';
+      document.body.appendChild(caja);
+    }
+    caja.textContent += (caja.textContent ? '\n\n' : '') + '⚠️ ' + msg;
+  }, true);
+</script>
+<script src="core.js?v=13"></script>
+<link rel="stylesheet" href="core.css?v=4">
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  /* ============================================================
+     INICIO — KPI de Gestión de Fechas
+     ------------------------------------------------------------
+     Definición tomada de la pizarra de proceso de la Jefatura de
+     Taller. Fuente de datos: Odoo Studio, vía tallerQuery (core.js):
+
+       x_taller_orden:
+         x_studio_fecha_recepcion, x_studio_fecha_diagnostico,
+         x_studio_fecha_entrega, x_studio_estado, x_studio_bahia_id,
+         x_studio_equipo_id, x_studio_tecnico_responsable_id
+
+       x_taller_presupuesto (una fila por versión de cotización):
+         x_studio_orden_id, x_studio_version, x_studio_estado
+         ("Borrador"/"Enviado"/"Aprobado"/"Rechazado"),
+         x_studio_fecha_presupuesto, x_studio_fecha_aprobacion
+
+     Fórmulas (según pizarra):
+       Tiempo Diagnóstico = fecha_diagnostico − fecha_recepcion        (Receptor/Técnico)
+       Tiempo Cotizar     = fecha_presupuesto − fecha_diagnostico      (Jefatura Taller/Bodega)
+       Tiempo Autorizar   = fecha_aprobacion  − fecha_presupuesto      (Jefe Taller/Cliente)
+       Tiempo Bahía       = fecha_entrega     − fecha_aprobacion       (Bahía)
+       Tiempo Reparar TOTAL = (fecha_entrega − fecha_recepcion) − Tiempo Autorizar
+          → el tiempo que el cliente tarda en aprobar la cotización
+            NO cuenta contra el taller, se resta del total (KPI: Jefatura)
+     ============================================================ */
+  :root{
+    --color-fondo:#F8FAFC; --color-panel:#ffffff; --color-borde:#E4E9EE;
+    --color-texto:#111827; --color-texto-suave:#6B7280;
+    --color-primario:#16A34A; --color-primario-oscuro:#15803D;
+    --color-acento-suave:#D1FAE5; --color-peligro:#DC2626; --color-alerta:#D97706;
+    --radio:14px; --sombra:0 1px 2px rgba(17,24,39,.05), 0 4px 12px rgba(17,24,39,.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; padding:18px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif; background:var(--color-fondo); color:var(--color-texto); font-size:13.5px;}
+  .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;}
+  .barra-superior h1{font-size:16px; margin:0;}
+  .barra-superior p{margin:2px 0 0; font-size:11.5px; color:var(--color-texto-suave);}
+  .barra-derecha{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .selector-simple{border:1px solid var(--color-borde); border-radius:999px; padding:7px 14px; font-size:12.5px; background:#fff; color:var(--color-texto); cursor:pointer;}
+  .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:999px; padding:7px 14px; font-size:12.5px; cursor:pointer; color:var(--color-texto); font-weight:600;}
+  .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .cargando, .error-carga{text-align:center; padding:40px; color:var(--color-texto-suave);}
+  .error-carga{color:var(--color-peligro);}
+
+  .seccion-titulo{font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:var(--color-texto-suave); font-weight:700; margin:22px 0 10px; display:flex; align-items:center; gap:8px;}
+  .seccion-titulo .linea{flex:1; height:1px; background:var(--color-borde);}
+
+  .fila-resumen{display:grid; grid-template-columns:1.3fr 1fr 1fr; gap:14px;}
+  @media (max-width:820px){ .fila-resumen{grid-template-columns:1fr;} }
+
+  .kpi-destacada-clic{cursor:pointer;}
+  .kpi-destacada-formula{font-size:10.5px; opacity:.75; margin-top:-2px; margin-bottom:8px; position:relative; z-index:1;}
+  .kpi-destacada-nota{font-size:11px; opacity:.85; margin-top:12px; border-top:1px solid rgba(255,255,255,.22); padding-top:9px; position:relative; z-index:1;}
+
+  .etapas-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:12px;}
+  @media (max-width:1000px){ .etapas-grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:520px){ .etapas-grid{grid-template-columns:1fr;} }
+  .etapa{background:#fff; border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:14px 15px; cursor:pointer; transition:box-shadow .12s,border-color .12s;}
+  .etapa:hover{border-color:var(--color-primario); box-shadow:0 6px 16px rgba(17,24,39,.09);}
+  .etapa.excluida{background:repeating-linear-gradient(135deg,#fff,#fff 10px,#FAFBF7 10px,#FAFBF7 20px);}
+  .etapa-top{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .etapa-icono{width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; color:#fff; flex-shrink:0;}
+  .etapa-paso{font-size:10px; font-weight:700; color:var(--color-texto-suave); background:var(--color-fondo); border-radius:999px; padding:2px 8px;}
+  .etapa-label{font-size:12px; font-weight:700; margin-bottom:2px;}
+  .etapa-formula{font-size:10px; color:var(--color-texto-suave); margin-bottom:8px; min-height:13px;}
+  .etapa-valor{font-size:23px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1;}
+  .etapa-valor .unidad{font-size:11px; font-weight:600; color:var(--color-texto-suave); margin-left:4px;}
+  .etapa-responsable{font-size:10.5px; color:var(--color-texto-suave); margin-top:9px; padding-top:8px; border-top:1px dashed var(--color-borde);}
+  .etapa-nota-excluida{font-size:9.5px; color:var(--color-alerta); font-weight:600; margin-top:5px;}
+
+  .barra-card{background:#fff; border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px 18px;}
+  .barra-card h2{font-size:13px; margin:0 0 2px;}
+  .barra-sub{font-size:11px; color:var(--color-texto-suave); margin-bottom:12px;}
+  .barra-track{display:flex; height:32px; border-radius:9px; overflow:hidden; background:var(--color-fondo); border:1px solid var(--color-borde);}
+  .barra-seg{display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; white-space:nowrap; overflow:hidden; cursor:pointer;}
+  .barra-seg.excluida{background:repeating-linear-gradient(135deg,#D97706,#D97706 8px,#C2660A 8px,#C2660A 16px);}
+  .barra-leyenda{display:flex; flex-wrap:wrap; gap:12px; margin-top:10px;}
+  .barra-leyenda-item{display:flex; align-items:center; gap:5px; font-size:11px; color:var(--color-texto-suave);}
+  .barra-leyenda-punto{width:9px; height:9px; border-radius:3px; flex-shrink:0;}
+
+  .tabla-card{background:#fff; border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px 18px; overflow-x:auto;}
+  .chip-etapa{font-size:10px; font-weight:700; padding:2px 8px; border-radius:999px; color:#fff; display:inline-block;}
+  .chip-alerta{color:var(--color-peligro); font-weight:700;}
+
+  .drill-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); z-index:998; display:none;}
+  .drill-fondo.abierto{display:block;}
+  .drill-modal{position:fixed; top:50%; left:50%; transform:translate(-50%,-50%) scale(.97); width:min(760px,94vw); max-height:82vh; background:#fff; border-radius:16px; box-shadow:0 20px 50px rgba(17,24,39,.28); z-index:999; display:none; flex-direction:column; overflow:hidden; opacity:0; transition:opacity .12s,transform .12s;}
+  .drill-modal.abierto{display:flex; opacity:1; transform:translate(-50%,-50%) scale(1);}
+  .drill-header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--color-borde); flex-shrink:0;}
+  .drill-header h3{margin:0; font-size:13.5px;}
+  .drill-header p{margin:2px 0 0; font-size:11px; color:var(--color-texto-suave);}
+  .drill-cerrar{width:26px; height:26px; border:1px solid var(--color-borde); border-radius:8px; background:#fff; cursor:pointer; color:var(--color-texto-suave);}
+  .drill-cerrar:hover{background:var(--color-acento-suave); border-color:var(--color-primario); color:var(--color-primario-oscuro);}
+  .drill-cuerpo{padding:12px 16px; overflow:auto;}
+
+  .pie-nota{font-size:11px; color:var(--color-texto-suave); background:var(--color-acento-suave); border-left:3px solid var(--color-primario); padding:9px 13px; border-radius:8px; margin-top:24px;}
+  .pie-nota b{color:var(--color-primario-oscuro);}
+</style>
+</head>
+<body>
+<div id="raiz"></div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">inicio.html — v1 (KPI de gestión de fechas)</div>
+
+<script>
+const h = React.createElement;
+const { useState, useEffect } = React;
+
+/* Palabras clave por si algún día se agrega una etapa nueva —
+   hoy las 4 fechas ya existen como campos directos, no hace falta
+   inferir por bitácora. */
+const COLORES_ETAPA = {
+  diagnostico: "#3B82F6",
+  cotizar:     "#8B5CF6",
+  autorizar:   "#D97706",
+  bahia:       "#0D9488"
+};
+const DEF_ETAPAS = [
+  { key:"diagnostico", paso:"1", label:"Tiempo Diagnóstico", formula:"F. Diagnóstico − F. Recepción", responsable:"👤 Receptor / Técnico", excluida:false },
+  { key:"cotizar",     paso:"2", label:"Tiempo Cotizar",     formula:"F. Cotizado − F. Diagnóstico",   responsable:"👤 Jefatura Taller / Bodega", excluida:false },
+  { key:"autorizar",   paso:"3", label:"Tiempo Autorizar",   formula:"F. Aprobar − F. Cotizado",       responsable:"👤 Jefe Taller / Cliente", excluida:true },
+  { key:"bahia",       paso:"4", label:"Tiempo Bahía",       formula:"F. Entrega − F. Autorizado",     responsable:"👤 Bahía", excluida:false }
+];
+
+const ESTADOS_CERRADOS = ["Entregada","Cerrada","Cancelada"];
+
+function parseFechaOdoo(v){
+  if (!v) return null;
+  const d = new Date(String(v).replace(" ", "T"));
+  return isNaN(d.getTime()) ? null : d;
+}
+function diasEntre(a, b){ return (b - a) / 86400000; }
+function promedio(arr){
+  const v = arr.filter(x => x !== null && x !== undefined && !isNaN(x));
+  if (!v.length) return null;
+  return v.reduce((a,b)=>a+b,0) / v.length;
+}
+function fmtDias(v){ return (v === null || v === undefined) ? "—" : v.toFixed(1); }
+function nombreM2O(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
+function idM2O(v){ return Array.isArray(v) ? v[0] : v; }
+
+function calcularTiempos(orden, presupuestosDeOrden){
+  const fRecepcion = parseFechaOdoo(orden.x_studio_fecha_recepcion);
+  const fDiagnostico = parseFechaOdoo(orden.x_studio_fecha_diagnostico);
+  const fEntrega = parseFechaOdoo(orden.x_studio_fecha_entrega);
+  if (!fEntrega) return null; // solo cuentan para KPI de tiempo las órdenes ya entregadas
+
+  const conFechaCotiz = presupuestosDeOrden
+    .map(p => ({ p, f: parseFechaOdoo(p.x_studio_fecha_presupuesto) }))
+    .filter(x => x.f)
+    .sort((a,b) => a.f - b.f);
+  const fCotizado = conFechaCotiz[0] ? conFechaCotiz[0].f : null;
+
+  const aprobado = presupuestosDeOrden.find(p => p.x_studio_estado === "Aprobado");
+  const fCotizadoAprobado = aprobado ? parseFechaOdoo(aprobado.x_studio_fecha_presupuesto) : null;
+  const fAprobado = aprobado ? parseFechaOdoo(aprobado.x_studio_fecha_aprobacion) : null;
+
+  const tDiag  = (fDiagnostico && fRecepcion) ? diasEntre(fRecepcion, fDiagnostico) : null;
+  const tCotiz = (fCotizado && fDiagnostico)   ? diasEntre(fDiagnostico, fCotizado) : null;
+  const tAutor = (fAprobado && fCotizadoAprobado) ? diasEntre(fCotizadoAprobado, fAprobado) : null;
+  const tBahia = (fEntrega && fAprobado)        ? diasEntre(fAprobado, fEntrega) : null;
+
+  const bruto = fRecepcion ? diasEntre(fRecepcion, fEntrega) : null;
+  const total = bruto === null ? null : bruto - (tAutor || 0);
+
+  return { diagnostico:tDiag, cotizar:tCotiz, autorizar:tAutor, bahia:tBahia, total, fRecepcion, fEntrega };
+}
+
+function Inicio(){
+  const [sesion, setSesion] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [ordenes, setOrdenes] = useState([]);
+  const [presupuestos, setPresupuestos] = useState([]);
+  const [diasFiltro, setDiasFiltro] = useState(30);
+  const [bahiaFiltro, setBahiaFiltro] = useState("");
+  const [drill, setDrill] = useState(null); // { titulo, sub, filas:[[cols...]], columnas:[...] }
+
+  useEffect(() => {
+    const s = exigirSesion();
+    if (s) { setSesion(s); cargar(); }
+  }, []);
+
+  async function cargar(){
+    setCargando(true); setError("");
+    try {
+      // Fetch SIEMPRE secuencial (nunca Promise.all — ver notas del proyecto).
+      const filasOrdenes = await tallerQuery("x_taller_orden", [
+        "id","x_name","x_studio_estado","x_studio_bahia_id","x_studio_equipo_id",
+        "x_studio_tecnico_responsable_id","x_studio_fecha_recepcion",
+        "x_studio_fecha_diagnostico","x_studio_fecha_entrega",
+      ], [], 5000);
+      const filasPresupuestos = await tallerQuery("x_taller_presupuesto", [
+        "id","x_studio_orden_id","x_studio_version","x_studio_estado",
+        "x_studio_fecha_presupuesto","x_studio_fecha_aprobacion",
+      ], [], 5000);
+      setOrdenes(filasOrdenes);
+      setPresupuestos(filasPresupuestos);
+    } catch(e) {
+      setError("No se pudieron cargar los KPI: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  if (!sesion) return null;
+  if (cargando) return h("div", { className: "cargando" }, "Cargando KPI de gestión de fechas...");
+  if (error) return h("div", { className: "error-carga" }, error);
+
+  // ---- Bahías disponibles para el filtro (a partir de las propias órdenes) ----
+  const bahiasUnicas = [...new Map(
+    ordenes.filter(o => o.x_studio_bahia_id).map(o => [idM2O(o.x_studio_bahia_id), nombreM2O(o.x_studio_bahia_id)])
+  ).entries()].sort((a,b) => a[1].localeCompare(b[1]));
+
+  // ---- Rango de fechas ----
+  const ahora = new Date();
+  const desde = new Date(ahora.getTime() - diasFiltro * 86400000);
+
+  const ordenesFiltradas = ordenes.filter(o => {
+    if (bahiaFiltro && String(idM2O(o.x_studio_bahia_id)) !== bahiaFiltro) return false;
+    return true;
+  });
+
+  const presupuestosPorOrden = {};
+  presupuestos.forEach(p => {
+    const oid = idM2O(p.x_studio_orden_id);
+    (presupuestosPorOrden[oid] = presupuestosPorOrden[oid] || []).push(p);
+  });
+
+  const cerradas = ordenesFiltradas.filter(o => o.x_studio_fecha_entrega);
+  const cerradasEnRango = cerradas.filter(o => {
+    const f = parseFechaOdoo(o.x_studio_fecha_entrega);
+    return f && f >= desde && f <= ahora;
+  });
+  const activas = ordenesFiltradas.filter(o => !ESTADOS_CERRADOS.includes(o.x_studio_estado));
+
+  const tiempos = cerradasEnRango
+    .map(o => ({ orden:o, t: calcularTiempos(o, presupuestosPorOrden[o.id] || []) }))
+    .filter(x => x.t);
+
+  const promTotal = promedio(tiempos.map(x => x.t.total));
+  const promedios = {};
+  DEF_ETAPAS.forEach(def => { promedios[def.key] = promedio(tiempos.map(x => x.t[def.key])); });
+
+  function abrirDrillEtapa(def){
+    const filas = tiempos
+      .filter(x => x.t[def.key] !== null)
+      .sort((a,b) => b.t[def.key] - a.t[def.key])
+      .map(x => [x.orden.x_name, nombreM2O(x.orden.x_studio_equipo_id), nombreM2O(x.orden.x_studio_bahia_id), fmtDias(x.t[def.key]) + " días"]);
+    setDrill({
+      titulo: def.label + " — detalle por orden",
+      sub: (def.formula || "") + (def.responsable ? " · " + def.responsable.replace("👤 ","Responsable: ") : ""),
+      columnas: ["Orden","Equipo","Bahía", def.label],
+      filas,
+    });
+  }
+  function abrirDrillTotal(){
+    const filas = tiempos
+      .sort((a,b) => b.t.total - a.t.total)
+      .map(x => [x.orden.x_name, nombreM2O(x.orden.x_studio_equipo_id), nombreM2O(x.orden.x_studio_bahia_id), fmtDias(x.t.total) + " días"]);
+    setDrill({
+      titulo: "Tiempo Reparar (Total) — detalle por orden",
+      sub: "Fecha Entrega − Fecha Recepción − Tiempo de Autorizar · Responsable: Jefatura",
+      columnas: ["Orden","Equipo","Bahía","Tiempo Total"],
+      filas,
+    });
+  }
+
+  const sumaEtapas = DEF_ETAPAS.reduce((s,d) => s + (promedios[d.key] || 0), 0) || 1;
+
+  const topBottlenecks = [...tiempos].sort((a,b) => b.t.total - a.t.total).slice(0, 8);
+
+  return h("div", null,
+    h("div", { className: "barra-superior" },
+      h("div", null,
+        h("h1", null, "🏠 Inicio — KPI de Gestión de Fechas"),
+        h("p", null, "Tiempos de ciclo del taller, según la definición de la Jefatura de Taller")
+      ),
+      h("div", { className: "barra-derecha" },
+        h("div", { className: "ia-pildora-grupo" },
+          [7,30,90].map(d => h("button", {
+            key: d, className: "ia-pildora" + (diasFiltro === d ? " activa" : ""),
+            onClick: () => setDiasFiltro(d),
+          }, d + " días"))
+        ),
+        h("select", {
+          className: "selector-simple", value: bahiaFiltro,
+          onChange: e => setBahiaFiltro(e.target.value),
+        },
+          h("option", { value: "" }, "Todas las bahías"),
+          bahiasUnicas.map(([id, nombre]) => h("option", { key: id, value: String(id) }, nombre))
+        ),
+        h("button", { className: "btn-refrescar", onClick: cargar }, "↻ Refrescar")
+      )
+    ),
+
+    h("div", { className: "fila-resumen" },
+      h("div", { className: "ia-kpi-destacada kpi-destacada-clic", onClick: abrirDrillTotal, tabIndex: 0, role: "button" },
+        h("div", { className: "ia-kpi-destacada-etiqueta" }, "⭐ Tiempo Reparar — Total (KPI Jefatura)"),
+        h("div", { className: "kpi-destacada-formula" }, "Fecha Entrega − Fecha Recepción − Tiempo de Autorizar"),
+        h("div", { className: "ia-kpi-destacada-valor" }, fmtDias(promTotal), h("span", { style:{fontSize:"15px",fontWeight:600,marginLeft:"6px",opacity:.9} }, "días")),
+        h("div", { className: "ia-kpi-destacada-sub" }, tiempos.length + " orden(es) entregadas en el período"),
+        h("div", { className: "kpi-destacada-nota" }, "El tiempo que el cliente tarda en aprobar la cotización no cuenta contra el taller — se excluye del total. Clic para ver el detalle.")
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono azul" }, "✅"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Órdenes entregadas"),
+        h("div", { className: "ia-kpi-valor" }, cerradasEnRango.length),
+        h("div", { className: "ia-kpi-delta neutro" }, "en los últimos " + diasFiltro + " días")
+      ),
+      h("div", { className: "ia-kpi" },
+        h("div", { className: "ia-kpi-icono ambar" }, "⏳"),
+        h("div", { className: "ia-kpi-etiqueta" }, "Órdenes activas"),
+        h("div", { className: "ia-kpi-valor" }, activas.length),
+        h("div", { className: "ia-kpi-delta neutro" }, "sin entregar aún")
+      )
+    ),
+
+    h("div", { className: "seccion-titulo" }, h("span", null, "Tiempo por etapa del flujo"), h("span", { className: "linea" })),
+    h("div", { className: "etapas-grid" },
+      DEF_ETAPAS.map(def => h("div", {
+          key: def.key, className: "etapa" + (def.excluida ? " excluida" : ""),
+          onClick: () => abrirDrillEtapa(def), tabIndex: 0, role: "button",
+        },
+        h("div", { className: "etapa-top" },
+          h("div", { className: "etapa-icono", style: { background: COLORES_ETAPA[def.key] } },
+            def.key === "diagnostico" ? "🔍" : def.key === "cotizar" ? "💵" : def.key === "autorizar" ? "✍️" : "🅿️"),
+          h("div", { className: "etapa-paso" }, "Paso " + def.paso)
+        ),
+        h("div", { className: "etapa-label" }, def.label),
+        h("div", { className: "etapa-formula" }, def.formula),
+        h("div", { className: "etapa-valor" }, fmtDias(promedios[def.key]), h("span", { className: "unidad" }, "días")),
+        h("div", { className: "etapa-responsable" }, def.responsable),
+        def.excluida ? h("div", { className: "etapa-nota-excluida" }, "⚠ No cuenta en el Total (depende del cliente)") : null
+      ))
+    ),
+
+    h("div", { className: "seccion-titulo" }, h("span", null, "Composición del tiempo total (promedio)"), h("span", { className: "linea" })),
+    h("div", { className: "barra-card" },
+      h("h2", null, "Recepción → Diagnóstico → Cotización → Autorización → Bahía → Entrega"),
+      h("div", { className: "barra-sub" }, "El tramo de Autorización (cliente) está achurado: no forma parte del KPI de Tiempo Reparar Total."),
+      h("div", { className: "barra-track" },
+        DEF_ETAPAS.map(def => {
+          const val = promedios[def.key] || 0;
+          const pct = Math.max((val / sumaEtapas) * 100, val > 0 ? 4 : 0);
+          return h("div", {
+            key: def.key,
+            className: "barra-seg" + (def.excluida ? " excluida" : ""),
+            style: { width: pct + "%", background: def.excluida ? undefined : COLORES_ETAPA[def.key] },
+            title: def.label + ": " + fmtDias(val) + " días",
+            onClick: () => abrirDrillEtapa(def),
+          }, val > 0 ? fmtDias(val) + "d" : "");
+        })
+      ),
+      h("div", { className: "barra-leyenda" },
+        DEF_ETAPAS.map(def => h("div", { key: def.key, className: "barra-leyenda-item" },
+          h("span", { className: "barra-leyenda-punto", style: { background: def.excluida ? "#D97706" : COLORES_ETAPA[def.key] } }),
+          def.label + (def.excluida ? " (excluida del total)" : "")
+        ))
+      )
+    ),
+
+    h("div", { className: "seccion-titulo" }, h("span", null, "Órdenes con mayor tiempo total (posibles cuellos de botella)"), h("span", { className: "linea" })),
+    h("div", { className: "tabla-scroll tabla-card", style: { padding: 0 } },
+      h("table", { className: "tabla-infoagro" },
+        h("thead", null, h("tr", null,
+          ["Orden","Equipo","Bahía","Recepción","Entrega","Etapa más lenta","Tiempo Total"].map(c => h("th", { key: c }, h("div", { className: "tabla-th-contenido" }, c)))
+        )),
+        h("tbody", null,
+          topBottlenecks.length
+            ? topBottlenecks.map(({ orden, t }) => {
+                let claveLenta = "diagnostico", maxV = -1;
+                DEF_ETAPAS.forEach(def => { const v = t[def.key]; if (v !== null && v > maxV) { maxV = v; claveLenta = def.key; } });
+                const defLenta = DEF_ETAPAS.find(d => d.key === claveLenta);
+                return h("tr", { key: orden.id },
+                  h("td", null, h("b", null, orden.x_name)),
+                  h("td", null, nombreM2O(orden.x_studio_equipo_id)),
+                  h("td", null, nombreM2O(orden.x_studio_bahia_id)),
+                  h("td", null, formatearFecha(orden.x_studio_fecha_recepcion)),
+                  h("td", null, formatearFecha(orden.x_studio_fecha_entrega)),
+                  h("td", null, h("span", { className: "chip-etapa", style: { background: COLORES_ETAPA[claveLenta] } }, defLenta.label.replace("Tiempo ", "") + " · " + fmtDias(maxV) + "d")),
+                  h("td", { className: t.total > 15 ? "chip-alerta" : "" }, fmtDias(t.total) + " días")
+                );
+              })
+            : h("tr", null, h("td", { colSpan: 7, className: "tabla-vacia" }, "Sin órdenes entregadas en el período seleccionado"))
+        )
+      )
+    ),
+
+    h("div", { className: "pie-nota" },
+      h("b", null, "Fuente de la definición:"), " tiempos y responsables tomados de la pizarra de proceso de la Jefatura de Taller. ",
+      h("b", null, "Fuente de datos:"), " ", h("code", null, "x_taller_orden"), " + ", h("code", null, "x_taller_presupuesto"), " vía ", h("code", null, "tallerQuery"), " (Odoo Studio)."
+    ),
+
+    drill && h("div", { className: "drill-fondo abierto", onClick: () => setDrill(null) }),
+    drill && h("div", { className: "drill-modal abierto" },
+      h("div", { className: "drill-header" },
+        h("div", null, h("h3", null, drill.titulo), h("p", null, drill.sub)),
+        h("button", { className: "drill-cerrar", onClick: () => setDrill(null) }, "✕")
+      ),
+      h("div", { className: "drill-cuerpo" },
+        h("table", { className: "tabla-infoagro" },
+          h("thead", null, h("tr", null, drill.columnas.map(c => h("th", { key: c }, h("div", { className: "tabla-th-contenido" }, c))))),
+          h("tbody", null,
+            drill.filas.length
+              ? drill.filas.map((fila, i) => h("tr", { key: i }, fila.map((v, j) => h("td", { key: j }, j === 0 ? h("b", null, v) : v))))
+              : h("tr", null, h("td", { colSpan: drill.columnas.length, className: "tabla-vacia" }, "Sin datos"))
+          )
+        )
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("raiz")).render(h(Inicio));
+</script>
+</body>
+</html>
