@@ -131,6 +131,13 @@
 
   .pie-nota{font-size:11px; color:var(--color-texto-suave); background:var(--color-acento-suave); border-left:3px solid var(--color-primario); padding:9px 13px; border-radius:8px; margin-top:24px;}
   .pie-nota b{color:var(--color-primario-oscuro);}
+
+  .aviso-calidad{
+    font-size:11.5px; color:#92400E; background:#FEF3C7; border:1px solid #FDE68A;
+    border-radius:10px; padding:10px 14px; line-height:1.6;
+  }
+  .aviso-calidad.ok{ color:var(--color-primario-oscuro); background:var(--color-acento-suave); border-color:#BEEBD1; }
+  .chip-falta{ font-size:10.5px; font-weight:700; color:var(--color-peligro); background:#FEE2E2; padding:2px 8px; border-radius:999px; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -212,7 +219,8 @@ function calcularTiempos(orden, presupuestosDeOrden){
   const tAutor = (fAprobado && fCotizadoAprobado) ? diasEntre(fCotizadoAprobado, fAprobado) : null;
   const tBahia = (fEntrega && fAprobado)        ? diasEntre(fAprobado, fEntrega) : null;
 
-  return { diagnostico:tDiag, cotizar:tCotiz, autorizar:tAutor, bahia:tBahia, componente1, componente2, total, fRecepcion, fEntrega };
+  return { diagnostico:tDiag, cotizar:tCotiz, autorizar:tAutor, bahia:tBahia, componente1, componente2, total,
+    fRecepcion, fDiagnostico, fCotizado, fCotizadoAprobado, fAprobado, fEntrega };
 }
 
 function Inicio(){
@@ -286,6 +294,30 @@ function Inicio(){
   const tiempos = cerradasEnRango
     .map(o => ({ orden:o, t: calcularTiempos(o, presupuestosPorOrden[o.id] || []) }))
     .filter(x => x.t);
+
+  // ---- Auditoría de datos: por orden entregada, qué fecha falta (independiente
+  // del filtro anterior, para que una orden con datos incompletos SÍ aparezca aquí). ----
+  const auditoria = cerradasEnRango.map(o => {
+    const pres = presupuestosPorOrden[o.id] || [];
+    const conFecha = pres.map(p => parseFechaOdoo(p.x_studio_fecha_presupuesto)).filter(Boolean).sort((a,b)=>a-b);
+    const aprobado = pres.find(p => p.x_studio_estado === "Aprobado");
+    return {
+      orden: o,
+      fRecepcion: parseFechaOdoo(o.x_studio_fecha_recepcion),
+      fDiagnostico: parseFechaOdoo(o.x_studio_fecha_diagnostico),
+      fCotizado: conFecha[0] || null,
+      fAprobado: aprobado ? parseFechaOdoo(aprobado.x_studio_fecha_aprobacion) : null,
+      fEntrega: parseFechaOdoo(o.x_studio_fecha_entrega),
+      tienePresupuesto: pres.length > 0,
+      tieneAprobado: !!aprobado,
+    };
+  });
+  const faltantes = {
+    fRecepcion: auditoria.filter(a => !a.fRecepcion).length,
+    fDiagnostico: auditoria.filter(a => !a.fDiagnostico).length,
+    fCotizado: auditoria.filter(a => !a.fCotizado).length,
+    fAprobado: auditoria.filter(a => !a.fAprobado).length,
+  };
 
   const promTotal = promedio(tiempos.map(x => x.t.total));
   const promComponente1 = promedio(tiempos.map(x => x.t.componente1));
@@ -477,6 +509,38 @@ function Inicio(){
                 );
               })
             : h("tr", null, h("td", { colSpan: 7, className: "tabla-vacia" }, "Sin órdenes entregadas en el período seleccionado"))
+        )
+      )
+    ),
+
+    h("div", { className: "seccion-titulo" }, h("span", null, "Calidad de datos — ¿qué fecha falta en cada orden entregada?"), h("span", { className: "linea" })),
+    faltantes.fDiagnostico + faltantes.fCotizado + faltantes.fAprobado > 0
+      ? h("div", { className: "aviso-calidad" },
+          "⚠ De " + auditoria.length + " orden(es) entregada(s) en el período: ",
+          faltantes.fDiagnostico > 0 ? h("b", null, faltantes.fDiagnostico + " sin fecha de diagnóstico") : null,
+          (faltantes.fDiagnostico > 0 && faltantes.fCotizado > 0) ? ", " : null,
+          faltantes.fCotizado > 0 ? h("b", null, faltantes.fCotizado + " sin fecha de cotización") : null,
+          (faltantes.fAprobado > 0 && (faltantes.fDiagnostico > 0 || faltantes.fCotizado > 0)) ? ", " : null,
+          faltantes.fAprobado > 0 ? h("b", null, faltantes.fAprobado + " sin fecha de autorización") : null,
+          ". Mientras falten, esas etapas se ven como \"—\" arriba, aunque la orden ya esté entregada."
+        )
+      : h("div", { className: "aviso-calidad ok" }, "✓ Todas las órdenes entregadas en el período tienen las 5 fechas registradas."),
+    h("div", { className: "tabla-scroll tabla-card", style: { padding: 0, marginTop: 10 } },
+      h("table", { className: "tabla-infoagro" },
+        h("thead", null, h("tr", null,
+          ["Orden","Recepción","Diagnóstico","Cotizado","Autorizado","Entrega"].map(c => h("th", { key: c }, h("div", { className: "tabla-th-contenido" }, c)))
+        )),
+        h("tbody", null,
+          auditoria.length
+            ? auditoria.map(a => h("tr", { key: a.orden.id },
+                h("td", null, h("b", null, a.orden.x_name)),
+                h("td", null, a.fRecepcion ? formatearFecha(a.orden.x_studio_fecha_recepcion) : h("span", { className: "chip-falta" }, "✗ falta")),
+                h("td", null, a.fDiagnostico ? formatearFecha(a.orden.x_studio_fecha_diagnostico) : h("span", { className: "chip-falta" }, "✗ falta")),
+                h("td", null, a.fCotizado ? formatearFecha(a.fCotizado) : h("span", { className: "chip-falta" }, a.tienePresupuesto ? "✗ sin fecha en la cotización" : "✗ sin cotización creada")),
+                h("td", null, a.fAprobado ? formatearFecha(a.fAprobado) : h("span", { className: "chip-falta" }, a.tieneAprobado ? "✗ sin fecha de aprobación" : "✗ ninguna versión Aprobada")),
+                h("td", null, a.fEntrega ? formatearFecha(a.orden.x_studio_fecha_entrega) : h("span", { className: "chip-falta" }, "✗ falta"))
+              ))
+            : h("tr", null, h("td", { colSpan: 6, className: "tabla-vacia" }, "Sin órdenes entregadas en el período seleccionado"))
         )
       )
     ),
