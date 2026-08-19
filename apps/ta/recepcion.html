@@ -93,10 +93,30 @@
   .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:420px; box-shadow:0 20px 40px rgba(17,24,39,.25);}
   .modal h3{margin:0 0 14px; font-size:15px;}
   .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:16px;}
+
+  .kpi-chip{
+    display:inline-flex; align-items:center; gap:7px; background:var(--color-acento-suave); border:1px solid #A7F3D0;
+    border-radius:999px; padding:6px 14px; font-size:12px; color:var(--color-primario-oscuro); cursor:pointer; font-weight:600;
+    transition:filter .12s;
+  }
+  .kpi-chip:hover{ filter:brightness(.97); }
+  .kpi-chip-valor{ font-size:14.5px; font-weight:800; }
+
+  .kpi-solicitudes-grande{
+    display:inline-flex; align-items:center; gap:16px; background:linear-gradient(135deg,#16A34A 0%,#15803D 100%);
+    color:#fff; border-radius:16px; padding:18px 26px; cursor:pointer; box-shadow:0 10px 24px rgba(21,128,61,.3);
+    transition:transform .12s;
+  }
+  .kpi-solicitudes-grande:hover{ transform:translateY(-1px); }
+  .kpi-sg-icono{ font-size:26px; }
+  .kpi-sg-texto{ text-align:left; }
+  .kpi-sg-valor{ font-size:32px; font-weight:800; line-height:1; }
+  .kpi-sg-etiqueta{ font-size:12px; opacity:.9; margin-top:2px; }
+  .kpi-sg-flecha{ font-size:20px; opacity:.85; }
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v14 (se quita el botón, va en Órdenes)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v15 (siempre requiere Solicitud; cliente ya no se crea acá; KPI de pendientes)</div>
 <div id="raiz"></div>
 
 <script>
@@ -149,74 +169,9 @@ function Buscador({ placeholder, buscar, renderItem, onSeleccionar, deshabilitad
 /* ------------------------------------------------------------
    Modal simple para crear cliente nuevo
    ------------------------------------------------------------ */
-function ModalNuevoCliente({ onCerrar, onCreado }){
-  const [nombre, setNombre] = useState("");
-  const [tipo, setTipo] = useState("Externo");
-  const [telefono, setTelefono] = useState("");
-  const [contacto, setContacto] = useState("");
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState("");
-  const [crudo, setCrudo] = useState(null);
-
-  async function guardar(){
-    if (!nombre.trim()){ setError("El nombre es obligatorio."); return; }
-    setGuardando(true); setError(""); setCrudo(null);
-    try {
-      const resp = await tallerCrear("x_taller_cliente", {
-        x_name: nombre.trim(),
-        x_studio_tipo_cliente: tipo,
-        x_studio_telefono: telefono || false,
-        x_studio_contacto: contacto || false,
-      });
-      setCrudo(resp);
-      if (resp.ok) {
-        onCreado({ id: resp.id, x_name: nombre.trim(), x_studio_tipo_cliente: tipo });
-      } else {
-        setError(resp.error || "No se pudo crear el cliente.");
-      }
-    } catch(e) {
-      setError("Error: " + e.message);
-      setCrudo({ excepcion: e.message });
-    } finally {
-      setGuardando(false);
-    }
-  }
-
-  return h("div", { className: "modal-fondo", onClick: onCerrar },
-    h("div", { className: "modal", onClick: e => e.stopPropagation() },
-      h("h3", null, "🧑‍🤝‍🧑 Nuevo Cliente"),
-      h("div", { className: "campo" },
-        h("label", null, "Nombre ", h("span", { className: "req" }, "*")),
-        h("input", { type: "text", value: nombre, autoFocus: true, disabled: !!crudo, onChange: e => setNombre(e.target.value) })
-      ),
-      h("div", { className: "campo" },
-        h("label", null, "Tipo de cliente"),
-        h("select", { value: tipo, disabled: !!crudo, onChange: e => setTipo(e.target.value) },
-          h("option", { value: "Interno" }, "Interno"),
-          h("option", { value: "Externo" }, "Externo")
-        )
-      ),
-      h("div", { className: "campo" },
-        h("label", null, "Contacto"),
-        h("input", { type: "text", value: contacto, disabled: !!crudo, onChange: e => setContacto(e.target.value) })
-      ),
-      h("div", { className: "campo" },
-        h("label", null, "Teléfono"),
-        h("input", { type: "text", value: telefono, disabled: !!crudo, onChange: e => setTelefono(e.target.value) })
-      ),
-      error && h("div", { className: "mensaje mensaje-error" }, error),
-      crudo && h("pre", { style: { background:"#111827", color:"#D1FAE5", padding:"10px", borderRadius:"7px", fontSize:"10.5px", whiteSpace:"pre-wrap", wordBreak:"break-all" } }, JSON.stringify(crudo, null, 2)),
-      h("div", { className: "modal-botones" },
-        crudo && crudo.ok
-          ? h("button", { className: "btn-primario", onClick: () => onCreado({ id: crudo.id, x_name: nombre.trim(), x_studio_tipo_cliente: tipo }) }, "Continuar →")
-          : h(React.Fragment, null,
-              h("button", { className: "btn-secundario", onClick: onCerrar, disabled: guardando }, "Cancelar"),
-              h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Crear cliente")
-            )
-      )
-    )
-  );
-}
+/* La creación de clientes se movió a Configuración (Administración → Clientes),
+   controlada por un Administrador. Recepción ya NO crea clientes: siempre
+   llega con el cliente que trae la Solicitud de Servicio de origen. */
 
 /* ------------------------------------------------------------
    Modal simple para registrar equipo nuevo (de un cliente externo)
@@ -287,37 +242,6 @@ function ModalNuevoEquipo({ cliente, onCerrar, onCreado }){
 /* ------------------------------------------------------------
    Pantalla principal de Recepción
    ------------------------------------------------------------ */
-function ModalSolicitudesPendientes({ solicitudes, cargando, onCerrar, onElegir }){
-  return h("div", { className: "modal-fondo", onClick: onCerrar },
-    h("div", { className: "modal", onClick: e => e.stopPropagation() },
-      h("h3", null, "📞 Solicitudes de Servicio Pendientes"),
-      h("div", { style: { fontSize: "12px", color: "var(--color-texto-suave)", marginBottom: "12px" } },
-        "Elegí una para precargar el cliente y el problema reportado en la recepción."
-      ),
-      cargando
-        ? h("div", { className: "buscador-vacio" }, "Cargando...")
-        : !solicitudes || solicitudes.length === 0
-          ? h("div", { className: "buscador-vacio" }, "No hay solicitudes pendientes ahora mismo.")
-          : h("div", { style: { border: "1px solid var(--color-borde)", borderRadius: "8px", overflow: "hidden", maxHeight: "50vh", overflowY: "auto" } },
-              solicitudes.map((s,i) => h("div", {
-                  key: s.id,
-                  style: {
-                    padding: "10px 12px", cursor: "pointer",
-                    borderBottom: i < solicitudes.length-1 ? "1px solid var(--color-fondo)" : "none",
-                  },
-                  onClick: () => onElegir(s),
-                },
-                  h("div", { style: { fontSize: "13px", fontWeight: 600 } }, s.x_name + " — " + m2oTextoLocal(s.x_studio_cliente_id)),
-                  h("div", { style: { fontSize: "11.5px", color: "var(--color-texto-suave)" } }, s.x_studio_descripcion_equipo)
-                )
-              )
-            ),
-      h("div", { className: "modal-botones" },
-        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar")
-      )
-    )
-  );
-}
 function m2oTextoLocal(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
 
 function Recepcion(){
@@ -332,7 +256,6 @@ function Recepcion(){
   const [equipo, setEquipo] = useState(null);
   const [equiposDelCliente, setEquiposDelCliente] = useState(null);
   const [cargandoEquipos, setCargandoEquipos] = useState(false);
-  const [modalCliente, setModalCliente] = useState(false);
   const [modalEquipo, setModalEquipo] = useState(false);
 
   const [fechaRecepcion, setFechaRecepcion] = useState(() => fechaParaOdoo(new Date()));
@@ -346,8 +269,7 @@ function Recepcion(){
   const [error, setError] = useState("");
   const [errorHorometro, setErrorHorometro] = useState("");
   const [folioCreado, setFolioCreado] = useState(null);
-  const [modalSolicitudes, setModalSolicitudes] = useState(false);
-  const [solicitudesPendientes, setSolicitudesPendientes] = useState(null);
+  const [pendientesCount, setPendientesCount] = useState(null); // null = aún no se sabe
   const [respuestaCruda, setRespuestaCruda] = useState(null);
 
   const ELEMENTOS_ACTA = ["Llantas en buen estado","Espejos","Batería","Herramientas/gata","Combustible","Extintor","Radio/GPS","Sin daños visibles adicionales"];
@@ -371,24 +293,20 @@ function Recepcion(){
     );
   }
 
-  async function abrirSolicitudesPendientes(){
-    setModalSolicitudes(true);
-    if (solicitudesPendientes !== null) return; // ya cargadas, no repetir la consulta
+  async function cargarPendientesCount(){
     try {
-      const filas = await tallerQuery("x_taller_solicitud", [
-        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo","x_studio_problema_reportado","create_date",
-      ], [["x_studio_estado","=","Pendiente"]], 500);
-      setSolicitudesPendientes(filas);
+      const filas = await tallerQuery("x_taller_solicitud", ["id"], [["x_studio_estado","=","Pendiente"]], 500);
+      setPendientesCount(filas.length);
     } catch(e) {
-      setError("No se pudieron cargar las solicitudes pendientes: " + e.message);
-      setSolicitudesPendientes([]);
+      setPendientesCount(0);
     }
   }
 
-  function elegirSolicitudPendiente(s){
-    aplicarSolicitud(s);
-    setModalSolicitudes(false);
+  function irASolicitud(){
+    window.parent.postMessage({ tipo: "navegar", pestana: "solicitud" }, "*");
   }
+
+  useEffect(() => { cargarPendientesCount(); }, []);
 
   useEffect(() => {
     if (!idSolicitud) return;
@@ -447,13 +365,6 @@ function Recepcion(){
     const s = exigirSesion();
     if (s) setSesion(s);
   }, []);
-
-  async function buscarClientes(texto){
-    const filas = await tallerQuery("x_taller_cliente",
-      ["id","x_name","x_studio_tipo_cliente","x_studio_telefono"],
-      [["x_name","ilike",texto]], 15);
-    return filas;
-  }
 
   useEffect(() => {
     if (!cliente) { setEquiposDelCliente(null); return; }
@@ -658,6 +569,32 @@ function Recepcion(){
   if (!sesion) return null;
   if (cargandoSolicitud) return h("div", { className: "envoltura" }, h("div", { className: "panel" }, "Cargando solicitud..."));
 
+  // Recepción siempre debe originarse en una Solicitud de Servicio. Si se abrió
+  // la pestaña directo (sin ?desde_solicitud=), no se muestra el formulario:
+  // se manda a elegir/crear la solicitud en la pestaña Solicitud.
+  if (!idSolicitud && !solicitudOrigen) {
+    return h("div", { className: "envoltura" },
+      h("div", { className: "panel", style: { textAlign: "center", padding: "34px 22px" } },
+        h("div", { style: { fontSize: "30px", marginBottom: "6px" } }, "📞"),
+        h("h2", { style: { justifyContent: "center", marginBottom: "6px" } }, "Esta recepción necesita una Solicitud de Servicio"),
+        h("p", { style: { color: "var(--color-texto-suave)", fontSize: "13px", maxWidth: "440px", margin: "0 auto 22px" } },
+          "Toda recepción tiene que originarse en una Solicitud (así queda el cliente y el equipo ya definidos). Elegí una pendiente o creá una nueva desde la pestaña Solicitud."
+        ),
+        h("div", {
+            className: "kpi-solicitudes-grande", onClick: irASolicitud, role: "button", tabIndex: 0,
+          },
+          h("div", { className: "kpi-sg-icono" }, "📞"),
+          h("div", { className: "kpi-sg-texto" },
+            h("div", { className: "kpi-sg-valor" }, pendientesCount === null ? "…" : pendientesCount),
+            h("div", { className: "kpi-sg-etiqueta" }, "Solicitud(es) de Servicio pendiente(s)")
+          ),
+          h("div", { className: "kpi-sg-flecha" }, "→")
+        ),
+        h("button", { className: "btn-primario", style: { marginTop: "18px" }, onClick: irASolicitud }, "Ir a Solicitud de Servicio")
+      )
+    );
+  }
+
   return h("div", { className: "envoltura" },
 
     folioCreado && h("div", { style: {
@@ -676,7 +613,11 @@ function Recepcion(){
     ),
 
     h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
-      h("button", { className: "link-chico", onClick: abrirSolicitudesPendientes }, "📞 Ver Solicitudes de Servicio Pendientes")
+      h("div", { className: "kpi-chip", onClick: irASolicitud, role: "button", tabIndex: 0, title: "Ir a Solicitud de Servicio" },
+        h("span", null, "📞"),
+        h("span", { className: "kpi-chip-valor" }, pendientesCount === null ? "…" : pendientesCount),
+        h("span", null, "Solicitudes pendientes")
+      )
     ),
 
     solicitudOrigen && h("div", { style: {
@@ -702,22 +643,9 @@ function Recepcion(){
               ),
               cliente.x_studio_telefono && h("span", { className: "sub" }, cliente.x_studio_telefono)
             ),
-            h("button", { onClick: () => { setCliente(null); setEquipo(null); } }, "Cambiar")
+            h("span", { style: { fontSize: "11px", color: "var(--color-texto-suave)" } }, "Definido por la solicitud")
           )
-        : h(React.Fragment, null,
-            h(Buscador, {
-              placeholder: "Buscar cliente por nombre...",
-              buscar: buscarClientes,
-              onSeleccionar: c => { setCliente(c); setEquipo(null); },
-              renderItem: c => h(React.Fragment, null,
-                c.x_name,
-                h("span", { className: "badge " + (c.x_studio_tipo_cliente === "Externo" ? "badge-externo" : "badge-interno") }, c.x_studio_tipo_cliente)
-              ),
-            }),
-            h("div", { style: { marginTop: "8px" } },
-              h("button", { className: "link-chico", onClick: () => setModalCliente(true) }, "+ Crear cliente nuevo")
-            )
-          )
+        : h("div", { className: "buscador-vacio" }, "Esta solicitud no trae un cliente válido — revisala en la pestaña Solicitud.")
     ),
 
     h("div", { className: "panel" },
@@ -844,20 +772,10 @@ function Recepcion(){
       subiendoFotos ? "Subiendo fotos..." : guardando ? "Registrando..." : "✅ Registrar recepción"
     ),
 
-    modalCliente && h(ModalNuevoCliente, {
-      onCerrar: () => setModalCliente(false),
-      onCreado: c => { setCliente(c); setModalCliente(false); },
-    }),
     modalEquipo && cliente && h(ModalNuevoEquipo, {
       cliente,
       onCerrar: () => setModalEquipo(false),
       onCreado: eq => { setEquipo(eq); setModalEquipo(false); cargarEquiposDelCliente(cliente.id); },
-    }),
-    modalSolicitudes && h(ModalSolicitudesPendientes, {
-      solicitudes: solicitudesPendientes,
-      cargando: solicitudesPendientes === null,
-      onCerrar: () => setModalSolicitudes(false),
-      onElegir: elegirSolicitudPendiente,
     })
   );
 }
