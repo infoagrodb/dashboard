@@ -97,6 +97,7 @@
   .btn-primario:disabled{opacity:.6; cursor:default;}
   .btn-secundario{background:#fff; border:1px solid var(--color-borde); border-radius:999px; padding:9px 14px; font-size:13px; cursor:pointer; color:var(--color-texto);}
   .btn-peligro{background:#fff; border:1px solid var(--color-peligro); color:var(--color-peligro); border-radius:8px; padding:9px 14px; font-size:13px; cursor:pointer;}
+  .btn-exito{background:#0D9488; color:#fff; border:none; border-radius:999px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;}
   .btn-peligro:hover{background:var(--color-peligro-suave);}
   .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
   .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
@@ -104,7 +105,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v5 (botones de estado con descripción del efecto)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v6 (En diagnóstico automático + botón Diagnóstico Terminado)</div>
 
 <script>
 const h = React.createElement;
@@ -192,9 +193,10 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
   const bahiaActualId = Array.isArray(orden.x_studio_bahia_id) ? orden.x_studio_bahia_id[0] : null;
   const tecnicoActualId = Array.isArray(orden.x_studio_tecnico_responsable_id) ? orden.x_studio_tecnico_responsable_id[0] : null;
 
-  async function guardar(){
+  async function guardar(estadoForzado){
+    const estadoAGuardar = estadoForzado || nuevoEstado;
     const cambios = {};
-    if (nuevoEstado !== orden.x_studio_estado) cambios.x_studio_estado = nuevoEstado;
+    if (estadoAGuardar !== orden.x_studio_estado) cambios.x_studio_estado = estadoAGuardar;
 
     const bahiaSeleccionadaId = nuevaBahiaId ? Number(nuevaBahiaId) : null;
     const bahiaCambio = bahiaSeleccionadaId !== bahiaActualId;
@@ -271,6 +273,17 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
     }
   }
 
+  function terminarDiagnostico(){
+    if (!diagnostico.trim()){
+      setError("Escribí el diagnóstico antes de marcarlo como terminado.");
+      return;
+    }
+    setNuevoEstado("Pendiente de presupuesto"); // mantiene los botones de estado en sync visualmente
+    guardar("Pendiente de presupuesto"); // se pasa directo: setState es async, no llega a tiempo si se lee de nuevoEstado
+  }
+
+  const mostrarDiagnosticoTerminado = orden.x_studio_estado === "Recibida" || orden.x_studio_estado === "En diagnóstico";
+
   return h("div", { className: "modal-fondo", onClick: onCerrar },
     h("div", { className: "modal-detalle", onClick: e => e.stopPropagation() },
       h("h3", null, "🛠️ Diagnóstico de Orden de Trabajo"),
@@ -299,7 +312,18 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
         h("label", null, "Diagnóstico (causa raíz)"),
         h("textarea", {
-          value: diagnostico, onChange: e => setDiagnostico(e.target.value), rows: 3,
+          value: diagnostico,
+          onChange: e => {
+            const val = e.target.value;
+            setDiagnostico(val);
+            // Al empezar a escribir el diagnóstico, la orden pasa sola a "En
+            // diagnóstico" — solo si todavía no se tocó el selector de estado
+            // a mano (no pisa una elección manual).
+            if (val.trim() && orden.x_studio_estado === "Recibida" && nuevoEstado === "Recibida") {
+              setNuevoEstado("En diagnóstico");
+            }
+          },
+          rows: 3,
           placeholder: "Pruebas realizadas y causa raíz del problema...",
           style: { width:"100%", border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"8px", fontSize:"13px", fontFamily:"inherit", resize:"vertical" },
         })
@@ -366,7 +390,11 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
           : h("span"),
         h("div", { style: { display:"flex", gap:"8px" } },
           h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar"),
-          h("button", { className: "btn-primario", onClick: guardar, disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
+          mostrarDiagnosticoTerminado && h("button", {
+            className: "btn-exito", onClick: terminarDiagnostico, disabled: guardando,
+            title: "Guarda el diagnóstico y pasa la orden a Pendiente de presupuesto",
+          }, guardando ? "Guardando..." : "✅ Diagnóstico Terminado"),
+          h("button", { className: "btn-primario", onClick: () => guardar(), disabled: guardando }, guardando ? "Guardando..." : "Guardar cambios")
         )
       ),
 
