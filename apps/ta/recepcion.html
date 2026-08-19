@@ -119,10 +119,27 @@
   .fila-solicitud-fecha{ font-size:11px; color:var(--color-texto-suave); white-space:nowrap; }
   .fila-solicitud-flecha{ font-size:16px; color:var(--color-primario-oscuro); }
   .badge-prioridad{ background:var(--color-alerta-suave); color:var(--color-alerta); font-size:10px; font-weight:700; padding:1px 7px; border-radius:999px; }
+
+  .kpi-chip-grande-btn{
+    display:inline-flex; align-items:center; gap:9px; background:linear-gradient(135deg,#16A34A 0%,#15803D 100%);
+    color:#fff; border:none; border-radius:999px; padding:12px 24px; font-size:14px; font-weight:700; cursor:pointer;
+    box-shadow:0 8px 20px rgba(21,128,61,.3); transition:transform .12s;
+  }
+  .kpi-chip-grande-btn:hover{ transform:translateY(-1px); }
+  .kpi-chip-grande-btn .kpi-chip-valor{ font-size:19px; }
+
+  .modal-ancho{ max-width:560px; }
+  .lista-solicitudes-modal{ max-height:50vh; overflow-y:auto; }
+
+  .tabla-recientes{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .tabla-recientes th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.03em; color:var(--color-texto-suave); padding:7px 8px; border-bottom:1px solid var(--color-borde); }
+  .tabla-recientes td{ padding:8px; border-bottom:1px solid var(--color-borde); }
+  .tabla-recientes tr:last-child td{ border-bottom:none; }
+  .badge-ot{ background:var(--color-acento-suave); color:var(--color-primario-oscuro); font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; }
 </style>
 </head>
 <body>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v16 (listado de solicitudes pendientes inline, clic para recibir directo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">recepcion.html — v17 (elegir solicitud en modal, sin navegar; tabla de recepcionadas recientes)</div>
 <div id="raiz"></div>
 
 <script>
@@ -250,6 +267,42 @@ function ModalNuevoEquipo({ cliente, onCerrar, onCreado }){
    ------------------------------------------------------------ */
 function m2oTextoLocal(v){ return Array.isArray(v) ? v[1] : (v || "—"); }
 
+function ModalElegirSolicitud({ solicitudes, onCerrar, onElegir }){
+  return h("div", { className: "modal-fondo", onClick: onCerrar },
+    h("div", { className: "modal modal-ancho", onClick: e => e.stopPropagation() },
+      h("h3", null, "📞 Elegí la Solicitud a Recibir"),
+      solicitudes === null
+        ? h("div", { className: "buscador-vacio" }, "Cargando...")
+        : solicitudes.length === 0
+          ? h("div", { className: "buscador-vacio" }, "No hay solicitudes pendientes ahora mismo.")
+          : h("div", { className: "lista-solicitudes lista-solicitudes-modal" },
+              solicitudes.map(s => h("div", {
+                  key: s.id, className: "fila-solicitud", onClick: () => onElegir(s), role: "button", tabIndex: 0,
+                },
+                h("div", { className: "fila-solicitud-izq" },
+                  h("div", { className: "fila-solicitud-folio" },
+                    s.x_name,
+                    s.x_studio_prioridad && s.x_studio_prioridad !== "Normal" && h("span", { className: "badge-prioridad" }, s.x_studio_prioridad)
+                  ),
+                  h("div", { className: "fila-solicitud-cliente" }, m2oTextoLocal(s.x_studio_cliente_id)),
+                  h("div", { className: "fila-solicitud-detalle" },
+                    (m2oTextoLocal(s.x_studio_equipo_id) !== "—" ? m2oTextoLocal(s.x_studio_equipo_id) : s.x_studio_descripcion_equipo) +
+                    " — " + (s.x_studio_problema_reportado || "").slice(0, 90) + ((s.x_studio_problema_reportado || "").length > 90 ? "…" : "")
+                  )
+                ),
+                h("div", { className: "fila-solicitud-der" },
+                  h("span", { className: "fila-solicitud-fecha" }, formatearFechaHora(s.create_date)),
+                  h("span", { className: "fila-solicitud-flecha" }, "→")
+                )
+              ))
+            ),
+      h("div", { className: "modal-botones" },
+        h("button", { className: "btn-secundario", onClick: onCerrar }, "Cerrar")
+      )
+    )
+  );
+}
+
 function Recepcion(){
   const [sesion, setSesion] = useState(null);
 
@@ -277,6 +330,8 @@ function Recepcion(){
   const [folioCreado, setFolioCreado] = useState(null);
   const [pendientesCount, setPendientesCount] = useState(null); // null = aún no se sabe
   const [solicitudesPendientes, setSolicitudesPendientes] = useState(null); // null = cargando
+  const [modalPendientes, setModalPendientes] = useState(false);
+  const [recepcionadasRecientes, setRecepcionadasRecientes] = useState(null); // null = cargando
   const [respuestaCruda, setRespuestaCruda] = useState(null);
 
   const ELEMENTOS_ACTA = ["Llantas en buen estado","Espejos","Batería","Herramientas/gata","Combustible","Extintor","Radio/GPS","Sin daños visibles adicionales"];
@@ -315,15 +370,29 @@ function Recepcion(){
     }
   }
 
+  async function cargarRecepcionadasRecientes(){
+    try {
+      const filas = await tallerQuery("x_taller_solicitud", [
+        "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_descripcion_equipo",
+        "x_studio_orden_generada_id","create_date",
+      ], [["x_studio_estado","=","Convertida"]], 20);
+      filas.sort((a,b) => new Date(b.create_date) - new Date(a.create_date)); // más reciente primero
+      setRecepcionadasRecientes(filas);
+    } catch(e) {
+      setRecepcionadasRecientes([]);
+    }
+  }
+
   function elegirSolicitudPendiente(s){
     aplicarSolicitud(s);
+    setModalPendientes(false);
   }
 
   function irASolicitud(){
     window.parent.postMessage({ tipo: "navegar", pestana: "solicitud" }, "*");
   }
 
-  useEffect(() => { cargarPendientesCount(); }, []);
+  useEffect(() => { cargarPendientesCount(); cargarRecepcionadasRecientes(); }, []);
 
   useEffect(() => {
     if (!idSolicitud) return;
@@ -588,59 +657,56 @@ function Recepcion(){
 
   // Recepción siempre debe originarse en una Solicitud de Servicio. Si se abrió
   // la pestaña directo (sin ?desde_solicitud=), no se muestra el formulario:
-  // se muestra la cola de pendientes para elegir una acá mismo (quien recibe
-  // suele ser un usuario distinto de quien registró la solicitud).
+  // se elige la solicitud pendiente en un modal (quien recibe suele ser un
+  // usuario distinto de quien registró la solicitud), y abajo se ve un
+  // historial de las que ya se recepcionaron, para referencia.
   if (!idSolicitud && !solicitudOrigen) {
     return h("div", { className: "envoltura" },
-      h("div", { className: "panel" },
-        h("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px", marginBottom: "4px" } },
-          h("div", null,
-            h("h2", { style: { marginBottom: "2px" } }, "📞 Esta recepción necesita una Solicitud de Servicio"),
-            h("p", { style: { color: "var(--color-texto-suave)", fontSize: "12.5px", margin: 0 } },
-              "Elegí la solicitud del cliente que estás atendiendo. Si no está en la lista, creala primero desde Solicitud."
-            )
-          ),
-          h("div", { className: "kpi-chip kpi-chip-grande" },
-            h("span", null, "📞"),
-            h("span", { className: "kpi-chip-valor" }, pendientesCount === null ? "…" : pendientesCount),
-            h("span", null, "pendiente(s)")
-          )
+      h("div", { className: "panel", style: { textAlign: "center", padding: "30px 22px" } },
+        h("div", { style: { fontSize: "28px", marginBottom: "4px" } }, "📞"),
+        h("h2", { style: { justifyContent: "center", marginBottom: "4px" } }, "Esta recepción necesita una Solicitud de Servicio"),
+        h("p", { style: { color: "var(--color-texto-suave)", fontSize: "12.5px", maxWidth: "440px", margin: "0 auto 18px" } },
+          "Elegí la solicitud del cliente que estás por recibir."
         ),
-
-        error && h("div", { className: "mensaje mensaje-error", style: { marginTop: "12px" } }, error),
-
-        h("div", { style: { marginTop: "16px" } },
-          solicitudesPendientes === null
-            ? h("div", { className: "buscador-vacio" }, "Cargando solicitudes pendientes...")
-            : solicitudesPendientes.length === 0
-              ? h("div", { className: "buscador-vacio" }, "No hay solicitudes pendientes ahora mismo. Creá una nueva desde Solicitud.")
-              : h("div", { className: "lista-solicitudes" },
-                  solicitudesPendientes.map(s => h("div", {
-                      key: s.id, className: "fila-solicitud", onClick: () => elegirSolicitudPendiente(s), role: "button", tabIndex: 0,
-                    },
-                    h("div", { className: "fila-solicitud-izq" },
-                      h("div", { className: "fila-solicitud-folio" },
-                        s.x_name,
-                        s.x_studio_prioridad && s.x_studio_prioridad !== "Normal" && h("span", { className: "badge-prioridad" }, s.x_studio_prioridad)
-                      ),
-                      h("div", { className: "fila-solicitud-cliente" }, m2oTextoLocal(s.x_studio_cliente_id)),
-                      h("div", { className: "fila-solicitud-detalle" },
-                        (m2oTextoLocal(s.x_studio_equipo_id) !== "—" ? m2oTextoLocal(s.x_studio_equipo_id) : s.x_studio_descripcion_equipo) +
-                        " — " + (s.x_studio_problema_reportado || "").slice(0, 90) + ((s.x_studio_problema_reportado || "").length > 90 ? "…" : "")
-                      )
-                    ),
-                    h("div", { className: "fila-solicitud-der" },
-                      h("span", { className: "fila-solicitud-fecha" }, formatearFechaHora(s.create_date)),
-                      h("span", { className: "fila-solicitud-flecha" }, "→")
-                    )
-                  ))
-                )
+        h("button", { className: "kpi-chip kpi-chip-grande-btn", onClick: () => setModalPendientes(true) },
+          h("span", null, "📞"),
+          h("span", { className: "kpi-chip-valor" }, pendientesCount === null ? "…" : pendientesCount),
+          h("span", null, "solicitud(es) pendiente(s) — elegir")
         ),
-
-        h("div", { style: { marginTop: "16px", textAlign: "center" } },
+        h("div", { style: { marginTop: "12px" } },
           h("button", { className: "link-chico", onClick: irASolicitud }, "+ Crear una solicitud nueva (en la pestaña Solicitud)")
         )
-      )
+      ),
+
+      error && h("div", { className: "mensaje mensaje-error" }, error),
+
+      h("div", { className: "panel" },
+        h("h2", null, "✅ Recepcionadas recientemente"),
+        recepcionadasRecientes === null
+          ? h("div", { className: "buscador-vacio" }, "Cargando...")
+          : recepcionadasRecientes.length === 0
+            ? h("div", { className: "buscador-vacio" }, "Todavía no se ha recepcionado ninguna solicitud.")
+            : h("table", { className: "tabla-recientes" },
+                h("thead", null, h("tr", null,
+                  h("th", null, "Solicitud"), h("th", null, "Cliente"), h("th", null, "Equipo"), h("th", null, "Orden generada"), h("th", null, "Fecha")
+                )),
+                h("tbody", null,
+                  recepcionadasRecientes.map(s => h("tr", { key: s.id },
+                    h("td", null, s.x_name),
+                    h("td", null, m2oTextoLocal(s.x_studio_cliente_id)),
+                    h("td", null, m2oTextoLocal(s.x_studio_equipo_id) !== "—" ? m2oTextoLocal(s.x_studio_equipo_id) : (s.x_studio_descripcion_equipo || "—")),
+                    h("td", null, s.x_studio_orden_generada_id ? h("span", { className: "badge-ot" }, m2oTextoLocal(s.x_studio_orden_generada_id)) : "—"),
+                    h("td", null, formatearFechaHora(s.create_date))
+                  ))
+                )
+              )
+      ),
+
+      modalPendientes && h(ModalElegirSolicitud, {
+        solicitudes: solicitudesPendientes,
+        onCerrar: () => setModalPendientes(false),
+        onElegir: elegirSolicitudPendiente,
+      })
     );
   }
 
@@ -662,7 +728,7 @@ function Recepcion(){
     ),
 
     h("div", { style: { display: "flex", justifyContent: "flex-end", marginBottom: "10px" } },
-      h("div", { className: "kpi-chip", onClick: irASolicitud, role: "button", tabIndex: 0, title: "Ir a Solicitud de Servicio" },
+      h("div", { className: "kpi-chip", onClick: () => setModalPendientes(true), role: "button", tabIndex: 0, title: "Ver solicitudes pendientes" },
         h("span", null, "📞"),
         h("span", { className: "kpi-chip-valor" }, pendientesCount === null ? "…" : pendientesCount),
         h("span", null, "Solicitudes pendientes")
@@ -825,6 +891,11 @@ function Recepcion(){
       cliente,
       onCerrar: () => setModalEquipo(false),
       onCreado: eq => { setEquipo(eq); setModalEquipo(false); cargarEquiposDelCliente(cliente.id); },
+    }),
+    modalPendientes && h(ModalElegirSolicitud, {
+      solicitudes: solicitudesPendientes,
+      onCerrar: () => setModalPendientes(false),
+      onElegir: elegirSolicitudPendiente,
     })
   );
 }
