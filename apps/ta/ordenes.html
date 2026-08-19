@@ -115,7 +115,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v7 (franja OT/solicitud, fecha de diagnóstico visible, mejor contraste)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v8 (reordenado: Prioridad en franja-info, Técnico y Bahía debajo de Cliente/Equipo)</div>
 
 <script>
 const h = React.createElement;
@@ -328,6 +328,10 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
           h("div", { className: "franja-info-valor" }, formatearFecha(orden.x_studio_fecha_recepcion))
         ),
         h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Prioridad"),
+          h("div", { className: "franja-info-valor" }, h("span", { className: claseTexto("badge-prioridad", orden.x_studio_prioridad) }, orden.x_studio_prioridad))
+        ),
+        h("div", { className: "franja-info-item" },
           h("div", { className: "franja-info-label" }, "Solicitud de origen"),
           h("div", { className: "franja-info-valor" },
             solicitudOrigen === undefined
@@ -349,10 +353,38 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
           h("div", { className: "valor" }, m2oTexto(orden.x_studio_equipo_id))
         )
       ),
+
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
-        h("label", null, "Prioridad"),
-        h("div", { className: "valor" }, h("span", { className: claseTexto("badge-prioridad", orden.x_studio_prioridad) }, orden.x_studio_prioridad))
+        h("label", null, "Técnico responsable" + (nuevaBahiaId ? " (traído de la bahía — se puede cambiar)" : "")),
+        h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
+          h("option", { value: "" }, "— Sin asignar —"),
+          tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
+        )
       ),
+
+      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+        h("label", null, "Asignar bahía"),
+        h("select", {
+          value: nuevaBahiaId,
+          onChange: e => {
+            const idElegido = e.target.value;
+            setNuevaBahiaId(idElegido);
+            // La bahía ya tiene su propio responsable — se trae solo, para no
+            // pedirlo dos veces (era ambiguo elegirlo aparte).
+            const bahiaElegida = bahias.find(b => String(b.id) === idElegido);
+            if (bahiaElegida && Array.isArray(bahiaElegida.x_studio_responsable_id)) {
+              setNuevoTecnicoId(String(bahiaElegida.x_studio_responsable_id[0]));
+            }
+          },
+        },
+          h("option", { value: "" }, "— Sin asignar —"),
+          bahias.map(b => {
+            const ocupados = ocupacionPorBahia[b.id] || 0;
+            return h("option", { key: b.id, value: b.id }, b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")");
+          })
+        )
+      ),
+
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
         h("label", null, "Problema reportado por el cliente"),
         h("div", { className: "valor" }, orden.x_studio_problema_reportado || "—")
@@ -393,38 +425,6 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
             }, e))
         ),
         h("div", { className: "estado-descripcion" }, "ℹ️ " + (ESTADO_DESCRIPCIONES[nuevoEstado] || ""))
-      ),
-
-      h("div", { className: "fila-detalle" },
-        h("div", { className: "campo-detalle" },
-          h("label", null, "Asignar bahía"),
-          h("select", {
-            value: nuevaBahiaId,
-            onChange: e => {
-              const idElegido = e.target.value;
-              setNuevaBahiaId(idElegido);
-              // La bahía ya tiene su propio responsable — se trae solo, para no
-              // pedirlo dos veces (era ambiguo elegirlo aparte).
-              const bahiaElegida = bahias.find(b => String(b.id) === idElegido);
-              if (bahiaElegida && Array.isArray(bahiaElegida.x_studio_responsable_id)) {
-                setNuevoTecnicoId(String(bahiaElegida.x_studio_responsable_id[0]));
-              }
-            },
-          },
-            h("option", { value: "" }, "— Sin asignar —"),
-            bahias.map(b => {
-              const ocupados = ocupacionPorBahia[b.id] || 0;
-              return h("option", { key: b.id, value: b.id }, b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")");
-            })
-          )
-        ),
-        h("div", { className: "campo-detalle" },
-          h("label", null, "Técnico responsable" + (nuevaBahiaId ? " (traído de la bahía — se puede cambiar)" : "")),
-          h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
-            h("option", { value: "" }, "— Sin asignar —"),
-            tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
-          )
-        )
       ),
 
       h("div", { className: "fila-detalle" },
