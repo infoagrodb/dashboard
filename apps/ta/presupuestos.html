@@ -126,6 +126,7 @@
   .totales-caja .linea-total.grande{font-size:15px; font-weight:700; border-top:1px solid var(--color-borde); margin-top:6px; padding-top:8px; color:var(--color-primario-oscuro);}
 
   .mensaje-error{background:var(--color-peligro-suave); border-left:3px solid var(--color-peligro); color:#991B1B; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
+  .mensaje-aviso{background:#FEF3C7; border-left:3px solid #D97706; color:#92400E; font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
   .mensaje-exito{background:var(--color-acento-suave); border-left:3px solid var(--color-primario); color:var(--color-primario-oscuro); font-size:12px; padding:8px 10px; border-radius:6px; margin-top:10px;}
 
   .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
@@ -138,7 +139,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v19 (UM después de Descripción en Agregar Línea)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v20 (evita borradores duplicados; solo lista órdenes cotizables)</div>
 
 <script>
 const h = React.createElement;
@@ -191,16 +192,41 @@ function ModalNuevoPresupuesto({ onCerrar, onCreado }){
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState("");
 
+  // Solo se puede cotizar una orden que ya tiene diagnóstico (por eso Solicitada
+  // y En diagnóstico quedan afuera) — a pedido de Jefatura.
+  const ESTADOS_ELEGIBLES_PARA_COTIZAR = ["Pendiente de presupuesto", "En reparación", "Aprobada"];
+
   useEffect(() => {
     tallerQuery("x_taller_orden", [
       "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_estado","x_studio_fecha_recepcion",
-    ], [["x_studio_estado","not in",["Cerrada","Cancelada","Entregada"]]], 1000)
+    ], [["x_studio_estado","in",ESTADOS_ELEGIBLES_PARA_COTIZAR]], 1000)
       .then(setOrdenes)
       .catch(e => setError("No se pudieron cargar las órdenes: " + e.message))
       .finally(() => setCargandoOrdenes(false));
   }, []);
 
+  // Al elegir la orden, se revisa si ya tiene una versión en Borrador — si la
+  // tiene, no se debe crear otra: se avisa y se abre esa misma al continuar.
+  const [presupuestosDeOrden, setPresupuestosDeOrden] = useState(null);
+  const [cargandoPresupuestos, setCargandoPresupuestos] = useState(false);
+  useEffect(() => {
+    if (!orden) { setPresupuestosDeOrden(null); return; }
+    setCargandoPresupuestos(true);
+    tallerQuery("x_taller_presupuesto", ["id","x_studio_version","x_studio_estado"], [["x_studio_orden_id","=",orden.id]], 100)
+      .then(setPresupuestosDeOrden)
+      .catch(() => setPresupuestosDeOrden([]))
+      .finally(() => setCargandoPresupuestos(false));
+  }, [orden?.id]);
+  const borradorExistente = (presupuestosDeOrden || []).find(p => p.x_studio_estado === "Borrador");
+
   async function crear(){
+    // Si ya hay una versión en Borrador para esta orden, no se crea otra —
+    // se abre esa misma (a pedido de Jefatura, para no acumular borradores sueltos).
+    if (borradorExistente) {
+      onCreado(borradorExistente.id);
+      return;
+    }
+
     setCreando(true); setError("");
     try {
       const existentes = await tallerQuery("x_taller_presupuesto", ["id","x_studio_version"], [["x_studio_orden_id","=",orden.id]], 100);
@@ -283,10 +309,15 @@ function ModalNuevoPresupuesto({ onCerrar, onCreado }){
                 TablaInfoAgro(h, { columnas: columnasOrdenes, filas: ordenes || [], onFilaClick: setOrden })
               )
       ),
+      orden && cargandoPresupuestos && h("div", { className: "buscador-vacio", style: { marginTop: "8px" } }, "Revisando versiones existentes..."),
+      orden && !cargandoPresupuestos && borradorExistente && h("div", { className: "mensaje-aviso" },
+        "⚠ Esta orden ya tiene la versión V" + borradorExistente.x_studio_version + " en Borrador — no se crea otra, se va a abrir esa."
+      ),
       error && h("div", { className: "mensaje-error" }, error),
       h("div", { className: "modal-botones" },
         h("button", { className: "btn-secundario", onClick: onCerrar, disabled: creando }, "Cancelar"),
-        h("button", { className: "btn-primario", onClick: crear, disabled: creando || !orden }, creando ? "Creando..." : "Crear versión")
+        h("button", { className: "btn-primario", onClick: crear, disabled: creando || !orden || cargandoPresupuestos },
+          creando ? "Creando..." : borradorExistente ? "Abrir borrador existente" : "Crear versión")
       )
     )
   );
