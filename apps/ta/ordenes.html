@@ -83,14 +83,24 @@
   /* ---- Modal detalle ---- */
   .modal-fondo{position:fixed; inset:0; background:rgba(17,24,39,.45); display:flex; align-items:center; justify-content:center; z-index:500; padding:20px;}
   .modal-detalle{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:560px; max-height:88vh; overflow-y:auto; box-shadow:0 20px 40px rgba(17,24,39,.25);}
-  .modal-detalle h3{margin:0 0 4px; font-size:16px;}
-  .modal-detalle .folio-sub{color:var(--color-texto-suave); font-size:12px; margin-bottom:16px;}
+  .modal-detalle h3{margin:0 0 10px; font-size:16px;}
   .fila-detalle{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;}
-  .campo-detalle label{display:block; font-size:11px; color:var(--color-texto-suave); text-transform:uppercase; letter-spacing:.03em; margin-bottom:3px;}
-  .campo-detalle .valor{font-size:13.5px;}
+  .campo-detalle label{display:block; font-size:10.5px; font-weight:700; color:var(--color-texto-suave); text-transform:uppercase; letter-spacing:.04em; margin-bottom:3px;}
+  .campo-detalle .valor{font-size:14.5px; font-weight:600; color:var(--color-texto);}
   .campo-detalle textarea, .campo-detalle select{
     width:100%; border:1px solid var(--color-borde); border-radius:7px; padding:8px; font-size:13px; font-family:inherit;
   }
+
+  .franja-info{
+    display:flex; flex-wrap:wrap; gap:16px; background:var(--color-fondo); border:1px solid var(--color-borde);
+    border-radius:10px; padding:10px 14px; margin-bottom:16px;
+  }
+  .franja-info-item{ min-width:120px; }
+  .franja-info-label{ font-size:10px; font-weight:700; color:var(--color-texto-suave); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; }
+  .franja-info-valor{ font-size:13px; font-weight:700; color:var(--color-primario-oscuro); }
+
+  .fecha-diagnostico-visible{ margin-top:6px; font-size:12px; color:var(--color-texto-suave); }
+  .fecha-diagnostico-visible strong{ color:var(--color-texto); }
   .modal-botones{display:flex; gap:8px; justify-content:flex-end; margin-top:18px;}
   .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:999px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;}
   .btn-primario:hover:not(:disabled){background:var(--color-primario-oscuro);}
@@ -105,7 +115,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v6 (En diagnóstico automático + botón Diagnóstico Terminado)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v7 (franja OT/solicitud, fecha de diagnóstico visible, mejor contraste)</div>
 
 <script>
 const h = React.createElement;
@@ -153,10 +163,29 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
     Array.isArray(orden.x_studio_tecnico_responsable_id) ? String(orden.x_studio_tecnico_responsable_id[0]) : ""
   );
   const [diagnostico, setDiagnostico] = useState(orden.x_studio_diagnostico || "");
+  const [fechaDiagnosticoMostrada, setFechaDiagnosticoMostrada] = useState(orden.x_studio_fecha_diagnostico || null);
   const [fechaEntrega, setFechaEntrega] = useState(orden.x_studio_fecha_entrega ? orden.x_studio_fecha_entrega.slice(0,10) : "");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
+
+  // La orden no guarda un enlace directo hacia la solicitud que la originó
+  // (x_taller_solicitud sí guarda hacia adelante, en x_studio_orden_generada_id)
+  // — así que se busca al revés, por si esta orden vino de una solicitud.
+  const [solicitudOrigen, setSolicitudOrigen] = useState(undefined); // undefined=cargando, null=no tiene
+  useEffect(() => {
+    let activo = true;
+    (async () => {
+      try {
+        const filas = await tallerQuery("x_taller_solicitud", ["id","x_name","create_date"],
+          [["x_studio_orden_generada_id","=",orden.id]], 1);
+        if (activo) setSolicitudOrigen(filas[0] || null);
+      } catch(e) {
+        if (activo) setSolicitudOrigen(null);
+      }
+    })();
+    return () => { activo = false; };
+  }, [orden.id]);
 
   function m2oTexto(v){
     return Array.isArray(v) ? v[1] : (v || "—");
@@ -246,6 +275,7 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
       const resp = await tallerActualizar("x_taller_orden", orden.id, cambios);
       if (resp.ok) {
         setExito("Guardado correctamente.");
+        if (cambios.x_studio_fecha_diagnostico) setFechaDiagnosticoMostrada(cambios.x_studio_fecha_diagnostico);
         onActualizado({
           ...orden, ...cambios,
           x_studio_bahia_id: bahiaSeleccionadaId ? [bahiaSeleccionadaId, bahias.find(b=>b.id===bahiaSeleccionadaId)?.x_name] : false,
@@ -287,8 +317,27 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
   return h("div", { className: "modal-fondo", onClick: onCerrar },
     h("div", { className: "modal-detalle", onClick: e => e.stopPropagation() },
       h("h3", null, "🛠️ Diagnóstico de Orden de Trabajo"),
-      h("div", { style: { fontSize: "13px", fontWeight: 600, marginTop: "-8px", marginBottom: "2px" } }, orden.x_name),
-      h("div", { className: "folio-sub" }, "Recepcionado: " + formatearFecha(orden.x_studio_fecha_recepcion)),
+
+      h("div", { className: "franja-info" },
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Orden de trabajo"),
+          h("div", { className: "franja-info-valor" }, orden.x_name)
+        ),
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Recepcionada"),
+          h("div", { className: "franja-info-valor" }, formatearFecha(orden.x_studio_fecha_recepcion))
+        ),
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Solicitud de origen"),
+          h("div", { className: "franja-info-valor" },
+            solicitudOrigen === undefined
+              ? "Buscando..."
+              : solicitudOrigen
+                ? solicitudOrigen.x_name + " · " + formatearFecha(solicitudOrigen.create_date)
+                : "— (sin solicitud)"
+          )
+        )
+      ),
 
       h("div", { className: "fila-detalle" },
         h("div", { className: "campo-detalle" },
@@ -326,7 +375,11 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
           rows: 3,
           placeholder: "Pruebas realizadas y causa raíz del problema...",
           style: { width:"100%", border:"1px solid var(--color-borde)", borderRadius:"7px", padding:"8px", fontSize:"13px", fontFamily:"inherit", resize:"vertical" },
-        })
+        }),
+        h("div", { className: "fecha-diagnostico-visible" },
+          "🕒 Fecha de diagnóstico: ",
+          h("strong", null, fechaDiagnosticoMostrada ? formatearFechaHora(fechaDiagnosticoMostrada) : "— (todavía no se completó)")
+        )
       ),
 
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
