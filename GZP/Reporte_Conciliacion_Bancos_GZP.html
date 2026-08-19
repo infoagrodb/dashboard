@@ -2,7 +2,8 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Reporte Resumido de Conciliación de Cuentas — Grupo ZP</title>
+<title>grupozp.odoo.com/Conciliación bancaria</title>
+<link rel="icon" type="image/x-icon" href="https://grupozp.odoo.com/web/image/res.company/1/favicon">
 <style>
   *{box-sizing:border-box;}
   body{margin:0;background:#d9d9d9;font-family:Calibri,Arial,sans-serif;color:#000;padding:28px 12px;font-size:13px;}
@@ -92,6 +93,13 @@
     <div class="field">
       <label>&nbsp;</label>
       <button id="btnActualizar" style="font-family:Arial,sans-serif; font-size:12.5px; padding:6px 14px; border:1px solid #2e7d4f; background:#eaf5ef; color:#1f6f4a; cursor:pointer; border-radius:3px; font-weight:600;">&#8635; Recargar en vivo</button>
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <label style="display:flex; align-items:center; gap:6px; font-family:Arial,sans-serif; font-size:12.5px; color:#333; cursor:pointer; padding:6px 0;">
+        <input type="checkbox" id="chkVerAdvertencia" checked style="cursor:pointer;">
+        Mostrar advertencia de corte
+      </label>
     </div>
   </div>
 
@@ -262,7 +270,8 @@ function render(){
     .filter(c => c[0]==='P' && c[1] >= start && c[1] <= end)
     .map(([tipo,d,a,partner,doc,mn]) => {
       const banco = mn !== '' ? bankByMatching[mn] : undefined;
-      return { d, a, partner, doc, confirmado: !!banco, bancoFecha: banco?banco.fecha:null, bancoDesc: banco?banco.desc:null };
+      const dentroDelCorte = !!banco && banco.fecha <= end;
+      return { d, a, partner, doc, confirmado: dentroDelCorte, fueraDeCorte: !!banco && !dentroDelCorte, bancoFecha: banco?banco.fecha:null, bancoDesc: banco?banco.desc:null };
     })
     .sort((x,y)=> x.d < y.d ? -1 : 1);
 
@@ -289,11 +298,11 @@ function render(){
   if (officialReal !== null) {
     const diff = balanceAjustado - officialReal;
     const ok = Math.abs(diff) <= 0.02;
-    h += '<div class="banner '+(ok?'ok':'warn')+'">'+(ok
+    h += '<div id="banner-corte" class="banner '+(ok?'ok':'warn')+'">'+(ok
       ? 'Fecha de fin coincide con un corte oficial del banco \u2014 diferencia verificada: '+fmtPlain(diff)
       : 'Fecha de fin coincide con un corte oficial del banco \u2014 hay una diferencia real sin explicar de '+fmtPlain(Math.abs(diff)))+'</div>';
   } else {
-    h += '<div class="banner warn">La fecha de fin no coincide con un corte oficial confirmado por el banco en Odoo. El "Balance Final" mostrado es el calculado según los movimientos registrados, sin confirmación bancaria para esa fecha exacta.</div>';
+    h += '<div id="banner-corte" class="banner warn">La fecha de fin no coincide con un corte oficial confirmado por el banco en Odoo. El "Balance Final" mostrado es el calculado según los movimientos registrados, sin confirmación bancaria para esa fecha exacta.</div>';
   }
 
   h += '<table class="rpt">';
@@ -339,8 +348,10 @@ function render(){
     pagosEnRango.forEach(p => {
       const estado = p.confirmado
         ? '<span style="color:#1f6f4a;font-weight:700;">\u2713 Conciliado</span>'
-        : '<span style="color:#8a1f2b;font-weight:700;">\u2717 Pendiente</span>';
-      const bancoCol = p.confirmado
+        : (p.fueraDeCorte
+            ? '<span style="color:#a9770e;font-weight:700;">\u2717 Pendiente (banco fuera de corte)</span>'
+            : '<span style="color:#8a1f2b;font-weight:700;">\u2717 Pendiente</span>');
+      const bancoCol = (p.bancoDesc !== null)
         ? (p.bancoDesc||'') + (p.bancoFecha && p.bancoFecha !== p.d ? ' <span style="color:#888;font-size:11px;">('+fmtDate(p.bancoFecha)+')</span>' : '')
         : '<span style="color:#aaa;">—</span>';
       h += '<tr><td>'+fmtDate(p.d)+'</td><td>'+(p.partner||'')+'</td><td>'+(p.doc||'')+'</td><td class="ref">'+bancoCol+'</td><td class="num">'+fmtCell(p.a)+'</td><td>'+estado+'</td></tr>';
@@ -366,10 +377,18 @@ function render(){
 
   reportDiv.innerHTML = h;
   footnote.textContent = 'Consulta en vivo: account.bank.statement.line, account.bank.statement y account.move.line — grupozp.odoo.com vía Cloudflare Worker ('+acc.lines.length+' movimientos)';
+  aplicarVisibilidadAdvertencia();
 
   detailToggle.style.display = 'block';
   renderDetail(acc, start, end);
 }
+
+function aplicarVisibilidadAdvertencia(){
+  const banner = document.getElementById('banner-corte');
+  const chk = document.getElementById('chkVerAdvertencia');
+  if (banner && chk) banner.style.display = chk.checked ? '' : 'none';
+}
+document.getElementById('chkVerAdvertencia').addEventListener('change', aplicarVisibilidadAdvertencia);
 
 function renderDetail(acc, start, end){
   const inRange = acc.lines.filter(([d,a]) => d >= start && d <= end);
