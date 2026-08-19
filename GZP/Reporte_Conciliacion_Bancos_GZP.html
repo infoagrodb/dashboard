@@ -162,7 +162,7 @@ async function boot(){
   loadStatus.textContent = 'Consultando datos en vivo desde grupozp.odoo.com…';
   try {
     const [lines, stmts, clearing] = await Promise.all([
-      odooQuery('account.bank.statement.line', ['id','date','amount','payment_ref','journal_id'], [['journal_id','in',[6,9]]]),
+      odooQuery('account.bank.statement.line', ['id','date','amount','payment_ref','journal_id','is_reconciled'], [['journal_id','in',[6,9]]]),
       odooQuery('account.bank.statement', ['date','balance_end_real','journal_id'], [['journal_id','in',[6,9]]]),
       odooQuery('account.move.line', ['date','debit','credit','matching_number','payment_id','statement_line_id','partner_id','account_id','journal_id'], [['account_id','in',[715,716,730,731]],['journal_id','in',[6,9]]]),
     ]);
@@ -173,7 +173,7 @@ async function boot(){
       acctLinesRaw.forEach(l => { idToRef[l.id] = l.payment_ref || ''; });
       const acctLines = acctLinesRaw
         .sort((a,b)=> a.date < b.date ? -1 : 1)
-        .map(l => [l.date, l.amount, l.payment_ref || '', l.id]);
+        .map(l => [l.date, l.amount, l.payment_ref || '', l.id, !!l.is_reconciled]);
       const acctStmts = stmts.filter(s => m2o0(s.journal_id) === journalId)
         .sort((a,b)=> a.date < b.date ? -1 : 1)
         .map(s => ({date: s.date, real: s.balance_end_real}));
@@ -285,12 +285,11 @@ function render(){
   const totalPend = depPend + retPend;
   const balanceAjustado = closingCalc + totalPend;
 
-  // Movimientos flotantes: líneas del banco dentro del rango que NO tienen ninguna línea de
-  // conciliación (clearing) asociada — es decir, el banco registró algo que nunca pasó por
-  // el flujo de pagos/recibos pendientes del contador (comisiones, ajustes directos, etc.)
-  const matchedStatementIds = new Set(clearing.filter(c => c[0]==='B' && c[6]!=null).map(c => c[6]));
+  // Movimientos flotantes: líneas del banco dentro del rango cuyo propio campo is_reconciled
+  // (calculado por Odoo, sin importar el mecanismo: pago, recibo, o cordobización/TO-CUBRIR FONDOS
+  // conciliada directo contra la cuenta transitoria) indica que aún no están conciliadas.
   const flotantes = acc.lines
-    .filter(([d,a,ref,id]) => d >= start && d <= end && !matchedStatementIds.has(id))
+    .filter(([d,a,ref,id,rec]) => d >= start && d <= end && !rec)
     .map(([d,a,ref]) => ({d,a,ref}))
     .sort((x,y)=> x.d < y.d ? -1 : 1);
 
