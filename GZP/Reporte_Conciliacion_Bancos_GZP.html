@@ -161,13 +161,14 @@ async function boot(){
   loadStatus.style.display = 'block';
   loadStatus.textContent = 'Consultando datos en vivo desde grupozp.odoo.com…';
   try {
-    const [lines, stmts, clearing] = await Promise.all([
+    const [lines, stmts, clearing, ledger] = await Promise.all([
       odooQuery('account.bank.statement.line', ['id','date','amount','payment_ref','journal_id','is_reconciled'], [['journal_id','in',[6,9]]]),
       odooQuery('account.bank.statement', ['date','balance_end_real','journal_id'], [['journal_id','in',[6,9]]]),
-      odooQuery('account.move.line', ['date','debit','credit','matching_number','payment_id','statement_line_id','partner_id','account_id','journal_id'], [['account_id','in',[715,716,730,731]],['journal_id','in',[6,9]]]),
+      odooQuery('account.move.line', ['date','debit','credit','amount_currency','matching_number','payment_id','statement_line_id','partner_id','account_id','journal_id','name'], [['account_id','in',[715,716,730,731]],['journal_id','in',[6,9]]]),
+      odooQuery('account.move.line', ['date','debit','credit','amount_currency','account_id'], [['account_id','in',[41,592]]]),
     ]);
 
-    function buildAccount(label, currency, journalId, cuentasClearing){
+    function buildAccount(label, currency, journalId, cuentasClearing, glAccountId, usaAmountCurrency){
       const acctLinesRaw = lines.filter(l => m2o0(l.journal_id) === journalId);
       const idToRef = {};
       acctLinesRaw.forEach(l => { idToRef[l.id] = l.payment_ref || ''; });
@@ -177,21 +178,33 @@ async function boot(){
       const acctStmts = stmts.filter(s => m2o0(s.journal_id) === journalId)
         .sort((a,b)=> a.date < b.date ? -1 : 1)
         .map(s => ({date: s.date, real: s.balance_end_real}));
-      const acctClearing = clearing.filter(c => cuentasClearing.includes(m2o0(c.account_id)) && m2o0(c.journal_id) === journalId)
+      const acctClearing = clearing.filter(c => cuentasClearing.includes(m2o0(c.account_id)) && m2o0(c.journal_id) !== 7)
         .sort((a,b)=> a.date < b.date ? -1 : 1)
         .map(c => {
-          const signed = c.debit - c.credit;
+          // Las cuentas transitorias en USD (730/731) guardan debit/credit en córdobas —
+          // hay que usar amount_currency para obtener el monto real en dólares.
+          const signed = (currency === 'US$') ? c.amount_currency : (c.debit - c.credit);
           if (c.payment_id) return ['P', c.date, signed, m2o1(c.partner_id), m2o1(c.payment_id), c.matching_number || '', null];
           const slId = m2o0(c.statement_line_id);
-          const bankDesc = idToRef[slId] || m2o1(c.statement_line_id);
-          return ['B', c.date, signed, m2o1(c.partner_id), bankDesc, c.matching_number || '', slId];
+          if (slId) {
+            const bankDesc = idToRef[slId] || m2o1(c.statement_line_id);
+            return ['B', c.date, signed, m2o1(c.partner_id), bankDesc, c.matching_number || '', slId];
+          }
+          // Conciliación manual directa (ni payment_id ni statement_line_id) — ej. Cordobización / TO-CUBRIR FONDOS
+          return ['O', c.date, signed, m2o1(c.partner_id), c.name || '', c.matching_number || '', null];
         });
-      return { label, currency, lines: acctLines, statements: acctStmts, clearing: acctClearing };
+      // Libro contable real (account.move.line en la cuenta GL del banco, ej. 11103/11104).
+      // Para cuentas en moneda extranjera (USD) se usa amount_currency, NO debit/credit
+      // (que Odoo siempre guarda en la moneda de la compañía, córdobas).
+      const acctLedger = ledger.filter(m => m2o0(m.account_id) === glAccountId)
+        .sort((a,b)=> a.date < b.date ? -1 : 1)
+        .map(m => [m.date, usaAmountCurrency ? m.amount_currency : (m.debit - m.credit)]);
+      return { label, currency, lines: acctLines, statements: acctStmts, clearing: acctClearing, ledger: acctLedger };
     }
 
     ACCOUNTS = {
-      BNK1: buildAccount('11103 Banpro Cta Cordoba 95447', 'C$', 6, [715,716]),
-      BNK2: buildAccount('11104 Banpro Cta Dolar 48612', 'US$', 9, [730,731]),
+      BNK1: buildAccount('11103 Banpro Cta Cordoba 95447', 'C$', 6, [715,716], 41, false),
+      BNK2: buildAccount('11104 Banpro Cta Dolar 48612', 'US$', 9, [730,731], 592, true),
     };
 
     populateAccounts();
@@ -269,15 +282,32 @@ function render(){
   // confirmado por el banco si existe una línea tipo "B" con el mismo matching_number.
   const clearing = acc.clearing || [];
   const bankByMatching = {};
-  clearing.filter(c => c[0]==='B' && c[5]).forEach(c => { bankByMatching[c[5]] = {fecha: c[1], desc: c[4]}; });
+  const bankIdsExplicados = new Set();
+  clearing.filter(c => c[0]==='B' && c[5]).forEach(c => { bankByMatching[c[5]] = {fecha: c[1], desc: c[4]}; if (c[6]!=null) bankIdsExplicados.add(c[6]); });
   const pagosEnRango = clearing
-    .filter(c => c[0]==='P' && c[1] >= start && c[1] <= end)
+    .filter(c => (c[0]==='P' || c[0]==='O') && c[1] >= start && c[1] <= end)
     .map(([tipo,d,a,partner,doc,mn]) => {
+      if (tipo === 'O') {
+        // Conciliación manual directa (Cordobización/TO-CUBRIR FONDOS, etc.): no pasa por payment_id,
+        // así que no hay una línea "B" separada que cruzar — el propio matching_number ya confirma
+        // que Odoo la concilió contra el banco.
+        const conf = mn !== '';
+        return { d, a, partner, doc, confirmado: conf, fueraDeCorte: false, bancoFecha: conf?d:null, bancoDesc: conf?doc:null };
+      }
       const banco = mn !== '' ? bankByMatching[mn] : undefined;
       const dentroDelCorte = !!banco && banco.fecha <= end;
       return { d, a, partner, doc, confirmado: dentroDelCorte, fueraDeCorte: !!banco && !dentroDelCorte, bancoFecha: banco?banco.fecha:null, bancoDesc: banco?banco.desc:null };
-    })
-    .sort((x,y)=> x.d < y.d ? -1 : 1);
+    });
+
+  // Movimientos del banco marcados is_reconciled=true por Odoo que NO son contraparte de ningún
+  // pago ya listado arriba — típicamente transferencias entre las propias cuentas de la empresa
+  // (TO-CUBRIR FONDOS, Cordobización) conciliadas directo entre las dos cuentas bancarias.
+  acc.lines.forEach(([d,a,ref,id,rec]) => {
+    if (d >= start && d <= end && rec && !bankIdsExplicados.has(id)) {
+      pagosEnRango.push({ d, a, partner: '', doc: '(transferencia entre cuentas)', confirmado: true, fueraDeCorte: false, bancoFecha: d, bancoDesc: ref });
+    }
+  });
+  pagosEnRango.sort((x,y)=> x.d < y.d ? -1 : 1);
 
   const pendientes = pagosEnRango.filter(p => !p.confirmado);
   const depPend = pendientes.filter(p => p.a >= 0).reduce((s,p) => s+p.a, 0);
@@ -309,7 +339,7 @@ function render(){
   }
 
   h += '<table class="rpt">';
-  h += '<tr class="hdr"><td class="desc"><b>Descripción</b></td><td class="monto">Monto</td><td class="total">Total</td></tr>';
+  h += '<tr class="hdr"><td class="desc"><b>Descripción</b></td><td class="monto">Monto ('+CUR+')</td><td class="total">Total ('+CUR+')</td></tr>';
   h += row('Cuenta: '+acc.label);
   h += row('Fecha de inicio de estado de cuenta:', undefined, fmtDate(start), {rawTotal:true});
   h += row('Fecha de fin de estado de cuenta:', undefined, fmtDate(end), {rawTotal:true});
@@ -345,9 +375,40 @@ function render(){
   }
   h += '</table>';
 
+  // ===== Saldo en Libro — la cuenta contable real (11103/11104), independiente del extracto bancario =====
+  const ledger = acc.ledger || [];
+  const libroEnRango = ledger.filter(([d]) => d >= start && d <= end);
+  const libroDeb = libroEnRango.filter(([d,a]) => a >= 0).reduce((s,[d,a]) => s+a, 0);
+  const libroCred = libroEnRango.filter(([d,a]) => a < 0).reduce((s,[d,a]) => s+a, 0);
+  const libroNeto = libroDeb + libroCred;
+  // Saldo de libro independiente: acumulado real desde el inicio de la cuenta contable (NO se
+  // toma prestado del saldo confirmado por el banco), para que una diferencia histórica libro-vs-banco
+  // se revele en vez de esconderse.
+  const saldoLibroInicio = ledger.filter(([d]) => d < start).reduce((s,[d,a]) => s+a, 0);
+  const saldoLibroFin = saldoLibroInicio + libroNeto;
+
+  h += '<table class="rpt" style="margin-top:18px;">';
+  h += row('Saldo en libro al '+fmtDate(start)+':', undefined, saldoLibroInicio);
+  h += row('Transacciones del o antes del '+fmtDate(end));
+  h += row('Débitos registrados en cuenta', libroDeb, undefined, {indent:true});
+  h += row('Créditos registrados en cuenta', libroCred, undefined, {indent:true, cls:'uline'});
+  h += row('Monto Neto registrado en cuenta', undefined, libroNeto);
+  h += row('Saldo en libro al '+fmtDate(end)+':', undefined, saldoLibroFin, {cls:'dbl'});
+  h += row('Transacciones en cuentas transitorias (registradas en Odoo, aún no depositadas/debitadas en el banco)');
+  h += row('Ingreso', depPend, undefined, {indent:true});
+  h += row('Gasto', retPend, undefined, {indent:true, cls:'uline'});
+  h += row('Total de Transacciones en Tránsito', undefined, totalPend);
+  h += row('Ajuste Requerido', undefined, 0);
+  const saldoLibroAjustado = saldoLibroFin + totalPend;
+  h += row('Saldo en Libro Ajustado al '+fmtDate(end)+':', undefined, saldoLibroAjustado, {cls:'dbl'});
+  h += '</table>';
+
+  const diffLibroVsBanco = saldoLibroAjustado - balanceAjustado;
+  h += '<p class="final-num '+(Math.abs(diffLibroVsBanco)<=0.02?'ok':'bad')+'">Diferencia (Saldo en Libro Ajustado vs. Balance Bancario Ajustado): '+fmtCell(diffLibroVsBanco)+'</p>';
+
   if (pagosEnRango.length) {
-    h += '<div class="rupturas" style="margin-top:14px;"><p class="section-title" style="font-family:Arial;font-size:10.5px;text-transform:uppercase;color:#666;">Pagos comparados contra la conciliación real del contador ('+fmtDate(start)+' \u2013 '+fmtDate(end)+')</p>';
-    h += '<table class="excel"><tr><th>Fecha</th><th>Socio</th><th>Documento</th><th>Descripción / No. de documento del banco</th><th class="num">Monto</th><th>Estado</th></tr>';
+    h += '<div class="rupturas" style="margin-top:14px;"><p class="section-title" style="font-family:Arial;font-size:10.5px;text-transform:uppercase;color:#666;">Movimientos comparados contra la conciliación real del contador (pagos y conciliaciones manuales) ('+fmtDate(start)+' \u2013 '+fmtDate(end)+')</p>';
+    h += '<table class="excel"><tr><th>Fecha</th><th>Socio</th><th>Documento</th><th>Descripción / No. de documento del banco</th><th class="num">Monto ('+CUR+')</th><th>Estado</th></tr>';
     pagosEnRango.forEach(p => {
       const estado = p.confirmado
         ? '<span style="color:#1f6f4a;font-weight:700;">\u2713 Conciliado</span>'
@@ -365,7 +426,7 @@ function render(){
   if (flotantes.length) {
     const totalFlot = flotantes.reduce((s,f)=>s+f.a,0);
     h += '<div class="rupturas" style="margin-top:14px;"><p class="section-title" style="font-family:Arial;font-size:10.5px;text-transform:uppercase;color:#666;">Movimientos flotantes (no conciliados) \u2014 en el banco pero sin v\u00ednculo de conciliaci\u00f3n ('+fmtDate(start)+' \u2013 '+fmtDate(end)+')</p>';
-    h += '<table class="excel"><tr><th>Fecha</th><th>Descripción / No. de documento del banco</th><th class="num">Monto</th></tr>';
+    h += '<table class="excel"><tr><th>Fecha</th><th>Descripción / No. de documento del banco</th><th class="num">Monto ('+CUR+')</th></tr>';
     flotantes.forEach(f => {
       h += '<tr><td>'+fmtDate(f.d)+'</td><td class="ref">'+(f.ref||'(sin referencia)')+'</td><td class="num">'+fmtCell(f.a)+'</td></tr>';
     });
@@ -375,7 +436,7 @@ function render(){
 
   if (officialReal !== null) {
     const diff = balanceAjustado - officialReal;
-    h += '<p class="final-num '+(Math.abs(diff)<=0.02?'ok':'bad')+'">Diferencia: '+fmtCell(diff)+'</p>';
+    h += '<p class="final-num '+(Math.abs(diff)<=0.02?'ok':'bad')+'">Diferencia (Banco Ajustado vs. Real confirmado): '+fmtCell(diff)+'</p>';
   }
 
   reportDiv.innerHTML = h;
@@ -409,7 +470,7 @@ function renderDetail(acc, start, end){
   html += '<button id="btnExpandAll">+ Expandir todo</button>';
   html += '<button id="btnCollapseAll">\u2212 Contraer todo</button>';
   html += '</div>';
-  html += '<table class="excel"><tr><th>Fecha</th><th>Descripción / No. de documento</th><th class="num">Monto</th></tr>';
+  html += '<table class="excel"><tr><th>Fecha</th><th>Descripción / No. de documento</th><th class="num">Monto ('+CUR+')</th></tr>';
 
   dates.forEach((d, gi) => {
     const items = byDate[d];
