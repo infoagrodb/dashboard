@@ -60,17 +60,28 @@
   .estado-Terminada, .estado-Entregada, .estado-Cerrada{background:#D1FAE5; color:#15803D;}
   .estado-Rechazada, .estado-Cancelada{background:#FEE2E2; color:#991B1B;}
 
-  .estado-botones{ display:flex; flex-wrap:wrap; gap:6px; }
-  .estado-boton{
-    border:1.5px solid transparent; border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600;
-    cursor:pointer; font-family:inherit; opacity:.55; transition:opacity .12s, border-color .12s, transform .1s;
+  .encabezado-modal{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:14px; }
+  .encabezado-modal h3{ font-size:16px; }
+
+  .estado-menu-wrap{ position:relative; flex-shrink:0; }
+  .estado-menu-boton{
+    border:1.5px solid currentColor; border-radius:999px; padding:6px 14px; font-size:12.5px; font-weight:700;
+    cursor:pointer; font-family:inherit; white-space:nowrap; display:inline-flex; align-items:center; gap:4px;
   }
-  .estado-boton:hover{ opacity:.85; }
-  .estado-boton.activo{ opacity:1; border-color:currentColor; transform:translateY(-1px); box-shadow:0 2px 6px rgba(17,24,39,.12); }
-  .estado-descripcion{
-    margin-top:8px; font-size:12px; color:var(--color-texto-suave); background:var(--color-fondo);
-    border-radius:7px; padding:8px 11px; line-height:1.4;
+  .estado-menu-flecha{ font-size:10px; opacity:.8; }
+  .estado-menu-fondo{ position:fixed; inset:0; z-index:600; }
+  .estado-menu-lista{
+    position:absolute; top:calc(100% + 6px); right:0; z-index:601; width:280px; max-height:360px; overflow-y:auto;
+    background:#fff; border:1px solid var(--color-borde); border-radius:10px; box-shadow:0 14px 32px rgba(17,24,39,.18);
+    padding:5px;
   }
+  .estado-menu-item{ padding:7px 9px; border-radius:7px; cursor:pointer; }
+  .estado-menu-item:hover{ background:var(--color-fondo); }
+  .estado-menu-item.activo{ background:var(--color-acento-suave); }
+  .estado-menu-item-top{ display:flex; align-items:center; gap:7px; }
+  .estado-menu-punto{ width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .estado-menu-item-nombre{ font-size:12.5px; font-weight:600; color:var(--color-texto); }
+  .estado-menu-item-desc{ font-size:10.5px; color:var(--color-texto-suave); margin:2px 0 0 15px; line-height:1.35; }
 
   .badge-prioridad{font-size:10px; font-weight:700; padding:1px 7px; border-radius:9px;}
   .prioridad-Baja{background:#F1F5F9; color:#64748B;}
@@ -115,7 +126,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v8 (reordenado: Prioridad en franja-info, Técnico y Bahía debajo de Cliente/Equipo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v9 (estado como menú en el encabezado; Bahía antes de Técnico)</div>
 
 <script>
 const h = React.createElement;
@@ -168,6 +179,7 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   const [exito, setExito] = useState("");
+  const [menuEstadoAbierto, setMenuEstadoAbierto] = useState(false);
 
   // La orden no guarda un enlace directo hacia la solicitud que la originó
   // (x_taller_solicitud sí guarda hacia adelante, en x_studio_orden_generada_id)
@@ -316,7 +328,35 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
 
   return h("div", { className: "modal-fondo", onClick: onCerrar },
     h("div", { className: "modal-detalle", onClick: e => e.stopPropagation() },
-      h("h3", null, "🛠️ Diagnóstico de Orden de Trabajo"),
+
+      h("div", { className: "encabezado-modal" },
+        h("h3", { style: { margin: 0 } }, "🛠️ Diagnóstico de Orden de Trabajo"),
+        h("div", { className: "estado-menu-wrap" },
+          h("button", {
+              type: "button",
+              className: "estado-menu-boton " + claseEstado(nuevoEstado),
+              onClick: () => setMenuEstadoAbierto(v => !v),
+            },
+            nuevoEstado, " ", h("span", { className: "estado-menu-flecha" }, "▾")
+          ),
+          menuEstadoAbierto && h(React.Fragment, null,
+            h("div", { className: "estado-menu-fondo", onClick: () => setMenuEstadoAbierto(false) }),
+            h("div", { className: "estado-menu-lista" },
+              INFOTALLER_ESTADOS_ORDEN.map(e => h("div", {
+                  key: e,
+                  className: "estado-menu-item" + (e === nuevoEstado ? " activo" : ""),
+                  onClick: () => { setNuevoEstado(e); setMenuEstadoAbierto(false); },
+                },
+                h("div", { className: "estado-menu-item-top" },
+                  h("span", { className: "estado-menu-punto " + claseEstado(e) }),
+                  h("span", { className: "estado-menu-item-nombre" }, e)
+                ),
+                h("div", { className: "estado-menu-item-desc" }, ESTADO_DESCRIPCIONES[e] || "")
+              ))
+            )
+          )
+        )
+      ),
 
       h("div", { className: "franja-info" },
         h("div", { className: "franja-info-item" },
@@ -355,14 +395,6 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
       ),
 
       h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
-        h("label", null, "Técnico responsable" + (nuevaBahiaId ? " (traído de la bahía — se puede cambiar)" : "")),
-        h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
-          h("option", { value: "" }, "— Sin asignar —"),
-          tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
-        )
-      ),
-
-      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
         h("label", null, "Asignar bahía"),
         h("select", {
           value: nuevaBahiaId,
@@ -382,6 +414,14 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
             const ocupados = ocupacionPorBahia[b.id] || 0;
             return h("option", { key: b.id, value: b.id }, b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")");
           })
+        )
+      ),
+
+      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+        h("label", null, "Técnico responsable" + (nuevaBahiaId ? " (traído de la bahía — se puede cambiar)" : "")),
+        h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
+          h("option", { value: "" }, "— Sin asignar —"),
+          tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
         )
       ),
 
@@ -412,19 +452,6 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
           "🕒 Fecha de diagnóstico: ",
           h("strong", null, fechaDiagnosticoMostrada ? formatearFechaHora(fechaDiagnosticoMostrada) : "— (todavía no se completó)")
         )
-      ),
-
-      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
-        h("label", null, "Cambiar estado"),
-        h("div", { className: "estado-botones" },
-          INFOTALLER_ESTADOS_ORDEN.map(e => h("button", {
-              key: e, type: "button",
-              className: "estado-boton " + claseEstado(e) + (e === nuevoEstado ? " activo" : ""),
-              onClick: () => setNuevoEstado(e),
-              title: ESTADO_DESCRIPCIONES[e] || "",
-            }, e))
-        ),
-        h("div", { className: "estado-descripcion" }, "ℹ️ " + (ESTADO_DESCRIPCIONES[nuevoEstado] || ""))
       ),
 
       h("div", { className: "fila-detalle" },
