@@ -53,11 +53,24 @@
   .panel{background:var(--color-panel); border:1px solid var(--color-borde); border-radius:var(--radio); box-shadow:var(--sombra); padding:16px;}
 
   .badge-estado{font-size:10.5px; font-weight:600; padding:2px 8px; border-radius:10px; white-space:nowrap;}
+  .estado-Solicitada{background:#F1F5F9; color:#475569;}
   .estado-Recibida, .estado-En-diagnostico{background:#DBEAFE; color:#1D4ED8;}
   .estado-Pendiente-de-presupuesto, .estado-Presupuestada, .estado-Pendiente-de-aprobacion{background:#FEF3C7; color:#B45309;}
   .estado-Aprobada, .estado-En-reparacion, .estado-Pendiente-de-repuesto{background:#DBEAFE; color:#1D4ED8;}
   .estado-Terminada, .estado-Entregada, .estado-Cerrada{background:#D1FAE5; color:#15803D;}
   .estado-Rechazada, .estado-Cancelada{background:#FEE2E2; color:#991B1B;}
+
+  .estado-botones{ display:flex; flex-wrap:wrap; gap:6px; }
+  .estado-boton{
+    border:1.5px solid transparent; border-radius:999px; padding:5px 12px; font-size:12px; font-weight:600;
+    cursor:pointer; font-family:inherit; opacity:.55; transition:opacity .12s, border-color .12s, transform .1s;
+  }
+  .estado-boton:hover{ opacity:.85; }
+  .estado-boton.activo{ opacity:1; border-color:currentColor; transform:translateY(-1px); box-shadow:0 2px 6px rgba(17,24,39,.12); }
+  .estado-descripcion{
+    margin-top:8px; font-size:12px; color:var(--color-texto-suave); background:var(--color-fondo);
+    border-radius:7px; padding:8px 11px; line-height:1.4;
+  }
 
   .badge-prioridad{font-size:10px; font-weight:700; padding:1px 7px; border-radius:9px;}
   .prioridad-Baja{background:#F1F5F9; color:#64748B;}
@@ -91,7 +104,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v4 (reapertura por retrabajo)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">ordenes.html — v5 (botones de estado con descripción del efecto)</div>
 
 <script>
 const h = React.createElement;
@@ -99,6 +112,26 @@ const { useState, useEffect } = React;
 
 const ESTADOS_QUE_OCUPAN_BAHIA = ["Recibida","En diagnóstico","Pendiente de presupuesto","Presupuestada",
   "Pendiente de aprobación","Aprobada","En reparación","Pendiente de repuesto"];
+
+/* Qué significa e implica cada estado — se muestra debajo de los botones para
+   que elegir el estado correcto no dependa de adivinar (a pedido de Jefatura,
+   porque con el combo largo era fácil perderse). */
+const ESTADO_DESCRIPCIONES = {
+  "Solicitada": "El cliente pidió el servicio — el equipo todavía no llegó al taller.",
+  "Recibida": "El equipo ya está en el taller, listo para diagnóstico.",
+  "En diagnóstico": "Un técnico está revisando el equipo para determinar la falla.",
+  "Pendiente de presupuesto": "El diagnóstico está listo — falta armar la cotización.",
+  "Presupuestada": "Ya se armó una cotización — falta enviarla o que la revisen.",
+  "Pendiente de aprobación": "La cotización se envió al cliente — esperando que la apruebe.",
+  "Aprobada": "El cliente aprobó la cotización — ya se puede agendar bahía y empezar a reparar.",
+  "Rechazada": "El cliente rechazó la cotización — la orden no continúa (salvo que se cotice de nuevo).",
+  "En reparación": "El equipo está en bahía — el técnico está trabajando en la reparación.",
+  "Pendiente de repuesto": "La reparación está detenida porque falta un repuesto.",
+  "Terminada": "El trabajo ya se hizo — falta el control de calidad y coordinar la entrega.",
+  "Entregada": "El equipo ya se entregó al cliente.",
+  "Cerrada": "El cliente confirmó la entrega/conformidad — la orden queda cerrada por completo.",
+  "Cancelada": "La orden se canceló — no se va a completar.",
+};
 
 function claseEstado(estado){
   return "badge-estado estado-" + String(estado).replace(/\s+/g, "-").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -206,6 +239,7 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
     }
 
     setGuardando(true); setError(""); setExito("");
+    const cambioDeEstado = !!cambios.x_studio_estado;
     try {
       const resp = await tallerActualizar("x_taller_orden", orden.id, cambios);
       if (resp.ok) {
@@ -215,6 +249,18 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
           x_studio_bahia_id: bahiaSeleccionadaId ? [bahiaSeleccionadaId, bahias.find(b=>b.id===bahiaSeleccionadaId)?.x_name] : false,
           x_studio_tecnico_responsable_id: tecnicoSeleccionadoId ? [tecnicoSeleccionadoId, tecnicos.find(t=>t.id===tecnicoSeleccionadoId)?.x_name] : false,
         });
+
+        // Sello la fecha del cambio de estado, aparte del guardado principal y sin
+        // bloquearlo: x_studio_fecha_ultimo_cambio_estado todavía NO existe en Odoo
+        // Studio (falta crearlo ahí — tipo Fecha y hora, en x_taller_orden). Mientras
+        // no exista, esto falla en silencio y no se pierde nada de lo demás.
+        if (cambioDeEstado) {
+          try {
+            await tallerActualizar("x_taller_orden", orden.id, {
+              x_studio_fecha_ultimo_cambio_estado: fechaParaOdoo(new Date()) + " " + new Date().toTimeString().slice(0,8),
+            });
+          } catch(e) { /* campo probablemente no existe todavía en Odoo Studio — no bloquea nada */ }
+        }
       } else {
         setError(resp.error || "No se pudo actualizar.");
       }
@@ -259,13 +305,20 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
         })
       ),
 
-      h("div", { className: "fila-detalle" },
-        h("div", { className: "campo-detalle" },
-          h("label", null, "Cambiar estado"),
-          h("select", { value: nuevoEstado, onChange: e => setNuevoEstado(e.target.value) },
-            INFOTALLER_ESTADOS_ORDEN.map(e => h("option", { key: e, value: e }, e))
-          )
+      h("div", { className: "campo-detalle", style: { marginBottom: "12px" } },
+        h("label", null, "Cambiar estado"),
+        h("div", { className: "estado-botones" },
+          INFOTALLER_ESTADOS_ORDEN.map(e => h("button", {
+              key: e, type: "button",
+              className: "estado-boton " + claseEstado(e) + (e === nuevoEstado ? " activo" : ""),
+              onClick: () => setNuevoEstado(e),
+              title: ESTADO_DESCRIPCIONES[e] || "",
+            }, e))
         ),
+        h("div", { className: "estado-descripcion" }, "ℹ️ " + (ESTADO_DESCRIPCIONES[nuevoEstado] || ""))
+      ),
+
+      h("div", { className: "fila-detalle" },
         h("div", { className: "campo-detalle" },
           h("label", null, "Asignar bahía"),
           h("select", {
@@ -287,17 +340,17 @@ function ModalDetalleOrden({ orden, bahias, tecnicos, ocupacionPorBahia, onCerra
               return h("option", { key: b.id, value: b.id }, b.x_name + " (" + ocupados + "/" + b.x_studio_capacidad + ")");
             })
           )
-        )
-      ),
-
-      h("div", { className: "fila-detalle" },
+        ),
         h("div", { className: "campo-detalle" },
           h("label", null, "Técnico responsable" + (nuevaBahiaId ? " (traído de la bahía — se puede cambiar)" : "")),
           h("select", { value: nuevoTecnicoId, onChange: e => setNuevoTecnicoId(e.target.value) },
             h("option", { value: "" }, "— Sin asignar —"),
             tecnicos.map(t => h("option", { key: t.id, value: t.id }, t.x_name))
           )
-        ),
+        )
+      ),
+
+      h("div", { className: "fila-detalle" },
         h("div", { className: "campo-detalle", style: { marginBottom: "0" } },
           h("label", null, "Fecha de entrega"),
           h("input", { type: "date", value: fechaEntrega, onChange: e => setFechaEntrega(e.target.value) })
