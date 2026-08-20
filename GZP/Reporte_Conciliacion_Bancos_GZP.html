@@ -23,6 +23,7 @@
   table.rpt{width:100%; border-collapse:collapse; font-size:13px;}
   table.rpt td{padding:3px 4px; vertical-align:baseline;}
   tr.hdr td{border-bottom:1px solid #000; font-weight:400;}
+  tr.seccion-header td.desc{font-size:15px; font-weight:700; padding-top:8px;}
   td.desc{width:56%;}
   td.monto{text-align:right; width:22%; white-space:nowrap;}
   td.total{text-align:right; width:22%; white-space:nowrap;}
@@ -243,10 +244,12 @@ function defaultDates(){
 
 function row(desc, monto, total, opts){
   opts = opts||{};
-  const cls = opts.cls ? ' class="'+opts.cls+'"' : '';
+  let cls = opts.cls ? ' '+opts.cls : '';
+  if (opts.seccion) cls += ' seccion-header';
+  const clsAttr = cls ? ' class="'+cls.trim()+'"' : '';
   const mStr = monto===undefined?'':(opts.rawMonto ? monto : fmtCell(monto));
   const tStr = total===undefined?'':(opts.rawTotal ? total : fmtCell(total));
-  return '<tr'+cls+'><td class="desc">'+(opts.indent?'&nbsp;&nbsp;&nbsp;&nbsp;':'')+desc+'</td><td class="monto">'+mStr+'</td><td class="total">'+tStr+'</td></tr>';
+  return '<tr'+clsAttr+'><td class="desc">'+(opts.indent?'&nbsp;&nbsp;&nbsp;&nbsp;':'')+desc+'</td><td class="monto">'+mStr+'</td><td class="total">'+tStr+'</td></tr>';
 }
 
 function render(){
@@ -345,7 +348,7 @@ function render(){
   h += row('Fecha de fin de estado de cuenta:', undefined, fmtDate(end), {rawTotal:true});
   h += '<tr class="blank"><td colspan="3"></td></tr>';
 
-  h += row('Institución Financiera');
+  h += row('Institución Financiera', undefined, undefined, {seccion:true});
   if (openingIsReal || Math.abs(openingAdj) <= 0.005) {
     h += row('Traspaso de Saldo REAL confirmado por el banco al '+fmtDate(start)+':', undefined, opening);
   } else if (anchorDate !== null) {
@@ -363,7 +366,7 @@ function render(){
   h += '<tr class="blank"><td colspan="3"></td></tr>';
 
   h += row('Balance Final de Estado de Cuenta al '+fmtDate(end)+':', undefined, closingCalc);
-  h += row('Transacciones Pendientes del '+fmtDate(start)+' al '+fmtDate(end)+' (pagos sin conciliar por el contador)');
+  h += row('Transacciones Pendientes del '+fmtDate(start)+' al '+fmtDate(end)+' (pagos sin conciliar por el contador)', undefined, undefined, {seccion:true});
   h += row('Depósitos Pendientes', depPend, undefined, {indent:true});
   h += row('Retiros Pendientes', retPend, undefined, {indent:true, cls:'uline'});
   h += row('Transacciones Pendientes Totales al '+fmtDate(end)+':', undefined, totalPend);
@@ -388,13 +391,14 @@ function render(){
   const saldoLibroFin = saldoLibroInicio + libroNeto;
 
   h += '<table class="rpt" style="margin-top:18px;">';
+  h += row('Saldo en Libro', undefined, undefined, {seccion:true});
   h += row('Saldo en libro al '+fmtDate(start)+':', undefined, saldoLibroInicio);
   h += row('Transacciones del o antes del '+fmtDate(end));
   h += row('Débitos registrados en cuenta', libroDeb, undefined, {indent:true});
   h += row('Créditos registrados en cuenta', libroCred, undefined, {indent:true, cls:'uline'});
   h += row('Monto Neto registrado en cuenta', undefined, libroNeto);
   h += row('Saldo en libro al '+fmtDate(end)+':', undefined, saldoLibroFin, {cls:'dbl'});
-  h += row('Transacciones en cuentas transitorias (registradas en Odoo, aún no depositadas/debitadas en el banco)');
+  h += row('Transacciones en cuentas transitorias (registradas en Odoo, aún no depositadas/debitadas en el banco)', undefined, undefined, {seccion:true});
   h += row('Ingreso', depPend, undefined, {indent:true});
   h += row('Gasto', retPend, undefined, {indent:true, cls:'uline'});
   h += row('Total de Transacciones en Tránsito', undefined, totalPend);
