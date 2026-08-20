@@ -164,8 +164,8 @@ async function boot(){
     const [lines, stmts, clearing, ledger] = await Promise.all([
       odooQuery('account.bank.statement.line', ['id','date','amount','payment_ref','journal_id','is_reconciled'], [['journal_id','in',[6,9]]]),
       odooQuery('account.bank.statement', ['date','balance_end_real','journal_id'], [['journal_id','in',[6,9]]]),
-      odooQuery('account.move.line', ['date','debit','credit','amount_currency','matching_number','payment_id','statement_line_id','partner_id','account_id','journal_id','name'], [['account_id','in',[715,716,730,731]],['journal_id','in',[6,9]]]),
-      odooQuery('account.move.line', ['date','debit','credit','amount_currency','account_id'], [['account_id','in',[41,592]]]),
+      odooQuery('account.move.line', ['date','debit','credit','amount_currency','matching_number','payment_id','statement_line_id','partner_id','account_id','journal_id','name'], [['account_id','in',[715,716,730,731]],['journal_id','in',[6,9]],['parent_state','=','posted']]),
+      odooQuery('account.move.line', ['date','debit','credit','amount_currency','account_id'], [['account_id','in',[41,592]],['parent_state','=','posted']]),
     ]);
 
     function buildAccount(label, currency, journalId, cuentasClearing, glAccountId, usaAmountCurrency){
@@ -329,7 +329,7 @@ function render(){
   h += '<p class="doc-report-by">Reporte por: Fecha de fin de estado de cuenta</p>';
 
   if (officialReal !== null) {
-    const diff = balanceAjustado - officialReal;
+    const diff = closingCalc - officialReal;
     const ok = Math.abs(diff) <= 0.02;
     h += '<div id="banner-corte" class="banner '+(ok?'ok':'warn')+'">'+(ok
       ? 'Fecha de fin coincide con un corte oficial del banco \u2014 diferencia verificada: '+fmtPlain(diff)
@@ -435,8 +435,8 @@ function render(){
   }
 
   if (officialReal !== null) {
-    const diff = balanceAjustado - officialReal;
-    h += '<p class="final-num '+(Math.abs(diff)<=0.02?'ok':'bad')+'">Diferencia (Banco Ajustado vs. Real confirmado): '+fmtCell(diff)+'</p>';
+    const diff = closingCalc - officialReal;
+    h += '<p class="final-num '+(Math.abs(diff)<=0.02?'ok':'bad')+'">Diferencia (Balance Calculado vs. Real confirmado): '+fmtCell(diff)+'</p>';
   }
 
   reportDiv.innerHTML = h;
