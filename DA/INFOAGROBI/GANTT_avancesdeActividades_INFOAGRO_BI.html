@@ -901,6 +901,26 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         </div>
       </div>
 
+      <div class="tf-campo campo-periodo campo-actividades-y-resumen">
+        <label>Período</label>
+        <select id="filterFechaTipo" class="ms-dropdown-select" onchange="toggleFechaInputs()">
+          <option value="all">Histórico</option>
+          <option value="este_mes" selected>Este Mes</option>
+          <option value="mes_pasado">Mes Pasado</option>
+          <option value="ano_curso">Año Curso</option>
+          <option value="personalizada">Rango...</option>
+        </select>
+      </div>
+
+      <div id="customDateInputs" class="tf-campo campo-actividades-y-resumen" style="display:none;">
+        <label>Rango de fechas</label>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="date" id="filterFechaDesde" class="ms-date" onchange="onCustomDateChange()">
+          <span style="font-size:11px; color:var(--tx-2, #8a9690);">a</span>
+          <input type="date" id="filterFechaHasta" class="ms-date" onchange="onCustomDateChange()">
+        </div>
+      </div>
+
       <div class="tf-campo campo-sector">
         <label>Sector</label>
         <div class="ms-dropdown" id="dropSector" onclick="toggleMsGantt(event,'sector')">Todos</div>
@@ -925,42 +945,22 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         <div class="ms-panel" id="msActividad"></div>
       </div>
 
-      <div class="tf-campo campo-periodo campo-actividades-y-resumen">
-        <label>Período</label>
-        <select id="filterFechaTipo" class="ms-dropdown-select" onchange="toggleFechaInputs()">
-          <option value="all">Histórico</option>
-          <option value="este_mes" selected>Este Mes</option>
-          <option value="mes_pasado">Mes Pasado</option>
-          <option value="ano_curso">Año Curso</option>
-          <option value="personalizada">Rango...</option>
-        </select>
-      </div>
-
-      <div id="customDateInputs" class="tf-campo campo-actividades-y-resumen" style="display:none;">
-        <label>Rango de fechas</label>
-        <div style="display:flex; gap:4px; align-items:center;">
-          <input type="date" id="filterFechaDesde" class="ms-date" onchange="onCustomDateChange()">
-          <span style="font-size:11px; color:var(--tx-2, #8a9690);">a</span>
-          <input type="date" id="filterFechaHasta" class="ms-date" onchange="onCustomDateChange()">
-        </div>
-      </div>
-
       <div class="tf-campo campo-proveedor campo-solo-actividades">
         <label>Proveedor</label>
         <div class="ms-dropdown" id="dropProveedor" onclick="toggleMsGantt(event,'proveedor')">Todos</div>
         <div class="ms-panel" id="msProveedor"></div>
       </div>
 
-      <div class="tf-campo campo-categoria campo-solo-insumos" style="display:none;">
-        <label>Categoría Insumo</label>
-        <div class="ms-dropdown" id="dropCategoria" onclick="toggleMsGantt(event,'categoria')">Todas</div>
-        <div class="ms-panel" id="msCategoria"></div>
-      </div>
-
       <div class="tf-campo campo-lote campo-solo-insumos" style="display:none;">
         <label>Lote</label>
         <div class="ms-dropdown" id="dropLote" onclick="toggleMsGantt(event,'lote')">Todos</div>
         <div class="ms-panel" id="msLote"></div>
+      </div>
+
+      <div class="tf-campo campo-categoria campo-solo-insumos" style="display:none;">
+        <label>Categoría Insumo</label>
+        <div class="ms-dropdown" id="dropCategoria" onclick="toggleMsGantt(event,'categoria')">Todas</div>
+        <div class="ms-panel" id="msCategoria"></div>
       </div>
 
       <div class="tf-campo campo-producto campo-solo-insumos" style="display:none;">
@@ -1206,12 +1206,12 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     <div class="modal-body-ins" style="max-height:70vh; overflow-y:auto;">
       <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#1b4332; margin:4px 0 6px;">📊 Avance</div>
       <table class="modal-table-ins" id="avanceDetalleTablaAvance" style="width:100%;">
-        <thead><tr><th>Finca</th><th>Lote</th><th>Turno</th><th class="num">Área en Mzn</th><th>Proveedor de Servicio</th><th>Orden de Trabajo</th></tr></thead>
+        <thead><tr><th>N° Orden</th><th>Proveedor</th><th>Turno</th><th>Finca</th><th>Lote</th><th class="num">Área en Mzn</th></tr></thead>
         <tbody></tbody>
       </table>
       <div style="font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:#1b4332; margin:18px 0 6px;">🧪 Insumos Utilizados</div>
       <table class="modal-table-ins" id="avanceDetalleTablaInsumos" style="width:100%;">
-        <thead><tr><th>Finca</th><th>Lote</th><th>Insumo</th><th>UM</th><th class="num">Cant. Gastada</th><th class="num">Área Mzn</th><th class="num">Dosis</th><th class="num">Cargas</th><th>Turno</th><th>Orden de Trabajo</th></tr></thead>
+        <thead><tr><th>N° Orden</th><th>Turno</th><th>Finca</th><th>Lote</th><th>Insumo</th><th>UM</th><th class="num">Cant. Gastada</th><th class="num">Área Mzn</th><th class="num">Dosis</th><th class="num">Cant. Cargas</th></tr></thead>
         <tbody></tbody>
       </table>
     </div>
@@ -3156,9 +3156,9 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
 
     const tbodyAvance = document.querySelector('#avanceDetalleTablaAvance tbody');
     tbodyAvance.innerHTML = dataset.map(d => `<tr>
-      <td>${escHtml(d.finca)}</td><td>${escHtml(d.lote)}</td><td>${d.turno==='Noche'?'Noche':'Día'}</td>
+      <td>${escHtml(d.orden||'—')}</td><td>${escHtml(d.proveedor||'—')}</td><td>${d.turno==='Noche'?'Noche':'Día'}</td>
+      <td>${escHtml(d.finca)}</td><td>${escHtml(d.lote)}</td>
       <td class="num">${d.avance.toFixed(2)}</td>
-      <td>${escHtml(d.proveedor||'—')}</td><td>${escHtml(d.orden||'—')}</td>
     </tr>`).join('');
 
     // Insumos usados ese mismo día en esas mismas fincas (ver nota arriba: cruce
@@ -3167,10 +3167,10 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     const tbodyInsumos = document.querySelector('#avanceDetalleTablaInsumos tbody');
     tbodyInsumos.innerHTML = insumosCruce.length
       ? insumosCruce.map(i => `<tr>
+          <td>${escHtml(i.orden)}</td><td>${i.turno==='Noche'?'Noche':'Día'}</td>
           <td>${escHtml(i.finca)}</td><td>${escHtml(i.lote)}</td><td>${escHtml(i.producto)}</td><td>${escHtml(i.um)}</td>
           <td class="num">${i.cantidad.toFixed(2)}</td><td class="num">${i.area.toFixed(2)}</td><td class="num">${i.dosis.toFixed(2)}</td>
           <td class="num">${i.cargas.toFixed(2)}</td>
-          <td>${i.turno==='Noche'?'Noche':'Día'}</td><td>${escHtml(i.orden)}</td>
         </tr>`).join('')
       : `<tr><td colspan="10" style="text-align:center; color:#94a3b8; padding:10px;">Sin insumos registrados ese día en ${fincasEnDetalle.length>1?'esas fincas':'esa finca'}</td></tr>`;
 
@@ -4498,17 +4498,15 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       );
     });
 
-    // Programación manual de Fungicida I (única fuente editable: texto libre
-    // "Finca" + "MZN Proyectada", una fila por fecha) — Fungicida II..VIII se
-    // DERIVAN automáticamente RECONSTRUYENDO la proyección de cero en cada
-    // etapa: se toma el primer día de la etapa anterior +13 (con chequeo de
-    // domingo ahí), y desde ese día se van colocando TODAS las entradas de
-    // Fungicida I, en su mismo orden, en días CONSECUTIVOS — sin dejar huecos
-    // salvo saltarse un domingo cuando corresponda. No se intenta conservar el
-    // espaciado real que tenían en Fungicida I (que podía traer huecos por
-    // otros motivos) — Fungicida II..VIII quedan siempre "corridas" apretadas.
-    // El resultado (programacionEfectivaPorEtapa) alimenta tanto la cascada de
-    // fechas como la vista de solo-lectura de Finca/MZN en cada Fungicida II..VIII.
+    // Programación manual de Fungicida I (única fuente 100% editable desde el
+    // inicio) — Fungicida II..VIII arrancan CALCULADOS solos (misma reconstrucción
+    // de siempre: primer día de la etapa anterior +13 con chequeo de domingo, y
+    // de ahí en más días consecutivos sin hueco) para que la primera vez que el
+    // usuario abre el tab ya tenga una propuesta armada. PERO esas celdas también
+    // son editables — si el usuario cambia Finca o MZN en cualquier Fungicida
+    // II..VIII, esa fecha puntual queda "fijada" con su valor (se guarda en
+    // PROGRAMACION_FUNGICIDAS[etapa][grupo]) y de ahí en adelante ese valor manda
+    // por sobre el cálculo automático, aunque F.I se vuelva a tocar después.
     const programacionEfectivaPorEtapa = { 'Fungicida I': {} };
     Object.entries(PROGRAMACION_FUNGICIDAS['Fungicida I'] || {}).forEach(([grupo, porFecha])=>{
       if(grupoPermitido(grupo)) programacionEfectivaPorEtapa['Fungicida I'][grupo] = porFecha;
@@ -4534,9 +4532,13 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
           }
           porFechaDerivada[cursor] = { finca: entrada.finca, mzn: entrada.mzn };
         });
+        // Se superponen las entradas manuales de ESTA etapa (si el usuario ya
+        // editó alguna fecha acá) — lo escrito a mano manda sobre lo calculado.
+        const manualDeEstaEtapa = PROGRAMACION_FUNGICIDAS[etapaActual]?.[grupo] || {};
+        const porFechaFinal = { ...porFechaDerivada, ...manualDeEstaEtapa };
         programacionEfectivaPorEtapa[etapaActual] = programacionEfectivaPorEtapa[etapaActual] || {};
-        programacionEfectivaPorEtapa[etapaActual][grupo] = porFechaDerivada;
-        inicioEtapaAnterior = Object.keys(porFechaDerivada).sort()[0]; // primer día de ESTA etapa, base de la siguiente
+        programacionEfectivaPorEtapa[etapaActual][grupo] = porFechaFinal;
+        inicioEtapaAnterior = Object.keys(porFechaFinal).sort()[0]; // primer día YA fusionado, base de la siguiente
       }
     });
 
@@ -4691,11 +4693,11 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     arbol.forEach(sec=> sec.grupos.forEach(g=>{
       ETAPAS_TODAS.forEach(etapa=>{
         if(etapa==='Fungicida I'){
-          filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Programá acá manualmente Fungicida I — el resto (II..VIII) se genera solo, +13 días sin domingo desde esta fecha">Finca</th>`;
+          filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Programá acá manualmente Fungicida I — el resto (II..VIII) arranca calculado solo, +13 días sin domingo desde esta fecha, pero también se puede editar celda por celda">Finca</th>`;
           filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Manzanas proyectadas ese día para esa finca">MZN (P)</th>`;
         } else if(ETAPAS_FUNGICIDA.includes(etapa)){
-          filaFinca += `<th class="ca-cal-finca" style="background:#e2e8f0;" title="Se genera solo copiando Fungicida I, +13 días sin domingo (encadenado) — no editable">Finca</th>`;
-          filaFinca += `<th class="ca-cal-finca" style="background:#e2e8f0;" title="Manzanas proyectadas — copiado de la etapa anterior">MZN (P)</th>`;
+          filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Arranca calculado solo copiando Fungicida I (+13 días sin domingo, encadenado) — se puede editar cualquier celda, y esa fecha queda fija con tu valor de ahí en más">Finca</th>`;
+          filaFinca += `<th class="ca-cal-finca" style="background:#fde68a;" title="Manzanas proyectadas — calculado solo, editable">MZN (P)</th>`;
         }
         g.fincas.forEach(c=>{
           const n = etapa==='Siembra' ? subEtiquetasSiembra(c).length : turnosDe(etapa).length;
@@ -4733,12 +4735,9 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     const secuencia = [];
     arbol.forEach(sec=> sec.grupos.forEach(g=>{
       ETAPAS_TODAS.forEach(etapa=>{
-        if(etapa==='Fungicida I'){
-          secuencia.push({ manual:'finca', grupo:g.grupo, etapa, editable:true });
-          secuencia.push({ manual:'mzn', grupo:g.grupo, etapa, editable:true });
-        } else if(ETAPAS_FUNGICIDA.includes(etapa)){
-          secuencia.push({ manual:'finca', grupo:g.grupo, etapa, editable:false });
-          secuencia.push({ manual:'mzn', grupo:g.grupo, etapa, editable:false });
+        if(ETAPAS_FUNGICIDA.includes(etapa)){
+          secuencia.push({ manual:'finca', grupo:g.grupo, etapa });
+          secuencia.push({ manual:'mzn', grupo:g.grupo, etapa });
         }
         g.fincas.forEach(c=>{
           if(etapa==='Siembra'){
@@ -4781,18 +4780,6 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
         if(entrada.manual){
           const grupo = entrada.grupo, etapaManual = entrada.etapa;
           const guardado = ((programacionEfectivaPorEtapa[etapaManual]||{})[grupo] && (programacionEfectivaPorEtapa[etapaManual]||{})[grupo][f]) || {};
-          if(!entrada.editable){
-            // Fungicida II..VIII: solo lectura, copiado de la etapa anterior — sin
-            // click, sin input, para que quede clarísimo que no se edita acá.
-            if(entrada.manual==='finca'){
-              const fincasSel = fincasDeTextoLibre(guardado.finca);
-              const chips = fincasSel.map(fn=> `<span class="tag-chip tag-chip-solo-lectura">${siglaFincaCA(fn)}</span>`).join('');
-              fila += `<td style="padding:1px;"><div class="tag-multi-box tag-multi-box-solo-lectura" title="Copiado de Fungicida I, +13 días sin domingo (encadenado) — no editable">${chips || ''}</div></td>`;
-            } else {
-              fila += `<td class="celda-mzn-solo-lectura" title="Copiado de la etapa anterior">${guardado.mzn!=null ? fmtVal(guardado.mzn) : ''}</td>`;
-            }
-            return;
-          }
           if(entrada.manual==='finca'){
             const fincasSel = fincasDeTextoLibre(guardado.finca);
             const chips = fincasSel.map(fn=>{
@@ -5010,6 +4997,19 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     const table = document.getElementById('tablaSeguimientoAplic');
     if(!table) return;
     const clon = table.cloneNode(true);
+    // Los widgets interactivos (chips de Finca, <input> de MZN) no tienen texto
+    // plano legible para el exportador — sin este reemplazo, la celda de Finca
+    // salía como el HTML concatenado de sus botones ("FSB✕+") y la de MZN salía
+    // vacía (table_to_book lee el texto de la celda, no el .value de un <input>).
+    clon.querySelectorAll('.tag-multi-box').forEach(box=>{
+      const fincas = (box.getAttribute('data-fincas') || '').split('|||').filter(Boolean).join('/');
+      const td = box.closest('td');
+      if(td) td.textContent = fincas;
+    });
+    clon.querySelectorAll('input.input-manual-fungicida-mzn').forEach(inp=>{
+      const td = inp.closest('td');
+      if(td) td.textContent = inp.value || '';
+    });
     const wb = XLSX.utils.table_to_book(clon, { raw: true });
     XLSX.writeFile(wb, `INFOAGRO_Seguimiento_Grupos_Aplicacion_Mani2026_${new Date().toISOString().slice(0,10)}.xlsx`);
   }
