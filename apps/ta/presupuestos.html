@@ -43,6 +43,16 @@
   .barra-superior{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;}
   .barra-superior h1{font-size:15px; margin:0; display:flex; align-items:center; gap:8px;}
   .barra-botones{display:flex; gap:8px;}
+
+  .franja-info{
+    display:flex; flex-wrap:wrap; gap:16px; background:var(--color-fondo); border:1px solid var(--color-borde);
+    border-radius:10px; padding:10px 14px; margin-bottom:16px;
+  }
+  .franja-info-item{ min-width:130px; }
+  .franja-info-label{ font-size:10px; font-weight:700; color:var(--color-texto-suave); text-transform:uppercase; letter-spacing:.04em; margin-bottom:2px; }
+  .franja-info-valor{ font-size:13px; font-weight:700; color:var(--color-primario-oscuro); }
+
+  .indicador-autoguardado{ font-size:12px; color:var(--color-texto-suave); margin-right:auto; }
   .btn-refrescar{background:#fff; border:1px solid var(--color-borde); border-radius:999px; padding:7px 12px; font-size:12.5px; cursor:pointer; color:var(--color-texto);}
   .btn-refrescar:hover{border-color:var(--color-primario); color:var(--color-primario-oscuro);}
   .btn-primario{background:var(--color-primario); color:#fff; border:none; border-radius:999px; padding:9px 16px; font-size:13px; font-weight:600; cursor:pointer;}
@@ -140,7 +150,7 @@
 </head>
 <body>
 <div id="raiz"></div>
-<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v21 (contenido centrado, ancho máximo 1180px)</div>
+<div style="position:fixed;bottom:4px;right:8px;font-size:10px;color:#9CA3AF;z-index:99998;">presupuestos.html — v22 (franja info equipo/solicitud/fechas; autoguardado de totales, sin botón)</div>
 
 <script>
 const h = React.createElement;
@@ -440,6 +450,7 @@ function ModalArticuloNuevo({ textoInicial, onCerrar, onCreado }){
 function DetallePresupuesto({ presupuestoId, onVolver }){
   const [presupuesto, setPresupuesto] = useState(null);
   const [orden, setOrden] = useState(null);
+  const [solicitudOrigen, setSolicitudOrigen] = useState(undefined); // undefined=cargando, null=no tiene
   const [lineas, setLineas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState("");
@@ -453,6 +464,7 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
   const [modalAprobar, setModalAprobar] = useState(false);
   const [modalRechazar, setModalRechazar] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
+  const [estadoAutoguardado, setEstadoAutoguardado] = useState(""); // "", "guardando", "guardado"
 
   function lineaVacia(){
     return { x_studio_tipo_linea: "Repuesto", x_studio_descripcion: "", x_studio_sku: "", x_studio_cantidad_presupuestada: 1, x_studio_unidad_medida: "und", x_studio_costo_manual: 0, x_studio_origen_costo: "Manual" };
@@ -476,8 +488,21 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
       setPresupuesto(presRows[0]);
       setLineas(lineasRows);
       if (Array.isArray(presRows[0].x_studio_orden_id)) {
-        const ordenRows = await tallerQuery("x_taller_orden", ["id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_fecha_recepcion"], [["id","=",presRows[0].x_studio_orden_id[0]]], 1);
+        const idOrden = presRows[0].x_studio_orden_id[0];
+        const ordenRows = await tallerQuery("x_taller_orden", [
+          "id","x_name","x_studio_cliente_id","x_studio_equipo_id","x_studio_fecha_recepcion",
+          "x_studio_fecha_diagnostico","x_studio_tecnico_responsable_id",
+        ], [["id","=",idOrden]], 1);
         if (ordenRows.length) setOrden(ordenRows[0]);
+
+        // La orden no guarda un enlace hacia atrás a la solicitud que la originó
+        // (x_taller_solicitud sí apunta hacia adelante, en x_studio_orden_generada_id).
+        try {
+          const solRows = await tallerQuery("x_taller_solicitud", ["id","x_name","create_date"], [["x_studio_orden_generada_id","=",idOrden]], 1);
+          setSolicitudOrigen(solRows[0] || null);
+        } catch(e) {
+          setSolicitudOrigen(null);
+        }
       }
     } catch(e) {
       setError("Error al cargar: " + e.message);
@@ -502,6 +527,35 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
     const total = subtotal - descuento + impuestos + otros;
     return { subMateriales, subManoObra, subServicios, subtotal, descuento, impuestos, otros, total };
   }, [lineas, presupuesto]);
+
+  // Autoguardado de Descuento/Impuestos/Totales — ya no hay botón "Guardar
+  // totales": se guarda solo, con un pequeño debounce para no pegarle a la
+  // API en cada tecla. Se salta el primer render (justo después de cargar())
+  // para no reescribir con los mismos valores que ya vinieron de Odoo.
+  const yaCargoUnaVez = useRef(false);
+  const timerAutoguardado = useRef(null);
+  useEffect(() => {
+    if (!presupuesto || soloLectura) return;
+    if (!yaCargoUnaVez.current) { yaCargoUnaVez.current = true; return; }
+
+    setEstadoAutoguardado("guardando");
+    clearTimeout(timerAutoguardado.current);
+    timerAutoguardado.current = setTimeout(async () => {
+      try {
+        const resp = await tallerActualizar("x_taller_presupuesto", presupuestoId, {
+          x_studio_descuento: num(presupuesto.x_studio_descuento), x_studio_impuestos: num(presupuesto.x_studio_impuestos),
+          x_studio_total_presupuesto: totales.total, x_studio_subtotal_materiales: totales.subMateriales,
+          x_studio_subtotal_mano_obra: totales.subManoObra, x_studio_subtotal_servicios: totales.subServicios,
+        });
+        setEstadoAutoguardado(resp.ok ? "guardado" : "");
+        if (!resp.ok) setError(resp.error || "No se pudo guardar el total automáticamente.");
+      } catch(e) {
+        setEstadoAutoguardado("");
+        setError("Error al autoguardar: " + e.message);
+      }
+    }, 700);
+    return () => clearTimeout(timerAutoguardado.current);
+  }, [presupuesto?.x_studio_descuento, presupuesto?.x_studio_impuestos, totales.total]);
 
   async function guardarLinea(linea, indice){
     setLineas(prev => prev.map((l,i) => i === indice ? { ...l, _guardando: true } : l));
@@ -808,6 +862,35 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
         h("span", { className: claseEstado(presupuesto.x_studio_estado) }, presupuesto.x_studio_estado)
       ),
 
+      h("div", { className: "franja-info" },
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Equipo"),
+          h("div", { className: "franja-info-valor" }, orden ? (Array.isArray(orden.x_studio_equipo_id) ? orden.x_studio_equipo_id[1] : "—") : "—")
+        ),
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Solicitud de origen"),
+          h("div", { className: "franja-info-valor" },
+            solicitudOrigen === undefined
+              ? "Buscando..."
+              : solicitudOrigen
+                ? solicitudOrigen.x_name + " · " + formatearFecha(solicitudOrigen.create_date)
+                : "— (sin solicitud)"
+          )
+        ),
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Recepcionada"),
+          h("div", { className: "franja-info-valor" }, orden ? formatearFecha(orden.x_studio_fecha_recepcion) : "—")
+        ),
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Diagnosticada"),
+          h("div", { className: "franja-info-valor" }, orden && orden.x_studio_fecha_diagnostico ? formatearFechaHora(orden.x_studio_fecha_diagnostico) : "—")
+        ),
+        h("div", { className: "franja-info-item" },
+          h("div", { className: "franja-info-label" }, "Diagnosticó"),
+          h("div", { className: "franja-info-valor" }, orden && Array.isArray(orden.x_studio_tecnico_responsable_id) ? orden.x_studio_tecnico_responsable_id[1] : "—")
+        )
+      ),
+
       presupuesto.x_studio_estado === "Aprobado" && h("div", { className: "mensaje-exito" },
         "✅ Aprobado por " + presupuesto.x_studio_aprobado_por_cliente + " el " + formatearFecha(presupuesto.x_studio_fecha_aprobacion) + " — este presupuesto ya no se puede editar."
       ),
@@ -957,15 +1040,10 @@ function DetallePresupuesto({ presupuestoId, onVolver }){
           generandoLink ? "Generando link..." : "🔗 Enviar a cliente para aprobar")
       ),
 
-      !soloLectura && h("div", { className: "barra-botones" },
-        h("button", { className: "btn-secundario", onClick: async () => {
-            const resp = await tallerActualizar("x_taller_presupuesto", presupuestoId, {
-              x_studio_descuento: num(presupuesto.x_studio_descuento), x_studio_impuestos: num(presupuesto.x_studio_impuestos),
-              x_studio_total_presupuesto: totales.total, x_studio_subtotal_materiales: totales.subMateriales,
-              x_studio_subtotal_mano_obra: totales.subManoObra, x_studio_subtotal_servicios: totales.subServicios,
-            });
-            if (resp.ok) setExito("Totales guardados."); else setError(resp.error || "No se pudo guardar.");
-          } }, "💾 Guardar totales"),
+      !soloLectura && h("div", { className: "barra-botones", style: { alignItems: "center" } },
+        h("span", { className: "indicador-autoguardado" },
+          estadoAutoguardado === "guardando" ? "💾 Guardando..." : estadoAutoguardado === "guardado" ? "✓ Guardado" : ""
+        ),
         h("button", { className: "btn-peligro", onClick: () => setModalRechazar(true), disabled: lineas.length === 0 }, "❌ Rechazar"),
         h("button", { className: "btn-primario", onClick: () => setModalAprobar(true), disabled: lineas.length === 0 }, "✅ Marcar como Aprobado")
       )
