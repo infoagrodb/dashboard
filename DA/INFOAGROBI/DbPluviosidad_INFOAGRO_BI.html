@@ -197,12 +197,12 @@ body{
   .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px;}
 .tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
   .tf-icon-texto{display:none;}
-  /* Jerarquía en móvil: Compañía → Sector → Finca → resto de campos propios */
-  .campo-compania{order:1;}
-  .campo-sector{order:2;}
-  .campo-finca{order:3;}
-  .campo-mes{order:4;}
-  .campo-anios{order:5;}
+  /* Jerarquía en móvil: Mes → Años → Compañía → Sector → Finca */
+  .campo-mes{order:1;}
+  .campo-anios{order:2;}
+  .campo-compania{order:3;}
+  .campo-sector{order:4;}
+  .campo-finca{order:5;}
 }
 @media (max-width:520px){
   .tf-campo{flex:1 1 100%;}
@@ -534,6 +534,12 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
         <div class="ms-panel" id="msAnios"></div>
       </div>
 
+      <div class="tf-campo campo-compania">
+        <label>Compañía</label>
+        <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
+        <div class="ms-panel" id="msCompania"></div>
+      </div>
+
       <div class="tf-campo campo-sector">
         <label>Sector</label>
         <div class="ms-dropdown" id="dropSector" onclick="toggleMs(event,'sector')">Todos</div>
@@ -544,12 +550,6 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
         <label>Finca</label>
         <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
         <div class="ms-panel" id="msFinca"></div>
-      </div>
-
-      <div class="tf-campo campo-compania">
-        <label>Compañía</label>
-        <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
-        <div class="ms-panel" id="msCompania"></div>
       </div>
     </div>
 
@@ -771,9 +771,39 @@ function totalMes(rows){
 
 const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
 const GITHUB_PV = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Pluviosidad.json";
+// Solo los campos que el dashboard realmente usa — reduce el peso de cada página
+// al paginar miles de registros de Odoo.
+const PV_FIELDS = "x_studio_fecha,x_studio_finca,x_studio_sector_1,x_studio_company_id,x_studio_cantidad_promedio";
 
-async function fetchGitHubOrWorker(githubUrl, workerUrl) {
-  // GitHub es la fuente principal (datos siempre actualizados vía GitHub Actions)
+// El endpoint /query del Worker limita cada respuesta (por defecto 8000 registros,
+// ordenados id asc = los más antiguos primero). Con más de 21,000 registros en Odoo,
+// una sola llamada se queda en 2025 y nunca trae los años más recientes (2026).
+// Aquí se pagina con offset hasta agotar todos los registros disponibles.
+async function fetchWorkerPaginado(baseUrl) {
+  const PAGE = 5000;
+  let offset = 0;
+  let todos = [];
+  for (let i = 0; i < 20; i++) { // tope de seguridad: hasta 100,000 registros
+    const url = `${baseUrl}&fields=${encodeURIComponent(PV_FIELDS)}&limit=${PAGE}&offset=${offset}`;
+    const r = await fetch(url);
+    if (!r.ok) break;
+    const j = await r.json();
+    if (!j.ok) break;
+    const pagina = Array.isArray(j.result) ? j.result : [];
+    todos = todos.concat(pagina);
+    if (pagina.length < PAGE) break; // última página
+    offset += PAGE;
+  }
+  return todos;
+}
+
+async function fetchWorkerOrGitHub(workerBaseUrl, githubUrl) {
+  // El Worker es la fuente principal (datos en vivo desde Odoo vía el Worker), paginado completo.
+  try {
+    const registros = await fetchWorkerPaginado(workerBaseUrl);
+    if (registros.length) return { result: registros };
+  } catch(e) {}
+  // GitHub como respaldo si el Worker no responde
   try {
     const r = await fetch(githubUrl + "?cache=" + Date.now());
     if (r.ok) {
@@ -782,18 +812,13 @@ async function fetchGitHubOrWorker(githubUrl, workerUrl) {
       if (records.length) return j;
     }
   } catch(e) {}
-  // Worker como fallback si GitHub no responde
-  try {
-    const r = await fetch(workerUrl);
-    if (r.ok) { const j = await r.json(); if (j.ok) return j; }
-  } catch(e) {}
   return { result: [] };
 }
 
 async function loadData(){
   try{
-    const json = await fetchGitHubOrWorker(GITHUB_PV, WORKER+"/query?base=info&model=x_pluviosidad");
-    
+    const json = await fetchWorkerOrGitHub(WORKER+"/query?base=info&model=x_pluviosidad", GITHUB_PV);
+
     let records = Array.isArray(json) ? json : (json.result ? (Array.isArray(json.result) ? json.result : json.result.records || []) : []);
     if(!records.length && json.records) records = json.records;
 
