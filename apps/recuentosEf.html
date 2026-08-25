@@ -317,12 +317,18 @@
 
   /* session list */
   .session-item{
-    display:flex;align-items:center;gap:12px;padding:13px 14px;border:1px solid var(--borde);border-radius:12px;
+    display:flex;align-items:center;gap:12px;padding:18px 16px;border:1px solid var(--borde);border-radius:12px;
     background:#fff;margin-bottom:10px;
   }
   .session-item .meta{flex:1;min-width:0;}
   .session-item .meta .t1{font-weight:700;font-size:0.92rem;}
   .session-item .meta .t2{font-size:0.78rem;color:var(--texto-suave);}
+  .session-item .lado-derecho{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;}
+  .btn-ver-reporte{
+    background:var(--verde-pastel);color:var(--verde-oscuro);border:1px solid #BEEBD1;
+    border-radius:8px;padding:6px 12px;font-size:0.76rem;font-weight:700;white-space:nowrap;
+  }
+  .btn-ver-reporte:active{background:#BEEBD1;}
   .tag{
     font-size:0.66rem;font-weight:700;text-transform:uppercase;padding:5px 10px;border-radius:99px;letter-spacing:.02em;
     display:flex;align-items:center;gap:5px;flex-shrink:0;
@@ -1121,7 +1127,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.07.24-9";
+const APP_VERSION = "2026.08.25-1";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -1662,7 +1668,22 @@ function toast(msg, isErr){
    ========================================================================= */
 let sincronizandoLocalId = null; // id de la evaluación que se está enviando ahora mismo
 
+/** Un borrador ('draft') que lleva más de 3 días sin tocarse casi seguro quedó
+ *  abandonado (el técnico empezó otro, o ya no se acuerda de los datos) — se limpia
+ *  solo para que la pantalla de Reportes no se llene de cosas viejas a medio hacer.
+ *  Nunca toca reportes 'pending_sync', 'error' ni 'fotos_pendientes' — esos SÍ tienen
+ *  datos que todavía hacen falta enviar, solo se limpian los que nunca se terminaron. */
+async function limpiarBorradoresViejos(){
+  const TRES_DIAS_MS = 3 * 24 * 60 * 60 * 1000;
+  const list = await idbGetAllSessions();
+  const viejos = list.filter(s => s.status === 'draft' && (Date.now() - new Date(s.updatedAt).getTime()) > TRES_DIAS_MS);
+  if(viejos.length === 0) return;
+  for(const s of viejos) await idbDeleteSession(s.localId);
+  toast(`${viejos.length} borrador(es) de más de 3 días se limpiaron solos`);
+}
+
 async function renderHome(){
+  await limpiarBorradoresViejos();
   const list = await idbGetAllSessions();
   list.sort((a,b)=>{
     const fa = a.header.fecha || '', fb = b.header.fecha || '';
@@ -1680,7 +1701,6 @@ async function renderHome(){
       const loteName = loteNombre(s.header.lote);
       const div = document.createElement('div');
       div.className='session-item';
-      div.onclick=()=>abrirSesion(s.localId);
       const enviandoAhora = sincronizandoLocalId === s.localId;
       const estadoTag = enviandoAhora ? 'syncing' : s.status;
       const tagTxt = {draft:'Borrador', pending_sync:'Por enviar', synced:'Enviado', error:'Error', syncing:'Enviando', fotos_pendientes:'Fotos pendientes'}[estadoTag];
@@ -1691,7 +1711,10 @@ async function renderHome(){
           <div class="t2">${s.header.fecha ? fmtFechaPDF(s.header.fecha) : 'sin fecha'} · Evaluación ${s.currentStation}/${s.header.estaciones}</div>
           ${(s.status==='error'||s.status==='fotos_pendientes') && s.lastError ? `<div class="t2" style="color:${s.status==='error'?'var(--rojo)':'var(--ambar)'};margin-top:2px;">${s.status==='error'?'⚠️':'📷'} ${s.lastError}</div>` : ''}
         </div>
-        <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
+        <div class="lado-derecho">
+          <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
+          <button class="btn-ver-reporte" onclick="abrirSesion('${s.localId}')">Ver reporte</button>
+        </div>
       `;
       cont.appendChild(div);
     });
