@@ -3213,18 +3213,20 @@ async function reimprimirReporte(id, folio, btnEl){
     const domainPdf = encodeURIComponent(JSON.stringify([
       ['res_model','=','x_recuentos_estado_del'], ['res_id','=',id], ['mimetype','=','application/pdf']
     ]));
-    const rA = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=id,name&domain=${domainPdf}&limit=10`);
-    const adjuntos = filasDe(await rA.json());
+    const adjuntos = filasDe(await fetchJsonConReintentos(`${WORKER}/query?base=info&model=ir.attachment&fields=id,name&domain=${domainPdf}&limit=10`));
 
     if(adjuntos.length){
       const masReciente = adjuntos.sort((a,b)=>b.id-a.id)[0]; // ID más alto = subida más reciente
       btn.textContent = '⏳ Descargando PDF original…';
       const domainDatos = encodeURIComponent(JSON.stringify([['id','=',masReciente.id]]));
-      const rD = await fetch(`${WORKER}/query?base=info&model=ir.attachment&fields=datas,name&domain=${domainDatos}&limit=1`);
-      const datosAdj = filasDe(await rD.json());
-      if(!datosAdj.length || !datosAdj[0].datas) throw new Error('El adjunto no tiene contenido descargable.');
+      // Odoo 19.3 eliminó el campo 'datas' de ir.attachment — el binario ahora se pide
+      // (y se guarda, ver v16.7 del Worker) con 'raw'. Pedir 'datas' aquí devolvía
+      // "Invalid field 'datas'" y por eso ni el PDF ni las fotos cargaban aunque el
+      // adjunto SÍ existiera en Odoo con contenido real.
+      const datosAdj = filasDe(await fetchJsonConReintentos(`${WORKER}/query?base=info&model=ir.attachment&fields=raw,name&domain=${domainDatos}&limit=1`));
+      if(!datosAdj.length || !datosAdj[0].raw) throw new Error('El adjunto no tiene contenido descargable.');
 
-      const bytesOriginal = base64ABytes(datosAdj[0].datas);
+      const bytesOriginal = base64ABytes(datosAdj[0].raw);
       let blobFinal = new Blob([bytesOriginal], { type:'application/pdf' });
 
       // El PDF original puede no traer las fotos si el recuento se sincronizó con una
@@ -3443,12 +3445,20 @@ async function obtenerFotosMeta(id){
   return fotos;
 }
 
-// Trae el binario (campo 'datas', base64) de UN adjunto puntual por su ID.
+// Trae el binario de UN adjunto puntual por su ID.
+// Odoo 19.3 eliminó el campo 'datas' de ir.attachment — pedirlo devolvía
+// "Invalid field 'datas'", que obtenerFotosAdjuntas() capturaba en su try/catch por
+// foto y la descartaba en silencio (por eso el modal decía "0 fotos" aunque el
+// adjunto SÍ existiera en Odoo con imagen real). El binario ahora se pide con 'raw'
+// — mismo campo que ya usa el Worker (v16.7) para guardar las fotos que sube la app
+// de campo — pero se sigue devolviendo/guardando internamente como "datas" en el
+// resto del código de este archivo para no tener que tocar todos los lugares que ya
+// leen esa propiedad (grid de fotos, zoom, fusión con el PDF).
 async function obtenerFotoDatas(attachmentId){
   const domain = encodeURIComponent(JSON.stringify([['id','=',attachmentId]]));
-  const r = await fetchConTimeout(`${WORKER}/query?base=info&model=ir.attachment&fields=datas&domain=${domain}&limit=1`);
+  const r = await fetchConTimeout(`${WORKER}/query?base=info&model=ir.attachment&fields=raw&domain=${domain}&limit=1`);
   const filas = filasDe(await r.json());
-  return filas[0]?.datas || null;
+  return filas[0]?.raw || null;
 }
 
 // Trae metadata + binario de TODAS las fotos de un recuento, ya con el binario en
