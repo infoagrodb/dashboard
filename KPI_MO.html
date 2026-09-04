@@ -106,6 +106,9 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .drag-chip:active{cursor:grabbing;}
 .drag-chip.dragging{opacity:0.4;background:#e5e7eb;}
 .drag-chip span{color:var(--verde);font-weight:700;}
+.drag-chip.subtotal-on{background:var(--verde-bg);border-color:var(--verde);box-shadow:0 0 0 1px var(--verde) inset;}
+.drag-chip .sub-ico{display:none;color:var(--verde);font-weight:800;font-size:11px;margin-left:2px;}
+.drag-chip.subtotal-on .sub-ico{display:inline;}
 
 .tabla-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;position:relative;}
 .tabla-header{padding:9px 13px;background:#f8fafb;border-bottom:1px solid var(--gris-borde);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
@@ -289,19 +292,12 @@ tr:hover td{background:#f8fafc;}
       <div id="hist-charts-container"></div>
       <div class="filtros-bar" style="gap:10px;align-items:center;">
         <div class="filtro-group" style="flex:1;">
-          <div class="filtro-label">Orden de Columnas de Agrupación (Arrastra para reordenar)</div>
+          <div class="filtro-label">Orden de Columnas de Agrupación (arrastra para reordenar · clic derecho aquí o en el encabezado de la tabla para su subtotal)</div>
           <div class="drag-container" id="drag-hierarchy-container-hist" ondragover="event.preventDefault()">
-            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">👤 <span>Puesto</span></div>
-            <div class="drag-chip" draggable="true" data-id="ciclo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🔁 <span>Ciclo</span></div>
-            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🌾 <span>Actividad</span></div>
+            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'hist','puesto')">👤 <span>Puesto</span><span class="sub-ico">Σ</span></div>
+            <div class="drag-chip" draggable="true" data-id="ciclo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'hist','ciclo')">🔁 <span>Ciclo</span><span class="sub-ico">Σ</span></div>
+            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'hist','actividad')">🌾 <span>Actividad</span><span class="sub-ico">Σ</span></div>
           </div>
-        </div>
-        <div class="filtro-group">
-          <div class="filtro-label">&nbsp;</div>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto);cursor:pointer;padding:6px 2px;user-select:none;">
-            <input type="checkbox" id="chk-hist-subtotales" onchange="toggleSubtotalesHist(this.checked)" style="accent-color:var(--verde);width:14px;height:14px;cursor:pointer;">
-            Mostrar subtotales
-          </label>
         </div>
       </div>
       <div class="tabla-card">
@@ -423,13 +419,13 @@ tr:hover td{background:#f8fafc;}
       </div>
       <div class="filtros-bar" style="gap:10px;align-items:center;">
         <div class="filtro-group" style="flex:1;">
-          <div class="filtro-label">Orden de Columnas de Agrupación (Arrastra para reordenar)</div>
+          <div class="filtro-label">Orden de Columnas de Agrupación (arrastra para reordenar · clic derecho aquí o en el encabezado de la tabla para su subtotal)</div>
           <div class="drag-container" id="drag-hierarchy-container" ondragover="event.preventDefault()">
-            <div class="drag-chip" draggable="true" data-id="cultivo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🌱 <span>Cultivo</span></div>
-            <div class="drag-chip" draggable="true" data-id="finca" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">📍 <span>Finca</span></div>
-            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🌾 <span>Actividad</span></div>
-            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">👤 <span>Puesto</span></div>
-            <div class="drag-chip" draggable="true" data-id="cc" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🏷 <span>Cuenta</span></div>
+            <div class="drag-chip" draggable="true" data-id="cultivo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'piv','cultivo')">🌱 <span>Cultivo</span><span class="sub-ico">Σ</span></div>
+            <div class="drag-chip" draggable="true" data-id="finca" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'piv','finca')">📍 <span>Finca</span><span class="sub-ico">Σ</span></div>
+            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'piv','actividad')">🌾 <span>Actividad</span><span class="sub-ico">Σ</span></div>
+            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'piv','puesto')">👤 <span>Puesto</span><span class="sub-ico">Σ</span></div>
+            <div class="drag-chip" draggable="true" data-id="cc" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return toggleSubtotalColumna(event,'piv','cc')">🏷 <span>Cuenta</span><span class="sub-ico">Σ</span></div>
           </div>
         </div>
         <div class="filtro-group">
@@ -440,13 +436,6 @@ tr:hover td{background:#f8fafc;}
             <button class="btn-toggle" id="btn-piv-mdhm" onclick="cambiarMetricaPiv('dhmzn')">DH/Mzn</button>
             <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')">C$/DH</button>
           </div>
-        </div>
-        <div class="filtro-group">
-          <div class="filtro-label">&nbsp;</div>
-          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto);cursor:pointer;padding:6px 2px;user-select:none;">
-            <input type="checkbox" id="chk-piv-subtotales" onchange="toggleSubtotalesPiv(this.checked)" style="accent-color:var(--verde);width:14px;height:14px;cursor:pointer;">
-            Mostrar subtotales
-          </label>
         </div>
       </div>
 
@@ -610,16 +599,31 @@ const MF=['01','02','03','04','05','06','07','08','09','10','11','12'];
 const PUESTOS_DEFAULT=['Jornalero','Operador de Maquina','Operador de Maquinaria','Ayudante de Campo'];
 
 let RAW_SB=[],DS_C=[],DS_DH=[],CAPA=[],SERIE=[],MAPA={};
+let NOMBRE_CUENTA={}; // código de cuenta N6 (gastos) -> nombre, obtenido del propio dato de Odoo (NOM_CC ya cubre N1)
+function nombreCuenta(cod){return NOM_CC[cod]||NOMBRE_CUENTA[cod]||'';}
+function cuentaConNombre(cod){if(!cod||cod==='Sin Cuenta')return cod;const n=nombreCuenta(cod);return n?`${cod} — ${n}`:cod;}
 let cultivoMz='Mani',cultivoCmp='Mani',cultivoHist='Mani';
 let ultimoComparativoParaExcel=[];
 let ciclosSel=new Set(),chartCmp=null,chartsHist={};
 let metricaHist='monto',vistaHist='mensual',chartTipo='line';
-let mostrarSubtotalesHist=false; // por defecto ocultos
+let subtotalesActivosHist=new Set(); // campos (puesto/ciclo/actividad) con subtotal activado por clic derecho
 let ultimoHistoriaParaExcel=[];
-function toggleSubtotalesHist(checked){mostrarSubtotalesHist=checked;renderizarHistoria();}
 let cultivoPivActual='Mani',seccionPiv='n1',vistaPiv='mensual';
 let metricaPiv='costo',_pivDatos={};
-let mostrarSubtotalesPiv=false; // por defecto ocultos
+let subtotalesActivosPiv=new Set(); // campos (cultivo/finca/actividad/puesto/cc) con subtotal activado por clic derecho
+
+// Activa/desactiva el subtotal de una columna específica de agrupación con clic derecho sobre su chip,
+// en vez de un check global que mostraba todos los niveles de una vez (resultaba confuso).
+function toggleSubtotalColumna(evt,tabla,campo){
+  if(evt&&evt.preventDefault)evt.preventDefault();
+  const set=tabla==='piv'?subtotalesActivosPiv:subtotalesActivosHist;
+  if(set.has(campo))set.delete(campo);else set.add(campo);
+  const containerId=tabla==='piv'?'drag-hierarchy-container':'drag-hierarchy-container-hist';
+  const chip=document.querySelector(`#${containerId} .drag-chip[data-id="${campo}"]`);
+  if(chip)chip.classList.toggle('subtotal-on',set.has(campo));
+  if(tabla==='piv')renderizarPivote();else renderizarHistoria();
+  return false;
+}
 
 let draggedChip = null;
 function dragStart(e) {
@@ -836,8 +840,13 @@ window.addEventListener('DOMContentLoaded',async()=>{
     if(resC){
       const json=resC;
       (json.result&&Array.isArray(json.result)?json.result:Object.values(json)).forEach(row=>{
-        const cc=String(limpiar(row["x_studio_cuenta_contable_debito"]||"")).split(" ")[0];
+        const ccTexto=String(limpiar(row["x_studio_cuenta_contable_debito"]||""));
+        const cc=ccTexto.split(" ")[0];
         if(!esN1(cc)&&!esN6(cc))return;
+        if(cc&&!NOMBRE_CUENTA[cc]){
+          const nom=ccTexto.substring(cc.length).replace(/^[\s\-–—]+/,'').trim();
+          if(nom)NOMBRE_CUENTA[cc]=nom;
+        }
         const ca=limpiar(row["x_studio_cuenta_analitica_en_recibo_de_pago"]);
         const fecha=row["x_studio_fecha_final_lote"]||"";
         const lote=limpiar(row["x_studio_nombre_del_lote"]);
@@ -1400,7 +1409,17 @@ function renderizarHistoria(){
             tooltip:{callbacks:{label:c=>{const v=c.parsed.y;if(v==null)return null;return`${c.dataset.label}: ${fmtVal(v)}`;}}},
             datalabels:{display:true}
           },
-          onClick:(evt,elements)=>{if(elements.length>0){const el=elements[0];const ds=chartsHist[`h${pi}`].data.datasets[el.datasetIndex];abrirDesgloseActividad(puesto,ds.label,mesesUsar[el.index],el.index,mesesUsar,base);}},
+          // No usamos "elements" (viene resuelto en modo 'index': agrupa TODOS los datasets de esa
+          // columna sin importar cuál línea se tocó realmente, así que siempre devolvía el primer
+          // ciclo). Se resuelve aparte, en modo 'nearest'+intersect, cuál punto/línea se clicó de verdad.
+          onClick:(evt,_elements,chart)=>{
+            const els=chart.getElementsAtEventForMode(evt,'nearest',{intersect:true},true);
+            if(els.length>0){
+              const el=els[0];
+              const ds=chart.data.datasets[el.datasetIndex];
+              abrirDesgloseActividad(puesto,ds.label,mesesUsar[el.index],el.index,mesesUsar,base);
+            }
+          },
           scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:false,ticks:{callback:v=>metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):`C$${fmt(Math.round(v))}`}}}
         }
       });
@@ -1410,8 +1429,13 @@ function renderizarHistoria(){
   const ordCampos=Array.from(document.querySelectorAll('#drag-hierarchy-container-hist .drag-chip')).map(el=>el.dataset.id);
   const [ord1,ord2,ord3]=ordCampos;
   const headersMap={puesto:'Puesto',ciclo:'Ciclo',actividad:'Actividad'};
+  const thHist=f=>{
+    const activo=subtotalesActivosHist.has(f);
+    const estilo=`cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
+    return`<th style="${estilo}" oncontextmenu="return toggleSubtotalColumna(event,'hist','${f}')" title="Clic derecho: mostrar/ocultar subtotal de ${headersMap[f]}">${headersMap[f]}${activo?' <span style="color:var(--verde)">Σ</span>':''}</th>`;
+  };
 
-  document.getElementById('th-historia').innerHTML=`<th>${headersMap[ord1]}</th><th>${headersMap[ord2]}</th><th>${headersMap[ord3]}</th>`+mesesUsar.map(m=>`<th class="t-right">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right">Total</th>`;
+  document.getElementById('th-historia').innerHTML=`${thHist(ord1)}${thHist(ord2)}${thHist(ord3)}`+mesesUsar.map(m=>`<th class="t-right">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right">Total</th>`;
 
   let rowItems=[];
   puestosConDatos.forEach(pu=>{
@@ -1456,11 +1480,12 @@ function renderizarHistoria(){
   let currentKeys=[null,null,null];
   rowItems.forEach((r,idx)=>{
     const keys=[r.getValByField(ord1),r.getValByField(ord2),r.getValByField(ord3)];
-    if(mostrarSubtotalesHist&&idx>0){
+    if(subtotalesActivosHist.size>0&&idx>0){
       let changeFromLevel=-1;
       for(let i=0;i<2;i++){if(currentKeys[i]!==keys[i]){changeFromLevel=i;break;}}
       if(changeFromLevel!==-1){
         for(let lvl=1;lvl>=changeFromLevel;lvl--){
+          if(!subtotalesActivosHist.has(ordCampos[lvl]))continue;
           filas+=filaSubtotalHist(`Total ${currentKeys[lvl]}`,fijosHastaNivel(currentKeys,lvl));
         }
       }
@@ -1475,8 +1500,9 @@ function renderizarHistoria(){
     fila['Total']=Number(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn)?.toFixed(2)??0)||null;
     ultimoHistoriaParaExcel.push(fila);
   });
-  if(mostrarSubtotalesHist&&rowItems.length>0){
+  if(subtotalesActivosHist.size>0&&rowItems.length>0){
     for(let lvl=1;lvl>=0;lvl--){
+      if(!subtotalesActivosHist.has(ordCampos[lvl]))continue;
       filas+=filaSubtotalHist(`Total ${currentKeys[lvl]}`,fijosHastaNivel(currentKeys,lvl));
     }
   }
@@ -1663,11 +1689,6 @@ function actualizarVisibilidadChipCuenta(){
   const chip=document.querySelector('#drag-hierarchy-container .drag-chip[data-id="cc"]');
   if(chip)chip.style.display=(metricaPiv==='dh')?'none':'';
 }
-function toggleSubtotalesPiv(checked){
-  mostrarSubtotalesPiv=checked;
-  renderizarPivote();
-}
-
 function calcPivVal(slot){
   if(!slot)return 0;
   if(metricaPiv==='costo')return slot.costo||0;
@@ -1791,7 +1812,9 @@ function renderizarPivote(){
 
   let thead='<thead><tr style="background:#f3f4f6;">';
   hierOrder.forEach(f=>{
-    thead+=`<th style="${thStyle}position:sticky;top:0;z-index:12;">${fieldLabels[f]||f}</th>`;
+    const activo=subtotalesActivosPiv.has(f);
+    const estilo=`${thStyle}position:sticky;top:0;z-index:12;cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
+    thead+=`<th style="${estilo}" oncontextmenu="return toggleSubtotalColumna(event,'piv','${f}')" title="Clic derecho: mostrar/ocultar subtotal de ${fieldLabels[f]||f}">${fieldLabels[f]||f}${activo?' <span style="color:var(--verde)">Σ</span>':''}</th>`;
   });
 
   anios.forEach(y=>{
@@ -1852,10 +1875,12 @@ function renderizarPivote(){
       }
     }
 
-    if(changeFromLevel!==-1 && idx>0 && mostrarSubtotalesPiv){
+    if(changeFromLevel!==-1 && idx>0 && subtotalesActivosPiv.size>0){
       for(let l=hierOrder.length-2; l>=changeFromLevel; l--){
+        if(!subtotalesActivosPiv.has(hierOrder[l]))continue;
         const pathKey=currentGroupKeys.slice(0, l+1).join('|');
-        const label=`Total ${currentGroupKeys[l]}`;
+        const labelVal=hierOrder[l]==='cc'?cuentaConNombre(currentGroupKeys[l]):currentGroupKeys[l];
+        const label=`Total ${labelVal}`;
         const slotMapY=groupSlots[pathKey]||{};
         rows.push(createSubtotalRow(label, slotMapY));
       }
@@ -1880,7 +1905,8 @@ function renderizarPivote(){
       const val=row.keys[fIdx];
       const isFirst=(fIdx===0);
       const style=isFirst?'font-weight:700;color:var(--verde-dark);':'';
-      rowHTML+=`<td style="padding:7px 10px;${style}">${val}</td>`;
+      const celda=f==='cc'?cuentaConNombre(val):val;
+      rowHTML+=`<td style="padding:7px 10px;${style}">${celda}</td>`;
     });
 
     let rowTotalYearAll=0;
@@ -1908,10 +1934,12 @@ function renderizarPivote(){
     });
   });
 
-  if(detailRows.length>0 && mostrarSubtotalesPiv){
+  if(detailRows.length>0 && subtotalesActivosPiv.size>0){
     for(let l=hierOrder.length-2; l>=0; l--){
+      if(!subtotalesActivosPiv.has(hierOrder[l]))continue;
       const pathKey=currentGroupKeys.slice(0, l+1).join('|');
-      const label=`Total ${currentGroupKeys[l]}`;
+      const labelVal=hierOrder[l]==='cc'?cuentaConNombre(currentGroupKeys[l]):currentGroupKeys[l];
+      const label=`Total ${labelVal}`;
       const slotMapY=groupSlots[pathKey]||{};
       rows.push(createSubtotalRow(label, slotMapY));
     }
