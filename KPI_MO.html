@@ -414,9 +414,20 @@ tr:hover td{background:#f8fafc;}
         <div class="chart-subtitle">Eje X: Ene → Dic · cada línea = un ciclo</div>
         <div class="chart-wrap tall"><canvas id="chart-cmp"></canvas></div>
       </div>
+      <div class="filtros-bar" style="gap:10px;align-items:center;">
+        <div class="filtro-group" style="flex:1;">
+          <div class="filtro-label">Orden de Columnas de Agrupación (arrastra para reordenar · clic derecho aquí o en el encabezado de la tabla: subtotal o contraer)<span id="cmp-colapso-badge"></span></div>
+          <div class="drag-container" id="drag-hierarchy-container-cmp" ondragover="event.preventDefault()">
+            <div class="drag-chip" draggable="true" data-id="ciclo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return abrirMenuSubtotal(event,'cmp','ciclo')">🔁 <span>Ciclo</span><span class="sub-ico">Σ</span><span class="col-ico">▤</span></div>
+            <div class="drag-chip" draggable="true" data-id="finca" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return abrirMenuSubtotal(event,'cmp','finca')">📍 <span>Finca</span><span class="sub-ico">Σ</span><span class="col-ico">▤</span></div>
+            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return abrirMenuSubtotal(event,'cmp','puesto')">👤 <span>Puesto</span><span class="sub-ico">Σ</span><span class="col-ico">▤</span></div>
+            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)" oncontextmenu="return abrirMenuSubtotal(event,'cmp','actividad')">🌾 <span>Actividad</span><span class="sub-ico">Σ</span><span class="col-ico">▤</span></div>
+          </div>
+        </div>
+      </div>
       <div class="tabla-card">
         <div class="tabla-header"><span class="tabla-title">Resumen por Ciclo / Finca / Puesto / Actividad</span><button class="export-btn" onclick="exportarComparativoAExcel()">⬇ Excel</button></div>
-        <div class="tabla-wrap"><table><thead><tr><th>Ciclo</th><th>Finca</th><th>Puesto</th><th>Actividad</th><th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right" id="th-cmp-cmz">C$/Mz</th><th class="t-right" id="th-cmp-cdh">C$/DH</th></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
+        <div class="tabla-wrap"><table><thead><tr id="th-comparar"></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
       </div>
     </div>
 
@@ -684,19 +695,29 @@ let metricaPiv='costo',_pivDatos={};
 let subtotalesActivosPiv=new Set(); // campos (cultivo/finca/actividad/puesto/cc) con subtotal activado por clic derecho
 let nivelColapsoPiv=null; // campo hasta el cual la tabla de Pivote está contraída (resumida), o null = expandida
 let nivelColapsoHist=null; // idem para Historia (Detalle Mensual)
+let subtotalesActivosCmp=new Set(); // campos (ciclo/finca/puesto/actividad) con subtotal activado por clic derecho en Comparar
+let nivelColapsoCmp=null; // idem contracción para Comparar
 let pivSoloAnios=false; // true = oculta las columnas de mes y muestra solo el total de cada año
 let pivInvertirAnioMes=false; // true = agrupa las columnas por Mes (y dentro de cada mes, los años) en vez de por Año
 let monedaGlobal='CS'; // 'CS'=Córdobas (moneda funcional del sistema) | 'USD'=Dólares
 let decimalesGlobal=0; // decimales para valores monetarios en toda la app (0 a 4, elegido por el usuario)
 const TASA_CAMBIO_USD=36.6243; // C$ por US$1
 
+// Configuración de cada tabla que soporta orden de columnas / subtotal / contraer (Pivote, Historia y
+// Comparar), para no repetir un ternario por cada tabla nueva que se agregue a este sistema.
+const TABLA_INFO={
+  piv:{containerId:'drag-hierarchy-container',badgeId:'piv-colapso-badge',getSubtotales:()=>subtotalesActivosPiv,getNivel:()=>nivelColapsoPiv,setNivel:v=>{nivelColapsoPiv=v;},render:()=>renderizarPivote()},
+  hist:{containerId:'drag-hierarchy-container-hist',badgeId:'hist-colapso-badge',getSubtotales:()=>subtotalesActivosHist,getNivel:()=>nivelColapsoHist,setNivel:v=>{nivelColapsoHist=v;},render:()=>renderizarHistoria()},
+  cmp:{containerId:'drag-hierarchy-container-cmp',badgeId:'cmp-colapso-badge',getSubtotales:()=>subtotalesActivosCmp,getNivel:()=>nivelColapsoCmp,setNivel:v=>{nivelColapsoCmp=v;},render:()=>renderizarComparativo()},
+};
+
 // Devuelve el orden de columnas EFECTIVAMENTE visible en la tabla (ya aplicada la contracción), para
 // saber si un campo dado es el último visible (ahí "subtotal"/"contraer" no tienen efecto adicional).
 function ordenEfectivo(tabla){
-  const containerId=tabla==='piv'?'drag-hierarchy-container':'drag-hierarchy-container-hist';
-  let orden=Array.from(document.querySelectorAll(`#${containerId} .drag-chip`)).map(el=>el.dataset.id);
+  const cfg=TABLA_INFO[tabla];
+  let orden=Array.from(document.querySelectorAll(`#${cfg.containerId} .drag-chip`)).map(el=>el.dataset.id);
   if(tabla==='piv'&&metricaPiv==='dh')orden=orden.filter(f=>f!=='cc');
-  const nivelColapso=tabla==='piv'?nivelColapsoPiv:nivelColapsoHist;
+  const nivelColapso=cfg.getNivel();
   const idx=nivelColapso?orden.indexOf(nivelColapso):-1;
   if(idx>=0&&idx<orden.length-1)orden=orden.slice(0,idx+1);
   return orden;
@@ -708,14 +729,15 @@ let ctxMenuObjetivo=null;
 function abrirMenuSubtotal(evt,tabla,campo){
   evt.preventDefault();
   ctxMenuObjetivo={tabla,campo};
-  const activo=(tabla==='piv'?subtotalesActivosPiv:subtotalesActivosHist).has(campo);
+  const cfg=TABLA_INFO[tabla];
+  const activo=cfg.getSubtotales().has(campo);
   const visibles=ordenEfectivo(tabla);
   // El subtotal solo tiene sentido en una columna visible que NO sea la más profunda mostrada
   // (ahí el subtotal sería idéntico a la fila de detalle).
   const puedeSubtotal=visibles.includes(campo)&&campo!==visibles[visibles.length-1];
   document.getElementById('ctx-subtotal-toggle').style.display=puedeSubtotal?'flex':'none';
   document.getElementById('ctx-subtotal-label').textContent=activo?'Ocultar subtotal aquí':'Mostrar subtotal aquí';
-  const nivelActual=tabla==='piv'?nivelColapsoPiv:nivelColapsoHist;
+  const nivelActual=cfg.getNivel();
   document.getElementById('ctx-expandir').style.display=nivelActual?'flex':'none';
   const menu=document.getElementById('subtotal-ctx-menu');
   menu.style.display='block';
@@ -731,29 +753,29 @@ function cerrarMenuSubtotal(){
 function ctxAccionSubtotal(){
   if(!ctxMenuObjetivo)return;
   const{tabla,campo}=ctxMenuObjetivo;
-  const set=tabla==='piv'?subtotalesActivosPiv:subtotalesActivosHist;
+  const set=TABLA_INFO[tabla].getSubtotales();
   if(set.has(campo))set.delete(campo);else set.add(campo);
   cerrarMenuSubtotal();
-  if(tabla==='piv')renderizarPivote();else renderizarHistoria();
+  TABLA_INFO[tabla].render();
 }
 function ctxAccionContraer(){
   if(!ctxMenuObjetivo)return;
   const{tabla,campo}=ctxMenuObjetivo;
-  const containerId=tabla==='piv'?'drag-hierarchy-container':'drag-hierarchy-container-hist';
-  const orden=Array.from(document.querySelectorAll(`#${containerId} .drag-chip`)).map(el=>el.dataset.id);
+  const cfg=TABLA_INFO[tabla];
+  const orden=Array.from(document.querySelectorAll(`#${cfg.containerId} .drag-chip`)).map(el=>el.dataset.id);
   const idx=orden.indexOf(campo);
   // Contraer en el último campo del orden completo equivale a no contraer nada (ya se ve todo).
   const nuevoNivel=(idx>=0&&idx<orden.length-1)?campo:null;
-  if(tabla==='piv')nivelColapsoPiv=nuevoNivel;else nivelColapsoHist=nuevoNivel;
+  cfg.setNivel(nuevoNivel);
   cerrarMenuSubtotal();
-  if(tabla==='piv')renderizarPivote();else renderizarHistoria();
+  cfg.render();
 }
 function ctxAccionExpandir(){
   if(!ctxMenuObjetivo)return;
   const{tabla}=ctxMenuObjetivo;
-  if(tabla==='piv')nivelColapsoPiv=null;else nivelColapsoHist=null;
+  TABLA_INFO[tabla].setNivel(null);
   cerrarMenuSubtotal();
-  if(tabla==='piv')renderizarPivote();else renderizarHistoria();
+  TABLA_INFO[tabla].render();
 }
 document.addEventListener('click',cerrarMenuSubtotal);
 document.addEventListener('scroll',cerrarMenuSubtotal,true);
@@ -761,11 +783,11 @@ document.addEventListener('scroll',cerrarMenuSubtotal,true);
 // Sincroniza el resaltado de los chips ("Σ" = subtotal activo, borde rojo = límite de la contracción,
 // atenuados = campos agregados/ocultos por la contracción) con el estado real tras cada render.
 function refrescarChipsUI(tabla){
-  const containerId=tabla==='piv'?'drag-hierarchy-container':'drag-hierarchy-container-hist';
-  const subtotales=tabla==='piv'?subtotalesActivosPiv:subtotalesActivosHist;
-  const nivelColapso=tabla==='piv'?nivelColapsoPiv:nivelColapsoHist;
+  const cfg=TABLA_INFO[tabla];
+  const subtotales=cfg.getSubtotales();
+  const nivelColapso=cfg.getNivel();
   let pasoBorde=false;
-  document.querySelectorAll(`#${containerId} .drag-chip`).forEach(chip=>{
+  document.querySelectorAll(`#${cfg.containerId} .drag-chip`).forEach(chip=>{
     const campo=chip.dataset.id;
     chip.classList.toggle('subtotal-on',subtotales.has(campo));
     if(nivelColapso&&pasoBorde){
@@ -779,12 +801,12 @@ function refrescarChipsUI(tabla){
       chip.classList.remove('colapso-borde','colapso-oculto');
     }
   });
-  const badge=document.getElementById(tabla==='piv'?'piv-colapso-badge':'hist-colapso-badge');
+  const badge=document.getElementById(cfg.badgeId);
   if(badge){
     if(nivelColapso){
-      const chipTxt=document.querySelector(`#${containerId} .drag-chip[data-id="${nivelColapso}"] span:not(.sub-ico):not(.col-ico)`);
+      const chipTxt=document.querySelector(`#${cfg.containerId} .drag-chip[data-id="${nivelColapso}"] span:not(.sub-ico):not(.col-ico)`);
       const nombre=chipTxt?chipTxt.textContent:nivelColapso;
-      badge.innerHTML=` · <span style="color:var(--rojo);font-weight:700;">contraída hasta ${nombre}</span> · <a onclick="${tabla==='piv'?'nivelColapsoPiv':'nivelColapsoHist'}=null;${tabla==='piv'?'renderizarPivote':'renderizarHistoria'}();" style="color:var(--azul);cursor:pointer;text-decoration:underline;">expandir todo</a>`;
+      badge.innerHTML=` · <span style="color:var(--rojo);font-weight:700;">contraída hasta ${nombre}</span> · <a onclick="TABLA_INFO['${tabla}'].setNivel(null);TABLA_INFO['${tabla}'].render();" style="color:var(--azul);cursor:pointer;text-decoration:underline;">expandir todo</a>`;
     } else {
       badge.innerHTML='';
     }
@@ -811,6 +833,7 @@ function dragOver(e) {
 const DRAG_CONTAINER_RENDER={
   'drag-hierarchy-container':renderizarPivote,
   'drag-hierarchy-container-hist':renderizarHistoria,
+  'drag-hierarchy-container-cmp':renderizarComparativo,
 };
 function dropChip(e) {
   e.preventDefault();
@@ -1829,39 +1852,143 @@ function exportarComparativoAExcel(){
 }
 
 function renderizarComparativo(){
-  document.getElementById('th-cmp-cmz').textContent=`${simboloMoneda()}/Mz`;
-  document.getElementById('th-cmp-cdh').textContent=`${simboloMoneda()}/DH`;
   const fincasActivas=getSelMs('cmp-finca');
   const puestosActivos=getSelMs('cmp-puesto');
   const actsActivos=getSelMs('cmp-act');
-  let grupos={};
+  const fieldLabelsCmp={ciclo:'Ciclo',finca:'Finca',puesto:'Puesto',actividad:'Actividad'};
+
+  let hierOrder=Array.from(document.querySelectorAll('#drag-hierarchy-container-cmp .drag-chip')).map(el=>el.dataset.id);
+  // "Contraer hasta aquí" recorta hierOrder a lo visible; el agrupamiento de más abajo ya suma
+  // automáticamente todo lo que quede fuera de las columnas visibles, mostrando la info resumida.
+  const idxColapsoCmp=nivelColapsoCmp?hierOrder.indexOf(nivelColapsoCmp):-1;
+  if(idxColapsoCmp>=0&&idxColapsoCmp<hierOrder.length-1)hierOrder=hierOrder.slice(0,idxColapsoCmp+1);
+
+  // Mzn depende únicamente de finca+ciclo (nunca de puesto/actividad), así que se calcula una sola vez
+  // por combinación y se deduplica por esa clave al sumar en filas/subtotales/total general (igual que
+  // en Historia y Pivote), sin importar en qué orden o nivel de agrupación se esté mostrando.
+  const mznPorClave={};
+  const rawRecords=[];
   CAPA.forEach(r=>{
     if(r.cultivo!==cultivoCmp||!ciclosSel.has(r.ciclo))return;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
     if(puestosActivos.size>0&&!puestosActivos.has(r.puesto))return;
     if(actsActivos.size>0&&!actsActivos.has(r.act))return;
-    const k=`${r.ciclo}|${r.finca}|${r.puesto}|${r.act}`;
-    if(!grupos[k])grupos[k]={ciclo:r.ciclo,finca:r.finca,puesto:r.puesto,act:r.act,costo:0,dh:0,mzn:buscarMzn(r.finca,r.ciclo)};
-    grupos[k].costo+=r.costo;grupos[k].dh+=r.dh;
-  });
-  let tC=0,tDh=0,tMzn=0;const mV=new Set();
-  ultimoComparativoParaExcel=[];
-  document.getElementById('tbody-comparar').innerHTML=Object.values(grupos).sort((a,b)=>a.ciclo.localeCompare(b.ciclo)).map(g=>{
-    const dhMz=g.mzn>0?g.dh/g.mzn:0,cMz=g.mzn>0?g.costo/g.mzn:0,cDh=g.dh>0?g.costo/g.dh:0;
-    tC+=g.costo;tDh+=g.dh;const lk=`${g.finca}|${g.ciclo}`;if(!mV.has(lk)){mV.add(lk);tMzn+=g.mzn;}
-    ultimoComparativoParaExcel.push({
-      Ciclo:g.ciclo,Finca:g.finca,Puesto:g.puesto||'—',Actividad:g.act||'—',
-      DH:Number((g.dh||0).toFixed(1)),[`Costo (${simboloMoneda()})`]:valorMonedaExcel(g.costo||0,true),
-      Mzn:g.mzn>0?Number(g.mzn.toFixed(2)):null,
-      'DH/Mzn':g.mzn>0?Number(dhMz.toFixed(2)):null,
-      [`${simboloMoneda()}/Mzn`]:g.mzn>0?valorMonedaExcel(cMz,true):null,
-      [`${simboloMoneda()}/DH`]:g.dh>0?valorMonedaExcel(cDh,true):null
+    const fincaKey=r.finca||'',cicloKey=r.ciclo||'';
+    const mk=`${fincaKey}|${cicloKey}`;
+    if(!(mk in mznPorClave))mznPorClave[mk]=buscarMzn(r.finca,r.ciclo);
+    rawRecords.push({
+      ciclo:r.ciclo||'Sin Ciclo',finca:r.finca||'Sin Finca',puesto:r.puesto||'Sin Puesto',actividad:r.act||'Sin Actividad',
+      costo:r.costo||0,dh:r.dh||0,mznKey:mk
     });
-    return`<tr><td class="font-bold">${g.ciclo}</td><td>${g.finca}</td><td>${g.puesto||'—'}</td><td>${g.act||'—'}</td><td class="t-right">${fmt(g.dh,1)}</td><td class="t-right">${fmtMoneda(g.costo)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${g.mzn>0?fmt(g.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">${fmtMoneda(cMz)}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">${fmtMoneda(cDh)}</td></tr>`;
-  }).join('')||`<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
+  });
+
+  function nuevoAcumCmp(){return{costo:0,dh:0,mznF:new Set(),mzn:0};}
+  function sumarEnAcumCmp(dest,src){
+    dest.costo+=src.costo;dest.dh+=src.dh;
+    src.mznF.forEach(k=>{if(!dest.mznF.has(k)){dest.mznF.add(k);dest.mzn+=mznPorClave[k]||0;}});
+  }
+
+  const rowMap={};
+  rawRecords.forEach(r=>{
+    const keyVals=hierOrder.map(f=>r[f]!==undefined?r[f]:'');
+    const rKey=JSON.stringify(keyVals);
+    if(!rowMap[rKey])rowMap[rKey]={keys:keyVals,...nuevoAcumCmp()};
+    const item=rowMap[rKey];
+    item.costo+=r.costo;item.dh+=r.dh;
+    if(!item.mznF.has(r.mznKey)){item.mznF.add(r.mznKey);item.mzn+=mznPorClave[r.mznKey]||0;}
+  });
+
+  let detailRows=Object.values(rowMap);
+  detailRows.sort((a,b)=>{
+    for(let i=0;i<hierOrder.length;i++){
+      const comp=String(a.keys[i]).localeCompare(String(b.keys[i]));
+      if(comp!==0)return comp;
+    }
+    return 0;
+  });
+
+  // ---- Encabezado dinámico según el orden de columnas actual ----
+  let theadHtml='';
+  hierOrder.forEach(f=>{
+    const activo=subtotalesActivosCmp.has(f);
+    const estilo=`cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
+    theadHtml+=`<th style="${estilo}" oncontextmenu="return abrirMenuSubtotal(event,'cmp','${f}')" title="Clic derecho: subtotal o contraer en ${fieldLabelsCmp[f]}">${fieldLabelsCmp[f]}${activo?' <span style="color:var(--verde)">Σ</span>':''}</th>`;
+  });
+  theadHtml+=`<th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">${simboloMoneda()}/Mz</th><th class="t-right">${simboloMoneda()}/DH</th>`;
+  document.getElementById('th-comparar').innerHTML=theadHtml;
+
+  function metricasCmp(acum){
+    return{
+      dhMz:acum.mzn>0?acum.dh/acum.mzn:0,
+      cMz:acum.mzn>0?acum.costo/acum.mzn:0,
+      cDh:acum.dh>0?acum.costo/acum.dh:0
+    };
+  }
+  function celdasMetricasCmp(acum){
+    const{dhMz,cMz,cDh}=metricasCmp(acum);
+    return`<td class="t-right">${fmt(acum.dh,1)}</td><td class="t-right">${fmtMoneda(acum.costo)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${acum.mzn>0?fmt(acum.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">${fmtMoneda(cMz)}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">${fmtMoneda(cDh)}</td>`;
+  }
+  function celdaHierCmp(f,val){
+    if(f==='ciclo')return`<td class="font-bold">${val}</td>`;
+    if(f==='finca')return`<td>${val}</td>`;
+    return`<td>${val||'—'}</td>`;
+  }
+  function filaSubtotalCmp(label,acum){
+    return`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;"><td colspan="${hierOrder.length}">${label}</td>${celdasMetricasCmp(acum)}</tr>`;
+  }
+
+  const grandTotal=nuevoAcumCmp();
+  let currentGroupKeys=new Array(hierOrder.length).fill(null);
+  let groupSlots={};
+  let filas='';
+  ultimoComparativoParaExcel=[];
+
+  detailRows.forEach((row,idx)=>{
+    let changeFromLevel=-1;
+    for(let i=0;i<hierOrder.length;i++){
+      if(currentGroupKeys[i]!==row.keys[i]){changeFromLevel=i;break;}
+    }
+    if(changeFromLevel!==-1&&idx>0&&subtotalesActivosCmp.size>0){
+      for(let l=hierOrder.length-2;l>=changeFromLevel;l--){
+        if(!subtotalesActivosCmp.has(hierOrder[l]))continue;
+        const pathKey=currentGroupKeys.slice(0,l+1).join('|');
+        filas+=filaSubtotalCmp(`Total ${currentGroupKeys[l]}`,groupSlots[pathKey]||nuevoAcumCmp());
+      }
+    }
+    for(let i=0;i<hierOrder.length;i++){
+      currentGroupKeys[i]=row.keys[i];
+      const pathKey=currentGroupKeys.slice(0,i+1).join('|');
+      if(!groupSlots[pathKey])groupSlots[pathKey]=nuevoAcumCmp();
+      sumarEnAcumCmp(groupSlots[pathKey],row);
+    }
+    filas+=`<tr>${hierOrder.map((f,fi)=>celdaHierCmp(f,row.keys[fi])).join('')}${celdasMetricasCmp(row)}</tr>`;
+    sumarEnAcumCmp(grandTotal,row);
+
+    const{dhMz,cMz,cDh}=metricasCmp(row);
+    const filaExcel={};
+    hierOrder.forEach((f,fi)=>{filaExcel[fieldLabelsCmp[f]]=row.keys[fi]||'—';});
+    filaExcel['DH']=Number((row.dh||0).toFixed(1));
+    filaExcel[`Costo (${simboloMoneda()})`]=valorMonedaExcel(row.costo||0,true);
+    filaExcel['Mzn']=row.mzn>0?Number(row.mzn.toFixed(2)):null;
+    filaExcel['DH/Mzn']=row.mzn>0?Number(dhMz.toFixed(2)):null;
+    filaExcel[`${simboloMoneda()}/Mzn`]=row.mzn>0?valorMonedaExcel(cMz,true):null;
+    filaExcel[`${simboloMoneda()}/DH`]=row.dh>0?valorMonedaExcel(cDh,true):null;
+    ultimoComparativoParaExcel.push(filaExcel);
+  });
+  if(detailRows.length>0&&subtotalesActivosCmp.size>0){
+    for(let l=hierOrder.length-2;l>=0;l--){
+      if(!subtotalesActivosCmp.has(hierOrder[l]))continue;
+      const pathKey=currentGroupKeys.slice(0,l+1).join('|');
+      filas+=filaSubtotalCmp(`Total ${currentGroupKeys[l]}`,groupSlots[pathKey]||nuevoAcumCmp());
+    }
+  }
+
+  document.getElementById('tbody-comparar').innerHTML=filas||`<tr><td colspan="${hierOrder.length+6}" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
+  const tC=grandTotal.costo,tDh=grandTotal.dh,tMzn=grandTotal.mzn;
   const gDhMz=tMzn>0?tDh/tMzn:0,gCMz=tMzn>0?tC/tMzn:0,gCDh=tDh>0?tC/tDh:0;
-  document.getElementById('tft-comparar').innerHTML=`<td colspan="4">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">${fmtMoneda(tC)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">${fmtMoneda(gCMz)}</td><td class="t-right">${fmtMoneda(gCDh)}</td>`;
+  document.getElementById('tft-comparar').innerHTML=`<td colspan="${hierOrder.length}">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">${fmtMoneda(tC)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">${fmtMoneda(gCMz)}</td><td class="t-right">${fmtMoneda(gCDh)}</td>`;
   document.getElementById('kpi-comparar').innerHTML=`<div class="kpi-card"><div class="kpi-label">Ciclos</div><div class="kpi-valor">${ciclosSel.size}</div></div><div class="kpi-card azul"><div class="kpi-label">DH</div><div class="kpi-valor">${fmt(Math.round(tDh))}</div></div><div class="kpi-card"><div class="kpi-label">Costo</div><div class="kpi-valor">${fmtMoneda(tC)}</div></div><div class="kpi-card nar"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div><div class="kpi-card rojo"><div class="kpi-label">${simboloMoneda()}/Mzn</div><div class="kpi-valor">${fmtMoneda(gCMz)}</div></div>`;
+  refrescarChipsUI('cmp');
   let pCM={};
   SERIE.forEach(r=>{
     if(r.cultivo!==cultivoCmp||!ciclosSel.has(r.ciclo)||!r.mes)return;
