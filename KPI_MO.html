@@ -287,15 +287,27 @@ tr:hover td{background:#f8fafc;}
       </div>
       <div class="kpi-grid" id="kpi-historia"></div>
       <div id="hist-charts-container"></div>
+      <div class="filtros-bar" style="gap:10px;align-items:center;">
+        <div class="filtro-group" style="flex:1;">
+          <div class="filtro-label">Orden de Columnas de Agrupación (Arrastra para reordenar)</div>
+          <div class="drag-container" id="drag-hierarchy-container-hist" ondragover="event.preventDefault()">
+            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">👤 <span>Puesto</span></div>
+            <div class="drag-chip" draggable="true" data-id="ciclo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🔁 <span>Ciclo</span></div>
+            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🌾 <span>Actividad</span></div>
+          </div>
+        </div>
+        <div class="filtro-group">
+          <div class="filtro-label">&nbsp;</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto);cursor:pointer;padding:6px 2px;user-select:none;">
+            <input type="checkbox" id="chk-hist-subtotales" onchange="toggleSubtotalesHist(this.checked)" style="accent-color:var(--verde);width:14px;height:14px;cursor:pointer;">
+            Mostrar subtotales
+          </label>
+        </div>
+      </div>
       <div class="tabla-card">
         <div class="tabla-header">
           <span class="tabla-title">Detalle Mensual</span>
-          <div style="display:flex;gap:8px;align-items:center;font-size:11px;flex-wrap:wrap;">
-            <span style="color:var(--gris);font-weight:600;">Orden columnas:</span>
-            <select id="col-ord-1" onchange="renderizarHistoria()" style="padding:3px 6px;border:1px solid var(--gris-borde);border-radius:4px;background:#fafafa;"><option value="puesto">Puesto</option><option value="ciclo">Ciclo</option><option value="actividad">Actividad</option></select>
-            <select id="col-ord-2" onchange="renderizarHistoria()" style="padding:3px 6px;border:1px solid var(--gris-borde);border-radius:4px;background:#fafafa;"><option value="ciclo" selected>Ciclo</option><option value="puesto">Puesto</option><option value="actividad">Actividad</option></select>
-            <select id="col-ord-3" onchange="renderizarHistoria()" style="padding:3px 6px;border:1px solid var(--gris-borde);border-radius:4px;background:#fafafa;"><option value="actividad" selected>Actividad</option><option value="puesto">Puesto</option><option value="ciclo">Ciclo</option></select>
-          </div>
+          <button class="export-btn" onclick="exportarHistoriaAExcel()">⬇ Excel</button>
         </div>
         <div class="tabla-wrap"><table><thead><tr id="th-historia"></tr></thead><tbody id="tbody-historia"></tbody><tfoot><tr class="fila-total" id="tft-historia"></tr></tfoot></table></div>
       </div>
@@ -543,6 +555,34 @@ tr:hover td{background:#f8fafc;}
   </div>
 </div>
 
+<!-- POPUP DESGLOSE POR ACTIVIDAD (clic en un punto de Historia C$/Mzn) -->
+<div id="popup-act-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9000;align-items:center;justify-content:center;" onclick="if(event.target===this)cerrarPopupAct()">
+  <div style="background:white;border-radius:10px;width:92%;max-width:820px;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.3);">
+    <div style="padding:14px 18px;border-bottom:1px solid var(--gris-borde);display:flex;align-items:center;justify-content:space-between;background:#0f3d25;border-radius:10px 10px 0 0;flex-shrink:0;">
+      <div>
+        <div style="font-weight:800;font-size:14px;color:white;" id="popup-act-titulo"></div>
+        <div style="font-size:11px;color:#7db897;margin-top:2px;" id="popup-act-resumen"></div>
+      </div>
+      <button onclick="cerrarPopupAct()" style="background:rgba(255,255,255,.15);border:none;color:white;font-size:18px;cursor:pointer;padding:4px 10px;border-radius:5px;">✕</button>
+    </div>
+    <div style="overflow-y:auto;flex:1;padding:16px 18px;">
+      <div style="position:relative;height:240px;margin-bottom:16px;"><canvas id="ch-popup-act"></canvas></div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead style="position:sticky;top:0;">
+          <tr style="background:#f3f4f6;">
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Actividad</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Costo C$</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">DH</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;" id="popup-act-col-metrica">Valor</th>
+          </tr>
+        </thead>
+        <tbody id="popup-act-tbody"></tbody>
+        <tfoot><tr id="popup-act-tfoot" style="font-weight:800;background:#f8fafc;border-top:2px solid #e5e7eb;"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
 <script>
 Chart.register(ChartDataLabels);
 Chart.defaults.plugins.datalabels={display:false};
@@ -574,6 +614,9 @@ let cultivoMz='Mani',cultivoCmp='Mani',cultivoHist='Mani';
 let ultimoComparativoParaExcel=[];
 let ciclosSel=new Set(),chartCmp=null,chartsHist={};
 let metricaHist='monto',vistaHist='mensual',chartTipo='line';
+let mostrarSubtotalesHist=false; // por defecto ocultos
+let ultimoHistoriaParaExcel=[];
+function toggleSubtotalesHist(checked){mostrarSubtotalesHist=checked;renderizarHistoria();}
 let cultivoPivActual='Mani',seccionPiv='n1',vistaPiv='mensual';
 let metricaPiv='costo',_pivDatos={};
 let mostrarSubtotalesPiv=false; // por defecto ocultos
@@ -587,19 +630,26 @@ function dragStart(e) {
 function dragOver(e) {
   e.preventDefault();
   const chip = e.target.closest('.drag-chip');
-  const container = document.getElementById('drag-hierarchy-container');
-  if (chip && chip !== draggedChip) {
+  const container = chip ? chip.closest('.drag-container') : null;
+  if (chip && container && chip !== draggedChip) {
     const rect = chip.getBoundingClientRect();
     const next = (e.clientX - rect.left) / (rect.right - rect.left) > 0.5;
     container.insertBefore(draggedChip, next ? chip.nextSibling : chip);
   }
 }
+// Cada contenedor .drag-container dispara el render de su propia tabla al soltar el chip.
+const DRAG_CONTAINER_RENDER={
+  'drag-hierarchy-container':renderizarPivote,
+  'drag-hierarchy-container-hist':renderizarHistoria,
+};
 function dropChip(e) {
   e.preventDefault();
   if (draggedChip) {
+    const container=draggedChip.closest('.drag-container');
     draggedChip.classList.remove('dragging');
     draggedChip = null;
-    renderizarPivote();
+    const renderFn=container&&DRAG_CONTAINER_RENDER[container.id];
+    if(renderFn)renderFn(); else renderizarPivote();
   }
 }
 
@@ -1154,6 +1204,56 @@ function cambiarVistaHist(v){
   renderizarHistoria();
 }
 
+// Construye las celdas <td> de una fila (leaf o subtotal) a partir de un mapa mes->{costo,dh,mzn},
+// respetando la vista Mensual/Acumulado igual que las filas de detalle. Reutilizable para subtotales.
+function celdasDesdeSlotsHist(porMes,mesesUsar){
+  let acum={costo:0,dh:0,mzn:0},totS={costo:0,dh:0,mzn:0},html='',valores=[];
+  mesesUsar.forEach(nm=>{
+    const v=porMes[nm];
+    if(vistaHist==='acumulado'){
+      if(v){acum.costo+=v.costo;acum.dh+=v.dh;acum.mzn=Math.max(acum.mzn,v.mzn);}
+      const val=calcVal(acum.costo,acum.dh,acum.mzn);
+      html+=`<td class="t-right" style="color:#9a3412">${val!=null?fmtVal(val):'—'}</td>`;
+      valores.push(val);
+    } else if(!v){
+      html+=`<td class="t-right text-gris">—</td>`;
+      valores.push(null);
+    } else {
+      totS.costo+=v.costo;totS.dh+=v.dh;totS.mzn=Math.max(totS.mzn,v.mzn);
+      const val=calcVal(v.costo,v.dh,v.mzn);
+      html+=`<td class="t-right">${fmtVal(val)}</td>`;
+      valores.push(val);
+    }
+  });
+  return{html,totS,valores};
+}
+// Agrega SERIE (ya filtrada por los filtros de arriba) mes a mes para un subgrupo fijando algunos
+// campos (puesto/ciclo/actividad) — usado para las filas de subtotal, dedupe de Mzn por finca|ciclo.
+function aggregarSlotsPorCamposHist(base,fijos){
+  const porMes={};
+  base.forEach(r=>{
+    if(fijos.puesto!==undefined&&(r.puesto||'Sin Puesto')!==fijos.puesto)return;
+    if(fijos.ciclo!==undefined&&(r.ciclo||'Sin Ciclo')!==fijos.ciclo)return;
+    if(fijos.actividad!==undefined&&(r.act||'Sin Actividad')!==fijos.actividad)return;
+    const nm=r.mes?r.mes.split('-')[1]:null;
+    if(!nm)return;
+    if(!porMes[nm])porMes[nm]=newSlot();
+    const sl=porMes[nm];
+    sl.costo+=r.costo;sl.dh+=r.dh;
+    const mk=`${r.finca}|${r.ciclo}`;
+    if(!sl.mznF.has(mk)){sl.mznF.add(mk);sl.mzn+=buscarMzn(r.finca,r.ciclo);}
+  });
+  return porMes;
+}
+
+function exportarHistoriaAExcel(){
+  if(!ultimoHistoriaParaExcel.length){alert('No hay datos para exportar con los filtros actuales.');return;}
+  const ws=XLSX.utils.json_to_sheet(ultimoHistoriaParaExcel);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Detalle Mensual');
+  XLSX.writeFile(wb,`Historia_ManoObra_${cultivoHist}_${new Date().toISOString().substring(0,10)}.xlsx`);
+}
+
 function renderizarHistoria(){
   const ciclosActivos=getSelMs('hist-ciclo');
   const puestosActivos=getSelMs('hist-puesto');
@@ -1300,16 +1400,15 @@ function renderizarHistoria(){
             tooltip:{callbacks:{label:c=>{const v=c.parsed.y;if(v==null)return null;return`${c.dataset.label}: ${fmtVal(v)}`;}}},
             datalabels:{display:true}
           },
-          onClick:(evt,elements)=>{if(elements.length>0){const ds=chartsHist[`h${pi}`].data.datasets[elements[0].datasetIndex];abrirPopupOrigen(puesto,ds.label);}},
+          onClick:(evt,elements)=>{if(elements.length>0){const el=elements[0];const ds=chartsHist[`h${pi}`].data.datasets[el.datasetIndex];abrirDesgloseActividad(puesto,ds.label,mesesUsar[el.index],el.index,mesesUsar,base);}},
           scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:false,ticks:{callback:v=>metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):`C$${fmt(Math.round(v))}`}}}
         }
       });
     });
   });
 
-  const ord1=document.getElementById('col-ord-1').value;
-  const ord2=document.getElementById('col-ord-2').value;
-  const ord3=document.getElementById('col-ord-3').value;
+  const ordCampos=Array.from(document.querySelectorAll('#drag-hierarchy-container-hist .drag-chip')).map(el=>el.dataset.id);
+  const [ord1,ord2,ord3]=ordCampos;
   const headersMap={puesto:'Puesto',ciclo:'Ciclo',actividad:'Actividad'};
 
   document.getElementById('th-historia').innerHTML=`<th>${headersMap[ord1]}</th><th>${headersMap[ord2]}</th><th>${headersMap[ord3]}</th>`+mesesUsar.map(m=>`<th class="t-right">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right">Total</th>`;
@@ -1320,23 +1419,12 @@ function renderizarHistoria(){
       const actsObj=porPuesto[pu]?.[ci];
       if(!actsObj)return;
       Object.keys(actsObj).sort().forEach(act=>{
-        const mesesVal=actsObj[act];
-        let acum={costo:0,dh:0,mzn:0},totS={costo:0,dh:0,mzn:0};
-        const celdas=mesesUsar.map(nm=>{
-          const v=mesesVal[nm];
-          if(vistaHist==='acumulado'){
-            if(v){acum.costo+=v.costo;acum.dh+=v.dh;acum.mzn=Math.max(acum.mzn,v.mzn);}
-            const val=calcVal(acum.costo,acum.dh,acum.mzn);
-            return`<td class="t-right" style="color:#9a3412">${val!=null?fmtVal(val):'—'}</td>`;
-          }
-          if(!v)return`<td class="t-right text-gris">—</td>`;
-          totS.costo+=v.costo;totS.dh+=v.dh;totS.mzn=Math.max(totS.mzn,v.mzn);
-          return`<td class="t-right">${fmtVal(calcVal(v.costo,v.dh,v.mzn))}</td>`;
-        }).join('');
+        const{html:celdas,totS,valores}=celdasDesdeSlotsHist(actsObj[act],mesesUsar);
         rowItems.push({
           pu, ci, act,
           celdas,
           totS,
+          valores,
           getValByField:(f)=>f==='puesto'?pu:f==='ciclo'?ci:act
         });
       });
@@ -1351,16 +1439,49 @@ function renderizarHistoria(){
     return a.getValByField(ord3).localeCompare(b.getValByField(ord3));
   });
 
-  let filas='';
-  rowItems.forEach(r=>{
-    const c1=r.getValByField(ord1);
-    const c2=r.getValByField(ord2);
-    const c3=r.getValByField(ord3);
-    const renderCell=(f, val)=>f==='puesto'?`<td class="font-bold">${val}</td>`:f==='ciclo'?`<td style="color:var(--azul)">${val}</td>`:`<td><span class="badge" style="background:#eef2ff;color:#1e40af">${val||'—'}</span></td>`;
-    filas+=`<tr>${renderCell(ord1,c1)}${renderCell(ord2,c2)}${renderCell(ord3,c3)}${r.celdas}<td class="t-right font-bold">${fmtVal(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn))}</td></tr>`;
-  });
+  const renderCell=(f, val)=>f==='puesto'?`<td class="font-bold">${val}</td>`:f==='ciclo'?`<td style="color:var(--azul)">${val}</td>`:`<td><span class="badge" style="background:#eef2ff;color:#1e40af">${val||'—'}</span></td>`;
+  function filaSubtotalHist(label,fijos){
+    const porMes=aggregarSlotsPorCamposHist(base,fijos);
+    const{html,totS}=celdasDesdeSlotsHist(porMes,mesesUsar);
+    return`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;"><td colspan="3">${label}</td>${html}<td class="t-right">${fmtVal(calcVal(totS.costo,totS.dh,totS.mzn))}</td></tr>`;
+  }
+  function fijosHastaNivel(keys,l){
+    const fijos={};
+    for(let i=0;i<=l;i++)fijos[ordCampos[i]]=keys[i];
+    return fijos;
+  }
 
-  document.getElementById('tbody-historia').innerHTML=filas;
+  let filas='';
+  ultimoHistoriaParaExcel=[];
+  let currentKeys=[null,null,null];
+  rowItems.forEach((r,idx)=>{
+    const keys=[r.getValByField(ord1),r.getValByField(ord2),r.getValByField(ord3)];
+    if(mostrarSubtotalesHist&&idx>0){
+      let changeFromLevel=-1;
+      for(let i=0;i<2;i++){if(currentKeys[i]!==keys[i]){changeFromLevel=i;break;}}
+      if(changeFromLevel!==-1){
+        for(let lvl=1;lvl>=changeFromLevel;lvl--){
+          filas+=filaSubtotalHist(`Total ${currentKeys[lvl]}`,fijosHastaNivel(currentKeys,lvl));
+        }
+      }
+    }
+    currentKeys=keys;
+    filas+=`<tr>${renderCell(ord1,keys[0])}${renderCell(ord2,keys[1])}${renderCell(ord3,keys[2])}${r.celdas}<td class="t-right font-bold">${fmtVal(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn))}</td></tr>`;
+    const fila={};
+    fila[headersMap[ord1]]=keys[0]||'—';fila[headersMap[ord2]]=keys[1]||'—';fila[headersMap[ord3]]=keys[2]||'—';
+    mesesUsar.forEach((m,mi)=>{
+      fila[ML[parseInt(m,10)-1]]=r.valores[mi]!=null?Number(r.valores[mi].toFixed(2)):null;
+    });
+    fila['Total']=Number(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn)?.toFixed(2)??0)||null;
+    ultimoHistoriaParaExcel.push(fila);
+  });
+  if(mostrarSubtotalesHist&&rowItems.length>0){
+    for(let lvl=1;lvl>=0;lvl--){
+      filas+=filaSubtotalHist(`Total ${currentKeys[lvl]}`,fijosHastaNivel(currentKeys,lvl));
+    }
+  }
+
+  document.getElementById('tbody-historia').innerHTML=filas||`<tr><td colspan="${3+mesesUsar.length+1}" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
   document.getElementById('tft-historia').innerHTML=`<td colspan="3">TOTAL</td>`+mesesUsar.map(()=>`<td></td>`).join('')+`<td class="t-right">${fmtVal(calcVal(totC,totDh,totMzn))}</td>`;
 }
 
@@ -1850,6 +1971,70 @@ function abrirPopupOrigen(puesto,ciclo){
   document.getElementById('popup-overlay').style.display='flex';
 }
 function cerrarPopup(){document.getElementById('popup-overlay').style.display='none';}
+
+// Desglose por Actividad al hacer clic en un punto del gráfico de Historia C$/Mzn.
+// Respeta la Vista activa: Mensual (solo ese mes) o Acumulado (Ene -> mes clicado).
+let chartPopupAct=null;
+function abrirDesgloseActividad(puesto,ciclo,nm,idx,mesesUsar,baseData){
+  const nmsUsar=vistaHist==='acumulado'?mesesUsar.slice(0,idx+1):[nm];
+  const regs=baseData.filter(r=>{
+    if((r.puesto||'Sin Puesto')!==puesto)return false;
+    if((r.ciclo||'Sin Ciclo')!==ciclo)return false;
+    const rnm=r.mes?r.mes.split('-')[1]:null;
+    return rnm&&nmsUsar.includes(rnm);
+  });
+
+  const porAct={};
+  regs.forEach(r=>{
+    const act=r.act||'Sin Actividad';
+    if(!porAct[act])porAct[act]=newSlot();
+    const sl=porAct[act];
+    sl.costo+=r.costo;sl.dh+=r.dh;
+    const mk=`${r.finca}|${r.ciclo}`;
+    if(!sl.mznF.has(mk)){sl.mznF.add(mk);sl.mzn+=buscarMzn(r.finca,r.ciclo);}
+  });
+  const acts=Object.keys(porAct).sort((a,b)=>(calcVal(porAct[b].costo,porAct[b].dh,porAct[b].mzn)||0)-(calcVal(porAct[a].costo,porAct[a].dh,porAct[a].mzn)||0));
+
+  const{l}=etqMetrica();
+  const periodoLbl=vistaHist==='acumulado'?`Acumulado Ene → ${ML[parseInt(nm,10)-1]}`:ML[parseInt(nm,10)-1];
+  document.getElementById('popup-act-titulo').textContent=`${puesto} — ${ciclo} — ${periodoLbl}`;
+  document.getElementById('popup-act-col-metrica').textContent=l;
+
+  let totC=0,totDh=0;const totFincas=new Set();
+  acts.forEach(act=>{totC+=porAct[act].costo;totDh+=porAct[act].dh;});
+  regs.forEach(r=>totFincas.add(r.finca));
+  let totMzn=0;totFincas.forEach(f=>totMzn+=buscarMzn(f,ciclo));
+  document.getElementById('popup-act-resumen').textContent=`${acts.length} actividad${acts.length===1?'':'es'} · Costo: C$ ${fmt(Math.round(totC))} · DH: ${fmt(Math.round(totDh))}`;
+
+  document.getElementById('popup-act-tbody').innerHTML=acts.length?acts.map((act,i)=>{
+    const s=porAct[act];
+    const val=calcVal(s.costo,s.dh,s.mzn);
+    return`<tr style="border-bottom:1px solid #f1f5f9;">
+      <td style="padding:6px 10px"><span class="badge" style="background:${PALETA[i%PALETA.length]}22;color:${PALETA[i%PALETA.length]}">${act}</span></td>
+      <td style="padding:6px 10px;text-align:right">C$ ${fmt(Math.round(s.costo))}</td>
+      <td style="padding:6px 10px;text-align:right">${fmt(s.dh,1)}</td>
+      <td style="padding:6px 10px;text-align:right;font-weight:700">${fmtVal(val)}</td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--gris);font-style:italic">Sin datos de actividad para este punto</td></tr>`;
+
+  const totVal=calcVal(totC,totDh,totMzn);
+  document.getElementById('popup-act-tfoot').innerHTML=`<td style="padding:8px 10px">TOTAL</td><td style="padding:8px 10px;text-align:right">C$ ${fmt(Math.round(totC))}</td><td style="padding:8px 10px;text-align:right">${fmt(totDh,1)}</td><td style="padding:8px 10px;text-align:right">${fmtVal(totVal)}</td>`;
+
+  if(chartPopupAct){chartPopupAct.destroy();chartPopupAct=null;}
+  chartPopupAct=new Chart(document.getElementById('ch-popup-act'),{
+    type:'bar',
+    data:{labels:acts,datasets:[{label:l,data:acts.map(act=>calcVal(porAct[act].costo,porAct[act].dh,porAct[act].mzn)||0),
+      backgroundColor:acts.map((a,i)=>PALETA[i%PALETA.length]),borderRadius:4,
+      datalabels:{display:true,align:'end',anchor:'end',color:'#374151',font:{size:9,weight:'bold'},formatter:v=>fmtVal(v)}}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtVal(c.parsed.y)}},datalabels:{display:true}},
+      scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:true,ticks:{callback:v=>fmtVal(v)}}}
+    }
+  });
+
+  document.getElementById('popup-act-overlay').style.display='flex';
+}
+function cerrarPopupAct(){document.getElementById('popup-act-overlay').style.display='none';if(chartPopupAct){chartPopupAct.destroy();chartPopupAct=null;}}
 </script>
 </body>
 </html>
