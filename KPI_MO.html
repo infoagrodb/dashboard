@@ -263,6 +263,7 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
             <button class="btn-toggle" id="btn-cmz" onclick="cambiarMetrica('cmz')">C$/Mzn</button>
             <button class="btn-toggle active" id="btn-cdh" onclick="cambiarMetrica('cdh')">C$/DH</button>
             <button class="btn-toggle" id="btn-dhmz" onclick="cambiarMetrica('dhmz')">DH/Mzn</button>
+            <button class="btn-toggle" id="btn-dh" onclick="cambiarMetrica('dh')">DH</button>
           </div>
         </div>
         <div class="filtro-group">
@@ -629,13 +630,23 @@ function buscarMzn(finca,ciclo){return RAW_SB.filter(s=>String(s["Finca"]||'').t
 function fmt(n,d=0){return Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
 function esN1(cc){return CUENTAS_N1.includes(cc);}
 function esN6(cc){return cc.startsWith('6100');}
+
 function calcVal(costo,dh,mzn){
+  if(metricaHist==='dh') return dh>0?dh:null;
   if(metricaHist==='cmz')return mzn>0?costo/mzn:null;
   if(metricaHist==='cdh')return dh>0?costo/dh:null;
   return mzn>0?dh/mzn:null;
 }
-function fmtVal(v){if(v==null)return'—';return metricaHist==='dhmz'?v.toFixed(2):'C$ '+fmt(Math.round(v));}
+
+function fmtVal(v){
+  if(v==null)return'—';
+  if(metricaHist==='dh') return fmt(Math.round(v));
+  if(metricaHist==='dhmz') return v.toFixed(2);
+  return 'C$ '+fmt(Math.round(v));
+}
+
 function etqMetrica(){
+  if(metricaHist==='dh') return {l:'DH', t:'Cantidad de Días Hombre (DH)'};
   if(metricaHist==='cmz')return{l:'C$/Mzn',t:'Costo MO por Manzana (C$/Mzn)'};
   if(metricaHist==='cdh')return{l:'C$/DH',t:'Costo por Dia Hombre (C$/DH)'};
   return{l:'DH/Mzn',t:'Dias Hombre por Manzana (DH/Mzn)'};
@@ -931,7 +942,7 @@ function filtrarCultivoHist(c){
 }
 function cambiarMetrica(m){
   metricaHist=m;
-  ['btn-cmz','btn-cdh','btn-dhmz'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  ['btn-cmz','btn-cdh','btn-dhmz','btn-dh'].forEach(id=>document.getElementById(id).classList.remove('active'));
   document.getElementById('btn-'+m).classList.add('active');
   renderizarHistoria();
 }
@@ -1072,7 +1083,7 @@ function renderizarHistoria(){
       });
       return{label:ciclo,data,borderColor:color,backgroundColor:color+'22',tension:.3,spanGaps:true,fill:false,pointRadius:4,pointHoverRadius:6,borderWidth:2,
         datalabels:{display:true,align:'top',anchor:'end',color,font:{size:8,weight:'bold'},
-          formatter:v=>v==null?null:metricaHist==='dhmz'?v.toFixed(1):('C$'+fmt(Math.round(v)))}};
+          formatter:v=>v==null?null:metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):('C$'+fmt(Math.round(v)))}};
     });
 
     requestAnimationFrame(()=>{
@@ -1086,7 +1097,7 @@ function renderizarHistoria(){
             datalabels:{display:true}
           },
           onClick:(evt,elements)=>{if(elements.length>0){const ds=chartsHist[`h${pi}`].data.datasets[elements[0].datasetIndex];abrirPopupOrigen(puesto,ds.label);}},
-          scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:false,ticks:{callback:v=>metricaHist==='dhmz'?v.toFixed(1):`C$${fmt(Math.round(v))}`}}}
+          scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:false,ticks:{callback:v=>metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):`C$${fmt(Math.round(v))}`}}}
         }
       });
     });
