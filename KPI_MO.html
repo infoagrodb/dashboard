@@ -333,6 +333,16 @@ tr:hover td{background:#f8fafc;}
           </div>
         </div>
         <div class="filtro-group">
+          <div class="filtro-label">Actividad <span id="cnt-cmp-act" class="ms-count" style="display:none"></span></div>
+          <div class="ms-wrap">
+            <div class="ms-btn" onclick="toggleDrop('drop-cmp-act')"><span id="lbl-cmp-act">Todas las Actividades</span><span style="font-size:9px;color:var(--gris)">▼</span></div>
+            <div class="ms-drop" id="drop-cmp-act">
+              <div class="ms-drop-hdr"><a onclick="msAll('cmp-act',true)">Todas</a><a onclick="msAll('cmp-act',false)">Ninguna</a></div>
+              <div id="items-cmp-act"></div>
+            </div>
+          </div>
+        </div>
+        <div class="filtro-group">
           <div class="filtro-label">Ciclos &nbsp;<a onclick="selTodosCiclosCmp(true)" style="font-size:10px;color:var(--azul);cursor:pointer;text-decoration:underline;">Todos</a> / <a onclick="selTodosCiclosCmp(false)" style="font-size:10px;color:var(--azul);cursor:pointer;text-decoration:underline;">Ninguno</a></div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;max-width:500px;" id="chips-ciclos"></div>
         </div>
@@ -344,8 +354,8 @@ tr:hover td{background:#f8fafc;}
         <div class="chart-wrap tall"><canvas id="chart-cmp"></canvas></div>
       </div>
       <div class="tabla-card">
-        <div class="tabla-header"><span class="tabla-title">Resumen por Ciclo / Finca / Puesto</span></div>
-        <div class="tabla-wrap"><table><thead><tr><th>Ciclo</th><th>Finca</th><th>Puesto</th><th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">C$/Mz</th><th class="t-right">C$/DH</th></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
+        <div class="tabla-header"><span class="tabla-title">Resumen por Ciclo / Finca / Puesto / Actividad</span><button class="export-btn" onclick="exportarComparativoAExcel()">⬇ Excel</button></div>
+        <div class="tabla-wrap"><table><thead><tr><th>Ciclo</th><th>Finca</th><th>Puesto</th><th>Actividad</th><th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">C$/Mz</th><th class="t-right">C$/DH</th></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
       </div>
     </div>
 
@@ -561,6 +571,7 @@ const PUESTOS_DEFAULT=['Jornalero','Operador de Maquina','Operador de Maquinaria
 
 let RAW_SB=[],DS_C=[],DS_DH=[],CAPA=[],SERIE=[],MAPA={};
 let cultivoMz='Mani',cultivoCmp='Mani',cultivoHist='Mani';
+let ultimoComparativoParaExcel=[];
 let ciclosSel=new Set(),chartCmp=null,chartsHist={};
 let metricaHist='monto',vistaHist='mensual',chartTipo='line';
 let cultivoPivActual='Mani',seccionPiv='n1',vistaPiv='mensual';
@@ -677,6 +688,8 @@ function msAll(ns,val){
     if(ns==='piv-ciclo')cascadaPivFinca();
     renderizarPivote();
   } else if(ns.startsWith('cmp')){
+    if(ns==='cmp-finca')cascadaCmpPuesto();
+    else if(ns==='cmp-puesto')cascadaCmpAct();
     renderizarComparativo();
   } else if(ns.startsWith('mz')){
     if(ns==='mz-ciclo')cascadaMzFinca();
@@ -1387,7 +1400,20 @@ function cascadaCmpPuesto(){
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
     if(r.puesto)puestos.add(r.puesto);
   });
-  poblarMs('cmp-puesto',puestos,()=>{actualizarMs('cmp-puesto');renderizarComparativo();});
+  poblarMs('cmp-puesto',puestos,()=>{actualizarMs('cmp-puesto');cascadaCmpAct();renderizarComparativo();});
+  cascadaCmpAct();
+}
+function cascadaCmpAct(){
+  const fincasActivas=getSelMs('cmp-finca');
+  const puestosActivos=getSelMs('cmp-puesto');
+  const acts=new Set();
+  CAPA.forEach(r=>{
+    if(r.cultivo!==cultivoCmp)return;
+    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
+    if(puestosActivos.size>0&&!puestosActivos.has(r.puesto))return;
+    if(r.act&&r.act.trim())acts.add(r.act);
+  });
+  poblarMs('cmp-act',acts,()=>{actualizarMs('cmp-act');renderizarComparativo();});
 }
 function toggleChip(c,el){
   if(ciclosSel.has(c)){ciclosSel.delete(c);el.style.background='#e5e7eb';el.style.color='var(--gris)';}
@@ -1401,32 +1427,52 @@ function selTodosCiclosCmp(v){
     else{ciclosSel.delete(c);el.style.background='#e5e7eb';el.style.color='var(--gris)';}
   });renderizarComparativo();
 }
+function exportarComparativoAExcel(){
+  if(!ultimoComparativoParaExcel.length){alert('No hay datos para exportar con los filtros actuales.');return;}
+  const ws=XLSX.utils.json_to_sheet(ultimoComparativoParaExcel);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Comparativo de Ciclos');
+  XLSX.writeFile(wb,`Comparativo_Ciclos_ManoObra_${cultivoCmp}_${new Date().toISOString().substring(0,10)}.xlsx`);
+}
+
 function renderizarComparativo(){
   const fincasActivas=getSelMs('cmp-finca');
   const puestosActivos=getSelMs('cmp-puesto');
+  const actsActivos=getSelMs('cmp-act');
   let grupos={};
   CAPA.forEach(r=>{
     if(r.cultivo!==cultivoCmp||!ciclosSel.has(r.ciclo))return;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
     if(puestosActivos.size>0&&!puestosActivos.has(r.puesto))return;
-    const k=`${r.ciclo}|${r.finca}|${r.puesto}`;
-    if(!grupos[k])grupos[k]={ciclo:r.ciclo,finca:r.finca,puesto:r.puesto,costo:0,dh:0,mzn:buscarMzn(r.finca,r.ciclo)};
+    if(actsActivos.size>0&&!actsActivos.has(r.act))return;
+    const k=`${r.ciclo}|${r.finca}|${r.puesto}|${r.act}`;
+    if(!grupos[k])grupos[k]={ciclo:r.ciclo,finca:r.finca,puesto:r.puesto,act:r.act,costo:0,dh:0,mzn:buscarMzn(r.finca,r.ciclo)};
     grupos[k].costo+=r.costo;grupos[k].dh+=r.dh;
   });
   let tC=0,tDh=0,tMzn=0;const mV=new Set();
+  ultimoComparativoParaExcel=[];
   document.getElementById('tbody-comparar').innerHTML=Object.values(grupos).sort((a,b)=>a.ciclo.localeCompare(b.ciclo)).map(g=>{
     const dhMz=g.mzn>0?g.dh/g.mzn:0,cMz=g.mzn>0?g.costo/g.mzn:0,cDh=g.dh>0?g.costo/g.dh:0;
     tC+=g.costo;tDh+=g.dh;const lk=`${g.finca}|${g.ciclo}`;if(!mV.has(lk)){mV.add(lk);tMzn+=g.mzn;}
-    return`<tr><td class="font-bold">${g.ciclo}</td><td>${g.finca}</td><td>${g.puesto||'—'}</td><td class="t-right">${fmt(g.dh,1)}</td><td class="t-right">C$ ${fmt(g.costo,2)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${g.mzn>0?fmt(g.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">C$ ${fmt(Math.round(cMz))}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">C$ ${cDh.toFixed(2)}</td></tr>`;
-  }).join('');
+    ultimoComparativoParaExcel.push({
+      Ciclo:g.ciclo,Finca:g.finca,Puesto:g.puesto||'—',Actividad:g.act||'—',
+      DH:Number((g.dh||0).toFixed(1)),'Costo (C$)':Number((g.costo||0).toFixed(2)),
+      Mzn:g.mzn>0?Number(g.mzn.toFixed(2)):null,
+      'DH/Mzn':g.mzn>0?Number(dhMz.toFixed(2)):null,
+      'C$/Mzn':g.mzn>0?Number(cMz.toFixed(2)):null,
+      'C$/DH':g.dh>0?Number(cDh.toFixed(2)):null
+    });
+    return`<tr><td class="font-bold">${g.ciclo}</td><td>${g.finca}</td><td>${g.puesto||'—'}</td><td>${g.act||'—'}</td><td class="t-right">${fmt(g.dh,1)}</td><td class="t-right">C$ ${fmt(g.costo,2)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${g.mzn>0?fmt(g.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">C$ ${fmt(Math.round(cMz))}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">C$ ${cDh.toFixed(2)}</td></tr>`;
+  }).join('')||`<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
   const gDhMz=tMzn>0?tDh/tMzn:0,gCMz=tMzn>0?tC/tMzn:0,gCDh=tDh>0?tC/tDh:0;
-  document.getElementById('tft-comparar').innerHTML=`<td colspan="3">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td><td class="t-right">C$ ${gCDh.toFixed(2)}</td>`;
+  document.getElementById('tft-comparar').innerHTML=`<td colspan="4">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td><td class="t-right">C$ ${gCDh.toFixed(2)}</td>`;
   document.getElementById('kpi-comparar').innerHTML=`<div class="kpi-card"><div class="kpi-label">Ciclos</div><div class="kpi-valor">${ciclosSel.size}</div></div><div class="kpi-card azul"><div class="kpi-label">DH</div><div class="kpi-valor">${fmt(Math.round(tDh))}</div></div><div class="kpi-card"><div class="kpi-label">Costo</div><div class="kpi-valor">C$ ${fmt(Math.round(tC))}</div></div><div class="kpi-card nar"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div><div class="kpi-card rojo"><div class="kpi-label">C$/Mzn</div><div class="kpi-valor">C$ ${fmt(Math.round(gCMz))}</div></div>`;
   let pCM={};
   SERIE.forEach(r=>{
     if(r.cultivo!==cultivoCmp||!ciclosSel.has(r.ciclo)||!r.mes)return;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
     if(puestosActivos.size>0&&!puestosActivos.has(r.puesto))return;
+    if(actsActivos.size>0&&!actsActivos.has(r.act))return;
     const nm=r.mes.split('-')[1];
     const k=`${r.ciclo}|${nm}`;
     if(!pCM[k])pCM[k]={costo:0,dh:0};pCM[k].costo+=r.costo;pCM[k].dh+=r.dh;
