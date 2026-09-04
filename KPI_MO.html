@@ -158,6 +158,7 @@ table{width:100%;border-collapse:collapse;font-size:11px;}
    tabla ignora los anchos declarados y calcula cada columna según su contenido. */
 .tabla-historia-fija{table-layout:fixed;width:max-content;max-width:none;}
 .tabla-piv-fija{table-layout:fixed;width:max-content;max-width:none;}
+.tabla-cmp-fija{table-layout:fixed;width:max-content;max-width:none;}
 th{background:#f3f4f6;color:#374151;font-weight:700;padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
 td{padding:7px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;}
 tr:hover td{background:#f8fafc;}
@@ -427,7 +428,7 @@ tr:hover td{background:#f8fafc;}
       </div>
       <div class="tabla-card">
         <div class="tabla-header"><span class="tabla-title">Resumen por Ciclo / Finca / Puesto / Actividad</span><button class="export-btn" onclick="exportarComparativoAExcel()">⬇ Excel</button></div>
-        <div class="tabla-wrap"><table><thead><tr id="th-comparar"></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
+        <div class="tabla-wrap"><table class="tabla-cmp-fija"><thead><tr id="th-comparar"></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
       </div>
     </div>
 
@@ -1907,14 +1908,36 @@ function renderizarComparativo(){
     return 0;
   });
 
+  // ---- Congelado (encabezado + hasta 4 columnas de agrupación) con anchos adaptados al texto real,
+  // igual que en Pivote: se mide con canvas el texto más largo de cada columna (encabezado + todas las
+  // filas) y se limita entre un mínimo y un máximo, en vez de reservar el mismo ancho fijo para todas.
+  const nColFrozenCmp=Math.min(4,hierOrder.length);
+  const MIN_HIER_W_CMP=64,MAX_HIER_W_CMP=260,PAD_HIER_CMP=30,METRIC_W_CMP=92;
+  const HEADER_FONT_CMP="700 10px 'Segoe UI',system-ui,sans-serif";
+  const BODY_FONT_CMP="700 11px 'Segoe UI',system-ui,sans-serif";
+  const anchosHierCmp=hierOrder.map((f,idx)=>{
+    let maxW=medirAnchoTexto(`${fieldLabelsCmp[f]} Σ`,HEADER_FONT_CMP);
+    detailRows.forEach(row=>{
+      const w=medirAnchoTexto(row.keys[idx],BODY_FONT_CMP);
+      if(w>maxW)maxW=w;
+    });
+    return Math.max(MIN_HIER_W_CMP,Math.min(MAX_HIER_W_CMP,Math.ceil(maxW)+PAD_HIER_CMP));
+  });
+  const anchoColCmp=idx=>anchosHierCmp.slice(0,idx).reduce((a,b)=>a+b,0);
+
   // ---- Encabezado dinámico según el orden de columnas actual ----
   let theadHtml='';
-  hierOrder.forEach(f=>{
+  hierOrder.forEach((f,idx)=>{
     const activo=subtotalesActivosCmp.has(f);
-    const estilo=`cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
+    const esFijo=idx<nColFrozenCmp;
+    const w=esFijo?anchosHierCmp[idx]:MAX_HIER_W_CMP;
+    const pos=esFijo?`position:sticky;top:0;left:${anchoColCmp(idx)}px;z-index:20;`:`position:sticky;top:0;z-index:12;`;
+    const estilo=`${pos}width:${w}px;max-width:${w}px;overflow:hidden;text-overflow:ellipsis;cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
     theadHtml+=`<th style="${estilo}" oncontextmenu="return abrirMenuSubtotal(event,'cmp','${f}')" title="Clic derecho: subtotal o contraer en ${fieldLabelsCmp[f]}">${fieldLabelsCmp[f]}${activo?' <span style="color:var(--verde)">Σ</span>':''}</th>`;
   });
-  theadHtml+=`<th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">${simboloMoneda()}/Mz</th><th class="t-right">${simboloMoneda()}/DH</th>`;
+  ['DH','Costo','Mzn','DH/Mz',`${simboloMoneda()}/Mz`,`${simboloMoneda()}/DH`].forEach(lbl=>{
+    theadHtml+=`<th class="t-right" style="position:sticky;top:0;z-index:12;width:${METRIC_W_CMP}px;max-width:${METRIC_W_CMP}px;">${lbl}</th>`;
+  });
   document.getElementById('th-comparar').innerHTML=theadHtml;
 
   function metricasCmp(acum){
@@ -1928,13 +1951,16 @@ function renderizarComparativo(){
     const{dhMz,cMz,cDh}=metricasCmp(acum);
     return`<td class="t-right">${fmt(acum.dh,1)}</td><td class="t-right">${fmtMoneda(acum.costo)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${acum.mzn>0?fmt(acum.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">${fmtMoneda(cMz)}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">${fmtMoneda(cDh)}</td>`;
   }
-  function celdaHierCmp(f,val){
-    if(f==='ciclo')return`<td class="font-bold">${val}</td>`;
-    if(f==='finca')return`<td>${val}</td>`;
-    return`<td>${val||'—'}</td>`;
+  function celdaHierCmp(f,val,idx,bg){
+    const esFijo=idx<nColFrozenCmp;
+    const w=esFijo?anchosHierCmp[idx]:MAX_HIER_W_CMP;
+    const fijoStyle=esFijo?`position:sticky;left:${anchoColCmp(idx)}px;z-index:6;background:${bg};`:'';
+    const estilo=`width:${w}px;max-width:${w}px;overflow:hidden;text-overflow:ellipsis;${fijoStyle}`;
+    if(f==='ciclo')return`<td class="font-bold" style="${estilo}" title="${val}">${val}</td>`;
+    return`<td style="${estilo}" title="${val||'—'}">${val||'—'}</td>`;
   }
   function filaSubtotalCmp(label,acum){
-    return`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;"><td colspan="${hierOrder.length}">${label}</td>${celdasMetricasCmp(acum)}</tr>`;
+    return`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;"><td colspan="${hierOrder.length}" style="position:sticky;left:0;z-index:6;background:#f8fafc;">${label}</td>${celdasMetricasCmp(acum)}</tr>`;
   }
 
   const grandTotal=nuevoAcumCmp();
@@ -1961,7 +1987,7 @@ function renderizarComparativo(){
       if(!groupSlots[pathKey])groupSlots[pathKey]=nuevoAcumCmp();
       sumarEnAcumCmp(groupSlots[pathKey],row);
     }
-    filas+=`<tr>${hierOrder.map((f,fi)=>celdaHierCmp(f,row.keys[fi])).join('')}${celdasMetricasCmp(row)}</tr>`;
+    filas+=`<tr>${hierOrder.map((f,fi)=>celdaHierCmp(f,row.keys[fi],fi,'white')).join('')}${celdasMetricasCmp(row)}</tr>`;
     sumarEnAcumCmp(grandTotal,row);
 
     const{dhMz,cMz,cDh}=metricasCmp(row);
@@ -1986,7 +2012,7 @@ function renderizarComparativo(){
   document.getElementById('tbody-comparar').innerHTML=filas||`<tr><td colspan="${hierOrder.length+6}" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
   const tC=grandTotal.costo,tDh=grandTotal.dh,tMzn=grandTotal.mzn;
   const gDhMz=tMzn>0?tDh/tMzn:0,gCMz=tMzn>0?tC/tMzn:0,gCDh=tDh>0?tC/tDh:0;
-  document.getElementById('tft-comparar').innerHTML=`<td colspan="${hierOrder.length}">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">${fmtMoneda(tC)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">${fmtMoneda(gCMz)}</td><td class="t-right">${fmtMoneda(gCDh)}</td>`;
+  document.getElementById('tft-comparar').innerHTML=`<td colspan="${hierOrder.length}" style="position:sticky;left:0;z-index:6;background:#e5e7eb;font-weight:700;">TOTAL:</td><td class="t-right" style="background:#e5e7eb;">${fmt(tDh,1)}</td><td class="t-right" style="background:#e5e7eb;">${fmtMoneda(tC)}</td><td class="t-right" style="background:#e5e7eb;">${fmt(tMzn)} Mz</td><td class="t-right" style="background:#e5e7eb;">${gDhMz.toFixed(2)}</td><td class="t-right" style="background:#e5e7eb;">${fmtMoneda(gCMz)}</td><td class="t-right" style="background:#e5e7eb;">${fmtMoneda(gCDh)}</td>`;
   document.getElementById('kpi-comparar').innerHTML=`<div class="kpi-card"><div class="kpi-label">Ciclos</div><div class="kpi-valor">${ciclosSel.size}</div></div><div class="kpi-card azul"><div class="kpi-label">DH</div><div class="kpi-valor">${fmt(Math.round(tDh))}</div></div><div class="kpi-card"><div class="kpi-label">Costo</div><div class="kpi-valor">${fmtMoneda(tC)}</div></div><div class="kpi-card nar"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div><div class="kpi-card rojo"><div class="kpi-label">${simboloMoneda()}/Mzn</div><div class="kpi-valor">${fmtMoneda(gCMz)}</div></div>`;
   refrescarChipsUI('cmp');
   let pCM={};
