@@ -89,6 +89,17 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .ms-item input{accent-color:var(--verde);width:13px;height:13px;cursor:pointer;flex-shrink:0;}
 .ms-item label{cursor:pointer;flex:1;}
 
+/* Filtro de columna tipo Excel (Matriz de Control y similares) */
+.th-con-filtro{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.col-filtro-ico{cursor:pointer;color:#9ca3af;font-size:10px;padding:2px 3px;border-radius:3px;flex-shrink:0;}
+.col-filtro-ico:hover{color:var(--texto);background:#e5e7eb;}
+.col-filtro-ico.activo{color:var(--verde);font-weight:900;}
+.col-filtro-menu{position:fixed;display:none;background:#fff;border:1px solid var(--gris-borde);border-radius:8px;box-shadow:0 10px 28px rgba(0,0,0,.18);z-index:500;min-width:200px;max-width:260px;}
+.col-filtro-buscar{padding:7px 9px;border-bottom:1px solid var(--gris-borde);}
+.col-filtro-buscar input{width:100%;padding:5px 8px;border:1px solid var(--gris-borde);border-radius:5px;font-size:11px;}
+.col-filtro-lista{max-height:220px;overflow-y:auto;}
+.col-filtro-vacio{padding:10px 11px;color:var(--gris);font-size:11px;font-style:italic;}
+
 /* Drag & Drop Hierarchy Chips */
 .drag-container{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f9fafb;border:1px dashed var(--gris-borde);padding:6px 10px;border-radius:6px;min-height:36px;}
 .drag-chip{background:var(--blanco);border:1px solid var(--gris-borde);padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:grab;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04);user-select:none;transition:all .15s;}
@@ -456,17 +467,37 @@ tr:hover td{background:#f8fafc;}
           </select>
         </div>
         <div class="filtro-group">
-          <div class="filtro-label">Ciclo</div>
-          <select id="sel-mz-ciclo" onchange="mzCambioCiclo()" style="padding:6px 10px;border:1px solid var(--gris-borde);border-radius:6px;font-size:12px;background:#fafafa;min-width:130px;"></select>
+          <div class="filtro-label">Ciclo <span id="cnt-mz-ciclo" class="ms-count" style="display:none"></span></div>
+          <div class="ms-wrap">
+            <div class="ms-btn" onclick="toggleDrop('drop-mz-ciclo')"><span id="lbl-mz-ciclo">Todos los Ciclos</span><span style="font-size:9px;color:var(--gris)">▼</span></div>
+            <div class="ms-drop" id="drop-mz-ciclo">
+              <div class="ms-drop-hdr"><a onclick="msAll('mz-ciclo',true)">Todos</a><a onclick="msAll('mz-ciclo',false)">Ninguno</a></div>
+              <div id="items-mz-ciclo"></div>
+            </div>
+          </div>
         </div>
         <div class="filtro-group">
-          <div class="filtro-label">Finca</div>
-          <select id="sel-mz-finca" onchange="renderizarMatriz()" style="padding:6px 10px;border:1px solid var(--gris-borde);border-radius:6px;font-size:12px;background:#fafafa;min-width:130px;"></select>
+          <div class="filtro-label">Finca <span id="cnt-mz-finca" class="ms-count" style="display:none"></span></div>
+          <div class="ms-wrap">
+            <div class="ms-btn" onclick="toggleDrop('drop-mz-finca')"><span id="lbl-mz-finca">Todas las Fincas</span><span style="font-size:9px;color:var(--gris)">▼</span></div>
+            <div class="ms-drop" id="drop-mz-finca">
+              <div class="ms-drop-hdr"><a onclick="msAll('mz-finca',true)">Todas</a><a onclick="msAll('mz-finca',false)">Ninguna</a></div>
+              <div id="items-mz-finca"></div>
+            </div>
+          </div>
+        </div>
+        <div class="filtro-group" style="align-self:flex-end;">
+          <button class="export-btn" onclick="exportarMatrizAExcel()">⬇ Excel</button>
         </div>
       </div>
       <div class="tabla-card">
         <div class="tabla-header"><span class="tabla-title">Matriz de Control</span></div>
         <div class="tabla-wrap"><table><thead><tr id="th-matriz"></tr></thead><tbody id="tbody-matriz"></tbody><tfoot><tr class="fila-total" id="tft-matriz"></tr></tfoot></table></div>
+      </div>
+      <div class="col-filtro-menu" id="mz-colfiltro-menu" onclick="event.stopPropagation()">
+        <div class="ms-drop-hdr"><a onclick="mzColFiltroTodos(true)">Todos</a><a onclick="mzColFiltroTodos(false)">Ninguno</a></div>
+        <div class="col-filtro-buscar"><input type="text" id="mz-colfiltro-buscar" placeholder="🔍 Buscar..." oninput="mzColFiltroBuscar(this.value)"></div>
+        <div class="col-filtro-lista" id="mz-colfiltro-lista"></div>
       </div>
     </div>
 
@@ -647,6 +678,9 @@ function msAll(ns,val){
     renderizarPivote();
   } else if(ns.startsWith('cmp')){
     renderizarComparativo();
+  } else if(ns.startsWith('mz')){
+    if(ns==='mz-ciclo')cascadaMzFinca();
+    renderizarMatriz();
   }
 }
 
@@ -876,56 +910,159 @@ function renderLogs(){
   document.querySelector('#tbl-audit-dh tbody').innerHTML=DS_DH.slice(0,5).map(r=>`<tr><td>${r.ca}</td><td>${r.fecha}</td><td>${r.puesto||'—'}</td><td class="t-right font-bold">${fmt(r.dh,1)}</td><td><span class="${r.finca==='SIN MAESTRO'?'badge-err':'badge'}">${r.finca}</span></td><td><span class="${r.ciclo==='SIN MAESTRO'?'badge-err':'badge'}">${r.ciclo}</span></td></tr>`).join('');
 }
 
-function iniciarMatriz(){cultivoMz='Mani';reconstruirMatrizCiclos();mzFiltrarFincas();renderizarMatriz();}
-function reconstruirMatrizCiclos(){
+let mzColFiltro={};        // campo -> Set de valores permitidos (vacío/ausente = todos, igual convención que getSelMs)
+let mzColFiltroActivo=null; // campo cuyo menú de filtro está abierto actualmente
+let mzColFiltroOpciones=[]; // opciones (valores únicos) del campo actualmente abierto
+let ultimoMatrizParaExcel=[];
+
+function iniciarMatriz(){cultivoMz='Mani';mzColFiltro={};cascadaMzCiclos();cascadaMzFinca();renderizarMatriz();}
+function cascadaMzCiclos(){
   const ciclos=new Set();
   CAPA.forEach(r=>{if(r.cultivo===cultivoMz&&r.ciclo&&r.ciclo!=='SIN MAESTRO')ciclos.add(r.ciclo);});
-  const sel=document.getElementById('sel-mz-ciclo');
-  sel.innerHTML='<option value="TODOS">Todos los Ciclos</option>';
-  Array.from(ciclos).sort().forEach(c=>sel.innerHTML+=`<option value="${c}">${c}</option>`);
+  poblarMs('mz-ciclo',ciclos,()=>{actualizarMs('mz-ciclo');cascadaMzFinca();renderizarMatriz();});
 }
-function mzFiltrarFincas(){
-  const cic=document.getElementById('sel-mz-ciclo').value;
+function cascadaMzFinca(){
+  const ciclosActivos=getSelMs('mz-ciclo');
   const fincas=new Set();
-  CAPA.forEach(r=>{if(r.cultivo===cultivoMz&&(cic==='TODOS'||r.ciclo===cic)&&r.finca&&r.finca!=='SIN MAESTRO')fincas.add(r.finca);});
-  const sel=document.getElementById('sel-mz-finca');
-  sel.innerHTML='<option value="TODOS">Todas las Fincas</option>';
-  Array.from(fincas).sort().forEach(f=>sel.innerHTML+=`<option value="${f}">${f}</option>`);
+  CAPA.forEach(r=>{
+    if(r.cultivo!==cultivoMz)return;
+    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
+    if(r.finca&&r.finca!=='SIN MAESTRO')fincas.add(r.finca);
+  });
+  poblarMs('mz-finca',fincas,()=>{actualizarMs('mz-finca');renderizarMatriz();});
 }
-function mzCambioCiclo(){mzFiltrarFincas();renderizarMatriz();}
 function filtrarCultivoMz(c){
   cultivoMz=c;
   ['btn-mz-mani','btn-mz-cana','btn-mz-cacao'].forEach(id=>document.getElementById(id).classList.remove('active'));
   document.getElementById(c==='Mani'?'btn-mz-mani':c==='Caña'?'btn-mz-cana':'btn-mz-cacao').classList.add('active');
-  reconstruirMatrizCiclos();mzFiltrarFincas();renderizarMatriz();
+  mzColFiltro={}; // las opciones de columna del cultivo anterior ya no aplican
+  cascadaMzCiclos();cascadaMzFinca();renderizarMatriz();
 }
+
+// Valor de un campo de agrupación para una fila de CAPA
+function mzValorCampo(r,campo){return campo==='Ciclo'?r.ciclo:campo==='Finca'?r.finca:campo==='Puesto'?r.puesto:r.act;}
+function pasaFiltroColMz(campo,valor){
+  const set=mzColFiltro[campo];
+  return !set||set.size===0||set.has(valor||'—');
+}
+// Opciones disponibles para el dropdown de un campo, ya acotadas por el resto de filtros activos
+// (barra superior + las demás columnas) — igual que el comportamiento de un filtro tipo Excel.
+function opcionesColumnaMz(campo,campos){
+  const ciclosActivos=getSelMs('mz-ciclo');
+  const fincasActivas=getSelMs('mz-finca');
+  const vals=new Set();
+  CAPA.forEach(r=>{
+    if(r.cultivo!==cultivoMz)return;
+    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
+    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
+    for(const c of campos){
+      if(c===campo)continue;
+      if(!pasaFiltroColMz(c,mzValorCampo(r,c)))return;
+    }
+    vals.add(mzValorCampo(r,campo)||'—');
+  });
+  return vals;
+}
+function abrirColFiltroMz(ev,campo,campos){
+  ev.stopPropagation();
+  const menu=document.getElementById('mz-colfiltro-menu');
+  if(mzColFiltroActivo===campo&&menu.style.display==='block'){
+    menu.style.display='none';mzColFiltroActivo=null;return;
+  }
+  mzColFiltroActivo=campo;
+  mzColFiltroOpciones=Array.from(opcionesColumnaMz(campo,campos)).sort((a,b)=>String(a).localeCompare(String(b),'es',{numeric:true}));
+  const seleccion=mzColFiltro[campo];
+  document.getElementById('mz-colfiltro-lista').innerHTML=mzColFiltroOpciones.map(v=>{
+    const checked=(!seleccion||seleccion.size===0||seleccion.has(v));
+    const id='mzcf-'+String(v).replace(/[^a-zA-Z0-9]/g,'_');
+    return `<div class="ms-item" data-txt="${String(v).toLowerCase()}"><input type="checkbox" value="${v}" id="${id}"${checked?' checked':''} onchange="mzColFiltroCambio()"><label for="${id}">${v}</label></div>`;
+  }).join('')||'<div class="col-filtro-vacio">Sin opciones para los filtros actuales.</div>';
+  document.getElementById('mz-colfiltro-buscar').value='';
+  const rect=ev.currentTarget.getBoundingClientRect();
+  menu.style.display='block';
+  const menuW=menu.offsetWidth||220;
+  menu.style.left=Math.max(6,Math.min(rect.left,window.innerWidth-menuW-6))+'px';
+  menu.style.top=(rect.bottom+4)+'px';
+}
+function mzColFiltroBuscar(q){
+  q=q.toLowerCase().trim();
+  document.querySelectorAll('#mz-colfiltro-lista .ms-item').forEach(it=>{
+    it.style.display=it.dataset.txt.includes(q)?'':'none';
+  });
+}
+function mzColFiltroTodos(val){
+  document.querySelectorAll('#mz-colfiltro-lista input').forEach(cb=>{if(cb.closest('.ms-item').style.display!=='none')cb.checked=val;});
+  mzColFiltroCambio();
+}
+function mzColFiltroCambio(){
+  const campo=mzColFiltroActivo;
+  if(!campo)return;
+  const checked=Array.from(document.querySelectorAll('#mz-colfiltro-lista input:checked')).map(c=>c.value);
+  mzColFiltro[campo]=new Set(checked);
+  renderizarMatriz();
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.col-filtro-menu')&&!e.target.closest('.col-filtro-ico')){
+    const menu=document.getElementById('mz-colfiltro-menu');
+    if(menu&&menu.style.display==='block'){menu.style.display='none';mzColFiltroActivo=null;}
+  }
+});
+
+function exportarMatrizAExcel(){
+  if(!ultimoMatrizParaExcel.length){alert('No hay datos para exportar con los filtros actuales.');return;}
+  const ws=XLSX.utils.json_to_sheet(ultimoMatrizParaExcel);
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Matriz de Control');
+  XLSX.writeFile(wb,`Matriz_Control_ManoObra_${cultivoMz}_${new Date().toISOString().substring(0,10)}.xlsx`);
+}
+
 function renderizarMatriz(){
   const desglose=document.getElementById('sel-mz-desglose').value;
-  const filC=document.getElementById('sel-mz-ciclo').value;
-  const filF=document.getElementById('sel-mz-finca').value;
+  const ciclosActivos=getSelMs('mz-ciclo');
+  const fincasActivas=getSelMs('mz-finca');
   let campos=['Ciclo','Finca'];
   if(desglose==='2')campos=['Ciclo','Finca','Puesto'];
   if(desglose==='3')campos=['Ciclo','Finca','Puesto','Actividad'];
-  document.getElementById('th-matriz').innerHTML=campos.map(c=>`<th>${c}</th>`).join('')+'<th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">C$/Mz</th>';
+
+  document.getElementById('th-matriz').innerHTML=campos.map(c=>{
+    const activo=mzColFiltro[c]&&mzColFiltro[c].size>0;
+    return `<th><div class="th-con-filtro"><span>${c}</span><span class="col-filtro-ico${activo?' activo':''}" onclick='abrirColFiltroMz(event,"${c}",${JSON.stringify(campos)})' title="Filtrar ${c}">▾</span></div></th>`;
+  }).join('')+'<th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">C$/Mz</th>';
+
   let agg={};
   CAPA.forEach(r=>{
     if(r.cultivo!==cultivoMz)return;
-    if(filC!=='TODOS'&&r.ciclo!==filC)return;
-    if(filF!=='TODOS'&&r.finca!==filF)return;
-    const keys=campos.map(g=>g==='Ciclo'?r.ciclo:g==='Finca'?r.finca:g==='Puesto'?r.puesto:r.act);
+    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
+    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
+    for(const c of campos){if(!pasaFiltroColMz(c,mzValorCampo(r,c)))return;}
+    const keys=campos.map(g=>mzValorCampo(r,g));
     const k=keys.join('|');
     if(!agg[k])agg[k]={keys,finca:r.finca,ciclo:r.ciclo,costo:0,dh:0};
     agg[k].costo+=r.costo;agg[k].dh+=r.dh;
   });
+
   let mznV=new Set();
-  RAW_SB.forEach(s=>{const f=String(s["Finca"]||'').trim(),c=String(s["Ciclo"]||'').trim();if(detectCult(c,f)===cultivoMz&&(filC==='TODOS'||c===filC)&&(filF==='TODOS'||f===filF))mznV.add(`${f}|${c}`);});
+  RAW_SB.forEach(s=>{
+    const f=String(s["Finca"]||'').trim(),c=String(s["Ciclo"]||'').trim();
+    if(detectCult(c,f)===cultivoMz&&(ciclosActivos.size===0||ciclosActivos.has(c))&&(fincasActivas.size===0||fincasActivas.has(f)))mznV.add(`${f}|${c}`);
+  });
   let mznT=0;mznV.forEach(k=>{const[f,c]=k.split('|');mznT+=buscarMzn(f,c);});
+
   let tC=0,tDh=0;
+  ultimoMatrizParaExcel=[];
   document.getElementById('tbody-matriz').innerHTML=Object.values(agg).map(r=>{
     tC+=r.costo;tDh+=r.dh;
     const mzn=buscarMzn(r.finca,r.ciclo);
+    const fila={};
+    campos.forEach((c,i)=>fila[c]=r.keys[i]||'—');
+    fila['DH']=Number((r.dh||0).toFixed(1));
+    fila['Costo (C$)']=Number((r.costo||0).toFixed(2));
+    fila['Mzn']=mzn>0?Number(mzn.toFixed(2)):null;
+    fila['DH/Mzn']=(mzn>0&&r.dh>0)?Number((r.dh/mzn).toFixed(2)):null;
+    fila['C$/Mzn']=mzn>0?Number((r.costo/mzn).toFixed(2)):null;
+    ultimoMatrizParaExcel.push(fila);
     return`<tr>${r.keys.map(k=>`<td>${k||'—'}</td>`).join('')}<td class="t-right">${fmt(r.dh,1)}</td><td class="t-right">C$ ${fmt(r.costo,2)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${mzn>0?fmt(mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${mzn>0&&r.dh>0?(r.dh/mzn).toFixed(2):'—'}</td><td class="t-right" style="color:var(--rojo);font-weight:700">C$ ${mzn>0?fmt(Math.round(r.costo/mzn)):'—'}</td></tr>`;
-  }).join('');
+  }).join('')||`<tr><td colspan="${campos.length+5}" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
   const gDhMz=mznT>0?tDh/mznT:0,gCMz=mznT>0?tC/mznT:0;
   document.getElementById('tft-matriz').innerHTML=`<td colspan="${campos.length}">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(mznT)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td>`;
 }
