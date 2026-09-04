@@ -408,6 +408,13 @@ tr:hover td{background:#f8fafc;}
             <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')">C$/DH</button>
           </div>
         </div>
+        <div class="filtro-group">
+          <div class="filtro-label">&nbsp;</div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--texto);cursor:pointer;padding:6px 2px;user-select:none;">
+            <input type="checkbox" id="chk-piv-subtotales" onchange="toggleSubtotalesPiv(this.checked)" style="accent-color:var(--verde);width:14px;height:14px;cursor:pointer;">
+            Mostrar subtotales
+          </label>
+        </div>
       </div>
 
       <div id="piv-panel-n1" class="piv-panel active tabla-card">
@@ -527,6 +534,7 @@ let ciclosSel=new Set(),chartCmp=null,chartsHist={};
 let metricaHist='monto',vistaHist='mensual',chartTipo='line';
 let cultivoPivActual='Mani',seccionPiv='n1',vistaPiv='mensual';
 let metricaPiv='costo',_pivDatos={};
+let mostrarSubtotalesPiv=false; // por defecto ocultos
 
 let draggedChip = null;
 function dragStart(e) {
@@ -1351,6 +1359,10 @@ function actualizarVisibilidadChipCuenta(){
   const chip=document.querySelector('#drag-hierarchy-container .drag-chip[data-id="cc"]');
   if(chip)chip.style.display=(metricaPiv==='dh')?'none':'';
 }
+function toggleSubtotalesPiv(checked){
+  mostrarSubtotalesPiv=checked;
+  renderizarPivote();
+}
 
 function calcPivVal(slot){
   if(!slot)return 0;
@@ -1512,14 +1524,8 @@ function renderizarPivote(){
       porAnio[y].forEach(m=>{
         const slot=slotMapY[m];
         const val=calcPivVal(slot);
-        if(y===anios[0]){
-          if(!grandTotalMonths[m])grandTotalMonths[m]=newSlot();
-          if(slot){
-            grandTotalMonths[m].costo+=slot.costo;
-            grandTotalMonths[m].dh+=slot.dh;
-            slot.mznF&&slot.mznF.forEach(k=>{if(!grandTotalMonths[m].mznF.has(k)){grandTotalMonths[m].mznF.add(k);grandTotalMonths[m].mzn+=slot.mzn;}});
-          }
-        }
+        // Nota: el total general (grandTotalMonths) NO se acumula aquí; ya se acumula una única vez
+        // por fila de detalle más abajo. Sumarlo también aquí duplicaba el total general.
         subTotalYear+=val;
         rHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
       });
@@ -1542,7 +1548,7 @@ function renderizarPivote(){
       }
     }
 
-    if(changeFromLevel!==-1 && idx>0){
+    if(changeFromLevel!==-1 && idx>0 && mostrarSubtotalesPiv){
       for(let l=hierOrder.length-2; l>=changeFromLevel; l--){
         const pathKey=currentGroupKeys.slice(0, l+1).join('|');
         const label=`Total ${currentGroupKeys[l]}`;
@@ -1598,7 +1604,7 @@ function renderizarPivote(){
     });
   });
 
-  if(detailRows.length>0){
+  if(detailRows.length>0 && mostrarSubtotalesPiv){
     for(let l=hierOrder.length-2; l>=0; l--){
       const pathKey=currentGroupKeys.slice(0, l+1).join('|');
       const label=`Total ${currentGroupKeys[l]}`;
