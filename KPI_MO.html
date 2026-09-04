@@ -30,6 +30,12 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:v
 .badge-v{display:inline-block;background:var(--verde);color:#fff;font-size:9px;padding:1px 5px;border-radius:3px;margin-left:5px;font-weight:700;}
 nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .nav-section{font-size:9px;color:#5d8a6c;text-transform:uppercase;letter-spacing:.8px;padding:10px 14px 3px;font-weight:700;}
+.sb-config{padding:2px 14px 10px;display:flex;flex-direction:column;gap:6px;}
+.sb-select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:#dff2e6;font-size:11px;padding:6px 8px;border-radius:6px;cursor:pointer;}
+.sb-select:hover{background:rgba(255,255,255,.13);}
+.sb-select:focus{outline:none;border-color:var(--verde);}
+.sb-select option{background:#0f3d25;color:#dff2e6;}
+.sb-tc-hint{font-size:9px;color:#7db897;padding:0 1px;line-height:1.3;}
 .nav-item{display:flex;align-items:center;gap:9px;padding:10px 14px;cursor:pointer;font-size:12px;font-weight:500;color:#9ec8b0;transition:all .15s;border-left:3px solid transparent;}
 .nav-item:hover{background:rgba(255,255,255,.07);color:#fff;}
 .nav-item.active{background:rgba(46,204,113,.12);color:#2ecc71;border-left-color:#2ecc71;font-weight:700;}
@@ -128,6 +134,11 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .scroll-hint::after{content:'›';font-size:20px;font-weight:800;color:var(--verde);padding-right:4px;animation:pulse-h 1.4s ease-in-out infinite;}
 @keyframes pulse-h{0%,100%{transform:translateX(0);opacity:.6;}50%{transform:translateX(3px);opacity:1;}}
 table{width:100%;border-collapse:collapse;font-size:11px;}
+/* Detalle Mensual de Historia: encabezado y columnas de agrupación fijas al hacer scroll.
+   table-layout:fixed + width:auto es necesario para que los anchos en px de las columnas
+   fijas (ver thHist) se respeten exactamente, ya que sin esto el layout automático de la
+   tabla ignora los anchos declarados y calcula cada columna según su contenido. */
+.tabla-historia-fija{table-layout:fixed;width:max-content;max-width:none;}
 th{background:#f3f4f6;color:#374151;font-weight:700;padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
 td{padding:7px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;}
 tr:hover td{background:#f8fafc;}
@@ -188,12 +199,27 @@ tr:hover td{background:#f8fafc;}
   </div>
   <nav class="sb-nav">
     <div class="nav-section">Análisis</div>
-    <div class="nav-item active" onclick="irA('historia',this)"><span class="nav-icon">📈</span>Historia C$/Mzn</div>
+    <div class="nav-item active" onclick="irA('historia',this)"><span class="nav-icon">📈</span>Historia <span class="lbl-moneda">C$</span>/Mzn</div>
     <div class="nav-item" onclick="irA('comparar',this)"><span class="nav-icon">⚖️</span>Comparar Ciclos</div>
     <div class="nav-item" onclick="irA('pivote',this)"><span class="nav-icon">🗓</span>Pivote Mensual</div>
     <div class="nav-section">Datos</div>
     <div class="nav-item" onclick="irA('logs',this)"><span class="nav-icon">📊</span>Resumen de Datos</div>
     <div class="nav-item" onclick="irA('matriz',this)"><span class="nav-icon">📋</span>Matriz de Control</div>
+    <div class="nav-section">Moneda y Formato</div>
+    <div class="sb-config">
+      <select class="sb-select" id="sel-moneda" onchange="cambiarMoneda(this.value)" title="Moneda para todos los valores monetarios">
+        <option value="CS" selected>Córdobas (C$)</option>
+        <option value="USD">Dólares (US$)</option>
+      </select>
+      <select class="sb-select" id="sel-decimales" onchange="cambiarDecimales(this.value)" title="Decimales para los valores monetarios">
+        <option value="0" selected>0 decimales</option>
+        <option value="1">1 decimal</option>
+        <option value="2">2 decimales</option>
+        <option value="3">3 decimales</option>
+        <option value="4">4 decimales</option>
+      </select>
+      <div class="sb-tc-hint" id="sb-tc-hint" style="display:none;">Tipo de cambio: C$36.6243 = US$1</div>
+    </div>
   </nav>
   <div class="sidebar-bottom">Grupo ZP · Nicaragua 🌱</div>
 </nav>
@@ -218,11 +244,11 @@ tr:hover td{background:#f8fafc;}
         <div class="filtro-group">
           <div class="filtro-label">Métrica Eje Y</div>
           <div class="btn-toggle-group">
-            <button class="btn-toggle" id="btn-cmz" onclick="cambiarMetrica('cmz')">C$/Mzn</button>
-            <button class="btn-toggle" id="btn-cdh" onclick="cambiarMetrica('cdh')">C$/DH</button>
+            <button class="btn-toggle" id="btn-cmz" onclick="cambiarMetrica('cmz')"><span class="lbl-moneda">C$</span>/Mzn</button>
+            <button class="btn-toggle" id="btn-cdh" onclick="cambiarMetrica('cdh')"><span class="lbl-moneda">C$</span>/DH</button>
             <button class="btn-toggle" id="btn-dhmz" onclick="cambiarMetrica('dhmz')">DH/Mzn</button>
             <button class="btn-toggle" id="btn-dh" onclick="cambiarMetrica('dh')">DH</button>
-            <button class="btn-toggle active" id="btn-monto" onclick="cambiarMetrica('monto')">Monto C$</button>
+            <button class="btn-toggle active" id="btn-monto" onclick="cambiarMetrica('monto')">Monto <span class="lbl-moneda">C$</span></button>
           </div>
         </div>
         <div class="filtro-group">
@@ -309,7 +335,7 @@ tr:hover td{background:#f8fafc;}
           <span class="tabla-title">Detalle Mensual</span>
           <button class="export-btn" onclick="exportarHistoriaAExcel()">⬇ Excel</button>
         </div>
-        <div class="tabla-wrap"><table><thead><tr id="th-historia"></tr></thead><tbody id="tbody-historia"></tbody><tfoot><tr class="fila-total" id="tft-historia"></tr></tfoot></table></div>
+        <div class="tabla-wrap"><table class="tabla-historia-fija"><thead><tr id="th-historia"></tr></thead><tbody id="tbody-historia"></tbody><tfoot><tr class="fila-total" id="tft-historia"></tr></tfoot></table></div>
       </div>
     </div>
 
@@ -361,13 +387,13 @@ tr:hover td{background:#f8fafc;}
       </div>
       <div class="kpi-grid" id="kpi-comparar"></div>
       <div class="chart-card">
-        <div class="chart-title">C$/DH por Mes — Comparativo de Ciclos</div>
+        <div class="chart-title"><span class="lbl-moneda">C$</span>/DH por Mes — Comparativo de Ciclos</div>
         <div class="chart-subtitle">Eje X: Ene → Dic · cada línea = un ciclo</div>
         <div class="chart-wrap tall"><canvas id="chart-cmp"></canvas></div>
       </div>
       <div class="tabla-card">
         <div class="tabla-header"><span class="tabla-title">Resumen por Ciclo / Finca / Puesto / Actividad</span><button class="export-btn" onclick="exportarComparativoAExcel()">⬇ Excel</button></div>
-        <div class="tabla-wrap"><table><thead><tr><th>Ciclo</th><th>Finca</th><th>Puesto</th><th>Actividad</th><th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">C$/Mz</th><th class="t-right">C$/DH</th></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
+        <div class="tabla-wrap"><table><thead><tr><th>Ciclo</th><th>Finca</th><th>Puesto</th><th>Actividad</th><th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right" id="th-cmp-cmz">C$/Mz</th><th class="t-right" id="th-cmp-cdh">C$/DH</th></tr></thead><tbody id="tbody-comparar"></tbody><tfoot><tr class="fila-total" id="tft-comparar"></tr></tfoot></table></div>
       </div>
     </div>
 
@@ -435,10 +461,10 @@ tr:hover td{background:#f8fafc;}
         <div class="filtro-group">
           <div class="filtro-label">Métrica</div>
           <div class="btn-toggle-group">
-            <button class="btn-toggle active" id="btn-piv-mc" onclick="cambiarMetricaPiv('costo')">C$ Costo</button>
+            <button class="btn-toggle active" id="btn-piv-mc" onclick="cambiarMetricaPiv('costo')"><span class="lbl-moneda">C$</span> Costo</button>
             <button class="btn-toggle" id="btn-piv-mdh" onclick="cambiarMetricaPiv('dh')">DH</button>
             <button class="btn-toggle" id="btn-piv-mdhm" onclick="cambiarMetricaPiv('dhmzn')">DH/Mzn</button>
-            <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')">C$/DH</button>
+            <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')"><span class="lbl-moneda">C$</span>/DH</button>
           </div>
         </div>
       </div>
@@ -564,7 +590,7 @@ tr:hover td{background:#f8fafc;}
         <thead style="position:sticky;top:0;">
           <tr style="background:#f3f4f6;">
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Actividad</th>
-            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Costo C$</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;" id="popup-act-col-costo">Costo C$</th>
             <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">DH</th>
             <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;" id="popup-act-col-metrica">Valor</th>
           </tr>
@@ -624,6 +650,9 @@ let metricaPiv='costo',_pivDatos={};
 let subtotalesActivosPiv=new Set(); // campos (cultivo/finca/actividad/puesto/cc) con subtotal activado por clic derecho
 let nivelColapsoPiv=null; // campo hasta el cual la tabla de Pivote está contraída (resumida), o null = expandida
 let nivelColapsoHist=null; // idem para Historia (Detalle Mensual)
+let monedaGlobal='CS'; // 'CS'=Córdobas (moneda funcional del sistema) | 'USD'=Dólares
+let decimalesGlobal=0; // decimales para valores monetarios en toda la app (0 a 4, elegido por el usuario)
+const TASA_CAMBIO_USD=36.6243; // C$ por US$1
 
 // Devuelve el orden de columnas EFECTIVAMENTE visible en la tabla (ya aplicada la contracción), para
 // saber si un campo dado es el último visible (ahí "subtotal"/"contraer" no tienen efecto adicional).
@@ -811,19 +840,66 @@ function calcVal(costo,dh,mzn){
   if(metricaHist==='monto')return costo>0?costo:null;
   return mzn>0?dh/mzn:null;
 }
+// true si la métrica de Historia activa representa un monto en moneda (para saber si hay que
+// convertir a la moneda seleccionada al exportar valores numéricos crudos, p.ej. a Excel).
+function esMetricaHistMoneda(){return metricaHist==='cmz'||metricaHist==='cdh'||metricaHist==='monto';}
+
+// ---- Moneda (Córdobas/Dólares) y decimales, seleccionables por el usuario desde el menú lateral ----
+function convMoneda(v){return monedaGlobal==='USD'?(Number(v)||0)/TASA_CAMBIO_USD:(Number(v)||0);}
+function simboloMoneda(){return monedaGlobal==='USD'?'US$':'C$';}
+// Formatea un monto SIEMPRE como moneda (convierte según monedaGlobal y aplica decimalesGlobal, salvo que
+// se fuerce un número de decimales puntual, p.ej. para exportes que necesitan más precisión).
+function fmtMoneda(v,decForzados){
+  if(v==null)return'—';
+  const d=decForzados!=null?decForzados:decimalesGlobal;
+  return simboloMoneda()+' '+Number(convMoneda(v)).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+// Valor numérico (no string) listo para exportar a Excel: convierte a la moneda activa solo si el
+// valor representa dinero (según la métrica activa; DH y DH/Mzn no son montos y no se convierten).
+function valorMonedaExcel(v,esMoneda){
+  if(v==null)return null;
+  return Number((esMoneda?convMoneda(v):v).toFixed(2));
+}
+function cambiarMoneda(v){
+  monedaGlobal=v;
+  const hint=document.getElementById('sb-tc-hint');
+  if(hint)hint.style.display=v==='USD'?'block':'none';
+  actualizarEtiquetasMoneda();
+  rerenderizarConMoneda();
+}
+function cambiarDecimales(v){
+  decimalesGlobal=parseInt(v,10)||0;
+  rerenderizarConMoneda();
+}
+// Todo texto estático que nombra la moneda (título de pestaña, botones de métrica, etc.) lleva la
+// clase "lbl-moneda" y se actualiza aquí de una sola vez al cambiar de moneda.
+function actualizarEtiquetasMoneda(){
+  const sym=simboloMoneda();
+  document.querySelectorAll('.lbl-moneda').forEach(el=>{el.textContent=sym;});
+}
+// Re-renderiza TODOS los paneles (no solo el visible) para que ningún dato quede mostrando la
+// moneda/decimales anteriores al navegar a otra pestaña (antes solo se refrescaba el panel activo,
+// y los demás se quedaban "atrasados" hasta que algo más los volviera a renderizar).
+function rerenderizarConMoneda(){
+  renderizarHistoria();
+  renderizarComparativo();
+  renderizarPivote();
+  renderizarMatriz();
+  renderLogs();
+}
 
 function fmtVal(v){
   if(v==null)return'—';
   if(metricaHist==='dh') return fmt(Math.round(v));
   if(metricaHist==='dhmz') return v.toFixed(2);
-  return 'C$ '+fmt(Math.round(v));
+  return fmtMoneda(v);
 }
 
 function etqMetrica(){
   if(metricaHist==='dh') return {l:'DH', t:'Cantidad de Días Hombre (DH)'};
-  if(metricaHist==='cmz')return{l:'C$/Mzn',t:'Costo MO por Manzana (C$/Mzn)'};
-  if(metricaHist==='cdh')return{l:'C$/DH',t:'Costo por Dia Hombre (C$/DH)'};
-  if(metricaHist==='monto')return{l:'Monto C$',t:'Monto Total (C$)'};
+  if(metricaHist==='cmz')return{l:`${simboloMoneda()}/Mzn`,t:`Costo MO por Manzana (${simboloMoneda()}/Mzn)`};
+  if(metricaHist==='cdh')return{l:`${simboloMoneda()}/DH`,t:`Costo por Dia Hombre (${simboloMoneda()}/DH)`};
+  if(metricaHist==='monto')return{l:`Monto ${simboloMoneda()}`,t:`Monto Total (${simboloMoneda()})`};
   return{l:'DH/Mzn',t:'Dias Hombre por Manzana (DH/Mzn)'};
 }
 
@@ -1058,6 +1134,7 @@ window.addEventListener('DOMContentLoaded',async()=>{
     }
 
     setS('Renderizando...');
+    actualizarEtiquetasMoneda();
     renderLogs();
     iniciarMatriz();
     iniciarComparar();
@@ -1079,7 +1156,7 @@ function renderLogs(){
     <div class="kpi-card nar"><div class="kpi-label">Jornadas Odoo</div><div class="kpi-valor">${DS_DH.length.toLocaleString()}</div></div>
     <div class="kpi-card"><div class="kpi-label">Matriz Unificada</div><div class="kpi-valor">${CAPA.length.toLocaleString()}</div></div>
     <div class="kpi-card rojo"><div class="kpi-label">Serie Mensual</div><div class="kpi-valor">${SERIE.length.toLocaleString()}</div></div>`;
-  document.querySelector('#tbl-audit-c tbody').innerHTML=DS_C.slice(0,5).map(r=>`<tr><td>${r.ca}</td><td>${r.fecha}</td><td>${r.cc}</td><td class="t-right font-bold">C$ ${fmt(r.monto,2)}</td><td><span class="${r.finca==='SIN MAESTRO'?'badge-err':'badge'}">${r.finca}</span></td><td><span class="${r.ciclo==='SIN MAESTRO'?'badge-err':'badge'}">${r.ciclo}</span></td></tr>`).join('');
+  document.querySelector('#tbl-audit-c tbody').innerHTML=DS_C.slice(0,5).map(r=>`<tr><td>${r.ca}</td><td>${r.fecha}</td><td>${r.cc}</td><td class="t-right font-bold">${fmtMoneda(r.monto)}</td><td><span class="${r.finca==='SIN MAESTRO'?'badge-err':'badge'}">${r.finca}</span></td><td><span class="${r.ciclo==='SIN MAESTRO'?'badge-err':'badge'}">${r.ciclo}</span></td></tr>`).join('');
   document.querySelector('#tbl-audit-dh tbody').innerHTML=DS_DH.slice(0,5).map(r=>`<tr><td>${r.ca}</td><td>${r.fecha}</td><td>${r.puesto||'—'}</td><td class="t-right font-bold">${fmt(r.dh,1)}</td><td><span class="${r.finca==='SIN MAESTRO'?'badge-err':'badge'}">${r.finca}</span></td><td><span class="${r.ciclo==='SIN MAESTRO'?'badge-err':'badge'}">${r.ciclo}</span></td></tr>`).join('');
 }
 
@@ -1200,7 +1277,7 @@ function renderizarMatriz(){
   document.getElementById('th-matriz').innerHTML=campos.map(c=>{
     const activo=mzColFiltro[c]&&mzColFiltro[c].size>0;
     return `<th><div class="th-con-filtro"><span>${c}</span><span class="col-filtro-ico${activo?' activo':''}" onclick='abrirColFiltroMz(event,"${c}",${JSON.stringify(campos)})' title="Filtrar ${c}">▾</span></div></th>`;
-  }).join('')+'<th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">C$/Mz</th>';
+  }).join('')+`<th class="t-right">DH</th><th class="t-right">Costo</th><th class="t-right">Mzn</th><th class="t-right">DH/Mz</th><th class="t-right">${simboloMoneda()}/Mz</th>`;
 
   let agg={};
   CAPA.forEach(r=>{
@@ -1229,15 +1306,15 @@ function renderizarMatriz(){
     const fila={};
     campos.forEach((c,i)=>fila[c]=r.keys[i]||'—');
     fila['DH']=Number((r.dh||0).toFixed(1));
-    fila['Costo (C$)']=Number((r.costo||0).toFixed(2));
+    fila[`Costo (${simboloMoneda()})`]=valorMonedaExcel(r.costo||0,true);
     fila['Mzn']=mzn>0?Number(mzn.toFixed(2)):null;
     fila['DH/Mzn']=(mzn>0&&r.dh>0)?Number((r.dh/mzn).toFixed(2)):null;
-    fila['C$/Mzn']=mzn>0?Number((r.costo/mzn).toFixed(2)):null;
+    fila[`${simboloMoneda()}/Mzn`]=mzn>0?valorMonedaExcel(r.costo/mzn,true):null;
     ultimoMatrizParaExcel.push(fila);
-    return`<tr>${r.keys.map(k=>`<td>${k||'—'}</td>`).join('')}<td class="t-right">${fmt(r.dh,1)}</td><td class="t-right">C$ ${fmt(r.costo,2)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${mzn>0?fmt(mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${mzn>0&&r.dh>0?(r.dh/mzn).toFixed(2):'—'}</td><td class="t-right" style="color:var(--rojo);font-weight:700">C$ ${mzn>0?fmt(Math.round(r.costo/mzn)):'—'}</td></tr>`;
+    return`<tr>${r.keys.map(k=>`<td>${k||'—'}</td>`).join('')}<td class="t-right">${fmt(r.dh,1)}</td><td class="t-right">${fmtMoneda(r.costo)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${mzn>0?fmt(mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${mzn>0&&r.dh>0?(r.dh/mzn).toFixed(2):'—'}</td><td class="t-right" style="color:var(--rojo);font-weight:700">${mzn>0?fmtMoneda(r.costo/mzn):'—'}</td></tr>`;
   }).join('')||`<tr><td colspan="${campos.length+5}" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
   const gDhMz=mznT>0?tDh/mznT:0,gCMz=mznT>0?tC/mznT:0;
-  document.getElementById('tft-matriz').innerHTML=`<td colspan="${campos.length}">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(mznT)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td>`;
+  document.getElementById('tft-matriz').innerHTML=`<td colspan="${campos.length}">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">${fmtMoneda(tC)}</td><td class="t-right">${fmt(mznT)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">${fmtMoneda(gCMz)}</td>`;
 }
 
 function iniciarHistoria(){
@@ -1388,12 +1465,12 @@ function renderizarHistoria(){
   const gCMz=totMzn>0?totC/totMzn:0,gDhMz=totMzn>0?totDh/totMzn:0,gCDh=totDh>0?totC/totDh:0;
   const{l,t}=etqMetrica();
   document.getElementById('kpi-historia').innerHTML=`
-    <div class="kpi-card"><div class="kpi-label">Costo MO Total</div><div class="kpi-valor">C$ ${fmt(Math.round(totC))}</div></div>
+    <div class="kpi-card"><div class="kpi-label">Costo MO Total</div><div class="kpi-valor">${fmtMoneda(totC)}</div></div>
     <div class="kpi-card azul"><div class="kpi-label">DH Totales</div><div class="kpi-valor">${fmt(Math.round(totDh))}</div></div>
     <div class="kpi-card nar"><div class="kpi-label">Area Total</div><div class="kpi-valor">${fmt(totMzn,1)} Mz</div></div>
-    <div class="kpi-card"><div class="kpi-label">C$/Mzn</div><div class="kpi-valor">C$ ${fmt(Math.round(gCMz))}</div></div>
+    <div class="kpi-card"><div class="kpi-label">${simboloMoneda()}/Mzn</div><div class="kpi-valor">${fmtMoneda(gCMz)}</div></div>
     <div class="kpi-card azul"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div>
-    <div class="kpi-card rojo"><div class="kpi-label">C$/DH</div><div class="kpi-valor">C$ ${fmt(Math.round(gCDh))}</div></div>`;
+    <div class="kpi-card rojo"><div class="kpi-label">${simboloMoneda()}/DH</div><div class="kpi-valor">${fmtMoneda(gCDh)}</div></div>`;
 
   Object.values(chartsHist).forEach(ch=>ch.destroy());chartsHist={};
 
@@ -1455,12 +1532,12 @@ function renderizarHistoria(){
     const kpiPanel=document.createElement('div');
     kpiPanel.style.cssText='display:flex;flex-direction:column;gap:1px;border-right:1px solid var(--gris-borde);min-width:160px;flex-shrink:0;';
     const kpis=[
-      {label:'Costo MO',val:`C$ ${fmt(Math.round(pC))}`,color:'var(--verde)'},
+      {label:'Costo MO',val:fmtMoneda(pC),color:'var(--verde)'},
       {label:'DH Totales',val:fmt(Math.round(pDh)),color:'var(--azul)'},
       {label:'Área',val:`${fmt(pMzn,1)} Mz`,color:'var(--amarillo)'},
-      {label:'C$/Mzn',val:`C$ ${fmt(Math.round(pCMz))}`,color:'var(--verde)'},
+      {label:`${simboloMoneda()}/Mzn`,val:fmtMoneda(pCMz),color:'var(--verde)'},
       {label:'DH/Mzn',val:pDhMz.toFixed(2),color:'var(--azul)'},
-      {label:'C$/DH',val:`C$ ${fmt(Math.round(pCDh))}`,color:'var(--rojo)'},
+      {label:`${simboloMoneda()}/DH`,val:fmtMoneda(pCDh),color:'var(--rojo)'},
     ];
     kpis.forEach(k=>{
       const kd=document.createElement('div');
@@ -1497,7 +1574,7 @@ function renderizarHistoria(){
       });
       return{label:ciclo,data,borderColor:color,backgroundColor:chartTipo==='bar'?color+'aa':color+'22',tension:.3,spanGaps:true,fill:false,pointRadius:4,pointHoverRadius:6,borderWidth:chartTipo==='bar'?1:2,
         datalabels:{display:true,align:'top',anchor:'end',color,font:{size:8,weight:'bold'},
-          formatter:v=>v==null?null:metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):('C$'+fmt(Math.round(v)))}};
+          formatter:v=>v==null?null:fmtVal(v)}};
     });
 
     requestAnimationFrame(()=>{
@@ -1521,7 +1598,7 @@ function renderizarHistoria(){
               abrirDesgloseActividad(puesto,ds.label,mesesUsar[el.index],el.index,mesesUsar,base);
             }
           },
-          scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:false,ticks:{callback:v=>metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):`C$${fmt(Math.round(v))}`}}}
+          scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:l,font:{size:10}},beginAtZero:false,ticks:{callback:v=>fmtVal(v)}}}
         }
       });
     });
@@ -1535,14 +1612,18 @@ function renderizarHistoria(){
   const colapsadoHist=idxColapsoHist>=0&&idxColapsoHist<ordCampos.length-1;
   const camposEf=colapsadoHist?ordCampos.slice(0,idxColapsoHist+1):ordCampos;
   const nCols=camposEf.length;
+  const FREEZE_W=160;
+  const anchoCol=(idx)=>camposEf.slice(0,idx).reduce((s)=>s+FREEZE_W,0);
 
-  const thHist=f=>{
+  const thHist=(f,idx)=>{
     const activo=subtotalesActivosHist.has(f);
-    const estilo=`cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
+    const fijoEstilo=`position:sticky;top:0;left:${anchoCol(idx)}px;z-index:20;width:${FREEZE_W}px;max-width:${FREEZE_W}px;overflow:hidden;text-overflow:ellipsis;background:#f3f4f6;`;
+    const estilo=`${fijoEstilo}cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
     return`<th style="${estilo}" oncontextmenu="return abrirMenuSubtotal(event,'hist','${f}')" title="Clic derecho: subtotal o contraer en ${headersMap[f]}">${headersMap[f]}${activo?' <span style="color:var(--verde)">Σ</span>':''}</th>`;
   };
 
-  document.getElementById('th-historia').innerHTML=camposEf.map(thHist).join('')+mesesUsar.map(m=>`<th class="t-right">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right">Total</th>`;
+  const MES_W=90,TOTAL_W=100;
+  document.getElementById('th-historia').innerHTML=camposEf.map(thHist).join('')+mesesUsar.map(m=>`<th class="t-right" style="position:sticky;top:0;z-index:12;background:#f3f4f6;width:${MES_W}px;">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right" style="position:sticky;top:0;z-index:12;background:#e8f5e9;width:${TOTAL_W}px;">Total</th>`;
 
   const valsCampoHist=r=>({puesto:r.puesto||'Sin Puesto',ciclo:r.ciclo||'Sin Ciclo',actividad:r.act||'Sin Actividad'});
 
@@ -1584,11 +1665,12 @@ function renderizarHistoria(){
     return 0;
   });
 
-  const renderCell=(f, val)=>f==='puesto'?`<td class="font-bold">${val}</td>`:f==='ciclo'?`<td style="color:var(--azul)">${val}</td>`:`<td><span class="badge" style="background:#eef2ff;color:#1e40af">${val||'—'}</span></td>`;
+  const celdaFijaEstilo=(idx,bg)=>`position:sticky;left:${anchoCol(idx)}px;z-index:6;width:${FREEZE_W}px;max-width:${FREEZE_W}px;overflow:hidden;text-overflow:ellipsis;background:${bg};`;
+  const renderCell=(f, val, idx)=>f==='puesto'?`<td class="font-bold" style="${celdaFijaEstilo(idx,'white')}" title="${val}">${val}</td>`:f==='ciclo'?`<td style="${celdaFijaEstilo(idx,'white')}color:var(--azul)" title="${val}">${val}</td>`:`<td style="${celdaFijaEstilo(idx,'white')}" title="${val||'—'}"><span class="badge" style="background:#eef2ff;color:#1e40af">${val||'—'}</span></td>`;
   function filaSubtotalHist(label,fijos){
     const porMes=aggregarSlotsPorCamposHist(base,fijos);
     const{html,totS}=celdasDesdeSlotsHist(porMes,mesesUsar);
-    return`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;"><td colspan="${nCols}">${label}</td>${html}<td class="t-right">${fmtVal(calcVal(totS.costo,totS.dh,totS.mzn))}</td></tr>`;
+    return`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;"><td colspan="${nCols}" style="position:sticky;left:0;z-index:6;background:#f8fafc;">${label}</td>${html}<td class="t-right">${fmtVal(calcVal(totS.costo,totS.dh,totS.mzn))}</td></tr>`;
   }
   function fijosHastaNivel(keys,l){
     const fijos={};
@@ -1612,13 +1694,13 @@ function renderizarHistoria(){
       }
     }
     currentKeys=keys;
-    filas+=`<tr>${camposEf.map((f,fi)=>renderCell(f,keys[fi])).join('')}${r.celdas}<td class="t-right font-bold">${fmtVal(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn))}</td></tr>`;
+    filas+=`<tr>${camposEf.map((f,fi)=>renderCell(f,keys[fi],fi)).join('')}${r.celdas}<td class="t-right font-bold">${fmtVal(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn))}</td></tr>`;
     const fila={};
     camposEf.forEach((f,fi)=>{fila[headersMap[f]]=keys[fi]||'—';});
     mesesUsar.forEach((m,mi)=>{
-      fila[ML[parseInt(m,10)-1]]=r.valores[mi]!=null?Number(r.valores[mi].toFixed(2)):null;
+      fila[ML[parseInt(m,10)-1]]=valorMonedaExcel(r.valores[mi],esMetricaHistMoneda());
     });
-    fila['Total']=Number(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn)?.toFixed(2)??0)||null;
+    fila['Total']=valorMonedaExcel(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn),esMetricaHistMoneda())||null;
     ultimoHistoriaParaExcel.push(fila);
   });
   if(subtotalesActivosHist.size>0&&rowItems.length>0){
@@ -1629,7 +1711,7 @@ function renderizarHistoria(){
   }
 
   document.getElementById('tbody-historia').innerHTML=filas||`<tr><td colspan="${nCols+mesesUsar.length+1}" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
-  document.getElementById('tft-historia').innerHTML=`<td colspan="${nCols}">TOTAL</td>`+mesesUsar.map(()=>`<td></td>`).join('')+`<td class="t-right">${fmtVal(calcVal(totC,totDh,totMzn))}</td>`;
+  document.getElementById('tft-historia').innerHTML=`<td colspan="${nCols}" style="position:sticky;left:0;z-index:6;background:#e5e7eb;font-weight:700;">TOTAL</td>`+mesesUsar.map(()=>`<td style="background:#e5e7eb;"></td>`).join('')+`<td class="t-right" style="background:#e5e7eb;font-weight:700;">${fmtVal(calcVal(totC,totDh,totMzn))}</td>`;
   refrescarChipsUI('hist');
 }
 
@@ -1705,6 +1787,8 @@ function exportarComparativoAExcel(){
 }
 
 function renderizarComparativo(){
+  document.getElementById('th-cmp-cmz').textContent=`${simboloMoneda()}/Mz`;
+  document.getElementById('th-cmp-cdh').textContent=`${simboloMoneda()}/DH`;
   const fincasActivas=getSelMs('cmp-finca');
   const puestosActivos=getSelMs('cmp-puesto');
   const actsActivos=getSelMs('cmp-act');
@@ -1725,17 +1809,17 @@ function renderizarComparativo(){
     tC+=g.costo;tDh+=g.dh;const lk=`${g.finca}|${g.ciclo}`;if(!mV.has(lk)){mV.add(lk);tMzn+=g.mzn;}
     ultimoComparativoParaExcel.push({
       Ciclo:g.ciclo,Finca:g.finca,Puesto:g.puesto||'—',Actividad:g.act||'—',
-      DH:Number((g.dh||0).toFixed(1)),'Costo (C$)':Number((g.costo||0).toFixed(2)),
+      DH:Number((g.dh||0).toFixed(1)),[`Costo (${simboloMoneda()})`]:valorMonedaExcel(g.costo||0,true),
       Mzn:g.mzn>0?Number(g.mzn.toFixed(2)):null,
       'DH/Mzn':g.mzn>0?Number(dhMz.toFixed(2)):null,
-      'C$/Mzn':g.mzn>0?Number(cMz.toFixed(2)):null,
-      'C$/DH':g.dh>0?Number(cDh.toFixed(2)):null
+      [`${simboloMoneda()}/Mzn`]:g.mzn>0?valorMonedaExcel(cMz,true):null,
+      [`${simboloMoneda()}/DH`]:g.dh>0?valorMonedaExcel(cDh,true):null
     });
-    return`<tr><td class="font-bold">${g.ciclo}</td><td>${g.finca}</td><td>${g.puesto||'—'}</td><td>${g.act||'—'}</td><td class="t-right">${fmt(g.dh,1)}</td><td class="t-right">C$ ${fmt(g.costo,2)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${g.mzn>0?fmt(g.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">C$ ${fmt(Math.round(cMz))}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">C$ ${cDh.toFixed(2)}</td></tr>`;
+    return`<tr><td class="font-bold">${g.ciclo}</td><td>${g.finca}</td><td>${g.puesto||'—'}</td><td>${g.act||'—'}</td><td class="t-right">${fmt(g.dh,1)}</td><td class="t-right">${fmtMoneda(g.costo)}</td><td class="t-right" style="color:var(--verde);font-weight:700">${g.mzn>0?fmt(g.mzn)+' Mz':'—'}</td><td class="t-right" style="color:var(--azul);font-weight:700">${dhMz.toFixed(2)}</td><td class="t-right" style="color:var(--rojo);font-weight:700">${fmtMoneda(cMz)}</td><td class="t-right" style="color:var(--amarillo);font-weight:700">${fmtMoneda(cDh)}</td></tr>`;
   }).join('')||`<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr>`;
   const gDhMz=tMzn>0?tDh/tMzn:0,gCMz=tMzn>0?tC/tMzn:0,gCDh=tDh>0?tC/tDh:0;
-  document.getElementById('tft-comparar').innerHTML=`<td colspan="4">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td><td class="t-right">C$ ${gCDh.toFixed(2)}</td>`;
-  document.getElementById('kpi-comparar').innerHTML=`<div class="kpi-card"><div class="kpi-label">Ciclos</div><div class="kpi-valor">${ciclosSel.size}</div></div><div class="kpi-card azul"><div class="kpi-label">DH</div><div class="kpi-valor">${fmt(Math.round(tDh))}</div></div><div class="kpi-card"><div class="kpi-label">Costo</div><div class="kpi-valor">C$ ${fmt(Math.round(tC))}</div></div><div class="kpi-card nar"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div><div class="kpi-card rojo"><div class="kpi-label">C$/Mzn</div><div class="kpi-valor">C$ ${fmt(Math.round(gCMz))}</div></div>`;
+  document.getElementById('tft-comparar').innerHTML=`<td colspan="4">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">${fmtMoneda(tC)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">${fmtMoneda(gCMz)}</td><td class="t-right">${fmtMoneda(gCDh)}</td>`;
+  document.getElementById('kpi-comparar').innerHTML=`<div class="kpi-card"><div class="kpi-label">Ciclos</div><div class="kpi-valor">${ciclosSel.size}</div></div><div class="kpi-card azul"><div class="kpi-label">DH</div><div class="kpi-valor">${fmt(Math.round(tDh))}</div></div><div class="kpi-card"><div class="kpi-label">Costo</div><div class="kpi-valor">${fmtMoneda(tC)}</div></div><div class="kpi-card nar"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div><div class="kpi-card rojo"><div class="kpi-label">${simboloMoneda()}/Mzn</div><div class="kpi-valor">${fmtMoneda(gCMz)}</div></div>`;
   let pCM={};
   SERIE.forEach(r=>{
     if(r.cultivo!==cultivoCmp||!ciclosSel.has(r.ciclo)||!r.mes)return;
@@ -1749,12 +1833,15 @@ function renderizarComparativo(){
   const cO=Array.from(ciclosSel).sort();
   const datasets=cO.map((ci,idx)=>({
     label:ci,
-    data:MF.map(nm=>{const v=pCM[`${ci}|${nm}`];return(v&&v.dh>0)?Math.round(v.costo/v.dh*100)/100:null;}),
+    data:MF.map(nm=>{const v=pCM[`${ci}|${nm}`];return(v&&v.dh>0)?convMoneda(v.costo/v.dh):null;}),
     borderColor:PALETA[idx%PALETA.length],backgroundColor:PALETA[idx%PALETA.length],tension:.25,spanGaps:true,fill:false,borderWidth:2,pointRadius:3
   }));
   const ctx=document.getElementById('chart-cmp');
   if(chartCmp)chartCmp.destroy();
-  chartCmp=new Chart(ctx,{type:'line',data:{labels:ML,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:'C$/DH'},beginAtZero:false}}}});
+  // Los valores del dataset ya vienen convertidos a la moneda activa (convMoneda arriba), así que aquí
+  // solo se les da formato (símbolo + decimales) sin volver a convertir.
+  const fmtYaConvertido=v=>v==null?null:simboloMoneda()+' '+fmt(v,decimalesGlobal);
+  chartCmp=new Chart(ctx,{type:'line',data:{labels:ML,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{callbacks:{label:c=>c.parsed.y==null?null:`${c.dataset.label}: ${fmtYaConvertido(c.parsed.y)}`}}},scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:`${simboloMoneda()}/DH`},beginAtZero:false,ticks:{callback:v=>fmtYaConvertido(v)}}}}});
 }
 
 function iniciarPivote(){cultivoPivActual='Mani';cascadaPivCiclos();cascadaPivFinca();renderizarPivote();}
@@ -1820,10 +1907,10 @@ function calcPivVal(slot){
 }
 function fmtPiv(v){
   if(v===0)return'<span style="color:#d1d5db">—</span>';
-  if(metricaPiv==='costo')return'C$ '+fmt(Math.round(v));
+  if(metricaPiv==='costo')return fmtMoneda(v);
   if(metricaPiv==='dh')return fmt(Math.round(v));
   if(metricaPiv==='dhmzn')return v.toFixed(2);
-  return'C$ '+fmt(Math.round(v));
+  return fmtMoneda(v);
 }
 
 function newSlot(){return{costo:0,dh:0,mzn:0,mznF:new Set()};}
@@ -2112,7 +2199,7 @@ function abrirPopupOrigen(puesto,ciclo){
   const titulo=ciclo?`${puesto} — ${ciclo}`:(puesto?`${puesto} — todos los ciclos`:'Todos los registros');
   let totC=0,totDh=0;regs.forEach(r=>{totC+=r.costo;totDh+=r.dh;});
   document.getElementById('popup-titulo').textContent=titulo;
-  document.getElementById('popup-resumen').textContent=`${regs.length} registros · Costo: C$ ${fmt(Math.round(totC))} · DH: ${fmt(Math.round(totDh))}`;
+  document.getElementById('popup-resumen').textContent=`${regs.length} registros · Costo: ${fmtMoneda(totC)} · DH: ${fmt(Math.round(totDh))}`;
   document.getElementById('popup-tbody').innerHTML=regs.slice(0,300).map(r=>`
     <tr style="border-bottom:1px solid #f1f5f9;">
       <td style="padding:6px 10px">${r.ciclo||'—'}</td>
@@ -2120,7 +2207,7 @@ function abrirPopupOrigen(puesto,ciclo){
       <td style="padding:6px 10px">${r.puesto||'—'}</td>
       <td style="padding:6px 10px">${r.act||'—'}</td>
       <td style="padding:6px 10px">${r.mes||'—'}</td>
-      <td style="padding:6px 10px;text-align:right">${r.costo>0?'C$ '+fmt(r.costo,0):'—'}</td>
+      <td style="padding:6px 10px;text-align:right">${r.costo>0?fmtMoneda(r.costo):'—'}</td>
       <td style="padding:6px 10px;text-align:right">${r.dh>0?fmt(r.dh,1):'—'}</td>
     </tr>`).join('')+(regs.length>300?`<tr><td colspan="7" style="text-align:center;color:var(--gris);padding:12px;font-style:italic">... y ${regs.length-300} registros más</td></tr>`:'');
   document.getElementById('popup-overlay').style.display='flex';
@@ -2154,26 +2241,27 @@ function abrirDesgloseActividad(puesto,ciclo,nm,idx,mesesUsar,baseData){
   const periodoLbl=vistaHist==='acumulado'?`Acumulado Ene → ${ML[parseInt(nm,10)-1]}`:ML[parseInt(nm,10)-1];
   document.getElementById('popup-act-titulo').textContent=`${puesto} — ${ciclo} — ${periodoLbl}`;
   document.getElementById('popup-act-col-metrica').textContent=l;
+  document.getElementById('popup-act-col-costo').textContent=`Costo ${simboloMoneda()}`;
 
   let totC=0,totDh=0;const totFincas=new Set();
   acts.forEach(act=>{totC+=porAct[act].costo;totDh+=porAct[act].dh;});
   regs.forEach(r=>totFincas.add(r.finca));
   let totMzn=0;totFincas.forEach(f=>totMzn+=buscarMzn(f,ciclo));
-  document.getElementById('popup-act-resumen').textContent=`${acts.length} actividad${acts.length===1?'':'es'} · Costo: C$ ${fmt(Math.round(totC))} · DH: ${fmt(Math.round(totDh))}`;
+  document.getElementById('popup-act-resumen').textContent=`${acts.length} actividad${acts.length===1?'':'es'} · Costo: ${fmtMoneda(totC)} · DH: ${fmt(Math.round(totDh))}`;
 
   document.getElementById('popup-act-tbody').innerHTML=acts.length?acts.map((act,i)=>{
     const s=porAct[act];
     const val=calcVal(s.costo,s.dh,s.mzn);
     return`<tr style="border-bottom:1px solid #f1f5f9;">
       <td style="padding:6px 10px"><span class="badge" style="background:${PALETA[i%PALETA.length]}22;color:${PALETA[i%PALETA.length]}">${act}</span></td>
-      <td style="padding:6px 10px;text-align:right">C$ ${fmt(Math.round(s.costo))}</td>
+      <td style="padding:6px 10px;text-align:right">${fmtMoneda(s.costo)}</td>
       <td style="padding:6px 10px;text-align:right">${fmt(s.dh,1)}</td>
       <td style="padding:6px 10px;text-align:right;font-weight:700">${fmtVal(val)}</td>
     </tr>`;
   }).join(''):`<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--gris);font-style:italic">Sin datos de actividad para este punto</td></tr>`;
 
   const totVal=calcVal(totC,totDh,totMzn);
-  document.getElementById('popup-act-tfoot').innerHTML=`<td style="padding:8px 10px">TOTAL</td><td style="padding:8px 10px;text-align:right">C$ ${fmt(Math.round(totC))}</td><td style="padding:8px 10px;text-align:right">${fmt(totDh,1)}</td><td style="padding:8px 10px;text-align:right">${fmtVal(totVal)}</td>`;
+  document.getElementById('popup-act-tfoot').innerHTML=`<td style="padding:8px 10px">TOTAL</td><td style="padding:8px 10px;text-align:right">${fmtMoneda(totC)}</td><td style="padding:8px 10px;text-align:right">${fmt(totDh,1)}</td><td style="padding:8px 10px;text-align:right">${fmtVal(totVal)}</td>`;
 
   if(chartPopupAct){chartPopupAct.destroy();chartPopupAct=null;}
   chartPopupAct=new Chart(document.getElementById('ch-popup-act'),{
