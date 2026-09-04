@@ -41,6 +41,24 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .nav-item.active{background:rgba(46,204,113,.12);color:#2ecc71;border-left-color:#2ecc71;font-weight:700;}
 .nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
 .sidebar-bottom{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:#5d8a6c;}
+.sidebar-logo-mini{display:none;font-size:20px;text-align:center;}
+
+/* ---- Sidebar colapsado a solo iconos: más espacio en pantalla para las tablas/gráficos ---- */
+.sb-collapse-btn{
+  position:absolute;top:18px;right:-12px;width:24px;height:24px;border-radius:50%;
+  background:var(--verde);color:#fff;border:2px solid #0f3d25;cursor:pointer;
+  font-size:11px;display:flex;align-items:center;justify-content:center;z-index:210;
+  box-shadow:0 1px 4px rgba(0,0,0,.25);padding:0;line-height:1;
+}
+.sb-collapse-btn:hover{background:var(--verde-dark);}
+#sidebar.collapsed{width:58px;}
+#sidebar.collapsed ~ #main{margin-left:58px;}
+#sidebar.collapsed .nav-text,#sidebar.collapsed .nav-section,#sidebar.collapsed .sb-config,
+#sidebar.collapsed .sidebar-logo .marca,#sidebar.collapsed .sidebar-logo .sub,#sidebar.collapsed .sidebar-bottom{display:none;}
+#sidebar.collapsed .sidebar-logo-mini{display:block;}
+#sidebar.collapsed .sidebar-logo{padding:14px 6px 10px;text-align:center;}
+#sidebar.collapsed .nav-item{justify-content:center;gap:0;padding:11px 6px;}
+#sidebar.collapsed .nav-icon{font-size:17px;}
 
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;}
 #sb-overlay.show{display:block;}
@@ -139,6 +157,7 @@ table{width:100%;border-collapse:collapse;font-size:11px;}
    fijas (ver thHist) se respeten exactamente, ya que sin esto el layout automático de la
    tabla ignora los anchos declarados y calcula cada columna según su contenido. */
 .tabla-historia-fija{table-layout:fixed;width:max-content;max-width:none;}
+.tabla-piv-fija{table-layout:fixed;width:max-content;max-width:none;}
 th{background:#f3f4f6;color:#374151;font-weight:700;padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
 td{padding:7px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;}
 tr:hover td{background:#f8fafc;}
@@ -174,6 +193,8 @@ tr:hover td{background:#f8fafc;}
   #sidebar{transform:translateX(-100%);}
   #sidebar.open{transform:translateX(0);}
   #main{margin-left:0;}
+  #sidebar.collapsed ~ #main{margin-left:0;}
+  .sb-collapse-btn{display:none;}
   .menu-btn{display:flex;align-items:center;justify-content:center;}
   .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;}
   .filtros-bar{padding:10px 12px;gap:8px;}
@@ -193,18 +214,20 @@ tr:hover td{background:#f8fafc;}
 </div>
 
 <nav id="sidebar">
+  <button class="sb-collapse-btn" id="sb-collapse-btn" onclick="toggleSidebarCollapsed()" title="Colapsar menú a solo iconos">◀</button>
   <div class="sidebar-logo">
     <div class="marca">InfoAgro BI <span class="badge-v">v10</span></div>
     <div class="sub">Grupo ZP · Control Mano de Obra</div>
+    <div class="sidebar-logo-mini" title="InfoAgro BI">🌱</div>
   </div>
   <nav class="sb-nav">
     <div class="nav-section">Análisis</div>
-    <div class="nav-item active" onclick="irA('historia',this)"><span class="nav-icon">📈</span>Historia <span class="lbl-moneda">C$</span>/Mzn</div>
-    <div class="nav-item" onclick="irA('comparar',this)"><span class="nav-icon">⚖️</span>Comparar Ciclos</div>
-    <div class="nav-item" onclick="irA('pivote',this)"><span class="nav-icon">🗓</span>Pivote Mensual</div>
+    <div class="nav-item active" onclick="irA('historia',this)" title="Historia"><span class="nav-icon">📈</span><span class="nav-text">Historia <span class="lbl-moneda">C$</span>/Mzn</span></div>
+    <div class="nav-item" onclick="irA('comparar',this)" title="Comparar Ciclos"><span class="nav-icon">⚖️</span><span class="nav-text">Comparar Ciclos</span></div>
+    <div class="nav-item" onclick="irA('pivote',this)" title="Pivote Mensual"><span class="nav-icon">🗓</span><span class="nav-text">Pivote Mensual</span></div>
     <div class="nav-section">Datos</div>
-    <div class="nav-item" onclick="irA('logs',this)"><span class="nav-icon">📊</span>Resumen de Datos</div>
-    <div class="nav-item" onclick="irA('matriz',this)"><span class="nav-icon">📋</span>Matriz de Control</div>
+    <div class="nav-item" onclick="irA('logs',this)" title="Resumen de Datos"><span class="nav-icon">📊</span><span class="nav-text">Resumen de Datos</span></div>
+    <div class="nav-item" onclick="irA('matriz',this)" title="Matriz de Control"><span class="nav-icon">📋</span><span class="nav-text">Matriz de Control</span></div>
     <div class="nav-section">Moneda y Formato</div>
     <div class="sb-config">
       <select class="sb-select" id="sel-moneda" onchange="cambiarMoneda(this.value)" title="Moneda para todos los valores monetarios">
@@ -467,15 +490,26 @@ tr:hover td{background:#f8fafc;}
             <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')"><span class="lbl-moneda">C$</span>/DH</button>
           </div>
         </div>
+        <div class="filtro-group">
+          <div class="filtro-label">Vista de Columnas</div>
+          <div style="display:flex;flex-direction:column;gap:5px;padding-top:2px;">
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--texto);cursor:pointer;">
+              <input type="checkbox" id="chk-piv-solo-anios" onchange="cambiarPivSoloAnios(this.checked)"> Solo años (ocultar meses)
+            </label>
+            <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--texto);cursor:pointer;" id="lbl-piv-invertir" title="Agrupa primero por Mes y dentro de cada mes muestra los años">
+              <input type="checkbox" id="chk-piv-invertir" onchange="cambiarPivInvertir(this.checked)"> Invertir Año/Mes
+            </label>
+          </div>
+        </div>
       </div>
 
       <div id="piv-panel-n1" class="piv-panel active tabla-card">
         <div class="piv-sect-header" style="background:var(--verde)">📋 Cuentas Nivel 1 — Salarios y Prestaciones de Campo (11410–11425)</div>
-        <div class="tabla-wrap" id="wrap-piv-n1"><table id="tbl-piv-n1" style="width:100%;border-collapse:collapse;font-size:11px;"></table></div>
+        <div class="tabla-wrap" id="wrap-piv-n1"><table id="tbl-piv-n1" class="tabla-piv-fija" style="border-collapse:collapse;font-size:11px;"></table></div>
       </div>
       <div id="piv-panel-n6" class="piv-panel tabla-card">
         <div class="piv-sect-header" style="background:#1e3a5f;">📋 Cuentas Nivel 6 — Gastos MO Indirectos (6100*)</div>
-        <div class="tabla-wrap" id="wrap-piv-n6"><table id="tbl-piv-n6" style="width:100%;border-collapse:collapse;font-size:11px;"></table></div>
+        <div class="tabla-wrap" id="wrap-piv-n6"><table id="tbl-piv-n6" class="tabla-piv-fija" style="border-collapse:collapse;font-size:11px;"></table></div>
       </div>
     </div>
 
@@ -650,6 +684,8 @@ let metricaPiv='costo',_pivDatos={};
 let subtotalesActivosPiv=new Set(); // campos (cultivo/finca/actividad/puesto/cc) con subtotal activado por clic derecho
 let nivelColapsoPiv=null; // campo hasta el cual la tabla de Pivote está contraída (resumida), o null = expandida
 let nivelColapsoHist=null; // idem para Historia (Detalle Mensual)
+let pivSoloAnios=false; // true = oculta las columnas de mes y muestra solo el total de cada año
+let pivInvertirAnioMes=false; // true = agrupa las columnas por Mes (y dentro de cada mes, los años) en vez de por Año
 let monedaGlobal='CS'; // 'CS'=Córdobas (moneda funcional del sistema) | 'USD'=Dólares
 let decimalesGlobal=0; // decimales para valores monetarios en toda la app (0 a 4, elegido por el usuario)
 const TASA_CAMBIO_USD=36.6243; // C$ por US$1
@@ -792,6 +828,12 @@ function toggleSidebar(){
   const ov=document.getElementById('sb-overlay');
   const open=sb.classList.toggle('open');
   ov.classList.toggle('show',open);
+}
+function toggleSidebarCollapsed(){
+  const sb=document.getElementById('sidebar');
+  const colapsado=sb.classList.toggle('collapsed');
+  document.getElementById('sb-collapse-btn').textContent=colapsado?'▶':'◀';
+  document.getElementById('sb-collapse-btn').title=colapsado?'Expandir menú':'Colapsar menú a solo iconos';
 }
 function cerrarSidebar(){
   document.getElementById('sidebar').classList.remove('open');
@@ -1898,6 +1940,22 @@ function actualizarVisibilidadChipCuenta(){
   const chip=document.querySelector('#drag-hierarchy-container .drag-chip[data-id="cc"]');
   if(chip)chip.style.display=(metricaPiv==='dh')?'none':'';
 }
+// "Solo años": oculta el desglose mensual y muestra un único total por año (independientemente de si
+// las columnas están invertidas o no — el usuario pidió ver "solo los años", así que ese checkbox
+// deshabilita visualmente el de invertir, ya que agrupar por mes dejaría de tener sentido.
+function cambiarPivSoloAnios(checked){
+  pivSoloAnios=checked;
+  const chkInvertir=document.getElementById('chk-piv-invertir');
+  const lblInvertir=document.getElementById('lbl-piv-invertir');
+  chkInvertir.disabled=checked;
+  lblInvertir.style.opacity=checked?'.5':'1';
+  lblInvertir.style.cursor=checked?'not-allowed':'pointer';
+  renderizarPivote();
+}
+function cambiarPivInvertir(checked){
+  pivInvertirAnioMes=checked;
+  renderizarPivote();
+}
 function calcPivVal(slot){
   if(!slot)return 0;
   if(metricaPiv==='costo')return slot.costo||0;
@@ -1914,6 +1972,16 @@ function fmtPiv(v){
 }
 
 function newSlot(){return{costo:0,dh:0,mzn:0,mznF:new Set()};}
+
+// Mide el ancho real (en px) que ocuparía un texto con una fuente dada, usando un canvas oculto
+// reutilizable. Sirve para que las columnas de agrupación de Pivote se ajusten al contenido real
+// en vez de usar un ancho fijo igual para todas (lo que dejaba mucho espacio vacío en columnas
+// con textos cortos como "Mani" o "Cocal" y ocupaba todo el ancho de pantalla sin necesidad).
+function medirAnchoTexto(texto, font){
+  if(!medirAnchoTexto._ctx)medirAnchoTexto._ctx=document.createElement('canvas').getContext('2d');
+  medirAnchoTexto._ctx.font=font;
+  return medirAnchoTexto._ctx.measureText(String(texto)).width;
+}
 
 function renderizarPivote(){
   const tbl=document.getElementById(`tbl-piv-${seccionPiv}`);
@@ -2023,32 +2091,102 @@ function renderizarPivote(){
   const thStyle='padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;background:#f3f4f6;color:#374151;font-weight:700;';
   const thNum=`${thStyle}text-align:right;`;
 
+  // ---- Congelado (encabezado + hasta 5 columnas de agrupación) y vistas "solo años"/"invertir" ----
+  const MES_W=85, TOTALG_W=95, TOTALGEN_W=105;
+  const nColFrozen=Math.min(5,hierOrder.length);
+  // Anchos de columna adaptados al texto real (en vez de un ancho fijo igual para todas), para no
+  // ocupar más pantalla de la necesaria: se mide con canvas el texto más largo de cada columna
+  // (encabezado + todas las filas de detalle) y se limita entre un mínimo y un máximo razonables.
+  const MIN_HIER_W=64, MAX_HIER_W=260, PAD_HIER=30;
+  const HEADER_FONT_PIV="700 10px 'Segoe UI',system-ui,sans-serif";
+  const BODY_FONT_PIV="700 11px 'Segoe UI',system-ui,sans-serif";
+  const anchosHier=hierOrder.map((f,idx)=>{
+    let maxW=medirAnchoTexto(`${fieldLabels[f]||f} Σ`,HEADER_FONT_PIV);
+    detailRows.forEach(row=>{
+      const val=f==='cc'?cuentaConNombre(row.keys[idx]):row.keys[idx];
+      const w=medirAnchoTexto(val,BODY_FONT_PIV);
+      if(w>maxW)maxW=w;
+    });
+    return Math.max(MIN_HIER_W,Math.min(MAX_HIER_W,Math.ceil(maxW)+PAD_HIER));
+  });
+  const anchoColPiv=idx=>anchosHier.slice(0,idx).reduce((a,b)=>a+b,0);
+  const mostrarSubcolumnas=!pivSoloAnios;
+  // "grupos": columnas de nivel superior (Año, o Mes si está invertido) — cada una con sus "items"
+  // (los sub-valores que se suman para el total del grupo: meses dentro del año, o años dentro del mes).
+  // "Solo años" ignora el estado de "invertir": si solo quieres ver años, el agrupamiento por mes deja
+  // de tener sentido, así que siempre se recalcula a partir de los años sin importar ese checkbox.
+  const grupos = pivSoloAnios
+    ? anios.map(y=>({label:y,items:porAnio[y].map(m=>({key:m}))}))
+    : (pivInvertirAnioMes ? (()=>{
+        const porMesNum={};
+        todosM.forEach(m=>{
+          const mn=m.slice(5,7);
+          if(!porMesNum[mn])porMesNum[mn]=[];
+          porMesNum[mn].push(m);
+        });
+        return Object.keys(porMesNum).sort().map(mn=>({label:ML[parseInt(mn,10)-1],items:porMesNum[mn].map(m=>({key:m,label:m.slice(0,4)}))}));
+      })() : anios.map(y=>({label:y,items:porAnio[y].map(m=>({key:m,label:ML[parseInt(m.slice(5),10)-1]}))})));
+
+  // Genera las celdas numéricas de una fila (detalle, subtotal o total general) iterando "grupos";
+  // si mostrarSubcolumnas está desactivado, solo se emite la celda de total de cada grupo (sin el
+  // desglose interno), aunque igual se suma internamente para que el total sea correcto.
+  function celdasGrupoPiv(slotSource, estiloTotalGrupo){
+    let html='',total=0;
+    grupos.forEach(g=>{
+      let subtotal=0;
+      if(mostrarSubcolumnas){
+        g.items.forEach(item=>{
+          const val=calcPivVal(slotSource[item.key]);
+          subtotal+=val;
+          html+=`<td class="t-right">${fmtPiv(val)}</td>`;
+        });
+      } else {
+        g.items.forEach(item=>{subtotal+=calcPivVal(slotSource[item.key]);});
+      }
+      html+=`<td class="t-right" style="${estiloTotalGrupo}">${fmtPiv(subtotal)}</td>`;
+      total+=subtotal;
+    });
+    return{html,total};
+  }
+
+  const estiloHierTh=(idx,top)=>{
+    const esFijo=idx<nColFrozen;
+    const w=esFijo?anchosHier[idx]:MAX_HIER_W;
+    const pos=esFijo?`position:sticky;top:${top}px;left:${anchoColPiv(idx)}px;z-index:20;`:`position:sticky;top:${top}px;z-index:12;`;
+    return`${pos}width:${w}px;max-width:${w}px;overflow:hidden;text-overflow:ellipsis;`;
+  };
+
   let thead='<thead><tr style="background:#f3f4f6;">';
-  hierOrder.forEach(f=>{
+  hierOrder.forEach((f,idx)=>{
     const activo=subtotalesActivosPiv.has(f);
-    const estilo=`${thStyle}position:sticky;top:0;z-index:12;cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
+    const estilo=`${thStyle}${estiloHierTh(idx,0)}cursor:context-menu;${activo?'background:var(--verde-bg);color:var(--verde-dark);':''}`;
     thead+=`<th style="${estilo}" oncontextmenu="return abrirMenuSubtotal(event,'piv','${f}')" title="Clic derecho: subtotal o contraer en ${fieldLabels[f]||f}">${fieldLabels[f]||f}${activo?' <span style="color:var(--verde)">Σ</span>':''}</th>`;
   });
 
-  anios.forEach(y=>{
-    const monthsCount=porAnio[y].length;
-    thead+=`<th colspan="${monthsCount}" style="${thStyle}text-align:center;background:#eef2ff;position:sticky;top:0;z-index:12;">${y}</th>`;
-    thead+=`<th style="${thStyle}text-align:right;background:#eef2ff;position:sticky;top:0;z-index:12;">Total ${y}</th>`;
+  grupos.forEach(g=>{
+    if(mostrarSubcolumnas){
+      thead+=`<th colspan="${g.items.length}" style="${thStyle}text-align:center;background:#eef2ff;position:sticky;top:0;z-index:12;">${g.label}</th>`;
+      thead+=`<th style="${thStyle}text-align:right;background:#eef2ff;position:sticky;top:0;z-index:12;width:${TOTALG_W}px;">Total ${g.label}</th>`;
+    } else {
+      thead+=`<th style="${thStyle}text-align:right;background:#eef2ff;position:sticky;top:0;z-index:12;width:${TOTALG_W}px;">${g.label}</th>`;
+    }
   });
-  thead+=`<th style="${thStyle}text-align:right;background:#e8f5e9;position:sticky;top:0;z-index:12;">Total general</th></tr>`;
+  thead+=`<th style="${thStyle}text-align:right;background:#e8f5e9;position:sticky;top:0;z-index:12;width:${TOTALGEN_W}px;">Total general</th></tr>`;
 
-  thead+='<tr style="background:#f3f4f6;">';
-  hierOrder.forEach(()=>{
-    thead+=`<th style="${thStyle}position:sticky;top:28px;z-index:12;"></th>`;
-  });
-
-  anios.forEach(y=>{
-    porAnio[y].forEach(m=>{
-      thead+=`<th style="${thNum}position:sticky;top:28px;z-index:12;">${ML[parseInt(m.slice(5),10)-1]}</th>`;
+  if(mostrarSubcolumnas){
+    thead+='<tr style="background:#f3f4f6;">';
+    hierOrder.forEach((f,idx)=>{
+      thead+=`<th style="${thStyle}${estiloHierTh(idx,28)}"></th>`;
     });
-    thead+=`<th style="${thNum}background:#eef2ff;position:sticky;top:28px;z-index:12;">Total</th>`;
-  });
-  thead+=`<th style="${thNum}background:#e8f5e9;position:sticky;top:28px;z-index:12;">Total</th></tr></thead>`;
+    grupos.forEach(g=>{
+      g.items.forEach(item=>{
+        thead+=`<th style="${thNum}position:sticky;top:28px;z-index:12;width:${MES_W}px;">${item.label}</th>`;
+      });
+      thead+=`<th style="${thNum}background:#eef2ff;position:sticky;top:28px;z-index:12;width:${TOTALG_W}px;">Total</th>`;
+    });
+    thead+=`<th style="${thNum}background:#e8f5e9;position:sticky;top:28px;z-index:12;width:${TOTALGEN_W}px;">Total</th></tr>`;
+  }
+  thead+='</thead>';
 
   const rows=[];
   const grandTotalMonths={};
@@ -2056,23 +2194,12 @@ function renderizarPivote(){
 
   function createSubtotalRow(label, slotMapY){
     let rHTML=`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;">`;
-    rHTML+=`<td style="padding:8px 10px;" colspan="${hierOrder.length}">${label}</td>`;
-
-    let subTotalYearAll=0;
-    anios.forEach(y=>{
-      let subTotalYear=0;
-      porAnio[y].forEach(m=>{
-        const slot=slotMapY[m];
-        const val=calcPivVal(slot);
-        // Nota: el total general (grandTotalMonths) NO se acumula aquí; ya se acumula una única vez
-        // por fila de detalle más abajo. Sumarlo también aquí duplicaba el total general.
-        subTotalYear+=val;
-        rHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
-      });
-      rHTML+=`<td class="t-right" style="background:#f1f5f9;">${fmtPiv(subTotalYear)}</td>`;
-      subTotalYearAll+=subTotalYear;
-    });
-    rHTML+=`<td class="t-right" style="background:#e8f5e9;">${fmtPiv(subTotalYearAll)}</td></tr>`;
+    rHTML+=`<td style="padding:8px 10px;position:sticky;left:0;z-index:6;background:#f8fafc;" colspan="${hierOrder.length}">${label}</td>`;
+    // Nota: el total general (grandTotalMonths) NO se acumula aquí; ya se acumula una única vez por
+    // fila de detalle más abajo. Sumarlo también aquí duplicaba el total general.
+    const{html,total}=celdasGrupoPiv(slotMapY,'background:#f1f5f9;');
+    rHTML+=html;
+    rHTML+=`<td class="t-right" style="background:#e8f5e9;">${fmtPiv(total)}</td></tr>`;
     return rHTML;
   }
 
@@ -2117,23 +2244,16 @@ function renderizarPivote(){
     hierOrder.forEach((f, fIdx)=>{
       const val=row.keys[fIdx];
       const isFirst=(fIdx===0);
-      const style=isFirst?'font-weight:700;color:var(--verde-dark);':'';
+      const esFijo=fIdx<nColFrozen;
+      const w=esFijo?anchosHier[fIdx]:MAX_HIER_W;
+      const fijoStyle=esFijo?`position:sticky;left:${anchoColPiv(fIdx)}px;z-index:6;background:white;`:'';
+      const style=`padding:7px 10px;width:${w}px;max-width:${w}px;overflow:hidden;text-overflow:ellipsis;${fijoStyle}${isFirst?'font-weight:700;color:var(--verde-dark);':''}`;
       const celda=f==='cc'?cuentaConNombre(val):val;
-      rowHTML+=`<td style="padding:7px 10px;${style}">${celda}</td>`;
+      rowHTML+=`<td style="${style}" title="${celda}">${celda}</td>`;
     });
 
-    let rowTotalYearAll=0;
-    anios.forEach(y=>{
-      let rowTotalYear=0;
-      porAnio[y].forEach(m=>{
-        const slot=row.months[m];
-        const val=calcPivVal(slot);
-        rowTotalYear+=val;
-        rowHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
-      });
-      rowHTML+=`<td class="t-right font-bold" style="background:#f8fafc;">${fmtPiv(rowTotalYear)}</td>`;
-      rowTotalYearAll+=rowTotalYear;
-    });
+    const{html,total:rowTotalYearAll}=celdasGrupoPiv(row.months,'background:#f8fafc;font-weight:700;');
+    rowHTML+=html;
     rowHTML+=`<td class="t-right font-bold" style="background:#e8f5e9;">${fmtPiv(rowTotalYearAll)}</td></tr>`;
     rows.push(rowHTML);
 
@@ -2159,20 +2279,9 @@ function renderizarPivote(){
   }
 
   let grandTotalHTML=`<tr style="background:#e5e7eb;font-weight:800;border-top:2px solid #374151;position:sticky;bottom:0;z-index:8;">`;
-  grandTotalHTML+=`<td style="padding:9px 10px;" colspan="${hierOrder.length}">Total general</td>`;
-
-  let grandTotalYearAll=0;
-  anios.forEach(y=>{
-    let gtYear=0;
-    porAnio[y].forEach(m=>{
-      const slot=grandTotalMonths[m];
-      const val=calcPivVal(slot);
-      gtYear+=val;
-      grandTotalHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
-    });
-    grandTotalHTML+=`<td class="t-right" style="background:#d1d5db;">${fmtPiv(gtYear)}</td>`;
-    grandTotalYearAll+=gtYear;
-  });
+  grandTotalHTML+=`<td style="padding:9px 10px;position:sticky;left:0;z-index:9;background:#e5e7eb;" colspan="${hierOrder.length}">Total general</td>`;
+  const{html:htmlGT,total:grandTotalYearAll}=celdasGrupoPiv(grandTotalMonths,'background:#d1d5db;');
+  grandTotalHTML+=htmlGT;
   grandTotalHTML+=`<td class="t-right" style="background:#d1d5db;">${fmtPiv(grandTotalYearAll)}</td></tr>`;
 
   _pivDatos={estN1:null, estN6:null};
