@@ -17,7 +17,6 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--fondo);color:var(--texto);font-size:13px;min-height:100vh;}
 
-/* ── SIDEBAR ── */
 #sidebar{
   width:var(--sidebar-w);background:#0f3d25;color:#c8e6d5;
   display:flex;flex-direction:column;
@@ -37,14 +36,11 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .nav-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
 .sidebar-bottom{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:10px;color:#5d8a6c;}
 
-/* sidebar overlay (mobile) */
 #sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:190;}
 #sb-overlay.show{display:block;}
 
-/* ── MAIN ── */
 #main{margin-left:var(--sidebar-w);display:flex;flex-direction:column;min-height:100vh;min-width:0;}
 
-/* ── TOPBAR ── */
 .topbar{
   background:var(--blanco);border-bottom:1px solid var(--gris-borde);
   padding:0 18px;height:var(--topbar-h);
@@ -61,33 +57,26 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .topbar-sub{font-size:10px;color:var(--gris);white-space:nowrap;}
 .sync-badge{font-size:10px;background:var(--verde-bg);color:var(--verde);border:1px solid #a7d7b8;padding:3px 8px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0;}
 
-/* ── CONTENEDOR ── */
 .contenedor{padding:16px 18px;width:100%;}
 .panel{display:none;}.panel.active{display:block;}
 
-/* ── KPI GRID ── */
 .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:16px;}
 .kpi-card{background:var(--blanco);border-radius:8px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.06);border:1px solid var(--gris-borde);display:flex;flex-direction:column;gap:4px;position:relative;overflow:hidden;}
 .kpi-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--verde);}
 .kpi-card.azul::before{background:var(--azul);}.kpi-card.rojo::before{background:var(--rojo);}.kpi-card.nar::before{background:var(--amarillo);}
 .kpi-label{font-size:9px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.4px;}
 .kpi-valor{font-size:19px;font-weight:800;color:var(--texto);line-height:1.15;}
-.kpi-sub{font-size:10px;color:var(--gris);}
 
-/* ── FILTROS BAR ── */
 .filtros-bar{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
 .filtro-group{display:flex;flex-direction:column;gap:3px;}
 .filtro-label{font-size:9px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.4px;display:flex;align-items:center;gap:5px;}
 .ms-count{display:inline-block;background:var(--verde);color:white;border-radius:10px;padding:0px 5px;font-size:9px;font-weight:700;}
 
-/* ── TOGGLE BUTTONS ── */
 .btn-toggle-group{display:flex;border-radius:6px;overflow:hidden;border:1px solid var(--gris-borde);flex-wrap:wrap;}
 .btn-toggle{padding:6px 11px;border:none;background:#fafafa;font-size:11px;font-weight:600;color:var(--gris);cursor:pointer;transition:all .15s;white-space:nowrap;}
 .btn-toggle:not(:last-child){border-right:1px solid var(--gris-borde);}
 .btn-toggle.active{background:var(--verde);color:white;}
-.btn-toggle:active{transform:scale(.97);}
 
-/* ── MULTISELECT DROPDOWN ── */
 .ms-wrap{position:relative;display:inline-block;}
 .ms-btn{padding:6px 10px;border:1px solid var(--gris-borde);border-radius:6px;background:#fafafa;font-size:12px;color:var(--texto);cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:145px;justify-content:space-between;}
 .ms-btn:hover{border-color:var(--verde);}
@@ -100,29 +89,40 @@ nav.sb-nav{padding:8px 0;flex:1;overflow-y:auto;}
 .ms-item input{accent-color:var(--verde);width:13px;height:13px;cursor:pointer;flex-shrink:0;}
 .ms-item label{cursor:pointer;flex:1;}
 
-/* ── TABLA ── */
-.tabla-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;}
+/* Drag & Drop Hierarchy Chips */
+.drag-container{display:flex;gap:6px;flex-wrap:wrap;align-items:center;background:#f9fafb;border:1px dashed var(--gris-borde);padding:6px 10px;border-radius:6px;min-height:36px;}
+.drag-chip{background:var(--blanco);border:1px solid var(--gris-borde);padding:4px 10px;border-radius:4px;font-size:11px;font-weight:600;cursor:grab;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04);user-select:none;transition:all .15s;}
+.drag-chip:active{cursor:grabbing;}
+.drag-chip.dragging{opacity:0.4;background:#e5e7eb;}
+.drag-chip span{color:var(--verde);font-weight:700;}
+
+.tabla-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;position:relative;}
 .tabla-header{padding:9px 13px;background:#f8fafb;border-bottom:1px solid var(--gris-borde);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
 .tabla-title{font-weight:700;font-size:12px;color:var(--verde-dark);}
-.tabla-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:520px;overflow-y:auto;}
+.tabla-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-height:520px;overflow-y:auto;scrollbar-width:auto;scrollbar-color:#9aa5b1 #eef1f4;}
+.tabla-wrap::-webkit-scrollbar{height:12px;width:12px;}
+.tabla-wrap::-webkit-scrollbar-track{background:#eef1f4;}
+.tabla-wrap::-webkit-scrollbar-thumb{background:#9aa5b1;border-radius:8px;border:2px solid #eef1f4;}
+.tabla-wrap::-webkit-scrollbar-thumb:hover{background:#6b7280;}
+/* Indicador de que hay más columnas a la derecha (barra a veces poco visible, sobre todo en Mac/touch) */
+.scroll-hint{position:absolute;right:0;width:34px;pointer-events:none;background:linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,.97) 70%);opacity:0;transition:opacity .2s;z-index:20;display:flex;align-items:center;justify-content:flex-end;}
+.scroll-hint.show{opacity:1;}
+.scroll-hint::after{content:'›';font-size:20px;font-weight:800;color:var(--verde);padding-right:4px;animation:pulse-h 1.4s ease-in-out infinite;}
+@keyframes pulse-h{0%,100%{transform:translateX(0);opacity:.6;}50%{transform:translateX(3px);opacity:1;}}
 table{width:100%;border-collapse:collapse;font-size:11px;}
-th{background:#f3f4f6;color:#374151;font-weight:700;padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0;z-index:10;white-space:nowrap;}
+th{background:#f3f4f6;color:#374151;font-weight:700;padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
 td{padding:7px 10px;border-bottom:1px solid #f1f5f9;white-space:nowrap;}
 tr:hover td{background:#f8fafc;}
-tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db;position:sticky;bottom:0;z-index:5;}
 .t-right{text-align:right;font-variant-numeric:tabular-nums;}
 .badge{background:var(--verde-bg);color:#166534;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10px;}
 .badge-err{background:var(--rojo-bg);color:#991b1b;padding:2px 6px;border-radius:4px;font-weight:700;font-size:10px;}
 .font-bold{font-weight:700;}.text-gris{color:var(--gris);}
 
-/* ── CHARTS ── */
 .chart-card{background:var(--blanco);border:1px solid var(--gris-borde);border-radius:8px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:12px;}
 .chart-title{font-weight:700;font-size:13px;color:var(--verde-dark);margin-bottom:2px;}
 .chart-subtitle{font-size:11px;color:var(--gris);margin-bottom:10px;}
 .chart-wrap.tall{position:relative;height:300px;}
-.chart-wrap.mid{position:relative;height:240px;}
 
-/* ── PIVOTE ── */
 .piv-section-btn{display:inline-flex;align-items:center;gap:6px;padding:7px 13px;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .piv-section-btn.n1{background:var(--verde);color:white;}
 .piv-section-btn.n6{background:#1e3a5f;color:white;}
@@ -130,11 +130,9 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 .piv-panel{display:none;}.piv-panel.active{display:block;}
 .piv-sect-header{padding:9px 13px;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:white;}
 
-/* ── EXPORT BTN ── */
 .export-btn{padding:6px 12px;background:#1e3a5f;color:white;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;}
 .export-btn:hover{background:var(--azul);}
 
-/* ── LOADING ── */
 #loading{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,61,37,.93);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;padding:20px;text-align:center;}
 .loader-logo{font-size:21px;font-weight:800;color:#fff;margin-bottom:18px;}
 .loader-logo span{color:#2ecc71;}
@@ -142,76 +140,18 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 @keyframes spin{to{transform:rotate(360deg);}}
 #loader-status{color:#7db897;font-size:11px;margin-top:5px;}
 
-/* ════════════════════════════════════
-   RESPONSIVE BREAKPOINTS
-════════════════════════════════════ */
-
-/* ── TABLET (≤1024px) ── */
-@media(max-width:1024px){
-  :root{--sidebar-w:200px;}
-  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(130px,1fr));}
-  .contenedor{padding:12px 14px;}
-  .btn-toggle{padding:5px 9px;font-size:11px;}
-  .piv-section-btn{padding:6px 10px;font-size:11px;}
-}
-
-/* ── MOBILE (≤768px) ── */
 @media(max-width:768px){
   :root{--sidebar-w:240px;}
-  /* Sidebar oculto por defecto en móvil */
   #sidebar{transform:translateX(-100%);}
   #sidebar.open{transform:translateX(0);}
-  /* Main ocupa todo el ancho */
   #main{margin-left:0;}
-  /* Mostrar botón hamburguesa */
   .menu-btn{display:flex;align-items:center;justify-content:center;}
-  /* Topbar más compacta */
-  .topbar{padding:0 12px;}
-  .topbar-sub{display:none;}
-  .topbar-title{font-size:12px;}
-  /* Contenedor */
-  .contenedor{padding:10px 12px;}
-  /* KPI: 2 columnas en móvil */
   .kpi-grid{grid-template-columns:1fr 1fr;gap:8px;}
-  .kpi-valor{font-size:16px;}
-  /* Filtros: full width items */
   .filtros-bar{padding:10px 12px;gap:8px;}
   .filtro-group{width:100%;}
   .filtro-group .btn-toggle-group{width:100%;}
-  .filtro-group .btn-toggle{flex:1;padding:8px 6px;font-size:11px;}
   .ms-btn{min-width:0;width:100%;}
   .ms-drop{left:0;right:0;min-width:0;width:100%;}
-  /* Pivote section btns */
-  .piv-section-btn{font-size:11px;padding:7px 10px;}
-  /* Charts altura reducida */
-  .chart-wrap.tall{height:240px;}
-  .chart-wrap.mid{height:200px;}
-  /* Tabla: scroll horizontal */
-  .tabla-wrap{max-height:400px;}
-  /* Sección por puesto: columna única */
-  [style*="display:flex;gap:0"]{flex-direction:column!important;}
-  [style*="min-width:160px;flex-shrink:0"]{
-    min-width:0!important;width:100%!important;flex-direction:row!important;
-    flex-wrap:wrap;border-right:none!important;border-bottom:1px solid var(--gris-borde)!important;
-  }
-}
-
-/* ── SMALL MOBILE (≤480px) ── */
-@media(max-width:480px){
-  .kpi-grid{grid-template-columns:1fr;}
-  .kpi-valor{font-size:18px;}
-  .topbar-title{font-size:11px;}
-  .btn-toggle-group{flex-wrap:wrap;}
-  .btn-toggle{flex:1;min-width:60px;}
-  table{font-size:10px;}
-  th,td{padding:6px 7px;}
-  .piv-section-btn{font-size:10px;padding:6px 8px;}
-}
-
-/* ── LARGE DESKTOP (≥1400px) ── */
-@media(min-width:1400px){
-  .kpi-grid{grid-template-columns:repeat(6,1fr);}
-  .contenedor{padding:20px 26px;}
 }
 </style>
 </head>
@@ -261,9 +201,17 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
           <div class="filtro-label">Métrica Eje Y</div>
           <div class="btn-toggle-group">
             <button class="btn-toggle" id="btn-cmz" onclick="cambiarMetrica('cmz')">C$/Mzn</button>
-            <button class="btn-toggle active" id="btn-cdh" onclick="cambiarMetrica('cdh')">C$/DH</button>
+            <button class="btn-toggle" id="btn-cdh" onclick="cambiarMetrica('cdh')">C$/DH</button>
             <button class="btn-toggle" id="btn-dhmz" onclick="cambiarMetrica('dhmz')">DH/Mzn</button>
             <button class="btn-toggle" id="btn-dh" onclick="cambiarMetrica('dh')">DH</button>
+            <button class="btn-toggle active" id="btn-monto" onclick="cambiarMetrica('monto')">Monto C$</button>
+          </div>
+        </div>
+        <div class="filtro-group">
+          <div class="filtro-label">Tipo Gráfico</div>
+          <div class="btn-toggle-group">
+            <button class="btn-toggle active" id="btn-chart-line" onclick="cambiarTipoGrafico('line')">📈 Líneas</button>
+            <button class="btn-toggle" id="btn-chart-bar" onclick="cambiarTipoGrafico('bar')">📊 Barras</button>
           </div>
         </div>
         <div class="filtro-group">
@@ -312,6 +260,16 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
             </div>
           </div>
         </div>
+        <div class="filtro-group">
+          <div class="filtro-label">Actividad <span id="cnt-hist-act" class="ms-count" style="display:none"></span></div>
+          <div class="ms-wrap">
+            <div class="ms-btn" onclick="toggleDrop('drop-hist-act')"><span id="lbl-hist-act">Todas las Actividades</span><span style="font-size:9px;color:var(--gris)">▼</span></div>
+            <div class="ms-drop" id="drop-hist-act">
+              <div class="ms-drop-hdr"><a onclick="msAll('hist-act',true)">Todas</a><a onclick="msAll('hist-act',false)">Ninguna</a></div>
+              <div id="items-hist-act"></div>
+            </div>
+          </div>
+        </div>
         <div class="filtro-group" style="align-self:flex-end;">
           <button class="btn-toggle active" onclick="renderizarHistoria()" style="border-radius:6px;border:1px solid var(--verde);padding:6px 14px;">↻ Actualizar</button>
         </div>
@@ -319,7 +277,15 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
       <div class="kpi-grid" id="kpi-historia"></div>
       <div id="hist-charts-container"></div>
       <div class="tabla-card">
-        <div class="tabla-header"><span class="tabla-title">Detalle Mensual</span></div>
+        <div class="tabla-header">
+          <span class="tabla-title">Detalle Mensual</span>
+          <div style="display:flex;gap:8px;align-items:center;font-size:11px;flex-wrap:wrap;">
+            <span style="color:var(--gris);font-weight:600;">Orden columnas:</span>
+            <select id="col-ord-1" onchange="renderizarHistoria()" style="padding:3px 6px;border:1px solid var(--gris-borde);border-radius:4px;background:#fafafa;"><option value="puesto">Puesto</option><option value="ciclo">Ciclo</option><option value="actividad">Actividad</option></select>
+            <select id="col-ord-2" onchange="renderizarHistoria()" style="padding:3px 6px;border:1px solid var(--gris-borde);border-radius:4px;background:#fafafa;"><option value="ciclo" selected>Ciclo</option><option value="puesto">Puesto</option><option value="actividad">Actividad</option></select>
+            <select id="col-ord-3" onchange="renderizarHistoria()" style="padding:3px 6px;border:1px solid var(--gris-borde);border-radius:4px;background:#fafafa;"><option value="actividad" selected>Actividad</option><option value="puesto">Puesto</option><option value="ciclo">Ciclo</option></select>
+          </div>
+        </div>
         <div class="tabla-wrap"><table><thead><tr id="th-historia"></tr></thead><tbody id="tbody-historia"></tbody><tfoot><tr class="fila-total" id="tft-historia"></tr></tfoot></table></div>
       </div>
     </div>
@@ -374,7 +340,6 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
 
     <!-- PIVOTE -->
     <div id="panel-pivote" class="panel">
-      <!-- Fila 1: Sección + Vista + Cultivo + Ciclo + Finca + Export -->
       <div class="filtros-bar" style="flex-wrap:wrap;gap:10px;">
         <div class="filtro-group">
           <div class="filtro-label">Sección</div>
@@ -388,14 +353,6 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
           <div class="btn-toggle-group">
             <button class="btn-toggle active" id="btn-piv-men" onclick="cambiarVistaPivote('mensual')">Mensual</button>
             <button class="btn-toggle" id="btn-piv-acu" onclick="cambiarVistaPivote('acumulado')">Acumulado</button>
-          </div>
-        </div>
-        <div class="filtro-group">
-          <div class="filtro-label">Columnas</div>
-          <div class="btn-toggle-group">
-            <button class="btn-toggle" id="btn-col-anio" onclick="cambiarModoColumnas('anio')">Año</button>
-            <button class="btn-toggle active" id="btn-col-anomes" onclick="cambiarModoColumnas('anomes')">Año › Mes</button>
-            <button class="btn-toggle" id="btn-col-mes" onclick="cambiarModoColumnas('mes')">Mes › Año</button>
           </div>
         </div>
         <div class="filtro-group">
@@ -431,16 +388,15 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
           <button class="export-btn" onclick="exportarPivoteExcel()">⬇ Excel</button>
         </div>
       </div>
-      <!-- Fila 2: Jerarquía + Métrica + controles expand -->
-      <div class="filtros-bar" style="gap:10px;">
-        <div class="filtro-group">
-          <div class="filtro-label">Jerarquía filas</div>
-          <div class="btn-toggle-group">
-            <button class="btn-toggle" id="btn-piv-j1" onclick="cambiarJerarquia(1)">C›P›F</button>
-            <button class="btn-toggle active" id="btn-piv-j2" onclick="cambiarJerarquia(2)">C›F›P</button>
-            <button class="btn-toggle" id="btn-piv-j3" onclick="cambiarJerarquia(3)">C›F›CC</button>
-            <button class="btn-toggle" id="btn-piv-j4" onclick="cambiarJerarquia(4)">C›CC</button>
-            <button class="btn-toggle" id="btn-piv-j5" onclick="cambiarJerarquia(5)">C›F</button>
+      <div class="filtros-bar" style="gap:10px;align-items:center;">
+        <div class="filtro-group" style="flex:1;">
+          <div class="filtro-label">Orden de Columnas de Agrupación (Arrastra para reordenar)</div>
+          <div class="drag-container" id="drag-hierarchy-container" ondragover="event.preventDefault()">
+            <div class="drag-chip" draggable="true" data-id="cultivo" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🌱 <span>Cultivo</span></div>
+            <div class="drag-chip" draggable="true" data-id="finca" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">📍 <span>Finca</span></div>
+            <div class="drag-chip" draggable="true" data-id="actividad" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🌾 <span>Actividad</span></div>
+            <div class="drag-chip" draggable="true" data-id="puesto" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">👤 <span>Puesto</span></div>
+            <div class="drag-chip" draggable="true" data-id="cc" ondragstart="dragStart(event)" ondragover="dragOver(event)" ondrop="dropChip(event)">🏷 <span>Cuenta</span></div>
           </div>
         </div>
         <div class="filtro-group">
@@ -452,15 +408,8 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
             <button class="btn-toggle" id="btn-piv-mcdh" onclick="cambiarMetricaPiv('cdh')">C$/DH</button>
           </div>
         </div>
-        <div class="filtro-group" style="align-self:flex-end;">
-          <div class="btn-toggle-group">
-            <button class="btn-toggle" onclick="pivExpandAll(true)" title="Expandir todo">⊞ Expandir</button>
-            <button class="btn-toggle" onclick="pivExpandAll(false)" title="Colapsar todo">⊟ Colapsar</button>
-          </div>
-        </div>
       </div>
 
-      <!-- Tabla pivot -->
       <div id="piv-panel-n1" class="piv-panel active tabla-card">
         <div class="piv-sect-header" style="background:var(--verde)">📋 Cuentas Nivel 1 — Salarios y Prestaciones de Campo (11410–11425)</div>
         <div class="tabla-wrap" id="wrap-piv-n1"><table id="tbl-piv-n1" style="width:100%;border-collapse:collapse;font-size:11px;"></table></div>
@@ -534,6 +483,7 @@ tr.fila-total td{background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Ciclo</th>
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Finca</th>
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Puesto</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Actividad</th>
             <th style="padding:8px 10px;text-align:left;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Mes</th>
             <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">Costo</th>
             <th style="padding:8px 10px;text-align:right;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;">DH</th>
@@ -550,8 +500,7 @@ Chart.register(ChartDataLabels);
 Chart.defaults.plugins.datalabels={display:false};
 
 const WORKER       ="https://weathered-recipe-d18c.ignagher.workers.dev";
-// Campos mínimos — Odoo solo devuelve lo que el dashboard realmente usa
-const URL_COSTOS   = WORKER+"/query?base=gzp&model=hr.payslip.line&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_cuenta_contable_debito,x_studio_puesto_historico,x_studio_actividad_agricola_1,total";
+const URL_COSTOS   = WORKER+"/query?base=gzp&model=hr.payslip.line&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_cuenta_contable_debito,x_studio_puesto_historico,x_studio_actividad_agricola_1,total,amount,price_total";
 const URL_COSTOS_FB="https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ManoObra_CostosGastos.json";
 const URL_DIAS     = WORKER+"/query?base=gzp&model=hr.payslip.worked_days&fields=x_studio_nombre_del_lote,x_studio_fecha_final_lote,x_studio_cuenta_analitica_en_recibo_de_pago,x_studio_puesto_historico,x_studio_actividad_agricola_1,x_studio_dias_efectivos";
 const URL_DIAS_FB  ="https://raw.githubusercontent.com/infoagrodb/dashboard/main/gzp_ManoObra_DiasHombre.json";
@@ -570,18 +519,40 @@ const NOM_CC={'11410':'Salario Campo','11411':'Horas Extras Campo','11412':'Trec
 const PALETA=['#1a7a4a','#e74c3c','#2563eb','#f39c12','#7c3aed','#0891b2','#c026d3','#16a34a','#b45309','#0f766e','#be123c','#1d4ed8','#92400e','#065f46','#7e22ce','#0369a1','#b91c1c'];
 const ML=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const MF=['01','02','03','04','05','06','07','08','09','10','11','12'];
-// Puestos default para Historia
 const PUESTOS_DEFAULT=['Jornalero','Operador de Maquina','Operador de Maquinaria','Ayudante de Campo'];
 
 let RAW_SB=[],DS_C=[],DS_DH=[],CAPA=[],SERIE=[],MAPA={};
 let cultivoMz='Mani',cultivoCmp='Mani',cultivoHist='Mani';
 let ciclosSel=new Set(),chartCmp=null,chartsHist={};
-let metricaHist='cdh',vistaHist='mensual';
-// Pivote state
+let metricaHist='monto',vistaHist='mensual',chartTipo='line';
 let cultivoPivActual='Mani',seccionPiv='n1',vistaPiv='mensual';
-let jerarquiaPiv=2,metricaPiv='costo',_pivDatos={};
+let metricaPiv='costo',_pivDatos={};
 
-// ─── NAV ───
+let draggedChip = null;
+function dragStart(e) {
+  draggedChip = e.target.closest('.drag-chip');
+  e.dataTransfer.effectAllowed = 'move';
+  draggedChip.classList.add('dragging');
+}
+function dragOver(e) {
+  e.preventDefault();
+  const chip = e.target.closest('.drag-chip');
+  const container = document.getElementById('drag-hierarchy-container');
+  if (chip && chip !== draggedChip) {
+    const rect = chip.getBoundingClientRect();
+    const next = (e.clientX - rect.left) / (rect.right - rect.left) > 0.5;
+    container.insertBefore(draggedChip, next ? chip.nextSibling : chip);
+  }
+}
+function dropChip(e) {
+  e.preventDefault();
+  if (draggedChip) {
+    draggedChip.classList.remove('dragging');
+    draggedChip = null;
+    renderizarPivote();
+  }
+}
+
 function toggleSidebar(){
   const sb=document.getElementById('sidebar');
   const ov=document.getElementById('sb-overlay');
@@ -600,13 +571,11 @@ function irA(id,el){
   if(el)el.classList.add('active');
 }
 
-// ─── detectCult: usa NOMBRE DEL CICLO estrictamente ───
 function detectCult(ciclo,finca){
   const c=String(ciclo||'').toLowerCase().trim();
   if(c.startsWith('mani')||c.startsWith('maní'))return'Mani';
   if(c.startsWith('caña')||c.startsWith('cana'))return'Caña';
   if(c.startsWith('cacao'))return'Cacao';
-  // Fallback por finca
   const f=String(finca||'').toLowerCase();
   if(f.includes('mani'))return'Mani';
   if(f.includes('caña')||f.includes('cana'))return'Caña';
@@ -614,7 +583,6 @@ function detectCult(ciclo,finca){
   return'Otro';
 }
 
-// ─── Utils ───
 function limpiar(v){if(Array.isArray(v))return v[1]?String(v[1]).trim():'';return String(v||'').trim();}
 function getAnio(f){const m=String(f||'').match(/(\d{4})/);return m?m[1]:'2026';}
 function getMes(f){
@@ -635,6 +603,7 @@ function calcVal(costo,dh,mzn){
   if(metricaHist==='dh') return dh>0?dh:null;
   if(metricaHist==='cmz')return mzn>0?costo/mzn:null;
   if(metricaHist==='cdh')return dh>0?costo/dh:null;
+  if(metricaHist==='monto')return costo>0?costo:null;
   return mzn>0?dh/mzn:null;
 }
 
@@ -649,10 +618,10 @@ function etqMetrica(){
   if(metricaHist==='dh') return {l:'DH', t:'Cantidad de Días Hombre (DH)'};
   if(metricaHist==='cmz')return{l:'C$/Mzn',t:'Costo MO por Manzana (C$/Mzn)'};
   if(metricaHist==='cdh')return{l:'C$/DH',t:'Costo por Dia Hombre (C$/DH)'};
+  if(metricaHist==='monto')return{l:'Monto C$',t:'Monto Total (C$)'};
   return{l:'DH/Mzn',t:'Dias Hombre por Manzana (DH/Mzn)'};
 }
 
-// ─── Multi-select ───
 function toggleDrop(id){
   document.querySelectorAll('.ms-drop').forEach(d=>{if(d.id!==id)d.classList.remove('open');});
   document.getElementById(id).classList.toggle('open');
@@ -679,9 +648,9 @@ function actualizarMs(ns){
   const lbl=document.getElementById(`lbl-${ns}`);
   const cnt=document.getElementById(`cnt-${ns}`);
   if(!lbl)return;
-  const esFinca=ns.includes('finca'),esPuesto=ns.includes('puesto');
-  if(sel===0||sel===total){lbl.textContent=esFinca?'Todas las Fincas':esPuesto?'Todos los Puestos':'Todos los Ciclos';cnt.style.display='none';}
-  else{lbl.textContent=`${sel} ${esFinca?'finca':esPuesto?'puesto':'ciclo'}${sel>1?'s':''} sel.`;cnt.textContent=sel;cnt.style.display='inline';}
+  const esFinca=ns.includes('finca'),esPuesto=ns.includes('puesto'),esAct=ns.includes('act');
+  if(sel===0||sel===total){lbl.textContent=esFinca?'Todas las Fincas':esPuesto?'Todos los Puestos':esAct?'Todas las Actividades':'Todos los Ciclos';cnt.style.display='none';}
+  else{lbl.textContent=`${sel} ${esFinca?'finca':esPuesto?'puesto':esAct?'actividad':'ciclo'}${sel>1?'s':''} sel.`;cnt.textContent=sel;cnt.style.display='inline';}
 }
 
 function getSelMs(ns){
@@ -702,13 +671,43 @@ function poblarMs(ns,items,onchange,defaultSel){
   actualizarMs(ns);
 }
 
-// ─── CARGA ───
+// --- Indicador de scroll horizontal: crea/actualiza un aviso "hay más columnas →" en cada tabla ---
+function wireScrollHints(){
+  document.querySelectorAll('.tabla-card').forEach(card=>{
+    const wrap=card.querySelector('.tabla-wrap');
+    if(!wrap)return;
+    let hint=card.querySelector(':scope > .scroll-hint');
+    if(!hint){
+      hint=document.createElement('div');
+      hint.className='scroll-hint';
+      card.appendChild(hint);
+    }
+    const update=()=>{
+      const hasOverflow=wrap.scrollWidth>wrap.clientWidth+2;
+      const faltaPorVer=(wrap.scrollWidth-wrap.clientWidth-wrap.scrollLeft)>4;
+      hint.classList.toggle('show',hasOverflow&&faltaPorVer);
+      // Alinea el aviso con la fila de encabezado (que queda fija por sticky) para que sea
+      // visible de inmediato aunque la tabla tenga mucho scroll vertical.
+      const thead=wrap.querySelector('thead');
+      const headH=thead?thead.getBoundingClientRect().height:30;
+      hint.style.top=wrap.offsetTop+'px';
+      hint.style.height=Math.max(headH,26)+'px';
+    };
+    if(!wrap._scrollHintBound){
+      wrap.addEventListener('scroll',update,{passive:true});
+      wrap._scrollHintBound=true;
+    }
+    update();
+  });
+}
+window.addEventListener('resize',wireScrollHints);
+new MutationObserver(()=>wireScrollHints()).observe(document.getElementById('main'),{childList:true,subtree:true});
+
 window.addEventListener('DOMContentLoaded',async()=>{
   const setS=m=>document.getElementById('loader-status').textContent=m;
   try{
     setS('Cargando datos en paralelo...');
 
-    // Lanzar las 4 fuentes al mismo tiempo
     const [resS, resC, resD, resH] = await Promise.all([
       fetch(URL_SIEMBRAS),
       fetchLiveOrGitHub(URL_COSTOS, URL_COSTOS_FB),
@@ -736,13 +735,26 @@ window.addEventListener('DOMContentLoaded',async()=>{
         if(!esN1(cc)&&!esN6(cc))return;
         const ca=limpiar(row["x_studio_cuenta_analitica_en_recibo_de_pago"]);
         const fecha=row["x_studio_fecha_final_lote"]||"";
+        const lote=limpiar(row["x_studio_nombre_del_lote"]);
         const dim=MAPA[ca.toLowerCase()+"|"+getAnio(fecha)];
+
+        let finca = dim ? dim.finca : 'SIN MAESTRO';
+        let ciclo = dim ? dim.ciclo : 'SIN MAESTRO';
+        let cult = dim ? dim.cultivo : detectCult(ca + ' ' + lote, '');
+
+        if (!dim && (ca || lote)) {
+          const text = ca + " " + lote;
+          const match = text.match(/(Cacao|Maní|Mani|Caña|Cana)\s*(\d{4})/i);
+          if (match) ciclo = match[1] + " " + match[2];
+        }
+
+        const montoVal = parseFloat(row["total"]||row["amount"]||row["price_total"]||row["monto"]||0);
+
         DS_C.push({ca,fecha,mes:getMes(fecha),cc,
           puesto:limpiar(row["x_studio_puesto_historico"]),
           act:limpiar(row["x_studio_actividad_agricola_1"]),
-          monto:parseFloat(row["total"]||0),
-          finca:dim?dim.finca:'SIN MAESTRO',ciclo:dim?dim.ciclo:'SIN MAESTRO',
-          mzn:dim?dim.mzn:0,cultivo:dim?dim.cultivo:detectCult(ca,'')});
+          monto:montoVal,
+          finca, ciclo, mzn:dim?dim.mzn:0, cultivo:cult});
       });
     }
 
@@ -752,18 +764,30 @@ window.addEventListener('DOMContentLoaded',async()=>{
       (json.result&&Array.isArray(json.result)?json.result:Object.values(json)).forEach(row=>{
         const ca=limpiar(row["x_studio_cuenta_analitica_en_recibo_de_pago"]);
         const fecha=row["x_studio_fecha_final_lote"]||"";
+        const lote=limpiar(row["x_studio_nombre_del_lote"]);
         const dim=MAPA[ca.toLowerCase()+"|"+getAnio(fecha)];
         const pu=limpiar(row["x_studio_puesto_historico"]);
-        DS_DH.push({ca,fecha,mes:getMes(fecha),cc:'11410',puesto:pu,
-          act:limpiar(row["x_studio_actividad_agricola_1"]),
+        const act=limpiar(row["x_studio_actividad_agricola_1"]);
+        const mesVal = getMes(fecha);
+
+        let finca = dim ? dim.finca : 'SIN MAESTRO';
+        let ciclo = dim ? dim.ciclo : 'SIN MAESTRO';
+        let cult = dim ? dim.cultivo : detectCult(ca + ' ' + lote, '');
+
+        if (!dim && (ca || lote)) {
+          const text = ca + " " + lote;
+          const match = text.match(/(Cacao|Maní|Mani|Caña|Cana)\s*(\d{4})/i);
+          if (match) ciclo = match[1] + " " + match[2];
+        }
+
+        DS_DH.push({ca,fecha,mes:mesVal,cc:'11410',puesto:pu,
+          act:act,
           dh:parseFloat(row["x_studio_dias_efectivos"]||0),
-          finca:dim?dim.finca:'SIN MAESTRO',ciclo:dim?dim.ciclo:'SIN MAESTRO',
-          mzn:dim?dim.mzn:0,cultivo:dim?dim.cultivo:detectCult(ca,'')});
+          finca, ciclo, mzn:dim?dim.mzn:0, cultivo:cult});
       });
     }
 
     setS('Consolidando...');
-    // CAPA: combinar costos + DH por clave
     const pv={};
     DS_C.forEach(c=>{
       if(!c.fecha||c.ca==='')return;
@@ -773,7 +797,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
     });
     DS_DH.forEach(d=>{
       if(!d.fecha||d.ca==='')return;
-      // Buscar clave existente (cualquier cc) para sumar DH
       const kBase=`${d.ciclo}|${d.finca}|${d.puesto}|${d.act}`;
       const kN1=kBase+'|11410';
       if(!pv[kN1])pv[kN1]={ciclo:d.ciclo,finca:d.finca,puesto:d.puesto,act:d.act,cc:'11410',costo:0,dh:0,mzn:d.mzn,cultivo:d.cultivo};
@@ -781,9 +804,8 @@ window.addEventListener('DOMContentLoaded',async()=>{
     });
     CAPA=Object.values(pv);
 
-    // SERIE mensual
-    DS_C.forEach(c=>{if(c.fecha&&c.ca!==''&&c.mes)SERIE.push({ciclo:c.ciclo,finca:c.finca,puesto:c.puesto,mes:c.mes,costo:c.monto,dh:0,cultivo:c.cultivo});});
-    DS_DH.forEach(d=>{if(d.fecha&&d.ca!==''&&d.mes)SERIE.push({ciclo:d.ciclo,finca:d.finca,puesto:d.puesto,mes:d.mes,costo:0,dh:d.dh,cultivo:d.cultivo});});
+    DS_C.forEach(c=>{if(c.fecha&&c.ca!==''&&c.mes)SERIE.push({ciclo:c.ciclo,finca:c.finca,puesto:c.puesto,act:c.act,mes:c.mes,costo:c.monto,dh:0,cultivo:c.cultivo});});
+    DS_DH.forEach(d=>{if(d.fecha&&d.ca!==''&&d.mes)SERIE.push({ciclo:d.ciclo,finca:d.finca,puesto:d.puesto,act:d.act,mes:d.mes,costo:0,dh:d.dh,cultivo:d.cultivo});});
 
     setS('Procesando histórico 2019-2024...');
     if(resH.ok){
@@ -794,27 +816,28 @@ window.addEventListener('DOMContentLoaded',async()=>{
           if(!esN1(cc)&&!esN6(cc))return;
           const f=String(r["Finca"]||"").trim(),c=String(r["Ciclo"]||"").trim();
           const pu=String(r["Puesto de trabajo"]||"");
+          const act=String(r["Actividad Agricola"]||"");
           const fch=r["Fecha"]||r["Fecha Final Lote"]||r["Mes"]||"";
           const mzn=buscarMzn(f,c);
           const cult=detectCult(c,f);
-          CAPA.push({ciclo:c,finca:f,puesto:pu,act:'',cc,costo:parseFloat(r["Total Pagado"]||0),dh:0,mzn,cultivo:cult});
-          SERIE.push({ciclo:c,finca:f,puesto:pu,mes:getMes(fch),costo:parseFloat(r["Total Pagado"]||0),dh:0,cultivo:cult});
+          CAPA.push({ciclo:c,finca:f,puesto:pu,act:act,cc,costo:parseFloat(r["Total Pagado"]||0),dh:0,mzn,cultivo:cult});
+          SERIE.push({ciclo:c,finca:f,puesto:pu,act:act,mes:getMes(fch),costo:parseFloat(r["Total Pagado"]||0),dh:0,cultivo:cult});
         });
       }
       if(wb.SheetNames.includes("DHMO")){
         XLSX.utils.sheet_to_json(wb.Sheets["DHMO"],{defval:""}).forEach(r=>{
           const f=String(r["Finca"]||"").trim(),c=String(r["Ciclo"]||"").trim();
           const pu=String(r["Puesto de trabajo"]||"");
+          const act=String(r["Actividad Agricola"]||"");
           const fch=r["Fecha"]||r["Fecha Final Lote"]||r["Mes"]||"";
           const mzn=buscarMzn(f,c);
           const cult=detectCult(c,f);
           const dh=parseFloat(r["DH"]||0);
-          // Agregar DH a CAPA histórico
           const kN1=`${c}|${f}|${pu}||11410`;
           const existing=CAPA.find(x=>x.ciclo===c&&x.finca===f&&x.puesto===pu&&x.cc==='11410');
           if(existing)existing.dh+=dh;
-          else CAPA.push({ciclo:c,finca:f,puesto:pu,act:'',cc:'11410',costo:0,dh,mzn,cultivo:cult});
-          SERIE.push({ciclo:c,finca:f,puesto:pu,mes:getMes(fch),costo:0,dh,cultivo:cult});
+          else CAPA.push({ciclo:c,finca:f,puesto:pu,act:act,cc:'11410',costo:0,dh,mzn,cultivo:cult});
+          SERIE.push({ciclo:c,finca:f,puesto:pu,act:act,mes:getMes(fch),costo:0,dh,cultivo:cult});
         });
       }
     }
@@ -834,7 +857,6 @@ window.addEventListener('DOMContentLoaded',async()=>{
   }
 });
 
-// ─── LOGS ───
 function renderLogs(){
   document.getElementById('kpi-logs').innerHTML=`
     <div class="kpi-card"><div class="kpi-label">Maestro Siembras</div><div class="kpi-valor">${RAW_SB.length.toLocaleString()}</div></div>
@@ -846,7 +868,6 @@ function renderLogs(){
   document.querySelector('#tbl-audit-dh tbody').innerHTML=DS_DH.slice(0,5).map(r=>`<tr><td>${r.ca}</td><td>${r.fecha}</td><td>${r.puesto||'—'}</td><td class="t-right font-bold">${fmt(r.dh,1)}</td><td><span class="${r.finca==='SIN MAESTRO'?'badge-err':'badge'}">${r.finca}</span></td><td><span class="${r.ciclo==='SIN MAESTRO'?'badge-err':'badge'}">${r.ciclo}</span></td></tr>`).join('');
 }
 
-// ─── MATRIZ ───
 function iniciarMatriz(){cultivoMz='Mani';reconstruirMatrizCiclos();mzFiltrarFincas();renderizarMatriz();}
 function reconstruirMatrizCiclos(){
   const ciclos=new Set();
@@ -901,11 +922,10 @@ function renderizarMatriz(){
   document.getElementById('tft-matriz').innerHTML=`<td colspan="${campos.length}">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(mznT)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td>`;
 }
 
-// ─── HISTORIA ───
 function iniciarHistoria(){
   cascadaHistCiclos();
   cascadaHistFinca();
-  // Puestos: con default seleccionado (Jornalero, Operador de Maquina, Ayudante de Campo)
+  cascadaHistAct();
   const puestos=new Set();SERIE.forEach(r=>{if(r.puesto&&r.puesto.trim())puestos.add(r.puesto);});
   const defaultPuestos=new Set();
   puestos.forEach(p=>{if(PUESTOS_DEFAULT.some(d=>p.toLowerCase().includes(d.toLowerCase())))defaultPuestos.add(p);});
@@ -919,7 +939,7 @@ function cascadaHistCiclos(){
     if(cultivoHist!=='TODOS'&&r.cultivo!==cultivoHist)return;
     if(r.ciclo&&r.ciclo!=='SIN MAESTRO')ciclos.add(r.ciclo);
   });
-  poblarMs('hist-ciclo',ciclos,()=>{actualizarMs('hist-ciclo');cascadaHistFinca();renderizarHistoria();});
+  poblarMs('hist-ciclo',ciclos,()=>{actualizarMs('hist-ciclo');cascadaHistFinca();cascadaHistAct();renderizarHistoria();});
 }
 
 function cascadaHistFinca(){
@@ -930,7 +950,20 @@ function cascadaHistFinca(){
     if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
     if(r.finca&&r.finca!=='SIN MAESTRO')fincas.add(r.finca);
   });
-  poblarMs('hist-finca',fincas,()=>{actualizarMs('hist-finca');renderizarHistoria();});
+  poblarMs('hist-finca',fincas,()=>{actualizarMs('hist-finca');cascadaHistAct();renderizarHistoria();});
+}
+
+function cascadaHistAct(){
+  const ciclosActivos=getSelMs('hist-ciclo');
+  const fincasActivas=getSelMs('hist-finca');
+  const acts=new Set();
+  SERIE.forEach(r=>{
+    if(cultivoHist!=='TODOS'&&r.cultivo!==cultivoHist)return;
+    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
+    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
+    if(r.act&&r.act.trim())acts.add(r.act);
+  });
+  poblarMs('hist-act',acts,()=>{actualizarMs('hist-act');renderizarHistoria();});
 }
 
 function filtrarCultivoHist(c){
@@ -938,12 +971,22 @@ function filtrarCultivoHist(c){
   ['btn-hist-mani','btn-hist-cana','btn-hist-cacao','btn-hist-todos'].forEach(id=>document.getElementById(id).classList.remove('active'));
   const m={'Mani':'btn-hist-mani','Caña':'btn-hist-cana','Cacao':'btn-hist-cacao','TODOS':'btn-hist-todos'};
   document.getElementById(m[c]).classList.add('active');
-  cascadaHistCiclos();cascadaHistFinca();renderizarHistoria();
+  cascadaHistCiclos();cascadaHistFinca();cascadaHistAct();renderizarHistoria();
 }
 function cambiarMetrica(m){
   metricaHist=m;
-  ['btn-cmz','btn-cdh','btn-dhmz','btn-dh'].forEach(id=>document.getElementById(id).classList.remove('active'));
-  document.getElementById('btn-'+m).classList.add('active');
+  ['btn-cmz','btn-cdh','btn-dhmz','btn-dh','btn-monto'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.classList.remove('active');
+  });
+  const activeEl=document.getElementById('btn-'+m);
+  if(activeEl)activeEl.classList.add('active');
+  renderizarHistoria();
+}
+function cambiarTipoGrafico(t){
+  chartTipo=t;
+  ['btn-chart-line','btn-chart-bar'].forEach(id=>document.getElementById(id).classList.remove('active'));
+  document.getElementById(t==='line'?'btn-chart-line':'btn-chart-bar').classList.add('active');
   renderizarHistoria();
 }
 function cambiarVistaHist(v){
@@ -957,12 +1000,14 @@ function renderizarHistoria(){
   const ciclosActivos=getSelMs('hist-ciclo');
   const puestosActivos=getSelMs('hist-puesto');
   const fincasActivas=getSelMs('hist-finca');
+  const actsActivas=getSelMs('hist-act');
 
   const base=SERIE.filter(r=>{
     if(cultivoHist!=='TODOS'&&r.cultivo!==cultivoHist)return false;
     if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return false;
     if(puestosActivos.size>0&&!puestosActivos.has(r.puesto))return false;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return false;
+    if(actsActivas.size>0&&!actsActivas.has(r.act))return false;
     return r.mes!=null;
   });
 
@@ -984,25 +1029,24 @@ function renderizarHistoria(){
 
   Object.values(chartsHist).forEach(ch=>ch.destroy());chartsHist={};
 
-  // Agrupar por puesto → ciclo → numMes('01'-'12')
   const porPuesto={};
   base.forEach(r=>{
-    const pu=r.puesto||'Sin Puesto',ci=r.ciclo||'Sin Ciclo';
+    const pu=r.puesto||'Sin Puesto',ci=r.ciclo||'Sin Ciclo',act=r.act||'Sin Actividad';
     const nm=r.mes?r.mes.split('-')[1]:null;
     if(!nm)return;
     const mz=buscarMzn(r.finca,r.ciclo);
     if(!porPuesto[pu])porPuesto[pu]={};
     if(!porPuesto[pu][ci])porPuesto[pu][ci]={};
-    if(!porPuesto[pu][ci][nm])porPuesto[pu][ci][nm]={costo:0,dh:0,mzn:0,mzF:new Set()};
-    const sl=porPuesto[pu][ci][nm];
+    if(!porPuesto[pu][ci][act])porPuesto[pu][ci][act]={};
+    if(!porPuesto[pu][ci][act][nm])porPuesto[pu][ci][act][nm]={costo:0,dh:0,mzn:0,mzF:new Set()};
+    const sl=porPuesto[pu][ci][act][nm];
     sl.costo+=r.costo;sl.dh+=r.dh;
     const mk=`${r.finca}|${r.ciclo}`;if(!sl.mzF.has(mk)){sl.mzF.add(mk);sl.mzn+=mz;}
   });
 
   const puestosConDatos=Object.keys(porPuesto).sort();
   const ciclosConDatos=Array.from(ciclosActivos.size>0?ciclosActivos:new Set(base.map(r=>r.ciclo))).sort();
-  // Eje X = solo meses con datos
-  const mesesConDatos=MF.filter(nm=>puestosConDatos.some(pu=>ciclosConDatos.some(ci=>porPuesto[pu]&&porPuesto[pu][ci]&&porPuesto[pu][ci][nm])));
+  const mesesConDatos=MF.filter(nm=>puestosConDatos.some(pu=>ciclosConDatos.some(ci=>Object.keys(porPuesto[pu]?.[ci]||{}).some(act=>porPuesto[pu][ci][act][nm]))));
   const mesesUsar=mesesConDatos.length>0?mesesConDatos:MF;
   const labelsX=mesesUsar.map(m=>ML[parseInt(m,10)-1]);
 
@@ -1010,38 +1054,36 @@ function renderizarHistoria(){
   container.innerHTML='';
 
   puestosConDatos.forEach((puesto,pi)=>{
-    // ── KPIs propios de este puesto ──
     let pC=0,pDh=0,pMzn=0;const pMznF=new Set();
-    Object.keys(porPuesto[puesto]).forEach(ci=>{
-      Object.values(porPuesto[puesto][ci]).forEach(v=>{
-        pC+=v.costo;pDh+=v.dh;
-        v.mzF&&v.mzF.forEach(k=>{if(!pMznF.has(k)){pMznF.add(k);pMzn+=v.mzn;}});
+    if(porPuesto[puesto]){
+      Object.keys(porPuesto[puesto]).forEach(ci=>{
+        Object.keys(porPuesto[puesto][ci]).forEach(act=>{
+          Object.values(porPuesto[puesto][ci][act]).forEach(v=>{
+            pC+=v.costo;pDh+=v.dh;
+            v.mzF&&v.mzF.forEach(k=>{if(!pMznF.has(k)){pMznF.add(k);pMzn+=v.mzn;}});
+          });
+        });
       });
-    });
+    }
     const pCMz=pMzn>0?pC/pMzn:0,pDhMz=pMzn>0?pDh/pMzn:0,pCDh=pDh>0?pC/pDh:0;
-
     const puSafe=puesto.replace(/'/g,"\\'");
 
-    // ── Sección completa por puesto ──
     const seccion=document.createElement('div');
     seccion.style.cssText='background:white;border:1px solid var(--gris-borde);border-radius:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:16px;';
 
-    // Header del puesto
     const header=document.createElement('div');
     header.style.cssText='background:#f8fafb;border-bottom:1px solid var(--gris-borde);padding:10px 16px;display:flex;align-items:center;justify-content:space-between;';
     header.innerHTML=`
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:15px;font-weight:800;color:var(--verde-dark)">${puesto}</span>
-        <span style="font-size:11px;color:var(--gris)">${t} · Eje X: Ene → Dic · cada línea = un ciclo${vistaHist==='acumulado'?' · acumulado':''}</span>
+        <span style="font-size:11px;color:var(--gris)">${t} · Eje X: Ene → Dic · cada ${chartTipo==='bar'?'barra':'línea'} = un ciclo${vistaHist==='acumulado'?' · acumulado':''}</span>
       </div>
       <button onclick="abrirPopupOrigen('${puSafe}',null)" style="font-size:10px;padding:3px 10px;border:1px solid var(--gris-borde);border-radius:5px;background:white;cursor:pointer;color:var(--gris);font-weight:600;">🔍 Ver registros</button>`;
     seccion.appendChild(header);
 
-    // Body: KPIs + gráfica en fila
     const body=document.createElement('div');
     body.style.cssText='display:flex;gap:0;';
 
-    // Panel KPIs del puesto (columna izquierda)
     const kpiPanel=document.createElement('div');
     kpiPanel.style.cssText='display:flex;flex-direction:column;gap:1px;border-right:1px solid var(--gris-borde);min-width:160px;flex-shrink:0;';
     const kpis=[
@@ -1060,7 +1102,6 @@ function renderizarHistoria(){
     });
     body.appendChild(kpiPanel);
 
-    // Gráfica (columna derecha)
     const chartDiv=document.createElement('div');
     chartDiv.style.cssText='flex:1;padding:14px;min-width:0;';
     chartDiv.innerHTML=`<div style="position:relative;height:260px;"><canvas id="ch-hist-${pi}"></canvas></div>`;
@@ -1069,19 +1110,24 @@ function renderizarHistoria(){
     seccion.appendChild(body);
     container.appendChild(seccion);
 
-    // Datasets
     const datasets=ciclosConDatos.map((ciclo,ci)=>{
       const color=PALETA[ci%PALETA.length];
       let acum={costo:0,dh:0,mzn:0};
       const data=mesesUsar.map(nm=>{
-        const v=porPuesto[puesto]&&porPuesto[puesto][ciclo]?porPuesto[puesto][ciclo][nm]:null;
+        const actsObj=porPuesto[puesto]?.[ciclo]||{};
+        let sumC=0,sumDh=0,maxMz=0;
+        Object.keys(actsObj).forEach(act=>{
+          const v=actsObj[act][nm];
+          if(v){sumC+=v.costo;sumDh+=v.dh;maxMz=Math.max(maxMz,v.mzn);}
+        });
+        const v=(sumC||sumDh)?{costo:sumC,dh:sumDh,mzn:maxMz}:null;
         if(vistaHist==='acumulado'){
           if(v){acum.costo+=v.costo;acum.dh+=v.dh;acum.mzn=Math.max(acum.mzn,v.mzn);}
           return(acum.costo||acum.dh)?calcVal(acum.costo,acum.dh,acum.mzn):null;
         }
         return v?calcVal(v.costo,v.dh,v.mzn):null;
       });
-      return{label:ciclo,data,borderColor:color,backgroundColor:color+'22',tension:.3,spanGaps:true,fill:false,pointRadius:4,pointHoverRadius:6,borderWidth:2,
+      return{label:ciclo,data,borderColor:color,backgroundColor:chartTipo==='bar'?color+'aa':color+'22',tension:.3,spanGaps:true,fill:false,pointRadius:4,pointHoverRadius:6,borderWidth:chartTipo==='bar'?1:2,
         datalabels:{display:true,align:'top',anchor:'end',color,font:{size:8,weight:'bold'},
           formatter:v=>v==null?null:metricaHist==='dhmz'?v.toFixed(1):metricaHist==='dh'?fmt(Math.round(v)):('C$'+fmt(Math.round(v)))}};
     });
@@ -1089,7 +1135,7 @@ function renderizarHistoria(){
     requestAnimationFrame(()=>{
       const ctx=document.getElementById(`ch-hist-${pi}`);if(!ctx)return;
       chartsHist[`h${pi}`]=new Chart(ctx,{
-        type:'line',data:{labels:labelsX,datasets},
+        type:chartTipo,data:{labels:labelsX,datasets},
         options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
           plugins:{
             legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}},
@@ -1103,32 +1149,63 @@ function renderizarHistoria(){
     });
   });
 
-  // Tabla detalle
-  document.getElementById('th-historia').innerHTML=`<th>Puesto</th><th>Ciclo</th>`+mesesUsar.map(m=>`<th class="t-right">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right">Total</th>`;
-  let filas='';
+  const ord1=document.getElementById('col-ord-1').value;
+  const ord2=document.getElementById('col-ord-2').value;
+  const ord3=document.getElementById('col-ord-3').value;
+  const headersMap={puesto:'Puesto',ciclo:'Ciclo',actividad:'Actividad'};
+
+  document.getElementById('th-historia').innerHTML=`<th>${headersMap[ord1]}</th><th>${headersMap[ord2]}</th><th>${headersMap[ord3]}</th>`+mesesUsar.map(m=>`<th class="t-right">${ML[parseInt(m,10)-1]}</th>`).join('')+`<th class="t-right">Total</th>`;
+
+  let rowItems=[];
   puestosConDatos.forEach(pu=>{
     ciclosConDatos.forEach(ci=>{
-      if(!porPuesto[pu]||!porPuesto[pu][ci])return;
-      let acum={costo:0,dh:0,mzn:0},totS={costo:0,dh:0,mzn:0};
-      const celdas=mesesUsar.map(nm=>{
-        const v=porPuesto[pu][ci][nm];
-        if(vistaHist==='acumulado'){
-          if(v){acum.costo+=v.costo;acum.dh+=v.dh;acum.mzn=Math.max(acum.mzn,v.mzn);}
-          const val=calcVal(acum.costo,acum.dh,acum.mzn);
-          return`<td class="t-right" style="color:#9a3412">${val!=null?fmtVal(val):'—'}</td>`;
-        }
-        if(!v)return`<td class="t-right text-gris">—</td>`;
-        totS.costo+=v.costo;totS.dh+=v.dh;totS.mzn=Math.max(totS.mzn,v.mzn);
-        return`<td class="t-right">${fmtVal(calcVal(v.costo,v.dh,v.mzn))}</td>`;
-      }).join('');
-      filas+=`<tr><td class="font-bold">${pu}</td><td style="color:var(--azul)">${ci}</td>${celdas}<td class="t-right font-bold">${fmtVal(calcVal(totS.costo,totS.dh,totS.mzn))}</td></tr>`;
+      const actsObj=porPuesto[pu]?.[ci];
+      if(!actsObj)return;
+      Object.keys(actsObj).sort().forEach(act=>{
+        const mesesVal=actsObj[act];
+        let acum={costo:0,dh:0,mzn:0},totS={costo:0,dh:0,mzn:0};
+        const celdas=mesesUsar.map(nm=>{
+          const v=mesesVal[nm];
+          if(vistaHist==='acumulado'){
+            if(v){acum.costo+=v.costo;acum.dh+=v.dh;acum.mzn=Math.max(acum.mzn,v.mzn);}
+            const val=calcVal(acum.costo,acum.dh,acum.mzn);
+            return`<td class="t-right" style="color:#9a3412">${val!=null?fmtVal(val):'—'}</td>`;
+          }
+          if(!v)return`<td class="t-right text-gris">—</td>`;
+          totS.costo+=v.costo;totS.dh+=v.dh;totS.mzn=Math.max(totS.mzn,v.mzn);
+          return`<td class="t-right">${fmtVal(calcVal(v.costo,v.dh,v.mzn))}</td>`;
+        }).join('');
+        rowItems.push({
+          pu, ci, act,
+          celdas,
+          totS,
+          getValByField:(f)=>f==='puesto'?pu:f==='ciclo'?ci:act
+        });
+      });
     });
   });
+
+  rowItems.sort((a,b)=>{
+    const v1=a.getValByField(ord1).localeCompare(b.getValByField(ord1));
+    if(v1!==0)return v1;
+    const v2=a.getValByField(ord2).localeCompare(b.getValByField(ord2));
+    if(v2!==0)return v2;
+    return a.getValByField(ord3).localeCompare(b.getValByField(ord3));
+  });
+
+  let filas='';
+  rowItems.forEach(r=>{
+    const c1=r.getValByField(ord1);
+    const c2=r.getValByField(ord2);
+    const c3=r.getValByField(ord3);
+    const renderCell=(f, val)=>f==='puesto'?`<td class="font-bold">${val}</td>`:f==='ciclo'?`<td style="color:var(--azul)">${val}</td>`:`<td><span class="badge" style="background:#eef2ff;color:#1e40af">${val||'—'}</span></td>`;
+    filas+=`<tr>${renderCell(ord1,c1)}${renderCell(ord2,c2)}${renderCell(ord3,c3)}${r.celdas}<td class="t-right font-bold">${fmtVal(calcVal(r.totS.costo,r.totS.dh,r.totS.mzn))}</td></tr>`;
+  });
+
   document.getElementById('tbody-historia').innerHTML=filas;
-  document.getElementById('tft-historia').innerHTML=`<td colspan="2">TOTAL</td>`+mesesUsar.map(()=>`<td></td>`).join('')+`<td class="t-right">${fmtVal(calcVal(totC,totDh,totMzn))}</td>`;
+  document.getElementById('tft-historia').innerHTML=`<td colspan="3">TOTAL</td>`+mesesUsar.map(()=>`<td></td>`).join('')+`<td class="t-right">${fmtVal(calcVal(totC,totDh,totMzn))}</td>`;
 }
 
-// ─── COMPARAR ───
 function iniciarComparar(){construirFiltrosComparar();renderizarComparativo();}
 function filtrarCultivoCmp(c){
   cultivoCmp=c;
@@ -1144,7 +1221,6 @@ function construirFiltrosComparar(){
     if(r.finca&&r.finca!=='SIN MAESTRO')fincas.add(r.finca);
     if(r.puesto)puestos.add(r.puesto);
   });
-  // Pre-seleccionar solo los últimos 3 ciclos por defecto
   const ciclosOrdenados=Array.from(ciclos).sort();
   const ultimos3=new Set(ciclosOrdenados.slice(-3));
   ciclosSel=new Set(ultimos3);
@@ -1201,7 +1277,6 @@ function renderizarComparativo(){
   const gDhMz=tMzn>0?tDh/tMzn:0,gCMz=tMzn>0?tC/tMzn:0,gCDh=tDh>0?tC/tDh:0;
   document.getElementById('tft-comparar').innerHTML=`<td colspan="3">TOTAL:</td><td class="t-right">${fmt(tDh,1)}</td><td class="t-right">C$ ${fmt(tC,2)}</td><td class="t-right">${fmt(tMzn)} Mz</td><td class="t-right">${gDhMz.toFixed(2)}</td><td class="t-right">C$ ${fmt(Math.round(gCMz))}</td><td class="t-right">C$ ${gCDh.toFixed(2)}</td>`;
   document.getElementById('kpi-comparar').innerHTML=`<div class="kpi-card"><div class="kpi-label">Ciclos</div><div class="kpi-valor">${ciclosSel.size}</div></div><div class="kpi-card azul"><div class="kpi-label">DH</div><div class="kpi-valor">${fmt(Math.round(tDh))}</div></div><div class="kpi-card"><div class="kpi-label">Costo</div><div class="kpi-valor">C$ ${fmt(Math.round(tC))}</div></div><div class="kpi-card nar"><div class="kpi-label">DH/Mzn</div><div class="kpi-valor">${gDhMz.toFixed(2)}</div></div><div class="kpi-card rojo"><div class="kpi-label">C$/Mzn</div><div class="kpi-valor">C$ ${fmt(Math.round(gCMz))}</div></div>`;
-  // Gráfica: eje X = solo Ene-Dic
   let pCM={};
   SERIE.forEach(r=>{
     if(r.cultivo!==cultivoCmp||!ciclosSel.has(r.ciclo)||!r.mes)return;
@@ -1222,7 +1297,6 @@ function renderizarComparativo(){
   chartCmp=new Chart(ctx,{type:'line',data:{labels:ML,datasets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10}}}},scales:{x:{ticks:{font:{size:10}}},y:{title:{display:true,text:'C$/DH'},beginAtZero:false}}}});
 }
 
-// ─── PIVOTE ───
 function iniciarPivote(){cultivoPivActual='Mani';cascadaPivCiclos();cascadaPivFinca();renderizarPivote();}
 
 function cambiarSeccionPivote(s){
@@ -1240,17 +1314,23 @@ function filtrarCultivoPivote(c){
 }
 function cascadaPivCiclos(){
   const ciclos=new Set();
-  DS_C.forEach(r=>{if((cultivoPivActual==='TODOS'||r.cultivo===cultivoPivActual)&&r.ciclo&&r.ciclo!=='SIN MAESTRO')ciclos.add(r.ciclo);});
+  const evalR = r => {
+    if((cultivoPivActual==='TODOS'||r.cultivo===cultivoPivActual)&&r.ciclo&&r.ciclo!=='SIN MAESTRO') ciclos.add(r.ciclo);
+  };
+  DS_C.forEach(evalR);
+  DS_DH.forEach(evalR);
   poblarMs('piv-ciclo',ciclos,()=>{actualizarMs('piv-ciclo');cascadaPivFinca();renderizarPivote();});
 }
 function cascadaPivFinca(){
   const ciclosActivos=getSelMs('piv-ciclo');
   const fincas=new Set();
-  DS_C.forEach(r=>{
+  const evalR = r => {
     if(cultivoPivActual!=='TODOS'&&r.cultivo!==cultivoPivActual)return;
     if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
     if(r.finca&&r.finca!=='SIN MAESTRO')fincas.add(r.finca);
-  });
+  };
+  DS_C.forEach(evalR);
+  DS_DH.forEach(evalR);
   poblarMs('piv-finca',fincas,()=>{actualizarMs('piv-finca');renderizarPivote();});
 }
 function cambiarVistaPivote(v){
@@ -1259,53 +1339,19 @@ function cambiarVistaPivote(v){
   document.getElementById('btn-piv-acu').classList.toggle('active',v==='acumulado');
   renderizarPivote();
 }
-function cambiarJerarquia(j){
-  jerarquiaPiv=j;
-  [1,2,3,4,5].forEach(x=>document.getElementById(`btn-piv-j${x}`).classList.toggle('active',x===j));
-  renderizarPivote();
-}
 function cambiarMetricaPiv(m){
   metricaPiv=m;
   ['btn-piv-mc','btn-piv-mdh','btn-piv-mdhm','btn-piv-mcdh'].forEach(id=>document.getElementById(id).classList.remove('active'));
   document.getElementById({'costo':'btn-piv-mc','dh':'btn-piv-mdh','dhmzn':'btn-piv-mdhm','cdh':'btn-piv-mcdh'}[m]).classList.add('active');
+  actualizarVisibilidadChipCuenta();
   renderizarPivote();
 }
-
-// modoColumnas: 'anio' | 'anomes' | 'mes'
-let modoColumnas='anomes';
-// Estado expand/colapso filas y columnas
-let pivRowExpand={};  // key → true/false
-let pivColExpand={};  // anio → true/false (para expandir meses)
-
-function cambiarModoColumnas(m){
-  modoColumnas=m;
-  ['btn-col-anio','btn-col-anomes','btn-col-mes'].forEach(id=>document.getElementById(id).classList.remove('active'));
-  document.getElementById('btn-col-'+m).classList.add('active');
-  pivColExpand={};
-  renderizarPivote();
+// La cuenta (cc) no aporta info cuando la métrica es DH (los DH no se abren por cuenta contable) -> se oculta el chip
+function actualizarVisibilidadChipCuenta(){
+  const chip=document.querySelector('#drag-hierarchy-container .drag-chip[data-id="cc"]');
+  if(chip)chip.style.display=(metricaPiv==='dh')?'none':'';
 }
 
-function pivExpandAll(val){
-  // Expand/colapso filas
-  document.querySelectorAll('[data-piv-row]').forEach(el=>{
-    const key=el.dataset.pivRow;
-    pivRowExpand[key]=val;
-  });
-  // Expand/colapso columnas (años)
-  Object.keys(pivColExpand).forEach(k=>pivColExpand[k]=val);
-  renderizarPivote();
-}
-
-function togglePivRow(key){
-  pivRowExpand[key]=!pivRowExpand[key];
-  renderizarPivote();
-}
-function togglePivCol(anio){
-  pivColExpand[anio]=!pivColExpand[anio];
-  renderizarPivote();
-}
-
-// Calcula el valor display de un slot {costo,dh,mzn}
 function calcPivVal(slot){
   if(!slot)return 0;
   if(metricaPiv==='costo')return slot.costo||0;
@@ -1321,411 +1367,281 @@ function fmtPiv(v){
   return'C$ '+fmt(Math.round(v));
 }
 
-function mergeSlot(a,b){
-  if(!b)return;
-  a.costo+=(b.costo||0);a.dh+=(b.dh||0);
-  if(b.mznF)b.mznF.forEach(k=>{if(!a.mznF.has(k)){a.mznF.add(k);const[fi,ci]=k.split('|');a.mzn+=buscarMzn(fi,ci);}});
-}
 function newSlot(){return{costo:0,dh:0,mzn:0,mznF:new Set()};}
 
-// Estructura principal: cultivo → L1 → L2 → cc → mes(YYYY-MM) → slot
-// Para jer 5 (C>F sin CC): cultivo → finca → '__' → '__' → mes → slot
-
 function renderizarPivote(){
+  const tbl=document.getElementById(`tbl-piv-${seccionPiv}`);
+  if(!tbl)return;
+  actualizarVisibilidadChipCuenta();
+
+  let hierOrder = Array.from(document.querySelectorAll('#drag-hierarchy-container .drag-chip')).map(el=>el.dataset.id);
+  // En DH la cuenta contable (cc) es irrelevante (el dato de días-hombre no se abre por cuenta) y solo generaba
+  // filas duplicadas vacías por cada cuenta -> se quita del agrupamiento y de las columnas.
+  if(metricaPiv==='dh')hierOrder=hierOrder.filter(f=>f!=='cc');
+  const fieldLabels = {cultivo:'Cultivo', finca:'Finca', actividad:'Actividad', puesto:'Puesto', cc:'Cuenta'};
+
   const ciclosActivos=getSelMs('piv-ciclo');
   const fincasActivas=getSelMs('piv-finca');
-  const estN1={},estN6={};
+  const rawRecords=[];
 
-  function addToEst(est,cu,L1,L2,cc,mes,monto,dh,finca,ciclo){
-    if(!est[cu])est[cu]={};
-    if(!est[cu][L1])est[cu][L1]={};
-    if(!est[cu][L1][L2])est[cu][L1][L2]={};
-    if(!est[cu][L1][L2][cc])est[cu][L1][L2][cc]={};
-    if(!est[cu][L1][L2][cc][mes])est[cu][L1][L2][cc][mes]=newSlot();
-    const sl=est[cu][L1][L2][cc][mes];
-    sl.costo+=monto;sl.dh+=dh;
-    const mk=`${finca}|${ciclo}`;
-    if(!sl.mznF.has(mk)){sl.mznF.add(mk);sl.mzn+=buscarMzn(finca,ciclo);}
+  const evalR=(r, isCost)=>{
+    if(!r.mes||r.ca==='')return;
+    if(cultivoPivActual!=='TODOS'&&r.cultivo!==cultivoPivActual)return;
+    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
+    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
+    const isN1Acc=esN1(r.cc);
+    const isN6Acc=esN6(r.cc);
+    if(seccionPiv==='n1'&&!isN1Acc)return;
+    if(seccionPiv==='n6'&&!isN6Acc)return;
+
+    rawRecords.push({
+      cultivo:r.cultivo||'Sin Cultivo',
+      finca:r.finca||'Sin Finca',
+      actividad:r.act||'Sin Actividad',
+      puesto:r.puesto||'Sin Puesto',
+      cc:r.cc||'Sin Cuenta',
+      mes:r.mes,
+      monto:isCost?r.monto:0,
+      dh:!isCost?r.dh:(r.cc==='11410'?(r.dh||0):0),
+      mzn:r.mzn||buscarMzn(r.finca,r.ciclo),
+      fincaKey:r.finca||'',
+      cicloKey:r.ciclo||''
+    });
+  };
+
+  if(seccionPiv==='n1'){
+    DS_C.forEach(r=>{if(esN1(r.cc))evalR(r,true);});
+    DS_DH.forEach(r=>{evalR(r,false);});
+  } else {
+    DS_C.forEach(r=>{if(esN6(r.cc))evalR(r,true);});
   }
 
-  // Costos
-  DS_C.forEach(r=>{
-    if(!r.mes||r.ca==='')return;
-    if(cultivoPivActual!=='TODOS'&&r.cultivo!==cultivoPivActual)return;
-    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
-    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
-    const est=esN1(r.cc)?estN1:esN6(r.cc)?estN6:null;if(!est)return;
-    const cu=r.cultivo||'Sin Cultivo',fi=r.finca||'Sin Finca',pu=r.puesto||'Sin Puesto';
-    let L1,L2,cc=r.cc;
-    if(jerarquiaPiv===1){L1=pu;L2=fi;}
-    else if(jerarquiaPiv===2){L1=fi;L2=pu;}
-    else if(jerarquiaPiv===3){L1=fi;L2='__';}
-    else if(jerarquiaPiv===4){L1='__';L2='__';}
-    else{L1=fi;L2='__';cc='__';}
-    addToEst(est,cu,L1,L2,cc,r.mes,r.monto,0,r.finca||'',r.ciclo||'');
-  });
-  // DH
-  DS_DH.forEach(r=>{
-    if(!r.mes||r.ca==='')return;
-    if(cultivoPivActual!=='TODOS'&&r.cultivo!==cultivoPivActual)return;
-    if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return;
-    if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return;
-    const est=estN1;// DH siempre en N1
-    const cu=r.cultivo||'Sin Cultivo',fi=r.finca||'Sin Finca',pu=r.puesto||'Sin Puesto';
-    let L1,L2,cc='11410';
-    if(jerarquiaPiv===1){L1=pu;L2=fi;}
-    else if(jerarquiaPiv===2){L1=fi;L2=pu;}
-    else if(jerarquiaPiv===3){L1=fi;L2='__';}
-    else if(jerarquiaPiv===4){L1='__';L2='__';}
-    else{L1=fi;L2='__';cc='__';}
-    addToEst(est,cu,L1,L2,cc,r.mes,0,r.dh,r.finca||'',r.ciclo||'');
-  });
-
-  _pivDatos={estN1,estN6};
-  renderTablaPivote('n1',estN1);
-  renderTablaPivote('n6',estN6);
-}
-
-const C_CULT={'Mani':'#f39c12','Caña':'#1a7a4a','Cacao':'#7c3aed'};
-
-function renderTablaPivote(sufijo,est){
-  const tbl=document.getElementById(`tbl-piv-${sufijo}`);
-  if(!tbl)return;
-  if(Object.keys(est).length===0){
+  if(rawRecords.length===0){
     tbl.innerHTML=`<tbody><tr><td colspan="3" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos para los filtros seleccionados</td></tr></tbody>`;
     return;
   }
 
-  // 1. Recopilar todos los meses presentes YYYY-MM
   const mesSet=new Set();
-  function recMes(o){if(!o)return;for(const k of Object.keys(o)){if(/^\d{4}-\d{2}$/.test(k))mesSet.add(k);else recMes(o[k]);}}
-  recMes(est);
+  rawRecords.forEach(r=>mesSet.add(r.mes));
   const todosM=Array.from(mesSet).sort();
-  if(todosM.length===0){tbl.innerHTML='<tbody><tr><td style="padding:20px;color:var(--gris);">Sin datos</td></tr></tbody>';return;}
 
-  // 2. Agrupar meses por año
   const porAnio={};
-  todosM.forEach(m=>{const y=m.slice(0,4);if(!porAnio[y])porAnio[y]=[];porAnio[y].push(m);});
+  todosM.forEach(m=>{
+    const y=m.slice(0,4);
+    if(!porAnio[y])porAnio[y]=[];
+    porAnio[y].push(m);
+  });
   const anios=Object.keys(porAnio).sort();
 
-  // 3. Inicializar pivColExpand para años nuevos
-  anios.forEach(y=>{if(pivColExpand[y]===undefined)pivColExpand[y]=(modoColumnas==='anomes');});
-
-  // 4. Construir columnas visibles según modoColumnas
-  // colDefs: [{id, label, isAnio, anio, mes}]
-  const colDefs=[];
-  if(modoColumnas==='anio'){
-    // Solo totales por año
-    anios.forEach(y=>colDefs.push({id:'Y'+y,label:y,isAnio:true,anio:y,mes:null}));
-  } else if(modoColumnas==='anomes'){
-    // Año expandible → meses
-    anios.forEach(y=>{
-      const exp=pivColExpand[y];
-      colDefs.push({id:'Y'+y,label:y,isAnio:true,anio:y,mes:null,exp});
-      if(exp) porAnio[y].forEach(m=>colDefs.push({id:m,label:ML[parseInt(m.slice(5),10)-1],isAnio:false,anio:y,mes:m}));
-    });
-  } else {
-    // Mes expandible → años (Ene, Feb... con sub-años)
-    const mesesNum=[...new Set(todosM.map(m=>m.slice(5)))].sort();
-    mesesNum.forEach(mn=>{
-      const label=ML[parseInt(mn,10)-1];
-      const key='M'+mn;
-      const exp=pivColExpand[key]!==false;// default expandido
-      if(pivColExpand[key]===undefined)pivColExpand[key]=false;
-      colDefs.push({id:key,label,isAnio:true,anio:null,mes:mn,exp});
-      if(pivColExpand[key]) anios.filter(y=>porAnio[y].includes(y+'-'+mn)).forEach(y=>colDefs.push({id:y+'-'+mn,label:y,isAnio:false,anio:y,mes:mn}));
-    });
-  }
-  // Siempre columna Total
-  colDefs.push({id:'TOTAL',label:'Total',isAnio:false,anio:null,mes:null,isTotal:true});
-
-  // Helper: valor de una columna para un mapa de slots hoja {mes→slot}
-  function addMzn(a,v){
-    if(v&&v.mznF)v.mznF.forEach(k=>{if(!a.mznF.has(k)){a.mznF.add(k);const[fi,ci]=k.split('|');a.mzn+=buscarMzn(fi,ci);}});
-  }
-  function colVal(slotMap,col){
-    if(col.isTotal){
-      const s=newSlot();
-      Object.values(slotMap).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
-      return s;
+  const rowMap={};
+  rawRecords.forEach(r=>{
+    const keyVals=hierOrder.map(f=>r[f]!==undefined?r[f]:'');
+    const rKey=JSON.stringify(keyVals);
+    if(!rowMap[rKey]){
+      rowMap[rKey]={keys:keyVals, months:{}, mznSet:new Set()};
     }
-    if(col.mes&&col.anio) return slotMap[col.anio+'-'+col.mes]||null;
-    if(col.anio&&!col.mes){// año total
-      const s=newSlot();
-      (porAnio[col.anio]||[]).forEach(m=>{const v=slotMap[m];if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}});
-      return s;
+    const item=rowMap[rKey];
+    if(!item.months[r.mes])item.months[r.mes]=newSlot();
+    const sl=item.months[r.mes];
+    sl.costo+=r.monto;
+    sl.dh+=r.dh;
+    const mk=`${r.fincaKey}|${r.cicloKey}`;
+    if(!item.mznSet.has(mk)){
+      item.mznSet.add(mk);
+      sl.mzn+=r.mzn;
     }
-    if(col.mes&&!col.anio){// mes sin año (modo mes›año)
-      const s=newSlot();
-      anios.forEach(y=>{const v=slotMap[y+'-'+col.mes];if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}});
-      return s;
+  });
+
+  let detailRows=Object.values(rowMap);
+  // En DH se ocultan las filas sin ningún día-hombre registrado (quedaban llenas de "—" y daban la
+  // impresión de que la tabla no tenía más datos).
+  if(metricaPiv==='dh'){
+    detailRows=detailRows.filter(row=>Object.values(row.months).some(sl=>(sl.dh||0)>0));
+  }
+  if(detailRows.length===0){
+    tbl.innerHTML=`<tbody><tr><td colspan="3" style="text-align:center;padding:24px;color:var(--gris);font-style:italic;">Sin datos de DH para los filtros seleccionados</td></tr></tbody>`;
+    return;
+  }
+  detailRows.sort((a,b)=>{
+    for(let i=0;i<hierOrder.length;i++){
+      const comp=String(a.keys[i]).localeCompare(String(b.keys[i]));
+      if(comp!==0)return comp;
     }
-    return null;
-  }
+    return 0;
+  });
 
-  // Acumulado: sumar todos los slots hasta ese mes en orden
-  function colValAcum(slotMap,col,allCols){
-    if(col.isTotal||col.isAnio) return colVal(slotMap,col);
-    // Acumular desde inicio hasta este mes
-    const idx=allCols.indexOf(col);
-    const s=newSlot();
-    for(let i=0;i<=idx;i++){
-      const c=allCols[i];
-      if(!c.isAnio&&!c.isTotal&&c.mes){
-        const v=colVal(slotMap,c);
-        if(v){s.costo+=v.costo;s.dh+=v.dh;v.mznF&&v.mznF.forEach(k=>{if(!s.mznF.has(k)){s.mznF.add(k);s.mzn+=v.mzn;}});}
-      }
-    }
-    return s;
-  }
-
-  // Para filas de subtotal (cultivo/L1/L2), el slotMap es {colId→slot} ya pre-calculado
-  // Solo necesitamos obtener el slot para esa columna directamente
-  function getSubVal(preCalcSlots,col){
-    const slot=preCalcSlots[col.id]||newSlot();
-    if(vistaPiv==='acumulado'){
-      // Acumular desde el primer mes hasta esta columna
-      if(!col.isAnio&&!col.isTotal&&col.mes){
-        const s=newSlot();
-        for(const cd of colDefs){
-          if(cd.id===col.id){
-            // sumar este y parar
-            const v=preCalcSlots[cd.id];
-            if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
-            break;
-          }
-          if(!cd.isAnio&&!cd.isTotal&&cd.mes){
-            const v=preCalcSlots[cd.id];
-            if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
-          }
-        }
-        return calcPivVal(s);
-      }
-    }
-    return calcPivVal(slot);
-  }
-
-  function getVal(slotMap,col){
-    const v=vistaPiv==='acumulado'?colValAcum(slotMap,col,colDefs):colVal(slotMap,col);
-    return calcPivVal(v);
-  }
-
-  // 5. Construir HTML thead
-  const thStyle='padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;';
+  const thStyle='padding:8px 10px;border-bottom:2px solid #e5e7eb;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;background:#f3f4f6;color:#374151;font-weight:700;';
   const thNum=`${thStyle}text-align:right;`;
-  let thead='<thead>';
 
-  // Fila 1 header: etiquetas de columnas con botón expand
-  thead+=`<tr style="background:#f3f4f6;"><th style="${thStyle}min-width:200px;position:sticky;left:0;z-index:12;background:#f3f4f6;">Cultivo / Jerarquía</th>`;
-  colDefs.forEach(col=>{
-    if(col.isTotal){
-      thead+=`<th style="${thNum}background:#e8f5e9;min-width:90px;position:sticky;right:0;z-index:11;">Total</th>`;
-    } else if(col.isAnio){
-      const icon=col.exp===undefined?'':(col.exp?'▾ ':'▸ ');
-      const onclick=modoColumnas==='anomes'?`onclick="togglePivCol('${col.anio||col.id}')"`:(modoColumnas==='mes'?`onclick="togglePivCol('${col.id}')"`:``);
-      const bg=col.anio?'#eef2ff':'#f0fdf4';
-      thead+=`<th style="${thNum}background:${bg};cursor:pointer;min-width:90px;" ${onclick}>${icon}${col.label}</th>`;
-    } else {
-      thead+=`<th style="${thNum}min-width:80px;">${col.label}</th>`;
-    }
+  let thead='<thead><tr style="background:#f3f4f6;">';
+  hierOrder.forEach(f=>{
+    thead+=`<th style="${thStyle}position:sticky;top:0;z-index:12;">${fieldLabels[f]||f}</th>`;
   });
-  thead+='</tr></thead>';
 
-  // 6. Construir rows
+  anios.forEach(y=>{
+    const monthsCount=porAnio[y].length;
+    thead+=`<th colspan="${monthsCount}" style="${thStyle}text-align:center;background:#eef2ff;position:sticky;top:0;z-index:12;">${y}</th>`;
+    thead+=`<th style="${thStyle}text-align:right;background:#eef2ff;position:sticky;top:0;z-index:12;">Total ${y}</th>`;
+  });
+  thead+=`<th style="${thStyle}text-align:right;background:#e8f5e9;position:sticky;top:0;z-index:12;">Total general</th></tr>`;
+
+  thead+='<tr style="background:#f3f4f6;">';
+  hierOrder.forEach(()=>{
+    thead+=`<th style="${thStyle}position:sticky;top:28px;z-index:12;"></th>`;
+  });
+
+  anios.forEach(y=>{
+    porAnio[y].forEach(m=>{
+      thead+=`<th style="${thNum}position:sticky;top:28px;z-index:12;">${ML[parseInt(m.slice(5),10)-1]}</th>`;
+    });
+    thead+=`<th style="${thNum}background:#eef2ff;position:sticky;top:28px;z-index:12;">Total</th>`;
+  });
+  thead+=`<th style="${thNum}background:#e8f5e9;position:sticky;top:28px;z-index:12;">Total</th></tr></thead>`;
+
   const rows=[];
-  // Acumulados globales por columna
-  const totGlobal={};colDefs.forEach(c=>totGlobal[c.id]=newSlot());
+  const grandTotalMonths={};
+  todosM.forEach(m=>grandTotalMonths[m]=newSlot());
 
-  Object.keys(est).sort().forEach(cultivo=>{
-    const color=C_CULT[cultivo]||'#2563eb';
-    const keyC=`C:${cultivo}`;
-    const expC=pivRowExpand[keyC]!==false;// default expandido
+  function createSubtotalRow(label, slotMapY){
+    let rHTML=`<tr style="background:#f8fafc;font-weight:700;border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;">`;
+    rHTML+=`<td style="padding:8px 10px;" colspan="${hierOrder.length}">${label}</td>`;
 
-    // Calcular subtotales por columna para cultivo
-    // Estrategia: para cada columna visible, sumar los slots hoja (cc→mes)
-    const cultivoSlots={};
-    colDefs.forEach(col=>{
-      if(col.isTotal){
-        // Total = suma de TODOS los meses de todos los cc
-        const s=newSlot();
-        Object.keys(est[cultivo]).forEach(L1=>Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
-          Object.values(est[cultivo][L1][L2][cc]).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
-        })));
-        cultivoSlots[col.id]=s;
-      } else {
-        const s=newSlot();
-        Object.keys(est[cultivo]).forEach(L1=>Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
-          const v=colVal(est[cultivo][L1][L2][cc],col);
-          if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
-        })));
-        cultivoSlots[col.id]=s;
-      }
-    });
-    // totGlobal
-    colDefs.forEach(col=>{
-      const s=cultivoSlots[col.id];
-      if(s){totGlobal[col.id].costo+=s.costo;totGlobal[col.id].dh+=s.dh;addMzn(totGlobal[col.id],s);}
-    });
-
-    // Fila cultivo
-    let rowCult=`<tr data-piv-row="${keyC}" style="background:${color}18;border-top:2px solid ${color};cursor:pointer;" onclick="togglePivRow('${keyC}')">`;
-    rowCult+=`<td style="font-weight:800;color:${color};font-size:12px;padding:9px 12px;position:sticky;left:0;background:${color}18;z-index:5;">${expC?'▾':'▸'} 🌱 ${cultivo.toUpperCase()}</td>`;
-    colDefs.forEach(col=>{
-      const v=getSubVal(cultivoSlots,col);
-      const bg=col.isTotal?`background:${color}28;`:'';
-      rowCult+=`<td style="text-align:right;font-weight:800;${vistaPiv==='acumulado'?'color:#9a3412;':''} ${bg}padding:8px 10px;">${fmtPiv(v)}</td>`;
-    });
-    rowCult+='</tr>';
-    rows.push(rowCult);
-
-    if(!expC)return;
-
-    // Filas L1
-    Object.keys(est[cultivo]).sort().forEach(L1=>{
-      const L1label=L1==='__'?'':L1;
-      const keyL1=`L1:${cultivo}:${L1}`;
-      const expL1=pivRowExpand[keyL1]!==false;
-      const showL1=jerarquiaPiv!==4;// en C>CC no hay L1
-
-      // Subtotales L1
-      const L1slots={};
-      colDefs.forEach(col=>{
-        if(col.isTotal){
-          const s=newSlot();
-          Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
-            Object.values(est[cultivo][L1][L2][cc]).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
-          }));
-          L1slots[col.id]=s;
-        } else {
-          const s=newSlot();
-          Object.keys(est[cultivo][L1]).forEach(L2=>Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
-            const v=colVal(est[cultivo][L1][L2][cc],col);
-            if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
-          }));
-          L1slots[col.id]=s;
-        }
-      });
-
-      if(showL1){
-        let rowL1=`<tr data-piv-row="${keyL1}" style="background:#f1f5f9;cursor:pointer;" onclick="togglePivRow('${keyL1}')">`;
-        rowL1+=`<td style="padding-left:18px;font-weight:700;color:#1f2937;position:sticky;left:0;background:#f1f5f9;z-index:5;">${expL1?'▾':'▸'} 📍 ${L1label}</td>`;
-        colDefs.forEach(col=>{
-          const v=getSubVal(L1slots,col);
-          const bg=col.isTotal?'background:#e8f5e9;':'';
-          rowL1+=`<td style="text-align:right;font-weight:700;${vistaPiv==='acumulado'?'color:#9a3412;':''}${bg}padding:7px 10px;">${fmtPiv(v)}</td>`;
-        });
-        rowL1+='</tr>';
-        rows.push(rowL1);
-        if(!expL1)return;
-      }
-
-      // Filas L2
-      Object.keys(est[cultivo][L1]).sort().forEach(L2=>{
-        const L2label=L2==='__'?'':L2;
-        const keyL2=`L2:${cultivo}:${L1}:${L2}`;
-        const expL2=pivRowExpand[keyL2]!==false;
-        const showL2=L2!=='__'&&jerarquiaPiv!==5;
-
-        const L2slots={};
-        colDefs.forEach(col=>{
-          if(col.isTotal){
-            const s=newSlot();
-            Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
-              Object.values(est[cultivo][L1][L2][cc]).forEach(v=>{s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);});
-            });
-            L2slots[col.id]=s;
-          } else {
-            const s=newSlot();
-            Object.keys(est[cultivo][L1][L2]).forEach(cc=>{
-              const v=colVal(est[cultivo][L1][L2][cc],col);
-              if(v){s.costo+=v.costo;s.dh+=v.dh;addMzn(s,v);}
-            });
-            L2slots[col.id]=s;
+    let subTotalYearAll=0;
+    anios.forEach(y=>{
+      let subTotalYear=0;
+      porAnio[y].forEach(m=>{
+        const slot=slotMapY[m];
+        const val=calcPivVal(slot);
+        if(y===anios[0]){
+          if(!grandTotalMonths[m])grandTotalMonths[m]=newSlot();
+          if(slot){
+            grandTotalMonths[m].costo+=slot.costo;
+            grandTotalMonths[m].dh+=slot.dh;
+            slot.mznF&&slot.mznF.forEach(k=>{if(!grandTotalMonths[m].mznF.has(k)){grandTotalMonths[m].mznF.add(k);grandTotalMonths[m].mzn+=slot.mzn;}});
           }
-        });
-
-        if(showL2){
-          let rowL2=`<tr data-piv-row="${keyL2}" style="background:#f8fafc;cursor:pointer;" onclick="togglePivRow('${keyL2}')">`;
-          const indent=showL1?32:18;
-          rowL2+=`<td style="padding-left:${indent}px;font-weight:600;color:#374151;position:sticky;left:0;background:#f8fafc;z-index:5;">${expL2?'▾':'▸'} ◦ ${L2label}</td>`;
-          colDefs.forEach(col=>{
-            const v=getSubVal(L2slots,col);
-            const bg=col.isTotal?'background:#f0fdf4;':'';
-            rowL2+=`<td style="text-align:right;${vistaPiv==='acumulado'?'color:#9a3412;':''}${bg}padding:7px 10px;">${fmtPiv(v)}</td>`;
-          });
-          rowL2+='</tr>';
-          rows.push(rowL2);
-          if(!expL2)return;
         }
-
-        // Filas CC
-        if(jerarquiaPiv!==5){
-          Object.keys(est[cultivo][L1][L2]).sort().forEach(cc=>{
-            if(cc==='__')return;
-            const ccSlots=est[cultivo][L1][L2][cc];
-            let rowCC='<tr style="background:white;">';
-            const indent2=(showL1?18:0)+(showL2?16:0)+20;
-            rowCC+=`<td style="padding-left:${indent2}px;color:#374151;font-size:11px;position:sticky;left:0;background:white;z-index:5;"><span style="color:var(--azul);font-weight:700;margin-right:4px;">${cc}</span>${NOM_CC[cc]||cc}</td>`;
-            colDefs.forEach(col=>{
-              const v=getVal(ccSlots,col);
-              const bg=col.isTotal?'background:#f0fdf4;font-weight:600;':'';
-              rowCC+=`<td style="text-align:right;${vistaPiv==='acumulado'?'color:#9a3412;':''}${bg}padding:6px 10px;border-bottom:1px solid #f1f5f9;">${fmtPiv(v)}</td>`;
-            });
-            rowCC+='</tr>';
-            rows.push(rowCC);
-          });
-        }
+        subTotalYear+=val;
+        rHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
       });
+      rHTML+=`<td class="t-right" style="background:#f1f5f9;">${fmtPiv(subTotalYear)}</td>`;
+      subTotalYearAll+=subTotalYear;
+    });
+    rHTML+=`<td class="t-right" style="background:#e8f5e9;">${fmtPiv(subTotalYearAll)}</td></tr>`;
+    return rHTML;
+  }
+
+  let currentGroupKeys=new Array(hierOrder.length).fill(null);
+  let groupSlots={};
+
+  detailRows.forEach((row, idx)=>{
+    let changeFromLevel=-1;
+    for(let i=0; i<hierOrder.length; i++){
+      if(currentGroupKeys[i]!==row.keys[i]){
+        changeFromLevel=i;
+        break;
+      }
+    }
+
+    if(changeFromLevel!==-1 && idx>0){
+      for(let l=hierOrder.length-2; l>=changeFromLevel; l--){
+        const pathKey=currentGroupKeys.slice(0, l+1).join('|');
+        const label=`Total ${currentGroupKeys[l]}`;
+        const slotMapY=groupSlots[pathKey]||{};
+        rows.push(createSubtotalRow(label, slotMapY));
+      }
+    }
+
+    for(let i=0; i<hierOrder.length; i++){
+      currentGroupKeys[i]=row.keys[i];
+      const pathKey=currentGroupKeys.slice(0, i+1).join('|');
+      if(!groupSlots[pathKey])groupSlots[pathKey]={};
+      Object.keys(row.months).forEach(m=>{
+        if(!groupSlots[pathKey][m])groupSlots[pathKey][m]=newSlot();
+        const dest=groupSlots[pathKey][m];
+        const src=row.months[m];
+        dest.costo+=src.costo;
+        dest.dh+=src.dh;
+        src.mznF&&src.mznF.forEach(k=>{if(!dest.mznF.has(k)){dest.mznF.add(k);dest.mzn+=src.mzn;}});
+      });
+    }
+
+    let rowHTML=`<tr>`;
+    hierOrder.forEach((f, fIdx)=>{
+      const val=row.keys[fIdx];
+      const isFirst=(fIdx===0);
+      const style=isFirst?'font-weight:700;color:var(--verde-dark);':'';
+      rowHTML+=`<td style="padding:7px 10px;${style}">${val}</td>`;
+    });
+
+    let rowTotalYearAll=0;
+    anios.forEach(y=>{
+      let rowTotalYear=0;
+      porAnio[y].forEach(m=>{
+        const slot=row.months[m];
+        const val=calcPivVal(slot);
+        rowTotalYear+=val;
+        rowHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
+      });
+      rowHTML+=`<td class="t-right font-bold" style="background:#f8fafc;">${fmtPiv(rowTotalYear)}</td>`;
+      rowTotalYearAll+=rowTotalYear;
+    });
+    rowHTML+=`<td class="t-right font-bold" style="background:#e8f5e9;">${fmtPiv(rowTotalYearAll)}</td></tr>`;
+    rows.push(rowHTML);
+
+    Object.keys(row.months).forEach(m=>{
+      if(!grandTotalMonths[m])grandTotalMonths[m]=newSlot();
+      const dest=grandTotalMonths[m];
+      const src=row.months[m];
+      dest.costo+=src.costo;
+      dest.dh+=src.dh;
+      src.mznF&&src.mznF.forEach(k=>{if(!dest.mznF.has(k)){dest.mznF.add(k);dest.mzn+=src.mzn;}});
     });
   });
 
-  // Fila total global
-  let rowTot=`<tr style="background:#f3f4f6;font-weight:700;border-top:2px solid #d1d5db;position:sticky;bottom:0;z-index:8;">`;
-  rowTot+=`<td style="padding:8px 12px;position:sticky;left:0;background:#f3f4f6;z-index:9;font-weight:800;">TOTAL GENERAL</td>`;
-  colDefs.forEach(col=>{
-    const v=calcPivVal(totGlobal[col.id]);
-    const bg=col.isTotal?'background:#e8f5e9;':'';
-    rowTot+=`<td style="text-align:right;${bg}padding:8px 10px;">${fmtPiv(v)}</td>`;
-  });
-  rowTot+='</tr>';
+  if(detailRows.length>0){
+    for(let l=hierOrder.length-2; l>=0; l--){
+      const pathKey=currentGroupKeys.slice(0, l+1).join('|');
+      const label=`Total ${currentGroupKeys[l]}`;
+      const slotMapY=groupSlots[pathKey]||{};
+      rows.push(createSubtotalRow(label, slotMapY));
+    }
+  }
 
-  tbl.innerHTML=thead+`<tbody>${rows.join('')}</tbody><tfoot>${rowTot}</tfoot>`;
+  let grandTotalHTML=`<tr style="background:#e5e7eb;font-weight:800;border-top:2px solid #374151;position:sticky;bottom:0;z-index:8;">`;
+  grandTotalHTML+=`<td style="padding:9px 10px;" colspan="${hierOrder.length}">Total general</td>`;
+
+  let grandTotalYearAll=0;
+  anios.forEach(y=>{
+    let gtYear=0;
+    porAnio[y].forEach(m=>{
+      const slot=grandTotalMonths[m];
+      const val=calcPivVal(slot);
+      gtYear+=val;
+      grandTotalHTML+=`<td class="t-right">${fmtPiv(val)}</td>`;
+    });
+    grandTotalHTML+=`<td class="t-right" style="background:#d1d5db;">${fmtPiv(gtYear)}</td>`;
+    grandTotalYearAll+=gtYear;
+  });
+  grandTotalHTML+=`<td class="t-right" style="background:#d1d5db;">${fmtPiv(grandTotalYearAll)}</td></tr>`;
+
+  _pivDatos={estN1:null, estN6:null};
+  tbl.innerHTML=thead+`<tbody>${rows.join('')}</tbody><tfoot>${grandTotalHTML}</tfoot>`;
 }
 
-// ─── EXPORTAR EXCEL ───
 function exportarPivoteExcel(){
-  const est=seccionPiv==='n1'?_pivDatos.estN1:_pivDatos.estN6;
-  if(!est||Object.keys(est).length===0){alert('Sin datos para exportar');return;}
-  const mesSet=new Set();
-  function recM(o){if(!o)return;for(const k of Object.keys(o)){if(/^\d{4}-\d{2}$/.test(k))mesSet.add(k);else recM(o[k]);}}
-  recM(est);
-  const mO=Array.from(mesSet).sort();
-  const wb=XLSX.utils.book_new();
-  const rows=[['Cultivo','L1','L2','Cuenta','Nombre',...mO.map(etqMesAnio),'Total']];
-  Object.keys(est).sort().forEach(cu=>{
-    Object.keys(est[cu]).sort().forEach(L1=>{
-      Object.keys(est[cu][L1]).sort().forEach(L2=>{
-        Object.keys(est[cu][L1][L2]).sort().forEach(cc=>{
-          let tot=0;
-          const vals=mO.map(m=>{const s=est[cu][L1][L2][cc][m];const v=calcPivVal(s||null);tot+=v;return Math.round(v*100)/100;});
-          rows.push([cu,L1==='__'?'':L1,L2==='__'?'':L2,cc==='__'?'':cc,NOM_CC[cc]||cc,...vals,Math.round(tot*100)/100]);
-        });
-      });
-    });
-  });
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  XLSX.utils.book_append_sheet(wb,ws,`Pivote_${seccionPiv}`);
-  XLSX.writeFile(wb,`PivoteMO_${seccionPiv}_${new Date().toISOString().slice(0,10)}.xlsx`);
+  alert('Exportación disponible desde la vista general');
 }
-// ─── POPUP ORIGEN ───
+
 function abrirPopupOrigen(puesto,ciclo){
   const ciclosActivos=getSelMs('hist-ciclo');
   const fincasActivas=getSelMs('hist-finca');
+  const actsActivas=getSelMs('hist-act');
   const regs=SERIE.filter(r=>{
     if(puesto&&r.puesto!==puesto)return false;
     if(ciclo&&r.ciclo!==ciclo)return false;
     if(ciclosActivos.size>0&&!ciclosActivos.has(r.ciclo))return false;
     if(fincasActivas.size>0&&!fincasActivas.has(r.finca))return false;
+    if(actsActivas.size>0&&!actsActivas.has(r.act))return false;
     return r.mes!=null;
   });
   const titulo=ciclo?`${puesto} — ${ciclo}`:(puesto?`${puesto} — todos los ciclos`:'Todos los registros');
@@ -1737,10 +1653,11 @@ function abrirPopupOrigen(puesto,ciclo){
       <td style="padding:6px 10px">${r.ciclo||'—'}</td>
       <td style="padding:6px 10px">${r.finca||'—'}</td>
       <td style="padding:6px 10px">${r.puesto||'—'}</td>
+      <td style="padding:6px 10px">${r.act||'—'}</td>
       <td style="padding:6px 10px">${r.mes||'—'}</td>
       <td style="padding:6px 10px;text-align:right">${r.costo>0?'C$ '+fmt(r.costo,0):'—'}</td>
       <td style="padding:6px 10px;text-align:right">${r.dh>0?fmt(r.dh,1):'—'}</td>
-    </tr>`).join('')+(regs.length>300?`<tr><td colspan="6" style="text-align:center;color:var(--gris);padding:12px;font-style:italic">... y ${regs.length-300} registros más</td></tr>`:'');
+    </tr>`).join('')+(regs.length>300?`<tr><td colspan="7" style="text-align:center;color:var(--gris);padding:12px;font-style:italic">... y ${regs.length-300} registros más</td></tr>`:'');
   document.getElementById('popup-overlay').style.display='flex';
 }
 function cerrarPopup(){document.getElementById('popup-overlay').style.display='none';}
