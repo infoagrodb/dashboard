@@ -692,7 +692,8 @@ function iniciarTablaInteractiva(host, columnasDef, datos, busquedaInicial){
     subtotales: new Set(),
     gruposColapsados: new Set(),
     metricas: new Set(),
-    busqueda: (busquedaInicial || "").trim().toLowerCase()
+    busqueda: (busquedaInicial || "").trim().toLowerCase(),
+    busquedaTokens: (busquedaInicial || "").trim().toLowerCase() ? (busquedaInicial || "").trim().toLowerCase().split(/\s+/).filter(Boolean) : []
   };
   let visiblesActual = [];
   let panelFlotante = null, menuContextual = null, arrastrando = null;
@@ -731,7 +732,10 @@ function iniciarTablaInteractiva(host, columnasDef, datos, busquedaInicial){
     el.style.left = left + "px";
   }
 
-  const coincideBusqueda = row => !st.busqueda || columnasDef.some(c => String(row[c.key] ?? "").toLowerCase().includes(st.busqueda));
+  const coincideBusqueda = row => {
+    if(!st.busquedaTokens || !st.busquedaTokens.length) return true;
+    return st.busquedaTokens.every(token => columnasDef.some(c => String(row[c.key] ?? "").toLowerCase().includes(token)));
+  };
   const filasFiltradas = () => datos.filter(row =>
     Object.entries(st.filtros).every(([k, permitidos]) => permitidos.has(row[k])) && coincideBusqueda(row));
 
@@ -967,7 +971,9 @@ function iniciarTablaInteractiva(host, columnasDef, datos, busquedaInicial){
       visibles.map(key => {
         const c = col(key);
         if(key === nivelKey){
-          return `<td style="padding-left:${10 + profundidad * 16}px"><span class="grupo-etiqueta-inner"><button class="grupo-caret" title="${colapsado ? "Expandir grupo" : "Colapsar grupo"}">${colapsado ? "▸" : "▾"}</button><b>${escHtml(valor)}</b><span class="grupo-conteo">${filasGrupo.length}</span></span></td>`;
+          const n = filasGrupo.length;
+          const tooltip = `${valor} (${n} movimiento${n === 1 ? "" : "s"})`;
+          return `<td style="padding-left:${10 + profundidad * 16}px" title="${escHtml(tooltip)}"><span class="grupo-etiqueta-inner"><button class="grupo-caret" title="${colapsado ? "Expandir grupo" : "Colapsar grupo"}">${colapsado ? "▸" : "▾"}</button><b>${escHtml(valor)}</b></span></td>`;
         }
         if(c.tipo === "numero" && st.subtotales.has(key)){
           const suma = filasGrupo.reduce((s, r) => s + (Number(r[key]) || 0), 0);
@@ -995,9 +1001,12 @@ function iniciarTablaInteractiva(host, columnasDef, datos, busquedaInicial){
       ? construirCuerpo(filas, nivelesActivos, [], 0)
       : filas.map(row => filaDato(row, 0)).join("");
 
+    const mensajeVacio = st.busqueda
+      ? `Sin resultados para “${escHtml(st.busqueda)}”. La búsqueda se aplica DENTRO de lo que dejan pasar los filtros del panel de arriba (Compañía, Período, Ciclo, Sector, Finca, Lote, Categoría, Insumo) — si el dato existe pero no aparece, probá "Limpiar" en el panel de filtros o revisá si alguno de ellos lo está excluyendo.`
+      : "Sin resultados con los filtros actuales";
     host.innerHTML = `<div class="tabla-wrapper"><table class="tabla-infoagro">
       <thead><tr>${thead}</tr></thead>
-      <tbody>${tbody || `<tr><td colspan="${visibles.length}" style="text-align:center;color:var(--color-texto-suave);padding:20px;">Sin resultados con los filtros actuales</td></tr>`}</tbody>
+      <tbody>${tbody || `<tr><td colspan="${visibles.length}" style="text-align:center;color:var(--color-texto-suave);padding:20px;white-space:normal;line-height:1.5;">${mensajeVacio}</td></tr>`}</tbody>
     </table></div>`;
 
     host.querySelectorAll(".grupo-caret").forEach(btn => {
@@ -1085,7 +1094,7 @@ function iniciarTablaInteractiva(host, columnasDef, datos, busquedaInicial){
     metricaActiva: (key, tipo) => st.metricas.has(`${key}::${tipo}`),
     toggleMetrica: (key, tipo, activa) => alternarMetrica(key, tipo, activa),
     descargarExcel: (nombreArchivo) => descargarExcel(nombreArchivo),
-    buscar: (texto) => { st.busqueda = (texto || "").trim().toLowerCase(); render(); }
+    buscar: (texto) => { st.busqueda = (texto || "").trim().toLowerCase(); st.busquedaTokens = st.busqueda ? st.busqueda.split(/\s+/).filter(Boolean) : []; render(); }
   };
 }
 
@@ -1214,7 +1223,8 @@ let BUSQUEDA_PIVOT = "";
 function datosParaPivot(){
   let datos = datosConFiltros(null);
   if(BUSQUEDA_PIVOT){
-    datos = datos.filter(r => CAMPOS_BUSQUEDA_PIVOT.some(c => String(r[c] || "").toLowerCase().includes(BUSQUEDA_PIVOT)));
+    const tokens = BUSQUEDA_PIVOT.split(/\s+/).filter(Boolean);
+    datos = datos.filter(r => tokens.every(token => CAMPOS_BUSQUEDA_PIVOT.some(c => String(r[c] || "").toLowerCase().includes(token))));
   }
   return datos;
 }
@@ -1269,9 +1279,10 @@ function renderPivot(){
     return ums.length === 1 ? ums[0] : (ums.length > 1 ? "Varios" : "");
   };
 
-  // Etiqueta de un nivel (dimensión) con su caret de colapsar/expandir y el
-  // contador de filas del grupo. esHoja=true la deja sin caret (es el valor
-  // final, p.ej. el Insumo, no un grupo colapsable).
+  // Etiqueta de un nivel (dimensión) con su caret de colapsar/expandir.
+  // esHoja=true la deja sin caret (es el valor final, p.ej. el Insumo, no un
+  // grupo colapsable). La cantidad de movimientos agrupados en esa fila ya no
+  // se muestra como número aparte — va en el tooltip (title) de la celda.
   function celdaEtiquetaGrupo(nodo, esHoja){
     let caret;
     if(esHoja){
@@ -1280,7 +1291,9 @@ function renderPivot(){
       const colapsado = PIVOT_COLAPSADOS.has(nodo.rutaId);
       caret = `<button class="grupo-caret" title="${colapsado ? "Expandir" : "Colapsar"}">${colapsado ? "▸" : "▾"}</button>`;
     }
-    return `<td class="col-fija col-dim-${nodo.dim}" data-ruta="${escHtml(nodo.rutaId)}" title="${escHtml(nodo.valor)}"><span class="grupo-etiqueta-inner">${caret}<b class="dim-valor-texto">${escHtml(nodo.valor)}</b><span class="grupo-conteo">${nodo.filasGrupo.length}</span></span></td>`;
+    const n = nodo.filasGrupo.length;
+    const tooltip = `${nodo.valor} (${n} movimiento${n === 1 ? "" : "s"})`;
+    return `<td class="col-fija col-dim-${nodo.dim}" data-ruta="${escHtml(nodo.rutaId)}" title="${escHtml(tooltip)}"><span class="grupo-etiqueta-inner">${caret}<b class="dim-valor-texto">${escHtml(nodo.valor)}</b></span></td>`;
   }
 
   // Fila fusionada: forma tabular real — cada dimensión tiene su propia
@@ -1385,10 +1398,13 @@ function renderPivot(){
   const totalGeneralCeldas = PIVOT_DIMS.map((d,idx) => idx===0 ? `<td class="col-fija"><b>Total general</b></td>` : `<td class="col-fija"></td>`).join("");
   const filaTotalGeneral = datos.length ? `<tr class="fila-total-general">${totalGeneralCeldas}<td class="col-fija-borde col-fija"></td>${fincas.map(f => `<td class="num">${fmt(sumaCantidadFinca(datos, f))}</td>`).join("")}<td class="num">${fmt(sumaCantidad(datos))}</td></tr>` : "";
 
+  const mensajeVacioPivot = BUSQUEDA_PIVOT
+    ? `Sin resultados para “${escHtml(BUSQUEDA_PIVOT)}”. La búsqueda se aplica DENTRO de lo que dejan pasar los filtros del panel de arriba (Compañía, Período, Ciclo, Sector, Finca, Lote, Categoría, Insumo) — si el dato existe pero no aparece, probá "Limpiar" en el panel de filtros o revisá si alguno de ellos lo está excluyendo.`
+    : "Sin resultados con los filtros actuales";
   host.innerHTML = `<div class="tabla-wrapper"><table class="tabla-infoagro tabla-pivot">
     ${colgroup}
     <thead>${thead}</thead>
-    <tbody>${tbody || `<tr><td colspan="${PIVOT_DIMS.length + 2 + fincas.length}" style="text-align:center;color:var(--color-texto-suave);padding:20px;">Sin resultados con los filtros actuales</td></tr>`}${filaTotalGeneral}</tbody>
+    <tbody>${tbody || `<tr><td colspan="${PIVOT_DIMS.length + 2 + fincas.length}" style="text-align:center;color:var(--color-texto-suave);padding:20px;white-space:normal;line-height:1.5;">${mensajeVacioPivot}</td></tr>`}${filaTotalGeneral}</tbody>
   </table></div>`;
 
   host.querySelectorAll(".grupo-caret").forEach(btn => {
