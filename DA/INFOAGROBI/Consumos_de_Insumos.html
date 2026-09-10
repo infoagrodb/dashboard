@@ -225,6 +225,12 @@ thead th:hover .th-filtro{opacity:.85;transform:scale(1);}
 .tabla-infoagro td.col-dim-producto{overflow:hidden;}
 .dim-valor-texto{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:135px;vertical-align:middle;}
 
+/* Forma tabular del pivot: valores de niveles ancestros repetidos en cada
+   fila (estilo Excel "Tabular Form"), en texto atenuado para diferenciarlos
+   visualmente de la etiqueta de grupo (negrita) del nivel activo. */
+.dim-valor-repetido{color:var(--color-texto-suave);font-weight:400;font-size:12.5px;}
+.dim-valor-repetido .dim-valor-texto{max-width:150px;}
+
 @media (max-width:900px){
   .toolbar-una-fila{flex-direction:column;align-items:stretch;}
   .tf-titulo::after{display:none;}
@@ -466,6 +472,8 @@ const CAMPOS_FILTRO = ["sector", "finca", "lote", "ciclo", "categoria", "product
 const ETIQUETAS_VACIAS = { sector:"Todos", finca:"Todas", lote:"Todos", ciclo:"Todos", categoria:"Todas", producto:"Todos" };
 const SEL = { sector:[], finca:[], lote:[], ciclo:[], categoria:[], producto:[] };
 let COMPANIA = "";
+let COMPANIA_POR_DEFECTO = "";
+let companiaInicializada = false;
 let PERIODO = (function(){ const r = calcularRangoPreset("ano_curso"); return { tipo:"ano_curso", desde:r.desde, hasta:r.hasta }; })();
 
 function datosBase(){
@@ -507,6 +515,16 @@ function poblarCompania(){
   const sel = document.getElementById("selCompania");
   const actuales = [...new Set(DATA_INSUMOS.map(r => r.compania))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"es"));
   sel.innerHTML = `<option value="">Todas</option>` + actuales.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("");
+  // Compañía por defecto: División Agrícola Comasa — se busca por coincidencia
+  // (sin distinguir tildes/mayúsculas) para no depender del acento exacto con
+  // el que esté guardado el nombre en Odoo. Solo se aplica la primera vez que
+  // hay datos; después de eso se respeta lo que el usuario elija.
+  if(!companiaInicializada){
+    const sinTildes = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    COMPANIA_POR_DEFECTO = actuales.find(c => sinTildes(c).includes("comasa")) || "";
+    COMPANIA = COMPANIA_POR_DEFECTO;
+    companiaInicializada = true;
+  }
   sel.value = COMPANIA;
 }
 function onCompaniaChange(){
@@ -543,8 +561,8 @@ document.getElementById("fechaDesde").addEventListener("change", e => { PERIODO.
 document.getElementById("fechaHasta").addEventListener("change", e => { PERIODO.hasta = e.target.value; podarSeleccionesObsoletas(); actualizarEtiquetasFiltros(); renderTodo(); });
 
 function limpiarFiltros(){
-  COMPANIA = "";
-  document.getElementById("selCompania").value = "";
+  COMPANIA = COMPANIA_POR_DEFECTO;
+  document.getElementById("selCompania").value = COMPANIA;
   const r = calcularRangoPreset("ano_curso");
   PERIODO = { tipo:"ano_curso", desde:r.desde, hasta:r.hasta };
   document.getElementById("selPeriodo").value = "ano_curso";
@@ -1195,12 +1213,22 @@ function renderPivot(){
     return ums.length === 1 ? ums[0] : (ums.length > 1 ? "Varios" : "");
   };
 
-  function filaPivotHtml(dim, valor, filasGrupo, profundidad, esUltimoNivel, colapsado, rutaId){
+  function filaPivotHtml(dim, valor, filasGrupo, profundidad, esUltimoNivel, colapsado, rutaId, ruta){
+    // Forma tabular (estilo Excel "Tabular Form"): cada dimensión ya tiene su
+    // propia columna, así que NO se indenta en escalera como un árbol — todas
+    // las celdas de una misma columna arrancan en el mismo margen izquierdo,
+    // igual que en una tabla normal. Los valores de los niveles ya decididos
+    // (ancestros, idx < profundidad) se REPITEN en cada fila descendiente, en
+    // texto atenuado, en vez de dejarse en blanco.
     const celdasDim = PIVOT_DIMS.map((d, idx) => {
       if(idx === profundidad){
         const caret = esUltimoNivel ? `<span style="display:inline-block;width:16px;"></span>` :
           `<button class="grupo-caret" title="${colapsado ? "Expandir" : "Colapsar"}">${colapsado ? "▸" : "▾"}</button>`;
-        return `<td class="col-fija col-dim-${d}${esUltimoNivel ? "" : " grupo-etiqueta"}" data-ruta="${escHtml(rutaId)}" style="padding-left:${10 + profundidad * 16}px" title="${escHtml(valor)}">${caret}<b class="dim-valor-texto">${escHtml(valor)}</b><span class="grupo-conteo">${filasGrupo.length}</span></td>`;
+        return `<td class="col-fija col-dim-${d}${esUltimoNivel ? "" : " grupo-etiqueta"}" data-ruta="${escHtml(rutaId)}" title="${escHtml(valor)}">${caret}<b class="dim-valor-texto">${escHtml(valor)}</b><span class="grupo-conteo">${filasGrupo.length}</span></td>`;
+      }
+      if(idx < profundidad){
+        const valorAncestro = ruta[idx] ? ruta[idx].valor : "";
+        return `<td class="col-fija col-dim-${d} dim-valor-repetido" title="${escHtml(valorAncestro)}"><span class="dim-valor-texto">${escHtml(valorAncestro)}</span></td>`;
       }
       return `<td class="col-fija col-dim-${d}"></td>`;
     }).join("");
@@ -1230,7 +1258,7 @@ function renderPivot(){
         const ruta = rutaPadre.concat([{ nivel: dim, valor }]);
         const rutaId = idRutaPivot(ruta);
         const colapsado = !esUltimoNivel && PIVOT_COLAPSADOS.has(rutaId);
-        html += filaPivotHtml(dim, valor, filasGrupo, profundidad, esUltimoNivel, colapsado, rutaId);
+        html += filaPivotHtml(dim, valor, filasGrupo, profundidad, esUltimoNivel, colapsado, rutaId, ruta);
         if(!esUltimoNivel && !colapsado) html += construirNodoPivot(filasGrupo, resto, ruta, profundidad + 1);
       });
     return html;
@@ -1329,7 +1357,12 @@ function exportarPivotExcel(){
         const rutaId = idRutaPivot(ruta);
         const colapsado = !esUltimoNivel && PIVOT_COLAPSADOS.has(rutaId);
         const esCategoriaSinSubtotal = dim === "categoria" && !esUltimoNivel && String(valor).trim().toLowerCase() !== "semilla";
-        const fila = PIVOT_DIMS.map((d, idx) => idx === profundidad ? valor : "");
+        // Igual que en pantalla: repetir valores de niveles ancestros (forma tabular)
+        const fila = PIVOT_DIMS.map((d, idx) => {
+          if(idx === profundidad) return valor;
+          if(idx < profundidad) return ruta[idx] ? ruta[idx].valor : "";
+          return "";
+        });
         fila.push(esUltimoNivel ? umDe(filasGrupo) : "");
         if(esCategoriaSinSubtotal){
           fincas.forEach(() => fila.push(""));
