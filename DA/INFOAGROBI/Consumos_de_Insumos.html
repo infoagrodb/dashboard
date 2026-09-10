@@ -537,13 +537,13 @@ function poblarCompania(){
   const sel = document.getElementById("selCompania");
   const actuales = [...new Set(DATA_INSUMOS.map(r => r.compania))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"es"));
   sel.innerHTML = `<option value="">Todas</option>` + actuales.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("");
-  // Compañía por defecto: División Agrícola Comasa — se busca por coincidencia
+  // Compañía por defecto: División Agricola Comasa — se busca por coincidencia
   // (sin distinguir tildes/mayúsculas) para no depender del acento exacto con
   // el que esté guardado el nombre en Odoo. Solo se aplica la primera vez que
   // hay datos; después de eso se respeta lo que el usuario elija.
   if(!companiaInicializada){
     const sinTildes = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    COMPANIA_POR_DEFECTO = actuales.find(c => sinTildes(c).includes("comasa")) || "";
+    COMPANIA_POR_DEFECTO = actuales.find(c => sinTildes(c).includes("División Agricola Comasa")) || "";
     COMPANIA = COMPANIA_POR_DEFECTO;
     companiaInicializada = true;
   }
