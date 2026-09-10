@@ -228,13 +228,21 @@ thead th:hover .th-filtro{opacity:.85;transform:scale(1);}
 .tabla-infoagro td.col-dim-producto,
 .tabla-infoagro th.col-dim-producto{max-width:180px;width:180px;}
 .tabla-infoagro td.col-dim-producto{overflow:hidden;}
-.dim-valor-texto{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:135px;vertical-align:middle;}
+/* El texto usa el ancho REAL de la columna (max-width:100%), no un tope fijo
+   en px — así, al ensanchar una columna del pivot (ver .col-resize-handle),
+   el texto completo se ve; solo se recorta con "…" cuando de verdad no cabe.
+   min-width:0 es necesario porque esta celda vive dentro de un contenedor
+   flex (.grupo-etiqueta-inner) y sin eso los flex items no se encogen por
+   debajo de su contenido, lo que rompe el elipsis. */
+.dim-valor-texto{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;max-width:100%;min-width:0;vertical-align:middle;}
+.grupo-etiqueta-inner .dim-valor-texto{flex:1 1 auto;min-width:0;}
+.grupo-conteo{flex-shrink:0;}
+.tabla-pivot td{overflow:hidden;}
 
 /* Forma tabular del pivot: valores de niveles ancestros repetidos en cada
    fila (estilo Excel "Tabular Form"), en texto atenuado para diferenciarlos
    visualmente de la etiqueta de grupo (negrita) del nivel activo. */
 .dim-valor-repetido{color:var(--color-texto-suave);font-weight:400;font-size:12.5px;}
-.dim-valor-repetido .dim-valor-texto{max-width:150px;}
 
 /* Fila de subtotal de Semilla: debajo de sus propias filas, con el mismo
    estilo destacado que el resto de subtotales de la app. Ninguna otra
@@ -363,8 +371,9 @@ thead th:hover .th-filtro{opacity:.85;transform:scale(1);}
   <!-- ============ TAB: RESUMEN (pivot Ciclo/Actividad/Insumo x Finca) ============ -->
   <div class="tab-panel activo" id="panelResumen">
     <div class="pivot-toolbar">
-      <div class="izq">Arrastra un encabezado (Ciclo / Actividad / Insumo) para cambiar el orden del árbol · clic en ▾ para colapsar un grupo</div>
+      <div class="izq">Arrastra un encabezado para cambiar el orden del árbol · clic en ▾ para colapsar un grupo · arrastra el borde de una columna para ajustar su ancho</div>
       <div class="der">
+        <button class="tf-btn" id="btnCamposPivot" title="Agregar o quitar niveles del pivot">☰ Campos <span class="chevron">▾</span></button>
         <button class="tf-btn" id="btnExpandirPivot" title="Expandir todos los grupos">⊞ Expandir Todo</button>
         <button class="tf-btn" id="btnColapsarPivot" title="Colapsar todos los grupos">⊟ Colapsar Todo</button>
         <button class="tf-btn" id="btnDescargarPivot" title="Descargar resumen (Excel)">⇩ Exportar Excel</button>
@@ -373,8 +382,8 @@ thead th:hover .th-filtro{opacity:.85;transform:scale(1);}
     <div class="caja-busqueda"><input type="text" id="buscarPivot" placeholder="Buscar en el resumen… (finca, ciclo, actividad, insumo…)"></div>
     <div id="pivotHost"></div>
     <p class="nota-ayuda">
-      Suma <b>Cant. Gastada</b> por Ciclo → Actividad → Insumo, con una columna por <b>Finca</b> y el <b>Total</b> a la derecha.
-      El orden de los tres niveles (Ciclo, Actividad, Insumo) se cambia arrastrando su encabezado, igual que en la pestaña Detalle.
+      Suma <b>Cant. Gastada</b> por los niveles activos (Ciclo → Actividad → Insumo por defecto), con una columna por <b>Finca</b> y el <b>Total</b> a la derecha.
+      El orden de los niveles se cambia arrastrando su encabezado, y con <b>☰ Campos</b> podés agregar o quitar niveles (Sector, Lote, Compañía, Turno, Productor). El número junto a cada valor es la cantidad de movimientos que se sumaron en esa fila.
     </p>
   </div>
 
@@ -537,13 +546,22 @@ function poblarCompania(){
   const sel = document.getElementById("selCompania");
   const actuales = [...new Set(DATA_INSUMOS.map(r => r.compania))].filter(Boolean).sort((a,b)=>a.localeCompare(b,"es"));
   sel.innerHTML = `<option value="">Todas</option>` + actuales.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("");
-  // Compañía por defecto: División Agricola Comasa — se busca por coincidencia
+  // Compañía por defecto: División Agrícola Comasa — se busca por coincidencia
   // (sin distinguir tildes/mayúsculas) para no depender del acento exacto con
-  // el que esté guardado el nombre en Odoo. Solo se aplica la primera vez que
-  // hay datos; después de eso se respeta lo que el usuario elija.
+  // el que esté guardado el nombre en Odoo. Hay MÁS DE UNA compañía cuyo
+  // nombre incluye "Comasa" (p.ej. la matriz y la división agrícola), así que
+  // no basta con buscar "comasa" solo -- eso agarraba la primera en orden
+  // alfabético, que no siempre era la correcta. Se exige "division" +
+  // "agricola" + "comasa" juntas para no confundirlas; si por algún motivo
+  // esa combinación exacta no aparece, cae de vuelta a cualquier "comasa".
+  // Solo se aplica la primera vez que hay datos; después de eso se respeta
+  // lo que el usuario elija.
   if(!companiaInicializada){
     const sinTildes = s => String(s).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    COMPANIA_POR_DEFECTO = actuales.find(c => sinTildes(c).includes("División Agricola Comasa")) || "";
+    COMPANIA_POR_DEFECTO = actuales.find(c => {
+      const n = sinTildes(c);
+      return n.includes("division") && n.includes("agricola") && n.includes("comasa");
+    }) || actuales.find(c => sinTildes(c).includes("comasa")) || "";
     COMPANIA = COMPANIA_POR_DEFECTO;
     companiaInicializada = true;
   }
@@ -1182,7 +1200,11 @@ function renderTodo(){
    Reutiliza la misma paleta y clases visuales que la tabla de Detalle
    (tabla-infoagro, fila-grupo, col-fija) para verse consistente.
    ============================================================ */
-const PIVOT_DIM_LABELS = { ciclo:"Ciclo", actividad:"Actividad", categoria:"Categoría Insumo", producto:"Insumo" };
+// Catálogo COMPLETO de campos que se pueden usar como nivel del pivot — los
+// 4 que ya vienen por defecto (ciclo/actividad/categoria/producto) más los
+// que el usuario puede agregar desde el selector "☰ Campos" del toolbar.
+// "finca" no está aquí porque ya es el eje de columnas del pivot (crosstab).
+const PIVOT_DIM_LABELS = { ciclo:"Ciclo", actividad:"Actividad", categoria:"Categoría Insumo", producto:"Insumo", sector:"Sector", lote:"Lote", compania:"Compañía", turno:"Turno", productor:"Productor" };
 const CAMPOS_BUSQUEDA_PIVOT = ["ciclo","finca","lote","categoria","producto","actividad","um","compania","sector","turno","productor","orden"];
 let PIVOT_DIMS = ["ciclo", "actividad", "categoria", "producto"];
 let PIVOT_COLAPSADOS = new Set();
@@ -1355,7 +1377,7 @@ function renderPivot(){
   const colgroup = `<colgroup>${columnasOrden.map(clave => `<col data-colkey="${escHtml(clave)}" style="width:${anchoColumnaPivot(clave)}px">`).join("")}</colgroup>`;
 
   const resize = clave => `<span class="col-resize-handle" data-colkey="${escHtml(clave)}" draggable="false"></span>`;
-  const theadDims = PIVOT_DIMS.map(dim => `<th class="col-fija dim-arrastrable col-dim-${dim}" draggable="true" data-dim="${dim}">${escHtml(PIVOT_DIM_LABELS[dim])}<span class="dim-handle">⠿ arrastrar</span>${resize(dim)}</th>`).join("");
+  const theadDims = PIVOT_DIMS.map(dim => `<th class="col-fija dim-arrastrable col-dim-${dim}" draggable="true" data-dim="${dim}" title="Arrastrar para reordenar">${escHtml(PIVOT_DIM_LABELS[dim])}<span class="dim-handle">⠿</span>${resize(dim)}</th>`).join("");
   const thead = `<tr>${theadDims}<th class="col-fija-borde col-fija">UM${resize("um")}</th>${fincas.map(f => `<th class="num">${escHtml(f)}${resize("finca:"+f)}</th>`).join("")}<th class="num" style="font-weight:800;">Total${resize("total")}</th></tr>`;
 
   const tbody = datos.length ? construirFilasPivot(datos, PIVOT_DIMS, [], 0, []) : "";
@@ -1445,6 +1467,42 @@ function aplicarFijasPivot(){
     acumulado += th.offsetWidth;
   });
 }
+
+// Selector de campos del pivot: agrega o quita niveles (además de los 4 que
+// vienen por defecto) — mismo patrón visual/interacción que "📊 Métricas" en
+// la pestaña Detalle (panel flotante con checkboxes, se cierra al hacer clic
+// afuera).
+document.getElementById("btnCamposPivot").addEventListener("click", function(e){
+  e.stopPropagation();
+  const existente = document.querySelector(".panel-campos-pivot");
+  if(existente){ existente.remove(); return; }
+  const panel = document.createElement("div");
+  panel.className = "ms-panel abierto panel-campos-pivot";
+  panel.innerHTML = `<div class="ms-lista" style="padding:8px 0;">
+    ${Object.keys(PIVOT_DIM_LABELS).map(campo => `<label class="ms-opcion"><input type="checkbox" data-campo="${campo}" ${PIVOT_DIMS.includes(campo) ? "checked" : ""}> ${escHtml(PIVOT_DIM_LABELS[campo])}</label>`).join("")}
+  </div>`;
+  document.body.appendChild(panel);
+  const r = this.getBoundingClientRect();
+  panel.style.top = (r.bottom + 4) + "px";
+  panel.style.left = Math.min(r.left, window.innerWidth - 240 - 8) + "px";
+  panel.addEventListener("click", ev => ev.stopPropagation());
+  panel.querySelectorAll("input").forEach(chk => {
+    chk.addEventListener("change", () => {
+      const campo = chk.dataset.campo;
+      if(chk.checked){
+        if(!PIVOT_DIMS.includes(campo)) PIVOT_DIMS.push(campo);
+      } else if(PIVOT_DIMS.length <= 1){
+        chk.checked = true; // no dejar el pivot sin ningún nivel
+        return;
+      } else {
+        PIVOT_DIMS.splice(PIVOT_DIMS.indexOf(campo), 1);
+      }
+      PIVOT_COLAPSADOS.clear(); // las rutas guardadas ya no corresponden a la nueva estructura
+      renderPivot();
+    });
+  });
+  document.addEventListener("click", function cerrar(){ panel.remove(); document.removeEventListener("click", cerrar); });
+});
 
 document.getElementById("btnExpandirPivot").addEventListener("click", () => { PIVOT_COLAPSADOS.clear(); renderPivot(); });
 document.getElementById("btnColapsarPivot").addEventListener("click", () => {
