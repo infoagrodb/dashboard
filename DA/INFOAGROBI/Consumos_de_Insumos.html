@@ -169,7 +169,12 @@ thead th:hover .th-filtro{opacity:.85;transform:scale(1);}
 .tabla-infoagro tr.fila-grupo.nivel-2{background:#f5fbf7;}
 .tabla-infoagro tr.fila-grupo.nivel-3{background:#f9fdfa;}
 .tabla-infoagro tr.fila-grupo td{padding:7px 10px;border-bottom:1px solid var(--color-borde);border-top:1px solid var(--color-borde);font-weight:700;color:var(--color-texto);}
-.grupo-etiqueta{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+/* OJO: el flex va en un <span> INTERNO, nunca directo en el <td> — un <td>
+   con display:flex deja de comportarse como celda de tabla (el navegador lo
+   saca del flujo de fila), y si dos celdas así comparten una misma <tr> (como
+   pasa en el pivot con varias etiquetas de grupo fusionadas en una fila) se
+   apilan una debajo de otra en vez de quedar una junto a la otra. */
+.grupo-etiqueta-inner{display:flex;align-items:center;gap:8px;white-space:nowrap;}
 .grupo-caret{border:none;background:none;cursor:pointer;font-size:11px;color:var(--color-primario-oscuro);width:16px;flex-shrink:0;padding:0;}
 .grupo-conteo{font-weight:500;font-size:11px;color:var(--color-texto-suave);background:#fff;border-radius:10px;padding:0 6px;}
 .grupo-subtotal{font-variant-numeric:tabular-nums;}
@@ -230,6 +235,23 @@ thead th:hover .th-filtro{opacity:.85;transform:scale(1);}
    visualmente de la etiqueta de grupo (negrita) del nivel activo. */
 .dim-valor-repetido{color:var(--color-texto-suave);font-weight:400;font-size:12.5px;}
 .dim-valor-repetido .dim-valor-texto{max-width:150px;}
+
+/* Fila de subtotal de Semilla: debajo de sus propias filas, con el mismo
+   estilo destacado que el resto de subtotales de la app. Ninguna otra
+   categoría lleva fila de subtotal (no es un dato válido sumarlas). */
+.tabla-infoagro tr.fila-subtotal-semilla td{background:#f0f9f4;font-weight:800;color:var(--color-primario-oscuro);border-top:1px solid var(--color-primario);border-bottom:1px solid var(--color-borde);}
+
+/* ---- Pivot: columnas de ancho ajustable a mano ----
+   table-layout:fixed + un <colgroup> con el ancho de cada columna (ver
+   PIVOT_ANCHOS/anchoColumnaPivot) — el ancho por defecto de "Insumo" ya no
+   lo fija la clase .col-dim-producto, lo controla el <col> de esa columna. */
+.tabla-pivot{table-layout:fixed;}
+.tabla-pivot.tabla-infoagro td.col-dim-producto,
+.tabla-pivot.tabla-infoagro th.col-dim-producto{width:auto;max-width:none;}
+.tabla-pivot th{position:relative;overflow:hidden;}
+.col-resize-handle{position:absolute;top:0;right:0;bottom:0;width:8px;cursor:col-resize;z-index:4;touch-action:none;}
+.col-resize-handle:hover,
+.col-resize-handle:active{background:rgba(45,106,79,.35);}
 
 @media (max-width:900px){
   .toolbar-una-fila{flex-direction:column;align-items:stretch;}
@@ -927,7 +949,7 @@ function iniciarTablaInteractiva(host, columnasDef, datos, busquedaInicial){
       visibles.map(key => {
         const c = col(key);
         if(key === nivelKey){
-          return `<td class="grupo-etiqueta" style="padding-left:${10 + profundidad * 16}px"><button class="grupo-caret" title="${colapsado ? "Expandir grupo" : "Colapsar grupo"}">${colapsado ? "▸" : "▾"}</button><b>${escHtml(valor)}</b><span class="grupo-conteo">${filasGrupo.length}</span></td>`;
+          return `<td style="padding-left:${10 + profundidad * 16}px"><span class="grupo-etiqueta-inner"><button class="grupo-caret" title="${colapsado ? "Expandir grupo" : "Colapsar grupo"}">${colapsado ? "▸" : "▾"}</button><b>${escHtml(valor)}</b><span class="grupo-conteo">${filasGrupo.length}</span></span></td>`;
         }
         if(c.tipo === "numero" && st.subtotales.has(key)){
           const suma = filasGrupo.reduce((s, r) => s + (Number(r[key]) || 0), 0);
@@ -1200,6 +1222,18 @@ function todasLasRutasGrupoPivot(filas, dims, rutaPadre){
   return out;
 }
 
+// Anchos de columna del pivot, ajustables a mano arrastrando el borde del
+// encabezado (ver .col-resize-handle). Se guardan por clave de columna
+// (nombre de dimensión, "um", "finca:<Nombre>" o "total") para que
+// sobrevivan a los re-render (colapsar/expandir, buscar, reordenar).
+let PIVOT_ANCHOS = {};
+const PIVOT_ANCHO_DEFECTO = { ciclo:130, actividad:150, categoria:170, producto:190, um:68 };
+function anchoColumnaPivot(clave){
+  if(PIVOT_ANCHOS[clave]) return PIVOT_ANCHOS[clave];
+  if(PIVOT_ANCHO_DEFECTO[clave]) return PIVOT_ANCHO_DEFECTO[clave];
+  return 100; // finca / total
+}
+
 function renderPivot(){
   const datos = datosParaPivot();
   const fincas = [...new Set(datos.map(r => r.finca))].filter(Boolean).sort((a,b) => a.localeCompare(b, "es"));
@@ -1213,42 +1247,77 @@ function renderPivot(){
     return ums.length === 1 ? ums[0] : (ums.length > 1 ? "Varios" : "");
   };
 
-  function filaPivotHtml(dim, valor, filasGrupo, profundidad, esUltimoNivel, colapsado, rutaId, ruta){
-    // Forma tabular (estilo Excel "Tabular Form"): cada dimensión ya tiene su
-    // propia columna, así que NO se indenta en escalera como un árbol — todas
-    // las celdas de una misma columna arrancan en el mismo margen izquierdo,
-    // igual que en una tabla normal. Los valores de los niveles ya decididos
-    // (ancestros, idx < profundidad) se REPITEN en cada fila descendiente, en
-    // texto atenuado, en vez de dejarse en blanco.
+  // Etiqueta de un nivel (dimensión) con su caret de colapsar/expandir y el
+  // contador de filas del grupo. esHoja=true la deja sin caret (es el valor
+  // final, p.ej. el Insumo, no un grupo colapsable).
+  function celdaEtiquetaGrupo(nodo, esHoja){
+    let caret;
+    if(esHoja){
+      caret = `<span style="display:inline-block;width:16px;"></span>`;
+    } else {
+      const colapsado = PIVOT_COLAPSADOS.has(nodo.rutaId);
+      caret = `<button class="grupo-caret" title="${colapsado ? "Expandir" : "Colapsar"}">${colapsado ? "▸" : "▾"}</button>`;
+    }
+    return `<td class="col-fija col-dim-${nodo.dim}" data-ruta="${escHtml(nodo.rutaId)}" title="${escHtml(nodo.valor)}"><span class="grupo-etiqueta-inner">${caret}<b class="dim-valor-texto">${escHtml(nodo.valor)}</b><span class="grupo-conteo">${nodo.filasGrupo.length}</span></span></td>`;
+  }
+
+  // Fila fusionada: forma tabular real — cada dimensión tiene su propia
+  // columna y NUNCA se genera una fila "solo de grupo" en blanco. La
+  // etiqueta+caret de cada nivel ancestro se muestra UNA VEZ, en la primera
+  // fila hoja (o fila colapsada) de ese grupo — exactamente en la misma fila
+  // que sus descendientes, no en una fila aparte arriba. `pendientes` es un
+  // array mutable: cada ancestro pendiente de mostrarse se "consume" (se
+  // quita) al aparecer en una fila, así las filas siguientes del mismo grupo
+  // ya no lo repiten con caret, solo con el valor atenuado (ancestro-repetido).
+  function filaPivotMerged(nodo, pendientes, rutaCompleta, esHoja){
     const celdasDim = PIVOT_DIMS.map((d, idx) => {
-      if(idx === profundidad){
-        const caret = esUltimoNivel ? `<span style="display:inline-block;width:16px;"></span>` :
-          `<button class="grupo-caret" title="${colapsado ? "Expandir" : "Colapsar"}">${colapsado ? "▸" : "▾"}</button>`;
-        return `<td class="col-fija col-dim-${d}${esUltimoNivel ? "" : " grupo-etiqueta"}" data-ruta="${escHtml(rutaId)}" title="${escHtml(valor)}">${caret}<b class="dim-valor-texto">${escHtml(valor)}</b><span class="grupo-conteo">${filasGrupo.length}</span></td>`;
+      const pendIdx = pendientes.findIndex(p => p.profundidad === idx);
+      if(pendIdx !== -1){
+        const pend = pendientes[pendIdx];
+        pendientes.splice(pendIdx, 1);
+        return celdaEtiquetaGrupo(pend, false);
       }
-      if(idx < profundidad){
-        const valorAncestro = ruta[idx] ? ruta[idx].valor : "";
+      if(idx === nodo.profundidad) return celdaEtiquetaGrupo(nodo, esHoja);
+      if(idx < nodo.profundidad){
+        const valorAncestro = rutaCompleta[idx] ? rutaCompleta[idx].valor : "";
         return `<td class="col-fija col-dim-${d} dim-valor-repetido" title="${escHtml(valorAncestro)}"><span class="dim-valor-texto">${escHtml(valorAncestro)}</span></td>`;
       }
       return `<td class="col-fija col-dim-${d}"></td>`;
     }).join("");
-    // Regla especial: el nivel "Categoría Insumo" es solo separación visual
-    // (no tiene sentido sumar litros/kg de productos distintos entre sí) —
-    // se deja en blanco, EXCEPTO para la categoría "Semilla", donde el
-    // subtotal sí es un dato válido y se calcula como en cualquier otro nivel.
-    const esCategoriaSinSubtotal = dim === "categoria" && !esUltimoNivel && String(valor).trim().toLowerCase() !== "semilla";
-    const celdaUm = `<td class="col-fija-borde col-fija">${esUltimoNivel ? escHtml(umDe(filasGrupo)) : ""}</td>`;
+    // Regla especial: el nivel "Categoría Insumo" (colapsado) es solo
+    // separación visual — no tiene sentido sumar litros/kg de productos
+    // distintos entre sí — se deja en "–", EXCEPTO para "Semilla".
+    const esCategoriaSinSubtotal = !esHoja && nodo.dim === "categoria" && String(nodo.valor).trim().toLowerCase() !== "semilla";
+    const celdaUm = `<td class="col-fija-borde col-fija">${esHoja ? escHtml(umDe(nodo.filasGrupo)) : ""}</td>`;
     const celdasFinca = esCategoriaSinSubtotal
       ? fincas.map(() => `<td class="num grupo-vacia">–</td>`).join("")
-      : fincas.map(f => `<td class="num">${fmt(sumaCantidadFinca(filasGrupo, f))}</td>`).join("");
+      : fincas.map(f => `<td class="num">${fmt(sumaCantidadFinca(nodo.filasGrupo, f))}</td>`).join("");
     const celdaTotal = esCategoriaSinSubtotal
       ? `<td class="num grupo-vacia">–</td>`
-      : `<td class="num" style="font-weight:800;">${fmt(sumaCantidad(filasGrupo))}</td>`;
-    const claseFila = esUltimoNivel ? "" : `fila-grupo nivel-${profundidad + 1}`;
-    return `<tr class="${claseFila}"${esUltimoNivel ? "" : ` data-ruta="${escHtml(rutaId)}"`}>${celdasDim}${celdaUm}${celdasFinca}${celdaTotal}</tr>`;
+      : `<td class="num" style="font-weight:800;">${fmt(sumaCantidad(nodo.filasGrupo))}</td>`;
+    const claseFila = esHoja ? "" : `fila-grupo nivel-${nodo.profundidad + 1}`;
+    return `<tr class="${claseFila}">${celdasDim}${celdaUm}${celdasFinca}${celdaTotal}</tr>`;
   }
 
-  function construirNodoPivot(filas, dims, rutaPadre, profundidad){
+  // Fila de subtotal, debajo de sus propias filas — SOLO para la categoría
+  // "Semilla" (única donde sumar el Insumo entre productos distintos es un
+  // dato válido). Las demás categorías no llevan fila de subtotal.
+  function filaSubtotalSemilla(nodoCategoria, rutaCompleta){
+    const idxHoja = PIVOT_DIMS.length - 1;
+    const celdasDim = PIVOT_DIMS.map((d, idx) => {
+      if(idx === idxHoja){
+        return `<td class="col-fija col-dim-${d}" title="Subtotal Semilla"><b class="dim-valor-texto">Subtotal Semilla</b></td>`;
+      }
+      const valorAncestro = idx <= nodoCategoria.profundidad ? (rutaCompleta[idx] ? rutaCompleta[idx].valor : "") : "";
+      return `<td class="col-fija col-dim-${d} dim-valor-repetido" title="${escHtml(valorAncestro)}"><span class="dim-valor-texto">${escHtml(valorAncestro)}</span></td>`;
+    }).join("");
+    const celdaUm = `<td class="col-fija-borde col-fija">${escHtml(umDe(nodoCategoria.filasGrupo))}</td>`;
+    const celdasFinca = fincas.map(f => `<td class="num">${fmt(sumaCantidadFinca(nodoCategoria.filasGrupo, f))}</td>`).join("");
+    const celdaTotal = `<td class="num" style="font-weight:800;">${fmt(sumaCantidad(nodoCategoria.filasGrupo))}</td>`;
+    return `<tr class="fila-subtotal-semilla">${celdasDim}${celdaUm}${celdasFinca}${celdaTotal}</tr>`;
+  }
+
+  function construirFilasPivot(filas, dims, rutaPadre, profundidad, pendientes){
     const [dim, ...resto] = dims;
     const esUltimoNivel = resto.length === 0;
     let html = "";
@@ -1257,22 +1326,45 @@ function renderPivot(){
       .forEach(([valor, filasGrupo]) => {
         const ruta = rutaPadre.concat([{ nivel: dim, valor }]);
         const rutaId = idRutaPivot(ruta);
-        const colapsado = !esUltimoNivel && PIVOT_COLAPSADOS.has(rutaId);
-        html += filaPivotHtml(dim, valor, filasGrupo, profundidad, esUltimoNivel, colapsado, rutaId, ruta);
-        if(!esUltimoNivel && !colapsado) html += construirNodoPivot(filasGrupo, resto, ruta, profundidad + 1);
+        const nodo = { dim, valor, filasGrupo, rutaId, profundidad };
+        if(esUltimoNivel){
+          html += filaPivotMerged(nodo, pendientes, ruta, true);
+        } else {
+          const colapsado = PIVOT_COLAPSADOS.has(rutaId);
+          if(colapsado){
+            html += filaPivotMerged(nodo, pendientes, ruta, false);
+          } else {
+            // OJO: `pendientes` es UN SOLO array compartido en todo el recorrido
+            // (no una copia por rama) — así, una vez que la etiqueta de un nivel
+            // se muestra en la primera fila hoja de TODO el árbol, no vuelve a
+            // aparecer con caret en las demás ramas hermanas (solo atenuada).
+            pendientes.push(nodo);
+            html += construirFilasPivot(filasGrupo, resto, ruta, profundidad + 1, pendientes);
+            const idxSobrante = pendientes.indexOf(nodo);
+            if(idxSobrante !== -1) pendientes.splice(idxSobrante, 1); // por si el grupo quedó sin filas descendientes
+            if(dim === "categoria" && String(valor).trim().toLowerCase() === "semilla"){
+              html += filaSubtotalSemilla(nodo, ruta);
+            }
+          }
+        }
       });
     return html;
   }
 
-  const theadDims = PIVOT_DIMS.map(dim => `<th class="col-fija dim-arrastrable col-dim-${dim}" draggable="true" data-dim="${dim}">${escHtml(PIVOT_DIM_LABELS[dim])}<span class="dim-handle">⠿ arrastrar</span></th>`).join("");
-  const thead = `<tr>${theadDims}<th class="col-fija-borde col-fija">UM</th>${fincas.map(f => `<th class="num">${escHtml(f)}</th>`).join("")}<th class="num" style="font-weight:800;">Total</th></tr>`;
+  const columnasOrden = [...PIVOT_DIMS, "um", ...fincas.map(f => `finca:${f}`), "total"];
+  const colgroup = `<colgroup>${columnasOrden.map(clave => `<col data-colkey="${escHtml(clave)}" style="width:${anchoColumnaPivot(clave)}px">`).join("")}</colgroup>`;
 
-  const tbody = datos.length ? construirNodoPivot(datos, PIVOT_DIMS, [], 0) : "";
+  const resize = clave => `<span class="col-resize-handle" data-colkey="${escHtml(clave)}" draggable="false"></span>`;
+  const theadDims = PIVOT_DIMS.map(dim => `<th class="col-fija dim-arrastrable col-dim-${dim}" draggable="true" data-dim="${dim}">${escHtml(PIVOT_DIM_LABELS[dim])}<span class="dim-handle">⠿ arrastrar</span>${resize(dim)}</th>`).join("");
+  const thead = `<tr>${theadDims}<th class="col-fija-borde col-fija">UM${resize("um")}</th>${fincas.map(f => `<th class="num">${escHtml(f)}${resize("finca:"+f)}</th>`).join("")}<th class="num" style="font-weight:800;">Total${resize("total")}</th></tr>`;
+
+  const tbody = datos.length ? construirFilasPivot(datos, PIVOT_DIMS, [], 0, []) : "";
 
   const totalGeneralCeldas = PIVOT_DIMS.map((d,idx) => idx===0 ? `<td class="col-fija"><b>Total general</b></td>` : `<td class="col-fija"></td>`).join("");
   const filaTotalGeneral = datos.length ? `<tr class="fila-total-general">${totalGeneralCeldas}<td class="col-fija-borde col-fija"></td>${fincas.map(f => `<td class="num">${fmt(sumaCantidadFinca(datos, f))}</td>`).join("")}<td class="num">${fmt(sumaCantidad(datos))}</td></tr>` : "";
 
-  host.innerHTML = `<div class="tabla-wrapper"><table class="tabla-infoagro">
+  host.innerHTML = `<div class="tabla-wrapper"><table class="tabla-infoagro tabla-pivot">
+    ${colgroup}
     <thead>${thead}</thead>
     <tbody>${tbody || `<tr><td colspan="${PIVOT_DIMS.length + 2 + fincas.length}" style="text-align:center;color:var(--color-texto-suave);padding:20px;">Sin resultados con los filtros actuales</td></tr>`}${filaTotalGeneral}</tbody>
   </table></div>`;
@@ -1287,7 +1379,10 @@ function renderPivot(){
   });
 
   host.querySelectorAll("th.dim-arrastrable").forEach(th => {
-    th.addEventListener("dragstart", () => { arrastrandoDimPivot = th.dataset.dim; th.classList.add("arrastrando"); });
+    th.addEventListener("dragstart", e => {
+      if(e.target.closest(".col-resize-handle")){ e.preventDefault(); return; }
+      arrastrandoDimPivot = th.dataset.dim; th.classList.add("arrastrando");
+    });
     th.addEventListener("dragend", () => th.classList.remove("arrastrando"));
     th.addEventListener("dragover", e => { e.preventDefault(); th.classList.add("recibiendo"); });
     th.addEventListener("dragleave", () => th.classList.remove("recibiendo"));
@@ -1301,6 +1396,34 @@ function renderPivot(){
       arrastrandoDimPivot = null;
       PIVOT_COLAPSADOS.clear(); // las rutas guardadas ya no corresponden al nuevo orden de niveles
       renderPivot();
+    });
+  });
+
+  // Ajuste manual del ancho de cada columna: arrastrar el borde derecho del
+  // encabezado. El ancho se guarda en PIVOT_ANCHOS y persiste entre renders.
+  host.querySelectorAll(".col-resize-handle").forEach(handle => {
+    handle.addEventListener("mousedown", e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const clave = handle.dataset.colkey;
+      const col = host.querySelector(`col[data-colkey="${CSS.escape(clave)}"]`);
+      if(!col) return;
+      const anchoInicial = col.getBoundingClientRect().width;
+      const xInicial = e.clientX;
+      document.body.style.cursor = "col-resize";
+      function mover(ev){
+        const nuevoAncho = Math.max(50, Math.round(anchoInicial + (ev.clientX - xInicial)));
+        PIVOT_ANCHOS[clave] = nuevoAncho;
+        col.style.width = nuevoAncho + "px";
+        aplicarFijasPivot();
+      }
+      function soltar(){
+        document.removeEventListener("mousemove", mover);
+        document.removeEventListener("mouseup", soltar);
+        document.body.style.cursor = "";
+      }
+      document.addEventListener("mousemove", mover);
+      document.addEventListener("mouseup", soltar);
     });
   });
 
@@ -1346,8 +1469,43 @@ function exportarPivotExcel(){
     return ums.length === 1 ? ums[0] : (ums.length > 1 ? "Varios" : "");
   };
 
+  // Misma forma fusionada que en pantalla: sin filas "solo de grupo" — la
+  // etiqueta de cada ancestro aparece una vez, en la primera fila hoja (o
+  // colapsada) de su grupo; las siguientes filas del mismo grupo repiten el
+  // valor (forma tabular). Subtotal como fila aparte solo para "Semilla".
+  function filaFusionadaExport(nodo, pendientes, rutaCompleta, esHoja){
+    const fila = PIVOT_DIMS.map((d, idx) => {
+      const pendIdx = pendientes.findIndex(p => p.profundidad === idx);
+      if(pendIdx !== -1){ const v = pendientes[pendIdx].valor; pendientes.splice(pendIdx, 1); return v; }
+      if(idx === nodo.profundidad) return nodo.valor;
+      if(idx < nodo.profundidad) return rutaCompleta[idx] ? rutaCompleta[idx].valor : "";
+      return "";
+    });
+    const esCategoriaSinSubtotal = !esHoja && nodo.dim === "categoria" && String(nodo.valor).trim().toLowerCase() !== "semilla";
+    fila.push(esHoja ? umDe(nodo.filasGrupo) : "");
+    if(esCategoriaSinSubtotal){
+      fincas.forEach(() => fila.push(""));
+      fila.push("");
+    } else {
+      fincas.forEach(f => fila.push(sumaCantidadFinca(nodo.filasGrupo, f)));
+      fila.push(sumaCantidad(nodo.filasGrupo));
+    }
+    return fila;
+  }
+  function filaSubtotalSemillaExport(nodoCategoria, rutaCompleta){
+    const idxHoja = PIVOT_DIMS.length - 1;
+    const fila = PIVOT_DIMS.map((d, idx) => {
+      if(idx === idxHoja) return "Subtotal Semilla";
+      return idx <= nodoCategoria.profundidad ? (rutaCompleta[idx] ? rutaCompleta[idx].valor : "") : "";
+    });
+    fila.push(umDe(nodoCategoria.filasGrupo));
+    fincas.forEach(f => fila.push(sumaCantidadFinca(nodoCategoria.filasGrupo, f)));
+    fila.push(sumaCantidad(nodoCategoria.filasGrupo));
+    return fila;
+  }
+
   const filasExport = [];
-  function recorrer(filas, dims, rutaPadre, profundidad){
+  function recorrer(filas, dims, rutaPadre, profundidad, pendientes){
     const [dim, ...resto] = dims;
     const esUltimoNivel = resto.length === 0;
     [...agruparPorPivot(filas, dim).entries()]
@@ -1355,27 +1513,28 @@ function exportarPivotExcel(){
       .forEach(([valor, filasGrupo]) => {
         const ruta = rutaPadre.concat([{ nivel: dim, valor }]);
         const rutaId = idRutaPivot(ruta);
-        const colapsado = !esUltimoNivel && PIVOT_COLAPSADOS.has(rutaId);
-        const esCategoriaSinSubtotal = dim === "categoria" && !esUltimoNivel && String(valor).trim().toLowerCase() !== "semilla";
-        // Igual que en pantalla: repetir valores de niveles ancestros (forma tabular)
-        const fila = PIVOT_DIMS.map((d, idx) => {
-          if(idx === profundidad) return valor;
-          if(idx < profundidad) return ruta[idx] ? ruta[idx].valor : "";
-          return "";
-        });
-        fila.push(esUltimoNivel ? umDe(filasGrupo) : "");
-        if(esCategoriaSinSubtotal){
-          fincas.forEach(() => fila.push(""));
-          fila.push("");
+        const nodo = { dim, valor, filasGrupo, rutaId, profundidad };
+        if(esUltimoNivel){
+          filasExport.push(filaFusionadaExport(nodo, pendientes, ruta, true));
         } else {
-          fincas.forEach(f => fila.push(sumaCantidadFinca(filasGrupo, f)));
-          fila.push(sumaCantidad(filasGrupo));
+          const colapsado = PIVOT_COLAPSADOS.has(rutaId);
+          if(colapsado){
+            filasExport.push(filaFusionadaExport(nodo, pendientes, ruta, false));
+          } else {
+            // `pendientes` es un solo array compartido en todo el recorrido —
+            // igual que en pantalla, ver comentario en construirFilasPivot.
+            pendientes.push(nodo);
+            recorrer(filasGrupo, resto, ruta, profundidad + 1, pendientes);
+            const idxSobrante = pendientes.indexOf(nodo);
+            if(idxSobrante !== -1) pendientes.splice(idxSobrante, 1);
+            if(dim === "categoria" && String(valor).trim().toLowerCase() === "semilla"){
+              filasExport.push(filaSubtotalSemillaExport(nodo, ruta));
+            }
+          }
         }
-        filasExport.push(fila);
-        if(!esUltimoNivel && !colapsado) recorrer(filasGrupo, resto, ruta, profundidad + 1);
       });
   }
-  if(datos.length) recorrer(datos, PIVOT_DIMS, [], 0);
+  if(datos.length) recorrer(datos, PIVOT_DIMS, [], 0, []);
 
   const encabezados = [...PIVOT_DIMS.map(d => PIVOT_DIM_LABELS[d]), "UM", ...fincas, "Total"];
   const filaTotalGeneral = [...PIVOT_DIMS.map((d, idx) => idx === 0 ? "Total general" : ""), "", ...fincas.map(f => sumaCantidadFinca(datos, f)), sumaCantidad(datos)];
