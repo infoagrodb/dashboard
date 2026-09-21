@@ -255,6 +255,16 @@
   .th-filtro:hover{ background:rgba(255,255,255,.45); opacity:1; transform:scale(1.08); }
   .th-filtro.activo{ opacity:1; transform:scale(1); background:#52b788; color:#fff;
     box-shadow:0 0 0 2px rgba(82,183,136,.35), 0 1px 2px rgba(17,24,39,.2); }
+  .th-drag{ cursor:grab; opacity:.65; font-size:12px; flex-shrink:0; user-select:none; }
+  .th-drag:active{ cursor:grabbing; }
+  th.arrastrando{ opacity:.35; }
+  th.drop-objetivo{ box-shadow:inset 0 0 0 2px currentColor; }
+  /* Listado de Reportes usa header claro (no verde) — variante de color para ▾ y ⠿ */
+  table.tabla-listado-reportes .th-orden{ color:var(--text-muted); }
+  table.tabla-listado-reportes .th-drag{ color:var(--text-muted); }
+  table.tabla-listado-reportes .th-filtro{ background:rgba(17,24,39,.08); color:var(--text-muted); box-shadow:none; }
+  table.tabla-listado-reportes .th-filtro:hover{ background:rgba(17,24,39,.16); }
+  table.tabla-listado-reportes .th-filtro.activo{ background:#52b788; color:#fff; }
 
   /* ---------- Comparación Ciclo Actual vs Histórico ---------- */
   .seccion-comparacion{ margin-top:28px; padding-top:20px; border-top:2px solid var(--border-color); }
@@ -578,7 +588,7 @@
           <button class="tf-icon" onclick="cargarListadoReportes(true)" title="Actualizar listado"><span>↻</span></button>
         </div>
         <div class="tabla-scroll" style="max-height:600px;">
-          <table class="tabla-listado-reportes">
+          <table class="tabla-listado-reportes" id="tablaListadoReportes">
             <thead><tr>
               <th>Reporte</th><th>Estado</th><th>Sector</th><th>Fecha</th><th>Ciclo</th>
               <th>Finca</th><th>Lote</th><th class="num">Edad</th><th>Aplicación</th>
@@ -1260,7 +1270,14 @@ function refrescarTabPorCicloSiVisible(){
   const panelRep = document.getElementById('panelReporte');
   if(panelRep && panelRep.classList.contains('activo')) poblarSelectorFincaReporte();
   const panelLis = document.getElementById('panelListado');
-  if(panelLis && panelLis.classList.contains('activo') && typeof LISTADO_CARGADO !== 'undefined' && LISTADO_CARGADO) renderListadoReportes();
+  if(panelLis && panelLis.classList.contains('activo') && typeof LISTADO_CARGADO !== 'undefined' && LISTADO_CARGADO){
+    // Se reconstruye siempre que se refresca este tab (no solo al cargarlo la primera
+    // vez) — así, si el usuario prende/apaga "Incluir históricos 2012-2024" estando
+    // parado en Listado de Reportes, los pseudo-reportes históricos aparecen o
+    // desaparecen igual que en el resto de las pestañas, sin re-pedir nada a Odoo.
+    construirListadoHistoricos();
+    renderListadoReportes();
+  }
 }
 
 // El toolbar tiene position:sticky (para quedar fijo arriba al hacer scroll), pero eso
@@ -2155,7 +2172,21 @@ function renderTablaPorCiclo(){
 const TABLA_REC_MASTER = {};
 const TABLA_REC_ORDEN = {};
 const TABLA_REC_FILTROS = {};
+const TABLA_REC_ETIQUETAS = {};
+const TABLA_REC_COLORDEN = {};
 let _panelFiltroRecActivo = null;
+
+function construirThRec(tablaId, idx, texto){
+  return `<th data-col="${idx}"
+      ondragstart="colDragStart(event,'${tablaId}')" ondragover="colDragOver(event)"
+      ondragleave="colDragLeave(event)" ondrop="colDrop(event,'${tablaId}')" ondragend="colDragEnd(event)">
+    <div class="th-cell">
+      <span class="th-drag" title="Arrastrar para reordenar columnas" onmousedown="this.closest('th').setAttribute('draggable','true')">⠿</span>
+      <span class="th-label" onclick="ordenarTablaRec('${tablaId}', ${idx})">${texto}</span>
+      <span class="th-orden" id="thOrdenRec_${tablaId}_${idx}"></span>
+      <button type="button" class="th-filtro" title="Filtrar" onclick="event.stopPropagation(); abrirFiltroColumnaRec('${tablaId}', ${idx}, this)">▾</button>
+    </div></th>`;
+}
 
 function activarTablaInteractivaRecuentos(tablaId){
   const tabla = document.getElementById(tablaId);
@@ -2163,26 +2194,89 @@ function activarTablaInteractivaRecuentos(tablaId){
   const thead = tabla.querySelector('thead');
   const tbody = tabla.querySelector('tbody');
   if(!thead || !tbody) return;
+  const headerRow = thead.querySelector('tr');
+
+  // Las etiquetas se recalculan siempre que el <thead> llegue "plano" (sin .th-cell) —
+  // caso de "Resultado por Ciclo", donde el caller reconstruye el header con <th> simples
+  // en cada render porque las columnas de Ciclo cambian según los datos filtrados. Si el
+  // header ya viene envuelto (caso "Listado de Reportes", header estático que nunca se
+  // reescribe entre renders), se reusa la etiqueta capturada la primera vez para no leer
+  // el ⠿/▾ ya inyectados como si fueran parte del texto de la columna.
+  const headerEsPlano = !headerRow.querySelector('.th-cell');
+  let etiquetas;
+  if(headerEsPlano){
+    etiquetas = [...headerRow.children].map(th => th.textContent.trim());
+    TABLA_REC_ETIQUETAS[tablaId] = etiquetas;
+  }else{
+    etiquetas = TABLA_REC_ETIQUETAS[tablaId] || [...headerRow.children].map(th => (th.querySelector('.th-label')||th).textContent.trim());
+  }
 
   const filas = [...tbody.querySelectorAll('tr')].filter(tr => !tr.querySelector('.vacio'));
   TABLA_REC_MASTER[tablaId] = filas.map(tr => ({
-    html: tr.outerHTML,
+    onclickAttr: tr.getAttribute('onclick') || '',
+    tds: [...tr.children].map(td => td.outerHTML),
     cells: [...tr.children].map(td => td.textContent.trim()),
+    // Valor real para ordenar: si la celda trae data-sort (p.ej. Fecha, donde el texto
+    // mostrado es "21-Sep-2026" pero eso no ordena bien como texto), se usa ese; si no,
+    // el mismo texto visible de siempre.
+    sortVals: [...tr.children].map(td => td.dataset.sort !== undefined ? td.dataset.sort : td.textContent.trim()),
   }));
 
-  const headerRow = thead.querySelector('tr');
-  // Se reconstruye siempre (sin bandera "wired") porque las columnas de Ciclo cambian
-  // según qué haya en los datos filtrados — no es un set fijo de columnas.
-  [...headerRow.children].forEach((th, idx) => {
-    const texto = th.textContent.trim();
-    th.innerHTML = `<div class="th-cell">
-      <span class="th-label" onclick="ordenarTablaRec('${tablaId}', ${idx})">${texto}</span>
-      <span class="th-orden" id="thOrdenRec_${tablaId}_${idx}"></span>
-      <button type="button" class="th-filtro" title="Filtrar" onclick="event.stopPropagation(); abrirFiltroColumnaRec('${tablaId}', ${idx}, this)">▾</button>
-    </div>`;
-  });
-
   if(!TABLA_REC_FILTROS[tablaId]) TABLA_REC_FILTROS[tablaId] = {};
+  const ncols = etiquetas.length;
+  if(!TABLA_REC_COLORDEN[tablaId] || TABLA_REC_COLORDEN[tablaId].length !== ncols){
+    TABLA_REC_COLORDEN[tablaId] = Array.from({length:ncols}, (_,i)=>i);
+  }
+
+  headerRow.innerHTML = TABLA_REC_COLORDEN[tablaId].map(idx => construirThRec(tablaId, idx, etiquetas[idx]||'')).join('');
+  aplicarFiltroYOrdenRec(tablaId);
+}
+
+// --- Arrastrar y soltar columnas (mismo patrón para todas las tablas interactivas) ---
+function colDragStart(e, tablaId){
+  const th = e.currentTarget;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', th.dataset.col);
+  th.classList.add('arrastrando');
+}
+function colDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.classList.add('drop-objetivo');
+}
+function colDragLeave(e){
+  e.currentTarget.classList.remove('drop-objetivo');
+}
+function colDrop(e, tablaId){
+  e.preventDefault();
+  const thDestino = e.currentTarget;
+  thDestino.classList.remove('drop-objetivo');
+  const colArrastrado = Number(e.dataTransfer.getData('text/plain'));
+  const colDestino = Number(thDestino.dataset.col);
+  const orden = TABLA_REC_COLORDEN[tablaId];
+  if(!orden || isNaN(colArrastrado) || colArrastrado===colDestino) return;
+  const iFrom = orden.indexOf(colArrastrado), iTo = orden.indexOf(colDestino);
+  if(iFrom===-1 || iTo===-1) return;
+  orden.splice(iFrom,1);
+  orden.splice(iTo,0,colArrastrado);
+  reordenarColumnasRec(tablaId);
+}
+function colDragEnd(){
+  document.querySelectorAll('th.arrastrando').forEach(el=>el.classList.remove('arrastrando'));
+  document.querySelectorAll('th.drop-objetivo').forEach(el=>el.classList.remove('drop-objetivo'));
+  document.querySelectorAll('th[draggable="true"]').forEach(th=>th.setAttribute('draggable','false'));
+}
+document.addEventListener('mouseup', ()=>{
+  document.querySelectorAll('th[draggable="true"]').forEach(th=>th.setAttribute('draggable','false'));
+});
+
+function reordenarColumnasRec(tablaId){
+  const tabla = document.getElementById(tablaId);
+  if(!tabla) return;
+  const headerRow = tabla.querySelector('thead tr');
+  const etiquetas = TABLA_REC_ETIQUETAS[tablaId] || [];
+  const orden = TABLA_REC_COLORDEN[tablaId] || [];
+  headerRow.innerHTML = orden.map(idx => construirThRec(tablaId, idx, etiquetas[idx]||'')).join('');
   aplicarFiltroYOrdenRec(tablaId);
 }
 
@@ -2262,7 +2356,7 @@ function aplicarFiltroYOrdenRec(tablaId){
   const orden = TABLA_REC_ORDEN[tablaId];
   if(orden){
     filas = [...filas].sort((a,b)=>{
-      const va=a.cells[orden.col]||'', vb=b.cells[orden.col]||'';
+      const va=a.sortVals[orden.col]||'', vb=b.sortVals[orden.col]||'';
       const na=parseFloat(va.replace(/,/g,'').replace(/[^0-9.\-]/g,''));
       const nb=parseFloat(vb.replace(/,/g,'').replace(/[^0-9.\-]/g,''));
       const esNumerico = va.replace(/[\s%.,\-0-9]/g,'')==='' && vb.replace(/[\s%.,\-0-9]/g,'')==='' && !isNaN(na) && !isNaN(nb);
@@ -2271,11 +2365,19 @@ function aplicarFiltroYOrdenRec(tablaId){
     });
   }
 
-  tabla.querySelectorAll('thead .th-filtro').forEach((btn, idx)=>{ btn.classList.toggle('activo', !!filtros[idx]); });
+  tabla.querySelectorAll('thead .th-filtro').forEach(btn=>{
+    const idx = Number(btn.closest('th').dataset.col);
+    btn.classList.toggle('activo', !!filtros[idx]);
+  });
 
-  const colspan = tabla.querySelectorAll('thead th').length;
+  const colOrden = TABLA_REC_COLORDEN[tablaId] || (filas[0] ? filas[0].tds.map((_,i)=>i) : []);
+  const colspan = colOrden.length || tabla.querySelectorAll('thead th').length;
   tbody.innerHTML = filas.length
-    ? filas.map(f=>f.html).join('')
+    ? filas.map(f=>{
+        const tds = colOrden.map(idx=>f.tds[idx]).join('');
+        const onclickAttr = f.onclickAttr ? ` onclick="${f.onclickAttr.replace(/"/g,'&quot;')}"` : '';
+        return `<tr${onclickAttr}>${tds}</tr>`;
+      }).join('')
     : `<tr><td colspan="${colspan}" class="vacio">Sin resultados con los filtros de columna actuales.</td></tr>`;
 }
 
@@ -2691,6 +2793,68 @@ let LISTADO_CARGADO = false;
 let CAMPO_ESTADO_ODOO = null;      // nombre técnico del campo de "Estado"/etapa detectado en x_recuentos_estado_del ('' si no existe ninguno de los candidatos)
 let DETALLE_REPORTE_ACTUAL = null; // { id, folio, header, lineas, totalFotos } del reporte abierto en la vista de detalle
 
+// --- Pseudo-reportes históricos para el Listado de Reportes ---
+// El histórico Excel (RAW con fuente!=='vivo') NO tiene "reportes" reales: son líneas
+// sueltas de recuento (finca, lote, ciclo, dds, tipo, valor), sin folio, sin fecha
+// exacta, sin área/población/estado fenológico/aplicación y sin fotos/PDF en Odoo —
+// esos datos simplemente no se capturaron así en el Excel de origen. Para que el
+// usuario los vea igual en este listado (con la etiqueta "Histórico" dejando claro
+// que están incompletos, no que falten por un bug) se agrupan las líneas históricas
+// por Compañía+Finca+Lote+Ciclo+DDS — la unidad más parecida a "una visita de campo"
+// que se puede reconstruir con lo que trae el Excel — y cada grupo se muestra como
+// una fila más de la tabla, con los campos que no existen mostrados como "—".
+let LISTADO_HISTORICOS = [];    // filas con la misma forma que LISTADO_REPORTES, para mezclarlas en la misma tabla
+let HIST_REPORTES_MAPA = {};    // idHist (numérico) -> { co, fi, lo, se, ci, dds, lineas:[...] }, para abrir el detalle sin re-pedir nada a Odoo
+let HIST_CLAVE_A_ID = {};       // clave de texto (co|||fi|||lo|||ci|||dds) -> idHist numérico
+
+// Clave de texto para agrupar líneas históricas — Finca/Lote pueden traer texto con
+// comillas o caracteres raros, así que esta clave nunca se pone directamente en un
+// atributo HTML (por eso HIST_CLAVE_A_ID le asigna un id numérico aparte para eso).
+function claveGrupoHistorico(r){ return `${r.co}|||${r.fi}|||${r.lo}|||${r.ci}|||${r.dds}`; }
+
+// Reconstruye LISTADO_HISTORICOS y HIST_REPORTES_MAPA desde RAW. Es sincrónico y sin
+// red — RAW ya está en memoria — así que se puede llamar de nuevo cada vez que
+// cambia qué hay en RAW (ej. al prender/apagar "Incluir históricos 2012-2024") sin
+// costo de repetir ninguna carga.
+function construirListadoHistoricos(){
+  const grupos = {};
+  const claveAId = {};
+  let siguienteId = 1;
+  RAW.filter(r=>r.fuente!=='vivo').forEach(r=>{
+    const clave = claveGrupoHistorico(r);
+    if(!claveAId[clave]) claveAId[clave] = siguienteId++;
+    const idHist = claveAId[clave];
+    if(!grupos[idHist]){
+      grupos[idHist] = { co:r.co, fi:r.fi, lo:r.lo, se:r.se, ci:r.ci, dds:r.dds, lineas:[] };
+    }
+    grupos[idHist].lineas.push({ fa:r.fa, re:r.re, idr:r.idr, valor:r.valor, esPorc:r.esPorc });
+  });
+
+  HIST_REPORTES_MAPA = grupos;
+  HIST_CLAVE_A_ID = claveAId;
+  LISTADO_HISTORICOS = Object.entries(grupos).map(([idHist,g])=>({
+    esHistorico: true,
+    id: null,
+    claveHist: Number(idHist),
+    folio: `Histórico · DDS ${g.dds ?? '—'}`,
+    estado: null,
+    sector: g.se,
+    fecha: null,
+    ciclo: g.ci,
+    finca: g.fi,
+    lote: g.lo,
+    edad: g.dds,
+    aplicacion: null,
+    area: null,
+    poblacion: null,
+    estaciones: null,
+    compania: g.co,
+  })).sort((a,b)=>
+    anioDeCiclo(b.ciclo)-anioDeCiclo(a.ciclo) || (a.finca||'').localeCompare(b.finca||'') ||
+    (a.lote||'').localeCompare(b.lote||'') || ((a.edad||0)-(b.edad||0))
+  );
+}
+
 function m2oListado(raw){
   if(raw === undefined || raw === null || raw === false || raw === '') return null;
   if(Array.isArray(raw)) return raw[1];
@@ -2779,11 +2943,28 @@ async function cargarListadoReportes(forzar){
       'x_studio_poblacion_plantas','x_studio_cantidad_de_estaciones','x_studio_aplicacion'];
     if(campoEstado) campos.push(campoEstado);
 
-    const r = await fetch(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=${campos.join(',')}&limit=2000`);
-    const recs = filasDe(await r.json());
+    // Paginado igual que cargarOdoo() (bloques de 1000 + reintentos) en vez de un solo
+    // pedido con limit=2000: un solo request grande puede venir recortado por algún tope
+    // del Worker/Odoo y dejar afuera justo los reportes más recientes (id más alto).
+    const recs = [];
+    let pagina = 0, totalEsperado = null;
+    while(pagina < MAX_PAGINAS){
+      const j = await fetchJsonConReintentos(`${WORKER}/query?base=info&model=x_recuentos_estado_del&fields=${campos.join(',')}&limit=1000&offset=${pagina*1000}`);
+      const bloque = filasDe(j);
+      if(j && typeof j.total === 'number') totalEsperado = j.total;
+      if(!bloque.length) break;
+      recs.push(...bloque);
+      pagina++;
+      if(bloque.length < 1000) break;
+      if(totalEsperado !== null && recs.length >= totalEsperado) break;
+    }
+    if(pagina >= MAX_PAGINAS) console.warn('cargarListadoReportes: se alcanzó MAX_PAGINAS, puede haber reportes sin traer.');
+    console.info(`Listado de Reportes cargado: ${recs.length} registros en ${pagina} página(s).`);
 
     LISTADO_REPORTES = recs.map(rr=>({
+      esHistorico: false,
       id: rr.id,
+      claveHist: null,
       folio: rr.x_name || String(rr.id),
       estado: campoEstado ? m2oListado(rr[campoEstado]) : null,
       sector: m2oListado(rr.x_studio_sector),
@@ -2798,6 +2979,10 @@ async function cargarListadoReportes(forzar){
       estaciones: rr.x_studio_cantidad_de_estaciones ?? null,
       compania: m2oListado(rr.x_studio_company_id),
     })).sort((a,b)=> (b.fecha||'').localeCompare(a.fecha||'') || (b.id-a.id));
+
+    // Pseudo-reportes del histórico Excel (solo aparecen si "Incluir históricos
+    // 2012-2024" está activo — RAW ya viene filtrado por ese checkbox).
+    construirListadoHistoricos();
 
     LISTADO_CARGADO = true;
     renderListadoReportes();
@@ -2840,14 +3025,26 @@ function filasListadoFiltradasPorBarra(filas){
   }
 
   if(seleccionPropia.familia.length || seleccionPropia.recuento.length || seleccionPropia.dds.length){
+    const cumpleFiltroLinea = r =>
+      (!seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa)) &&
+      (!seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re)) &&
+      (!seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds));
+
+    // Reportes en vivo: se identifican por folio (RAW trae 'reporte' = folio del padre).
     const foliosPermitidos = new Set(
-      RAW.filter(r => r.fuente==='vivo' && r.reporte
-        && (!seleccionPropia.familia.length  || seleccionPropia.familia.includes(r.fa))
-        && (!seleccionPropia.recuento.length || seleccionPropia.recuento.includes(r.re))
-        && (!seleccionPropia.dds.length      || seleccionPropia.dds.includes(r.dds))
-      ).map(r=>r.reporte)
+      RAW.filter(r => r.fuente==='vivo' && r.reporte && cumpleFiltroLinea(r)).map(r=>r.reporte)
     );
-    out = out.filter(r => foliosPermitidos.has(r.folio));
+    // Pseudo-reportes históricos: no tienen folio real, se identifican por el mismo
+    // id numérico de agrupación (Compañía+Finca+Lote+Ciclo+DDS, ver
+    // construirListadoHistoricos/HIST_CLAVE_A_ID) — si alguna de sus líneas cumple el
+    // filtro, el pseudo-reporte entero cuenta como "permitido".
+    const clavesHistPermitidas = new Set(
+      RAW.filter(r => r.fuente!=='vivo' && cumpleFiltroLinea(r))
+         .map(r=>HIST_CLAVE_A_ID[claveGrupoHistorico(r)])
+         .filter(idHist=>idHist!==undefined)
+    );
+
+    out = out.filter(r => r.esHistorico ? clavesHistPermitidas.has(r.claveHist) : foliosPermitidos.has(r.folio));
   }
 
   return out;
@@ -2858,7 +3055,10 @@ function renderListadoReportes(){
   const tbody = document.getElementById('tbodyListadoReportes');
   const contador = document.getElementById('listadoContador');
 
-  let filas = filasListadoFiltradasPorBarra(LISTADO_REPORTES);
+  // Se mezclan los reportes en vivo con los pseudo-reportes históricos en una sola
+  // tabla — filasListadoFiltradasPorBarra() ya sabe distinguir uno de otro por
+  // r.esHistorico para el filtro de Familia/Tipo de Recuento/DDS.
+  let filas = filasListadoFiltradasPorBarra([...LISTADO_REPORTES, ...LISTADO_HISTORICOS]);
   if(texto){
     filas = filas.filter(r =>
       normTxt(r.folio).includes(texto) || normTxt(r.finca).includes(texto) ||
@@ -2867,19 +3067,25 @@ function renderListadoReportes(){
     );
   }
 
-  contador.textContent = `${filas.length} reporte${filas.length!==1?'s':''}${hayFiltroActivo() ? ' (filtrado)' : ''}`;
+  const totalHist = filas.filter(r=>r.esHistorico).length;
+  contador.textContent = `${filas.length} reporte${filas.length!==1?'s':''}` +
+    (totalHist ? ` (${totalHist} histórico${totalHist!==1?'s':''})` : '') +
+    (hayFiltroActivo() ? ' (filtrado)' : '');
 
   if(!filas.length){
     tbody.innerHTML = `<tr><td colspan="13" class="vacio">No hay reportes que coincidan con los filtros/búsqueda.</td></tr>`;
     return;
   }
 
+  // Pseudo-reportes históricos abren un detalle liviano armado con lo que ya está en
+  // memoria (abrirDetalleReporteHistorico) en vez del detalle real de Odoo
+  // (abrirDetalleReporte, que necesita un id numérico que estos registros no tienen).
   tbody.innerHTML = filas.map(r=>`
-    <tr onclick="abrirDetalleReporte(${r.id})">
+    <tr onclick="${r.esHistorico ? `abrirDetalleReporteHistorico(${r.claveHist})` : `abrirDetalleReporte(${r.id})`}">
       <td><span class="folio-link">${r.folio}</span></td>
-      <td>${badgeEstadoReporte(r.estado)}</td>
+      <td>${r.esHistorico ? '<span class="pill-origen hist">Histórico</span>' : badgeEstadoReporte(r.estado)}</td>
       <td>${r.sector||'—'}</td>
-      <td>${formatoFecha(r.fecha)||'—'}</td>
+      <td data-sort="${r.fecha ? String(r.fecha).replace(/-/g,'') : ''}">${formatoFecha(r.fecha)||'—'}</td>
       <td>${r.ciclo||'—'}</td>
       <td>${r.finca||'—'}</td>
       <td>${r.lote||'—'}</td>
@@ -2891,6 +3097,8 @@ function renderListadoReportes(){
       <td>${r.compania||'—'}</td>
     </tr>
   `).join('');
+
+  activarTablaInteractivaRecuentos('tablaListadoReportes');
 }
 
 // Trae header + líneas + conteo de fotos de un reporte — compartida entre la vista de
@@ -2930,6 +3138,7 @@ async function cargarDetalleReporte(id){
 async function abrirDetalleReporte(id){
   document.getElementById('listadoVistaLista').style.display = 'none';
   document.getElementById('listadoVistaDetalle').style.display = 'block';
+  mostrarBotonesReporteVivo(true); // un reporte real sí tiene fotos/PDF que ofrecer
   const cont = document.getElementById('detalleReporteContenido');
   cont.innerHTML = '<div class="detalle-estado-msg">Cargando…</div>';
   DETALLE_REPORTE_ACTUAL = null;
@@ -2942,6 +3151,82 @@ async function abrirDetalleReporte(id){
     console.error('Error abriendo detalle de reporte:', e);
     cont.innerHTML = `<div class="detalle-estado-msg error">No se pudo cargar el detalle: ${e.message}</div>`;
   }
+}
+
+// Muestra/oculta "Ver fotos" y "Reimprimir reporte" — no aplican a un pseudo-reporte
+// histórico porque ese dato nunca pasó por Odoo como un reporte real: no hay
+// adjuntos, ni PDF, ni id numérico que consultar.
+function mostrarBotonesReporteVivo(mostrar){
+  const btnFotos = document.getElementById('btnVerFotosReporte');
+  const btnReimprimir = document.getElementById('btnReimprimirReporte');
+  if(btnFotos) btnFotos.style.display = mostrar ? '' : 'none';
+  if(btnReimprimir) btnReimprimir.style.display = mostrar ? '' : 'none';
+}
+
+// Abre el detalle de un pseudo-reporte histórico (ver construirListadoHistoricos) —
+// sin red, ya está todo en HIST_REPORTES_MAPA desde que se armó el listado.
+function abrirDetalleReporteHistorico(idHist){
+  document.getElementById('listadoVistaLista').style.display = 'none';
+  document.getElementById('listadoVistaDetalle').style.display = 'block';
+  mostrarBotonesReporteVivo(false);
+  DETALLE_REPORTE_ACTUAL = null;
+
+  const cont = document.getElementById('detalleReporteContenido');
+  const grupo = HIST_REPORTES_MAPA[idHist];
+  if(!grupo){
+    cont.innerHTML = '<div class="detalle-estado-msg error">No se encontró el detalle histórico (puede que se haya desactivado "Incluir históricos 2012-2024").</div>';
+    return;
+  }
+  renderDetalleReporteHistorico(grupo, 'detalleReporteContenido');
+}
+
+// Contraparte de renderDetalleReporte() para un pseudo-reporte histórico — usa solo
+// los campos que el Excel histórico realmente trae (ver cargarHistorico): sin folio,
+// fecha exacta, área evaluada, población, estado fenológico, aplicación, valores por
+// estación (E1-E10) ni fotos/PDF, porque esos datos no se capturaron así en origen.
+function renderDetalleReporteHistorico(grupo, contenedorId){
+  const cont = document.getElementById(contenedorId || 'detalleReporteContenido');
+
+  const campos = [
+    ['Sector', grupo.se],
+    ['Ciclo', grupo.ci],
+    ['Finca', grupo.fi],
+    ['Lote de la finca', grupo.lo],
+    ['DDS (edad aproximada)', grupo.dds!=null ? grupo.dds+' días' : null],
+    ['Compañía', grupo.co],
+  ];
+  const camposHtml = campos.map(([label,val])=>`
+    <div class="detalle-campo"><label>${label}</label><span>${(val===null||val===undefined||val==='')?'—':val}</span></div>
+  `).join('');
+
+  const lineasOrdenadas = [...grupo.lineas].sort((a,b)=>(a.idr||999)-(b.idr||999));
+  const filasLineas = lineasOrdenadas.map(l=>{
+    const resultado = l.esPorc ? (((l.valor||0)*100).toFixed(1)+'%') : (l.valor||0).toFixed(2);
+    return `<tr>
+      <td>${l.fa||'—'}</td>
+      <td>${l.re||'—'}</td>
+      <td class="num"><strong>${resultado}</strong></td>
+    </tr>`;
+  }).join('');
+
+  cont.innerHTML = `
+    <div class="detalle-reporte-card">
+      <div class="detalle-reporte-titulo">Histórico · ${grupo.fi||'—'} · ${grupo.lo||'—'} <span class="pill-origen hist" style="margin-left:6px;">Histórico</span></div>
+      <div class="detalle-reporte-sub">
+        Dato agregado desde el Excel histórico 2012-2024 (Origen: no es un reporte de Odoo) —
+        no tiene folio, fecha exacta, área evaluada, población, estado fenológico, aplicación,
+        valores por estación, fotos ni PDF, porque el Excel de origen no capturó esos campos.
+        Solo se conserva el promedio/porcentaje final por Tipo de Recuento.
+      </div>
+      <div class="detalle-campos-grid">${camposHtml}</div>
+    </div>
+    <div class="tabla-scroll" style="max-height:480px;">
+      <table class="tabla-datos-recuentos">
+        <thead><tr><th>Familia</th><th>Tipo de Recuento</th><th class="num">Resultado</th></tr></thead>
+        <tbody>${filasLineas || '<tr><td colspan="3" class="vacio">Sin líneas.</td></tr>'}</tbody>
+      </table>
+    </div>
+  `;
 }
 
 // Mismo detalle que abrirDetalleReporte, pero en un modal flotante en vez de cambiar de
