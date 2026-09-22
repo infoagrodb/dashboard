@@ -1127,7 +1127,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.08.25-1";
+const APP_VERSION = "2026.09.21-2";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -3550,6 +3550,21 @@ async function intentarSincronizarSilencioso(){
   sincronizarTodo();
 }
 
+/** Respaldo para cuando el técnico llena un reporte y nunca toca "Sincronizar ahora" (pasa
+ *  seguido en campo). Revisa si hay evaluaciones de verdad pendientes de enviar
+ *  ('pending_sync', 'error' o 'fotos_pendientes' — nunca 'draft', que no tiene nada listo
+ *  para mandar) y, si hay señal en este momento, las reenvía solo, sin pedirle nada a nadie.
+ *  Se llama al abrir la app, cada vez que vuelve a primer plano, y de respaldo cada hora
+ *  mientras quede abierta — para cubrir el caso de que ya haya señal pero el evento 'online'
+ *  del navegador no se haya disparado (pasa en algunos Android/Chrome en campo). */
+async function revisarPendientesYForzarEnvio(){
+  if(!navigator.onLine || syncEnCurso) return;
+  const list = await idbGetAllSessions();
+  const hayPendientes = list.some(s => s.status==='pending_sync' || s.status==='error' || s.status==='fotos_pendientes');
+  if(!hayPendientes) return;
+  intentarSincronizarSilencioso();
+}
+
 /* =========================================================================
    CONECTIVIDAD Y PILL DE ESTADO (spatial)
    ========================================================================= */
@@ -3828,6 +3843,15 @@ async function init(){
   if(navigator.onLine){
     refrescarCatalogos(true).catch(()=>{});
   }
+
+  // Respaldo de envío automático: revisa pendientes al abrir la app, cada vez que vuelve a
+  // primer plano, y cada hora mientras quede abierta — así lo que ya tiene señal se manda
+  // solo aunque el técnico nunca toque "Sincronizar ahora".
+  revisarPendientesYForzarEnvio();
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible') revisarPendientesYForzarEnvio();
+  });
+  setInterval(revisarPendientesYForzarEnvio, 60*60*1000);
 }
 init();
 </script>
