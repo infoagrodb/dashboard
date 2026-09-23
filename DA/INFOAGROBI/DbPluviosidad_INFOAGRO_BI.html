@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Pluviosidad · Análisis Histórico Gerencia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -14,15 +15,15 @@
   --brand-green: #2D6A4F;      /* Verde medio (shell) — antes Verde 600 */
   --bg-main: #FAFAF8;          /* Fondo shell */
   --card-bg: #ffffff;
-  
+
   --border-color: #E1E0D8;     /* Borde shell */
   --text-main: #22302A;        /* Texto shell */
   --text-muted: #8a9690;
-  
+
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
-  
+
   --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05);
@@ -51,7 +52,7 @@ body{
   align-items: center;
   justify-content: space-between;
   background: var(--brand-dark);
-  padding: 6px 12px; 
+  padding: 6px 12px;
   border-radius: var(--radius-md);
   color: #ffffff;
   box-shadow: var(--shadow-md);
@@ -59,16 +60,16 @@ body{
 }
 .page-hdr-left{display:flex;align-items:center;gap:8px}
 .page-icon{
-  font-size: 15px; 
+  font-size: 15px;
   background: rgba(255,255,255,0.1);
-  width: 26px;    
-  height: 26px;   
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-sm);
 }
-.page-title{font-size:12px;font-weight:700;letter-spacing:-0.01em} 
+.page-title{font-size:12px;font-weight:700;letter-spacing:-0.01em}
 .page-sub{font-size:10px;color:#94a3b8;margin-top:0px}
 
 /* CONTENEDOR DERECHO EXCLUSIVO PARA EL BOTÓN */
@@ -182,7 +183,7 @@ body{
 .tf-icon-verde{background:#1B4332; border-color:#1B4332;}
 .tf-icon-verde:hover{opacity:.88;}
 .tf-icon-calendario{background:#1B4332; color:#fff; padding:0 12px;}
-.tf-icon-calendario:hover{opacity:.88;}
+.tf-icon-calendario:hover{opacity:.88; background:#1B4332; border-color:#1B4332;}
 .tf-icon-texto{font-size:11.5px; font-weight:700; white-space:nowrap;}
 .tf-icon-excel{background:#1a9448; border-color:#1a9448;}
 .tf-icon-excel span{filter:brightness(0) invert(1);}
@@ -197,12 +198,13 @@ body{
   .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px;}
 .tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
   .tf-icon-texto{display:none;}
-  /* Jerarquía en móvil: Mes → Años → Compañía → Sector → Finca */
-  .campo-mes{order:1;}
+  /* Jerarquía en móvil: (Mes en tabla) → Compañía → Años → Sector → Finca → (Rango en gráficas) */
+  .campo-compania{order:1;}
   .campo-anios{order:2;}
-  .campo-compania{order:3;}
-  .campo-sector{order:4;}
-  .campo-finca{order:5;}
+  .campo-sector{order:3;}
+  .campo-finca{order:4;}
+  .campo-mes{order:0;}
+  .campo-rango{order:5;}
 }
 @media (max-width:520px){
   .tf-campo{flex:1 1 100%;}
@@ -211,12 +213,12 @@ body{
 
 .filters-wrapper {
   max-height: 500px;
-  overflow: visible; 
+  overflow: visible;
   transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-bottom 0.3s ease, opacity 0.3s ease;
   opacity: 1;
   flex-shrink: 0;
   position: relative;
-  z-index: 1000; 
+  z-index: 1000;
 }
 .filters-wrapper.collapsed {
   max-height: 0;
@@ -261,7 +263,7 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 .chk-list{
   position:absolute;top:34px;left:0;min-width:180px;background:var(--card-bg);
   border:1px solid var(--border-color);border-radius:var(--radius-sm);padding:6px;
-  z-index: 2000; 
+  z-index: 2000;
   display:none;max-height:200px;overflow-y:auto;box-shadow:var(--shadow-lg);
 }
 .chk-list.open{display:block}
@@ -318,13 +320,13 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 .kpi-card::before {
   content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; background: var(--brand-blue);
 }
-.kpi-card.accent::before { background: var(--brand-orange); } 
+.kpi-card.accent::before { background: var(--brand-orange); }
 
 .kpi-title-meta { font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; }
 .kpi-years-row { display: flex; gap: 6px; margin-top: 6px; overflow-x: auto; padding-bottom: 4px; }
 .kpi-year-box {
-  flex: 1; min-width: 60px; text-align: center; 
-  background: #f8fafc; border: 1px solid var(--border-color); 
+  flex: 1; min-width: 60px; text-align: center;
+  background: #f8fafc; border: 1px solid var(--border-color);
   padding: 4px 2px; border-radius: var(--radius-sm);
   cursor: pointer;
   transition: transform 0.1s ease;
@@ -344,7 +346,7 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
   margin-top: 0;
   display: flex;
   flex-direction: column;
-  flex-grow: 1; 
+  flex-grow: 1;
   position: relative;
   z-index: 5;
 }
@@ -357,12 +359,12 @@ select:focus, .chk-btn:focus{outline:none;border-color:var(--brand-blue);box-sha
 
 .tbl-wrap{
   flex-grow: 1;
-  overflow: auto; 
+  overflow: auto;
   background: var(--card-bg);
   border-radius:var(--radius-md);
   border:1px solid var(--border-color);
   box-shadow:var(--shadow-md);
-  -webkit-overflow-scrolling: touch; 
+  -webkit-overflow-scrolling: touch;
 }
 
 table.pivot{border-collapse:separate; border-spacing:0; width:100%; font-size:12px; color: var(--text-main)}
@@ -406,7 +408,7 @@ table.pivot tbody td{
 }
 table.pivot tbody td:first-child{
   text-align:left;font-weight:700;color:var(--text-main);
-  background:#f8fafc;white-space:nowrap; 
+  background:#f8fafc;white-space:nowrap;
   width:75px; min-width:75px; max-width:75px;
   position: sticky; left: 0; z-index: 10; border-right:2px solid var(--border-color);
 }
@@ -416,7 +418,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 /* CALENDAR VIEW */
 .calendar-wrapper {
   background: var(--card-bg); border-radius: var(--radius-md);
-  border: 1px solid var(--border-color); box-shadow: var(--shadow-md); 
+  border: 1px solid var(--border-color); box-shadow: var(--shadow-md);
   overflow-y: auto; flex-grow: 1;
 }
 .calendar-weekdays {
@@ -467,8 +469,8 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 /* MAPA DE CALOR (CALENDAR VIEW) */
 .rain-light { background: rgba(2, 132, 199, 0.04); }
 .rain-medium { background: rgba(2, 132, 199, 0.10); }
-.rain-heavy { background: rgba(22, 163, 74, 0.12); } 
-.rain-extreme { background: rgba(22, 163, 74, 0.25); } 
+.rain-heavy { background: rgba(22, 163, 74, 0.12); }
+.rain-extreme { background: rgba(22, 163, 74, 0.25); }
 .rain-light .weather-val { color: #0284c7; }
 .rain-medium .weather-val { color: #0369a1; }
 .rain-heavy .weather-val { color: #16a34a; }
@@ -494,7 +496,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .popup-hdr { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; border-bottom: 1px solid rgba(255,255,255,0.15); padding-bottom: 4px; margin-bottom: 6px; font-weight: 700; }
 .popup-item { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
 .popup-item .p-name { color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
-.popup-item .p-val { font-weight: 700; color: #4ade80; } 
+.popup-item .p-val { font-weight: 700; color: #4ade80; }
 
 .total-hidden .total-col{display:none}
 .loading{display:flex;align-items:center;justify-content:center;padding:30px;gap:12px;color:var(--text-muted);font-size:13px}
@@ -502,12 +504,40 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 @keyframes spin{to{transform:rotate(360deg)}}
 .empty-msg{text-align:center;padding:30px;color:var(--text-muted);font-size:13px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);}
 
+/* ---------- VISTA GRÁFICAS: acumulado mensual por Ubicación geográfica → Sector ---------- */
+.chart-ctrl{display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:var(--text-muted);}
+.chart-ctrl select{height:28px; width:auto; font-size:11.5px;}
+.chart-ubic{margin-top:10px;}
+.chart-ubic-hdr{
+  font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--brand-dark);
+  padding:6px 10px; background:#EEF3EF; border-left:4px solid var(--brand-orange); border-radius:6px; margin-bottom:8px;
+}
+.chart-grid{display:grid; grid-template-columns:1fr; gap:12px;}
+.chart-card{
+  background:var(--card-bg); border:1px solid var(--border-color); border-radius:var(--radius-md);
+  box-shadow:var(--shadow-sm); padding:10px 12px;
+}
+.chart-card.consolidado{border-top:3px solid var(--brand-dark);}
+.chart-card-hdr{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px;}
+.chart-card-title{font-size:12px; font-weight:800; color:var(--brand-dark);}
+.chart-card-sub{font-size:10px; color:var(--text-muted); font-weight:600; white-space:nowrap;}
+.chart-canvas-box{position:relative; height:360px;}
+.chart-fincas{display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; padding-top:8px; border-top:1px dashed var(--border-color); align-items:center;}
+.chart-fincas-lbl{font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-right:4px;}
+.chart-finca-chip{font-size:10.5px; font-weight:600; color:var(--brand-dark); background:#EEF3EF; border:1px solid #D6E2D9; border-radius:10px; padding:1px 8px;}
+body.modo-grafica .campo-mes{display:none;}
+.campo-mes{order:-1;} /* en tabla/calendario va de primero */
+.campo-rango{display:none;}
+body.modo-grafica .campo-rango{display:flex;}
+.campo-rango select{width:auto; max-width:120px;}
+@media (max-width:520px){ .chart-grid{grid-template-columns:1fr;} }
+
 /* RESPONSIVE AJUSTES */
 @media (max-width: 768px) {
   .page-hdr { flex-direction: row; align-items: center; justify-content: space-between; padding: 6px 12px; }
   .page-hdr-right { width: auto; }
   .filters-row { gap: 8px; }
-  .fg, select, .chk-wrap, .chk-btn { width: 100% !important; } 
+  .fg, select, .chk-wrap, .chk-btn { width: 100% !important; }
   .tbl-wrap { max-height: 55vh; border: 2px solid var(--brand-blue); }
 }
 </style>
@@ -522,22 +552,16 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
       <span>Análisis histórico</span>
     </div>
     <div class="tf-campos-grupo filters-wrapper" id="filtersWrapper">
-      <div class="tf-campo campo-mes">
-        <label>Mes de Análisis</label>
-        <div class="ms-dropdown" id="dropMes" onclick="toggleMs(event,'mes')">Julio</div>
-        <div class="ms-panel" id="msMes"></div>
+      <div class="tf-campo campo-compania">
+        <label>Compañía</label>
+        <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
+        <div class="ms-panel" id="msCompania"></div>
       </div>
 
       <div class="tf-campo campo-anios">
         <label>Años Históricos</label>
         <div class="ms-dropdown" id="dropAnios" onclick="toggleMs(event,'anios')">Todos</div>
         <div class="ms-panel" id="msAnios"></div>
-      </div>
-
-      <div class="tf-campo campo-compania">
-        <label>Compañía</label>
-        <div class="ms-dropdown" id="dropCompania" onclick="toggleMs(event,'compania')">Todas</div>
-        <div class="ms-panel" id="msCompania"></div>
       </div>
 
       <div class="tf-campo campo-sector">
@@ -551,11 +575,29 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
         <div class="ms-dropdown" id="dropFinca" onclick="toggleMs(event,'finca')">Todas</div>
         <div class="ms-panel" id="msFinca"></div>
       </div>
+
+      <div class="tf-campo campo-mes">
+        <label>Mes de Análisis</label>
+        <div class="ms-dropdown" id="dropMes" onclick="toggleMs(event,'mes')">Julio</div>
+        <div class="ms-panel" id="msMes"></div>
+      </div>
+
+      <div class="tf-campo campo-rango">
+        <label>Rango de Meses</label>
+        <div class="tf-inner">
+          <select id="selRangoDesde" onchange="cambiarRangoMeses()" title="Desde"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5" selected>Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12">Diciembre</option></select>
+          <span style="font-size:11px;color:var(--text-muted);">a</span>
+          <select id="selRangoHasta" onchange="cambiarRangoMeses()" title="Hasta"><option value="1">Enero</option><option value="2">Febrero</option><option value="3">Marzo</option><option value="4">Abril</option><option value="5">Mayo</option><option value="6">Junio</option><option value="7">Julio</option><option value="8">Agosto</option><option value="9">Septiembre</option><option value="10">Octubre</option><option value="11">Noviembre</option><option value="12" selected>Diciembre</option></select>
+        </div>
+      </div>
     </div>
 
     <div class="tf-acciones">
       <button class="tf-icon tf-icon-verde" onclick="toggleFiltrosExtra()" id="btnToggleFiltrosExtra" title="Mostrar/ocultar filtros">
         <svg viewBox="0 0 24 24" fill="none"><path d="M3 5h18l-7 8v6l-4-2v-4L3 5z" fill="#fff"/></svg>
+      </button>
+      <button class="tf-icon tf-icon-calendario" onclick="setView('chart')" id="btnToggleChart" title="Ver gráficas de acumulados">
+        <span>📈</span><span class="tf-icon-texto">Ver Gráficas</span>
       </button>
       <button class="tf-icon tf-icon-calendario" onclick="toggleViewMode()" id="btnToggleView" title="Ver calendario">
         <span>📅</span><span class="tf-icon-texto">Ver Calendario</span>
@@ -599,7 +641,7 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 
   <div class="pivot-section" id="viewCalendarSection" style="display: none;">
     <div class="pivot-label" id="calendarLabel">Calendario de Distribución Mensual Climatológica</div>
-    
+
     <div class="live-weather-banner" id="weatherBanner">
       <div class="weather-banner-left">
         <span style="font-size: 22px;">📡</span>
@@ -625,15 +667,34 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
     </div>
   </div>
 
+  <div class="pivot-section" id="viewChartSection" style="display: none;">
+    <div class="pivot-label-row">
+      <div class="pivot-label" id="chartLabel">Pluviómetro acumulado (mm) · por Ubicación geográfica y Sector</div>
+    </div>
+    <div id="chartWrap"></div>
+  </div>
+
 </div>
 
 <div id="global-tooltip"></div>
 
 <script>
 let RAW=[];
-let TOOLTIP_DATA={}; 
-let CURRENT_VIEW = "table"; 
-let SATELLITE_FORECAST = {}; 
+let TOOLTIP_DATA={};
+let CURRENT_VIEW = "table";
+let SATELLITE_FORECAST = {};
+let CHART_INST = [];
+let CHART_DESDE = 5;
+let CHART_HASTA = 12;
+
+// Rango de meses de la vista Gráficas (si Desde > Hasta se intercambian)
+function cambiarRangoMeses(){
+  let d = parseInt(document.getElementById("selRangoDesde").value);
+  let h = parseInt(document.getElementById("selRangoHasta").value);
+  if(d > h){ [d, h] = [h, d]; document.getElementById("selRangoDesde").value = d; document.getElementById("selRangoHasta").value = h; }
+  CHART_DESDE = d; CHART_HASTA = h;
+  render();
+}
 
 const MESES_NOM={
   "01":"Enero","02":"Febrero","03":"Marzo","04":"Abril",
@@ -650,30 +711,32 @@ function toggleFiltrosExtra() {
   document.getElementById("filtersWrapper").classList.toggle("collapsed");
 }
 
-function toggleViewMode() {
-  const btn = document.getElementById("btnToggleView");
-  const tblSec = document.getElementById("viewTableSection");
-  const calSec = document.getElementById("viewCalendarSection");
-  const chkTotalWrap = document.getElementById("chkTotalColWrap");
+// Vistas: "table" | "calendar" | "chart". Pulsar el botón de la vista activa regresa a la tabla.
+function setView(mode) {
+  CURRENT_VIEW = (CURRENT_VIEW === mode) ? "table" : mode;
+  const v = CURRENT_VIEW;
+  document.body.classList.toggle("modo-grafica", v === "chart");
+  document.getElementById("viewTableSection").style.display = v === "table" ? "block" : "none";
+  document.getElementById("viewCalendarSection").style.display = v === "calendar" ? "flex" : "none";
+  document.getElementById("viewChartSection").style.display = v === "chart" ? "flex" : "none";
 
-  if (CURRENT_VIEW === "table") {
-    CURRENT_VIEW = "calendar";
-    btn.innerHTML = '<span>📊</span><span class="tf-icon-texto">Ver Tabla</span>';
-    btn.title = "Ver tabla matriz";
-    tblSec.style.display = "none";
-    calSec.style.display = "flex";
-    chkTotalWrap.style.visibility = "hidden"; 
-    fetchLiveWeather(); 
-  } else {
-    CURRENT_VIEW = "table";
-    btn.innerHTML = '<span>📅</span><span class="tf-icon-texto">Ver Calendario</span>';
-    btn.title = "Ver calendario";
-    tblSec.style.display = "block";
-    calSec.style.display = "none";
-    chkTotalWrap.style.visibility = "visible";
-  }
+  const btnCal = document.getElementById("btnToggleView");
+  btnCal.innerHTML = v === "calendar"
+    ? '<span>📊</span><span class="tf-icon-texto">Ver Tabla</span>'
+    : '<span>📅</span><span class="tf-icon-texto">Ver Calendario</span>';
+  btnCal.title = v === "calendar" ? "Ver tabla matriz" : "Ver calendario";
+
+  const btnCh = document.getElementById("btnToggleChart");
+  btnCh.innerHTML = v === "chart"
+    ? '<span>📊</span><span class="tf-icon-texto">Ver Tabla</span>'
+    : '<span>📈</span><span class="tf-icon-texto">Ver Gráficas</span>';
+  btnCh.title = v === "chart" ? "Ver tabla matriz" : "Ver gráficas de acumulados";
+
+  if (v === "calendar") fetchLiveWeather();
   render();
 }
+
+function toggleViewMode() { setView("calendar"); }
 
 async function fetchLiveWeather() {
   const zonesConfig = [
@@ -683,13 +746,13 @@ async function fetchLiveWeather() {
   ];
 
   try {
-    const promises = zonesConfig.map(z => 
+    const promises = zonesConfig.map(z =>
       fetch(`https://api.open-meteo.com/v1/forecast?latitude=${z.lat}&longitude=${z.lon}&current=temperature_2m,weather_code&daily=weather_code,precipitation_probability_max,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=auto`)
       .then(res => res.json())
     );
 
     const results = await Promise.all(promises);
-    
+
     if(results[0] && results[0].current) {
       const tempActual = Math.round(results[0].current.temperature_2m);
       document.getElementById("weatherBannerTemp").textContent = `${tempActual}°C`;
@@ -701,7 +764,7 @@ async function fetchLiveWeather() {
     if(results[0] && results[0].daily) {
       results[0].daily.time.forEach((fechaStr, index) => {
         const diaNum = parseInt(fechaStr.split("-")[2]);
-        
+
         let maxProb = 0;
         let mainIcon = "📡☀️";
         let zonesData = [];
@@ -713,9 +776,9 @@ async function fetchLiveWeather() {
             const tMax = Math.round(res.daily.temperature_2m_max[index] || 32);
             const tMin = Math.round(res.daily.temperature_2m_min[index] || 23);
             const pSum = (res.daily.precipitation_sum[index] || 0).toFixed(1);
-            
+
             let zIcon = "☀️ Despejado";
-            let realFeel = tMax + 2; 
+            let realFeel = tMax + 2;
             if(code >= 51) {
               zIcon = "🌧️ Chubascos";
               realFeel = tMax - 1;
@@ -773,7 +836,7 @@ const WORKER = "https://weathered-recipe-d18c.ignagher.workers.dev";
 const GITHUB_PV = "https://raw.githubusercontent.com/infoagrodb/dashboard/main/info_Pluviosidad.json";
 // Solo los campos que el dashboard realmente usa — reduce el peso de cada página
 // al paginar miles de registros de Odoo.
-const PV_FIELDS = "x_studio_fecha,x_studio_finca,x_studio_sector_1,x_studio_company_id,x_studio_cantidad_promedio";
+const PV_FIELDS = "x_studio_fecha,x_studio_finca,x_studio_sector_1,x_studio_company_id,x_studio_cantidad_promedio,x_studio_ubicacion_geografica";
 
 // El endpoint /query del Worker limita cada respuesta (por defecto 8000 registros,
 // ordenados id asc = los más antiguos primero). Con más de 21,000 registros en Odoo,
@@ -826,7 +889,8 @@ async function loadData(){
       const finca=Array.isArray(r.x_studio_finca)?r.x_studio_finca[1]:r.x_studio_finca;
       const sector=Array.isArray(r.x_studio_sector_1)?r.x_studio_sector_1[1]:r.x_studio_sector_1;
       const compania=Array.isArray(r.x_studio_company_id)?r.x_studio_company_id[1]:r.x_studio_company_id;
-      return {f:r.x_studio_fecha, fi:finca, se:sector, co:compania, v:Number(r.x_studio_cantidad_promedio||0)};
+      const ubic=Array.isArray(r.x_studio_ubicacion_geografica)?r.x_studio_ubicacion_geografica[1]:r.x_studio_ubicacion_geografica;
+      return {f:r.x_studio_fecha, fi:finca, se:sector, co:compania, ub:ubic||null, v:Number(r.x_studio_cantidad_promedio||0)};
     });
     initFilters();
     render();
@@ -846,7 +910,7 @@ async function loadData(){
 let mesSeleccionado = null; // string único, ej. "07"
 let seleccionFiltros = { sector: [], finca: [], compania: [], anios: [] };
 
-function normalizarTxt(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+function normalizarTxt(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
 
 function initFilters(){
   const mesesDisponibles = [...new Set(RAW.map(r=>getM(r.f)))].sort();
@@ -1046,7 +1110,7 @@ function buildKPI(data){
   kpis.forEach(k=>{
     let card = document.createElement("div");
     card.className = `kpi-card ${k.clase}`;
-    
+
     let titleMeta = document.createElement("div");
     titleMeta.className = "kpi-title-meta";
     titleMeta.textContent = k.label;
@@ -1064,7 +1128,7 @@ function buildKPI(data){
 
       let yearBox = document.createElement("div");
       yearBox.className = "kpi-year-box";
-      
+
       let lbl = document.createElement("div");
       lbl.className = "kpi-year-label";
       lbl.textContent = y;
@@ -1092,21 +1156,21 @@ function buildKPI(data){
       // Agrupación y ordenamiento por Sector para los cuadros KPI superiores
       const sectoresKPI = [...new Set(yearRows.map(r => r.se || "General"))].sort();
       let tooltipContent = `<div class="popup-hdr" style="margin-bottom:8px;">Rendimiento por Sector (${y})</div>`;
-      
+
       sectoresKPI.forEach(sec => {
         const rowsSector = yearRows.filter(r => (r.se || "General") === sec);
         const fincasEnSector = [...new Set(rowsSector.map(r => r.fi))];
-        
+
         let fListSector = [];
         fincasEnSector.forEach(fiName => {
           const rowsFinca = rowsSector.filter(r => r.fi === fiName);
           const valF = k.fincaFn(rowsFinca);
           fListSector.push({ name: fiName, value: valF });
         });
-        
+
         // Ordenar fincas de mayor a menor dentro de su sector
         fListSector.sort((a, b) => b.value - a.value);
-        
+
         if (fListSector.length > 0) {
           tooltipContent += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
           fListSector.forEach(f => {
@@ -1143,7 +1207,7 @@ function buildPivot(data){
   const years=[...new Set(data.map(r=>getY(r.f)))].sort();
   const head=document.getElementById("pivotHead");
   const body=document.getElementById("pivotBody");
-  
+
   head.innerHTML=""; body.innerHTML="";
 
   if(!years.length||!data.length){
@@ -1166,7 +1230,7 @@ function buildPivot(data){
 
   let trTitles = document.createElement("tr");
   trTitles.className = "hdr-titles";
-  
+
   let thDiaLabel = document.createElement("th");
   thDiaLabel.textContent = "Día";
   trTitles.appendChild(thDiaLabel);
@@ -1195,7 +1259,7 @@ function buildPivot(data){
   years.forEach(y=>{
     const val=totalMes(data.filter(r=>getY(r.f)===y));
     grandTotal+=val; grandCols++;
-    
+
     let thYTotal = document.createElement("th");
     thYTotal.textContent = `${val>0?val.toFixed(1):"0.0"}`;
     trTotals.appendChild(thYTotal);
@@ -1216,7 +1280,7 @@ function buildPivot(data){
 
     const mStr=(MESES_NOM[mes]||mes).slice(0,3).toUpperCase();
     let tr=document.createElement("tr");
-    
+
     let tdDia=document.createElement("td");
     tdDia.textContent=`${d} - ${mStr}`;
     tr.appendChild(tdDia);
@@ -1227,7 +1291,7 @@ function buildPivot(data){
       const rows=data.filter(r=>getY(r.f)===y&&getD(r.f)===d);
       const val=avgDay(rows);
       if(rows.length){ totalDia+=val; cols++; }
-      
+
       let tdCell=document.createElement("td");
 
       if(val>0){
@@ -1235,13 +1299,13 @@ function buildPivot(data){
         let wrapper = document.createElement("div");
         wrapper.className = `cell-interactive ${cls}`;
         wrapper.textContent = val.toFixed(1);
-        
+
         const cellKey = `cell_${d}_${y}`;
-        
+
         // Agrupación por Sector para una lectura gerencial impecable en vista Tabla Matrix
         const sectoresEnDiaTable = [...new Set(rows.map(r => r.se || "General"))].sort();
         let htmlDesgloseTable = `<div class="popup-hdr" style="margin-bottom:8px;">Desglose por Sector (${y})</div>`;
-        
+
         sectoresEnDiaTable.forEach(sec => {
           const rowsSector = rows.filter(r => (r.se || "General") === sec);
           htmlDesgloseTable += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
@@ -1253,10 +1317,10 @@ function buildPivot(data){
               </div>`;
           });
         });
-        
+
         TOOLTIP_DATA[cellKey] = `<div style="min-width:180px; padding:2px;">${htmlDesgloseTable}</div>`;
         wrapper.setAttribute("data-key", cellKey);
-        
+
         wrapper.addEventListener("mouseenter", showGlobalTooltip);
         wrapper.addEventListener("mousemove", moveGlobalTooltip);
         wrapper.addEventListener("mouseleave", hideGlobalTooltip);
@@ -1293,7 +1357,7 @@ function buildCalendar(data) {
 
   const mesStr = mesSeleccionado;
   const yearsAvailable = [...new Set(data.map(r => getY(r.f)))].sort((a,b)=>b-a);
-  
+
   if (!yearsAvailable.length || !data.length) {
     grid.innerHTML = `<div class="empty-msg" style="grid-column: span 7;">Sin registros estructurados disponibles.</div>`;
     return;
@@ -1341,7 +1405,7 @@ function buildCalendar(data) {
     if (esMesActual && d >= hoy.getDate() && SATELLITE_FORECAST[d]) {
       dayCell.classList.add("forecast-day");
       const forecast = SATELLITE_FORECAST[d];
-      
+
       /* ICONO DE RADAR / SATÉLITE ATENUADO DIFERENCIADO */
       infoDiv.innerHTML = `
         <div class="forecast-icon-wrapper">${forecast.icon}</div>
@@ -1373,7 +1437,7 @@ function buildCalendar(data) {
             </div>
           `);
         });
-        
+
         TOOLTIP_DATA[cellKey] = `
           <div style="background: #f97316; padding: 8px 12px; font-weight: bold; font-size: 11px; display: flex; justify-content: space-between; align-items: center; border-top-left-radius: 8px; border-top-right-radius: 8px; color: #ffffff; font-family: sans-serif;">
             <span style="letter-spacing: 0.5px;">PRONÓSTICO METEOROLÓGICO</span>
@@ -1385,13 +1449,13 @@ function buildCalendar(data) {
               Datos satelitales actualizados en base a AccuWeather Core Interface
             </div>
           </div>`;
-        
+
         dayCell.setAttribute("data-key", cellKey);
         dayCell.addEventListener("mouseenter", showGlobalTooltip);
         dayCell.addEventListener("mousemove", moveGlobalTooltip);
         dayCell.addEventListener("mouseleave", hideGlobalTooltip);
       }
-    } 
+    }
     // EVALUACIÓN SECUNDARIA: Registros históricos duros (lo que ya pasó en años anteriores)
     else if (val > 0) {
       dayCell.classList.add("has-rain");
@@ -1405,11 +1469,11 @@ function buildCalendar(data) {
       infoDiv.innerHTML = `<span class="weather-icon">🌧️</span><span class="weather-val">${val.toFixed(1)}</span>`;
 
       const cellKey = `cal_cell_${d}_${activeYear}`;
-      
+
       // Agrupación por Sector para una lectura gerencial impecable
       const sectoresEnDia = [...new Set(dayRows.map(r => r.se || "General"))].sort();
       let htmlDesglose = `<div class="popup-hdr" style="margin-bottom:8px;">Desglose por Sector (Día ${d})</div>`;
-      
+
       sectoresEnDia.forEach(sec => {
         const rowsSector = dayRows.filter(r => (r.se || "General") === sec);
         htmlDesglose += `<div style="font-size:10px; font-weight:bold; color:#38bdf8; text-transform:uppercase; margin-top:6px; border-bottom:1px solid rgba(56,189,248,0.2); padding-bottom:2px; text-align:left;">Sector: ${sec}</div>`;
@@ -1448,25 +1512,228 @@ function buildCalendar(data) {
   }
 }
 
+// ===================================================================
+// VISTA GRÁFICAS — Pluviómetro acumulado (mm) mes a mes.
+// Respeta Compañía / Sector / Finca / Años (ignora "Mes de Análisis": la curva
+// recorre la temporada completa). Primero un consolidado de las fincas
+// seleccionadas y luego una gráfica por Sector dentro de cada Ubicación geográfica.
+// Cada mes usa totalMes() = suma diaria del promedio entre fincas (misma regla
+// que la tabla). Promedio = todo el histórico de la ubicación/fincas de la gráfica (excluye el año en curso).
+// Años: los seleccionados en el filtro; si es "Todos", los 3 más recientes.
+// ===================================================================
+const COLORES_ANIO = ["#2563eb", "#C9963B", "#7c3aed", "#0891b2", "#db2777", "#65a30d", "#ea580c", "#475569"];
+const MES_CORTO = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+
+function getFilteredSinMes(){
+  return RAW.filter(r=>
+    r.f &&
+    (!seleccionFiltros.compania.length || seleccionFiltros.compania.includes(r.co)) &&
+    (!seleccionFiltros.sector.length   || seleccionFiltros.sector.includes(r.se)) &&
+    (!seleccionFiltros.finca.length    || seleccionFiltros.finca.includes(r.fi))
+  );
+}
+
+// Totales mensuales { "2025": {5: mm, 6: mm, ...}, ... } para un conjunto de filas
+function totalesMensuales(rows){
+  const buckets = {};
+  rows.forEach(r=>{
+    const k = getY(r.f) + "|" + parseInt(getM(r.f));
+    (buckets[k] = buckets[k] || []).push(r);
+  });
+  const out = {};
+  Object.entries(buckets).forEach(([k, arr])=>{
+    const [y, m] = k.split("|");
+    (out[y] = out[y] || {})[m] = totalMes(arr);
+  });
+  return out;
+}
+
+function seriesAcumuladas(rows, aniosGraf, aniosProm){
+  const hoy = new Date();
+  const anioAct = hoy.getFullYear(), mesAct = hoy.getMonth() + 1;
+  const meses = []; for(let m = CHART_DESDE; m <= CHART_HASTA; m++) meses.push(m);
+  const tm = totalesMensuales(rows);
+
+  const datasets = aniosGraf.filter(y => tm[y]).map((y, i)=>{
+    let acc = 0;
+    const esActual = parseInt(y) === anioAct;
+    const data = meses.map(m=>{
+      // Año en curso: después del mes actual se mantiene plano con lo acumulado hasta hoy
+      if(!(esActual && m > mesAct)) acc += (tm[y][m] || 0);
+      return +acc.toFixed(1);
+    });
+    return {
+      label: String(y), data,
+      borderColor: esActual ? "#dc2626" : COLORES_ANIO[i % COLORES_ANIO.length],
+      backgroundColor: esActual ? "#dc2626" : COLORES_ANIO[i % COLORES_ANIO.length],
+      borderWidth: esActual ? 2.5 : 1.8, pointRadius: 3, tension: .25, spanGaps: false,
+      cubicInterpolationMode: "monotone"
+    };
+  });
+
+  // Promedio histórico: media de cada mes sobre todos los años con datos (sin el año en curso)
+  const aniosHist = aniosProm.filter(y => tm[y] && parseInt(y) !== anioAct);
+  if(aniosHist.length){
+    let acc = 0;
+    const data = meses.map(m=>{
+      const vals = aniosHist.map(y => tm[y][m] || 0);
+      acc += vals.reduce((s,v)=>s+v,0) / vals.length;
+      return +acc.toFixed(1);
+    });
+    datasets.push({
+      label: `Prom. (${aniosHist.length} años)`, data,
+      borderColor: "#2D6A4F", backgroundColor: "#2D6A4F",
+      borderWidth: 4, pointRadius: 3, tension: .25
+    });
+  }
+  return { labels: meses.map(m => MES_CORTO[m-1]), datasets };
+}
+
+// Dibuja el valor acumulado sobre cada punto, del color de su línea (como la gráfica de Excel)
+const ETIQUETAS_VALOR = {
+  id: "etiquetasValor",
+  afterDatasetsDraw(chart){
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.textAlign = "center"; ctx.textBaseline = "bottom";
+    // Reunir etiquetas por mes y separarlas verticalmente (mín. 12px) para que no se encimen
+    const porMes = {};
+    chart.data.datasets.forEach((ds, i)=>{
+      const meta = chart.getDatasetMeta(i);
+      if(meta.hidden) return;
+      const esProm = String(ds.label).startsWith("Prom");
+      meta.data.forEach((pt, j)=>{
+        const v = ds.data[j];
+        if(v == null) return;
+        (porMes[j] = porMes[j] || []).push({ x: pt.x, y: pt.y - 6, color: ds.borderColor, esProm,
+          txt: v.toLocaleString("es-NI", {maximumFractionDigits:1}) });
+      });
+    });
+    const top = chart.chartArea.top - 14;
+    Object.values(porMes).forEach(lbls=>{
+      lbls.sort((a, b) => b.y - a.y); // de abajo hacia arriba
+      for(let k = 1; k < lbls.length; k++){
+        if(lbls[k-1].y - lbls[k].y < 12) lbls[k].y = lbls[k-1].y - 12;
+      }
+      const exceso = top - lbls[lbls.length-1].y;
+      if(exceso > 0) lbls.forEach(l => l.y += exceso);
+      lbls.forEach(l=>{
+        ctx.font = (l.esProm ? "800 11px" : "700 10px") + " -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+        ctx.lineWidth = 3; ctx.strokeStyle = "#ffffff"; ctx.strokeText(l.txt, l.x, l.y);
+        ctx.fillStyle = l.color; ctx.fillText(l.txt, l.x, l.y);
+      });
+    });
+    ctx.restore();
+  }
+};
+
+function crearTarjetaGrafica(contenedor, titulo, sub, rows, aniosGraf, aniosProm, extraClase){
+  const card = document.createElement("div");
+  card.className = "chart-card" + (extraClase ? " " + extraClase : "");
+  card.innerHTML = `<div class="chart-card-hdr"><span class="chart-card-title"></span><span class="chart-card-sub"></span></div>
+    <div class="chart-canvas-box"><canvas></canvas></div>`;
+  card.querySelector(".chart-card-title").textContent = titulo;
+  card.querySelector(".chart-card-sub").textContent = sub;
+  const fincas = [...new Set(rows.map(r => r.fi).filter(Boolean))].sort();
+  const lista = document.createElement("div");
+  lista.className = "chart-fincas";
+  lista.innerHTML = `<span class="chart-fincas-lbl">Fincas en el cálculo (${fincas.length}):</span>`;
+  fincas.forEach(f => { const c = document.createElement("span"); c.className = "chart-finca-chip"; c.textContent = f; lista.appendChild(c); });
+  card.appendChild(lista);
+  contenedor.appendChild(card);
+
+  const { labels, datasets } = seriesAcumuladas(rows, aniosGraf, aniosProm);
+  CHART_INST.push(new Chart(card.querySelector("canvas"), {
+    type: "line",
+    data: { labels, datasets },
+    plugins: [ETIQUETAS_VALOR],
+    options: {
+      layout: { padding: { top: 34, right: 24 } },
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 14, font: { size: 11 } } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.parsed.y == null ? "—" : c.parsed.y.toLocaleString("es-NI", {maximumFractionDigits:1})} mm` } }
+      },
+      scales: {
+        y: { beginAtZero: true, title: { display: true, text: "mm acumulados", font: { size: 10 } }, ticks: { font: { size: 10 } } },
+        x: { ticks: { font: { size: 10 } } }
+      }
+    }
+  }));
+}
+
+function buildCharts(){
+  const wrap = document.getElementById("chartWrap");
+  CHART_INST.forEach(c => c.destroy()); CHART_INST = [];
+  wrap.innerHTML = "";
+
+  if(typeof Chart === "undefined"){
+    wrap.innerHTML = `<div class="empty-msg">No se pudo cargar la librería de gráficas (Chart.js). Verifique la conexión.</div>`;
+    return;
+  }
+
+  const base = getFilteredSinMes();
+  if(!base.length){
+    wrap.innerHTML = `<div class="empty-msg">No se encontraron registros para los criterios seleccionados.</div>`;
+    return;
+  }
+
+  const todosAnios = [...new Set(base.map(r => getY(r.f)))].sort((a,b)=>b-a);
+  const aniosGraf = (seleccionFiltros.anios.length
+    ? seleccionFiltros.anios.map(y=>parseInt(y)).sort((a,b)=>a-b)
+    : todosAnios.slice(0, 3).sort((a,b)=>a-b)).map(String);
+
+  // Promedio: TODO el histórico de la Ubicación geográfica + fincas de cada gráfica
+  // (no depende del filtro de Años, que solo decide qué líneas de año se dibujan). Excluye el año en curso.
+  const aniosProm = todosAnios.map(String);
+
+  // Ubicación geográfica → Sector
+  const ubicaciones = [...new Set(base.map(r => r.ub || "Sin ubicación"))].sort();
+  ubicaciones.forEach(ub=>{
+    const rowsUb = base.filter(r => (r.ub || "Sin ubicación") === ub);
+    const bloque = document.createElement("div");
+    bloque.className = "chart-ubic";
+    const hdr = document.createElement("div");
+    hdr.className = "chart-ubic-hdr";
+    hdr.textContent = `📍 ${ub}`;
+    bloque.appendChild(hdr);
+    const grid = document.createElement("div");
+    grid.className = "chart-grid";
+    bloque.appendChild(grid);
+    wrap.appendChild(bloque);
+
+    const sectores = [...new Set(rowsUb.map(r => r.se || "Sin sector"))].sort();
+    sectores.forEach(se=>{
+      const rowsSe = rowsUb.filter(r => (r.se || "Sin sector") === se);
+      const n = new Set(rowsSe.map(r=>r.fi)).size;
+      crearTarjetaGrafica(grid, `Sector ${se}`, `${n} finca${n===1?"":"s"}`, rowsSe, aniosGraf, aniosProm);
+    });
+  });
+
+  document.getElementById("chartLabel").textContent =
+    `Pluviómetro acumulado (mm) · ${MES_CORTO[CHART_DESDE-1]}–${MES_CORTO[CHART_HASTA-1]} · años ${aniosGraf.join(", ")} · por Ubicación geográfica y Sector`;
+}
+
 const gTooltip = document.getElementById("global-tooltip");
 
 function showGlobalTooltip(e) {
   const key = e.currentTarget.getAttribute("data-key");
   const htmlContent = TOOLTIP_DATA[key];
   if (!htmlContent) return;
-  
+
   gTooltip.innerHTML = htmlContent;
   gTooltip.style.display = "block";
   moveGlobalTooltip(e);
 }
 
 function moveGlobalTooltip(e) {
-  const tooltipWidth = 250; 
+  const tooltipWidth = 250;
   const tooltipHeight = gTooltip.offsetHeight || 100;
-  
+
   let posX = e.clientX - (tooltipWidth / 2);
-  let posY = e.clientY - tooltipHeight - 16; 
-  
+  let posY = e.clientY - tooltipHeight - 16;
+
   if ((posX + tooltipWidth) > window.innerWidth) posX = window.innerWidth - tooltipWidth - 20;
   if (posX < 0) posX = 10;
   if (posY < 0) posY = e.clientY + 20;
@@ -1480,9 +1747,11 @@ function hideGlobalTooltip() { gTooltip.style.display = "none"; }
 function render(){
   const data=getFiltered();
   buildKPI(data);
-  
+
   if (CURRENT_VIEW === "table") {
     buildPivot(data);
+  } else if (CURRENT_VIEW === "chart") {
+    buildCharts();
   } else {
     let grid = document.getElementById("calendarGrid");
     if(grid) buildCalendar(data);
