@@ -191,24 +191,45 @@ body{
 
 /* Responsive: en pantallas chicas los campos ocupan todo el ancho disponible y las
    acciones bajan a su propia fila, en vez de comprimirse ilegibles. */
-@media (max-width:900px){
-  .toolbar-una-fila{padding:10px;}
-  .tf-campo{flex:1 1 130px;}
-  .tf-inner select, .tf-inner .chk-btn{max-width:none; flex:1;}
-  .tf-acciones{width:100%; margin-left:0; justify-content:flex-start; border-top:1px solid var(--border-color); padding-top:8px; margin-top:2px;}
-.tf-titulo{width:100%; align-self:flex-start; margin-bottom:2px;}
-  .tf-icon-texto{display:none;}
-  /* Jerarquía en móvil: (Mes en tabla) → Compañía → Años → Sector → Finca → (Rango en gráficas) */
-  .campo-compania{order:1;}
-  .campo-anios{order:2;}
-  .campo-sector{order:3;}
-  .campo-finca{order:4;}
-  .campo-mes{order:0;}
-  .campo-rango{order:5;}
+/* ---------- Responsive ordenado ----------
+   Escritorio: [Título] [Filtros] [Acciones] en una fila.
+   ≤1280px: botones solo con ícono (el texto queda en el tooltip).
+   ≤1100px: fila 1 = Título + Acciones, fila 2 = Filtros a todo el ancho en cuadrícula pareja.
+   ≤640px: filtros de 2 en 2; ≤420px: uno por fila. */
+#toolbarCompacta{flex-wrap:nowrap;}
+/* Barra de filtros fija arriba al desplazarse */
+#toolbarCompacta{position:sticky; top:0; z-index:1100; box-shadow:0 4px 14px rgba(0,0,0,.08);}
+#toolbarCompacta .tf-titulo{align-self:center;}
+#toolbarCompacta .tf-campos-grupo{flex:1 1 auto; min-width:0; flex-wrap:nowrap; gap:10px;}
+#toolbarCompacta .tf-campo{flex:0 1 160px; min-width:105px;}
+#toolbarCompacta .tf-campo .ms-dropdown{width:100%; min-width:0; max-width:none;}
+#toolbarCompacta .campo-rango{flex:0 1 240px; min-width:190px;}
+#toolbarCompacta .campo-rango .tf-inner select{flex:1; min-width:0; width:auto; max-width:none;}
+#toolbarCompacta .tf-acciones{flex-wrap:nowrap; flex-shrink:0; align-self:flex-end; margin-left:auto;}
+@media (max-width:1280px){
+  #toolbarCompacta .tf-icon-texto{display:none;}
+  #toolbarCompacta .tf-icon-calendario{padding:0 10px;}
 }
-@media (max-width:520px){
-  .tf-campo{flex:1 1 100%;}
+@media (max-width:1100px){
+  #toolbarCompacta{flex-wrap:wrap; row-gap:10px; padding:10px 12px;}
+  #toolbarCompacta .tf-titulo{order:1; align-self:center;}
+  #toolbarCompacta .tf-acciones{order:2; margin-left:auto; align-self:center; width:auto; border:0; padding:0; margin-top:0;}
+  #toolbarCompacta .tf-campos-grupo{order:3; flex:1 1 100%; display:grid; grid-template-columns:repeat(auto-fill, minmax(170px, 1fr)); gap:10px;}
+  #toolbarCompacta .tf-campo{min-width:0; width:auto;}
+  #toolbarCompacta .campo-rango{grid-column:span 2;}
+  /* Orden: (Mes en tabla) → Compañía → Años → Sector → Finca → (Rango en gráficas) */
+  .campo-mes{order:0;} .campo-compania{order:1;} .campo-anios{order:2;}
+  .campo-sector{order:3;} .campo-finca{order:4;} .campo-rango{order:5;}
+}
+@media (max-width:640px){
+  #toolbarCompacta .tf-campos-grupo{grid-template-columns:1fr 1fr;}
   .ms-panel{min-width:0; width:100%; left:0; right:0;}
+}
+@media (max-width:420px){
+  #toolbarCompacta .tf-campos-grupo{grid-template-columns:1fr;}
+  #toolbarCompacta .campo-rango{grid-column:auto;}
+  #toolbarCompacta .tf-titulo h1{font-size:14px;}
+  #toolbarCompacta .tf-acciones{gap:4px;}
 }
 
 .filters-wrapper {
@@ -518,6 +539,8 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
   box-shadow:var(--shadow-sm); padding:10px 12px;
 }
 .chart-card.consolidado{border-top:3px solid var(--brand-dark);}
+.chart-card.por-ubic{margin-left:18px; border-left:3px solid var(--brand-orange); background:#FDFCF8;}
+.chart-card.por-ubic .chart-canvas-box{height:300px;}
 .chart-card-hdr{display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:6px;}
 .chart-card-title{font-size:12px; font-weight:800; color:var(--brand-dark);}
 .chart-card-sub{font-size:10px; color:var(--text-muted); font-weight:600; white-space:nowrap;}
@@ -526,6 +549,19 @@ table.pivot tbody tr:hover td:first-child{background:#f1f5f9}
 .chart-fincas-lbl{font-size:9.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); margin-right:4px;}
 .chart-finca-chip{font-size:10.5px; font-weight:600; color:var(--brand-dark); background:#EEF3EF; border:1px solid #D6E2D9; border-radius:10px; padding:1px 8px;}
 body.modo-grafica .campo-mes{display:none;}
+body.modo-grafica #kpiWrap{display:none;}
+.sec-kpis{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:10px;}
+.sec-kpi{background:#f8fafc; border:1px solid var(--border-color); border-left:3px solid var(--brand-blue); border-radius:var(--radius-sm); padding:6px 10px;}
+.sec-kpi.actual{border-left-color:#dc2626;}
+.sec-kpi.prom{border-left-color:var(--brand-dark);}
+.sec-kpi.desv{border-left-color:var(--brand-orange);}
+.sec-kpi-lbl{font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:var(--text-muted); font-weight:700;}
+.sec-kpi-val{font-size:16px; font-weight:800; color:var(--brand-dark); line-height:1.3;}
+.sec-kpi-val small{font-size:10px; font-weight:600; color:var(--text-muted);}
+.sec-kpi-val.pos{color:#15803d;} .sec-kpi-val.neg{color:#dc2626;}
+.chart-aviso{display:flex; flex-direction:column; align-items:center; gap:6px; padding:40px 20px; text-align:center; background:#fff;
+  border:1px dashed var(--border-color); border-radius:var(--radius-md); color:var(--text-muted); font-size:13px;}
+.chart-aviso b{color:var(--brand-dark); font-size:14px;}
 .campo-mes{order:-1;} /* en tabla/calendario va de primero */
 .campo-rango{display:none;}
 body.modo-grafica .campo-rango{display:flex;}
@@ -613,9 +649,6 @@ body.modo-grafica .campo-rango{display:flex;}
       <button class="tf-icon" onclick="location.reload()" title="Actualizar">
         <span>↻</span>
       </button>
-      <button class="tf-icon" onclick="window.print()" title="Imprimir">
-        <span>🖨️</span>
-      </button>
     </div>
   </div>
 
@@ -669,7 +702,11 @@ body.modo-grafica .campo-rango{display:flex;}
 
   <div class="pivot-section" id="viewChartSection" style="display: none;">
     <div class="pivot-label-row">
-      <div class="pivot-label" id="chartLabel">Pluviómetro acumulado (mm) · por Ubicación geográfica y Sector</div>
+      <div class="pivot-label" id="chartLabel">Pluviómetro acumulado (mm) · por Sector</div>
+      <label class="toggle-total" title="Mostrar debajo de cada Sector el desglose por Ubicación geográfica">
+        <input type="checkbox" id="chkVerUbicaciones" onchange="render()">
+        Ver por ubicaciones
+      </label>
     </div>
     <div id="chartWrap"></div>
   </div>
@@ -686,6 +723,10 @@ let SATELLITE_FORECAST = {};
 let CHART_INST = [];
 let CHART_DESDE = 5;
 let CHART_HASTA = 12;
+let CHART_LISTO = false; // las gráficas no se cargan hasta que el usuario aplique un filtro
+function hayFiltroActivo(){
+  return ['compania','anios','sector','finca'].some(k => seleccionFiltros[k].length) || CHART_DESDE !== 5 || CHART_HASTA !== 12;
+}
 
 // Rango de meses de la vista Gráficas (si Desde > Hasta se intercambian)
 function cambiarRangoMeses(){
@@ -693,6 +734,7 @@ function cambiarRangoMeses(){
   let h = parseInt(document.getElementById("selRangoHasta").value);
   if(d > h){ [d, h] = [h, d]; document.getElementById("selRangoDesde").value = d; document.getElementById("selRangoHasta").value = h; }
   CHART_DESDE = d; CHART_HASTA = h;
+  if(CURRENT_VIEW === "chart") CHART_LISTO = true;
   render();
 }
 
@@ -733,6 +775,16 @@ function setView(mode) {
   btnCh.title = v === "chart" ? "Ver tabla matriz" : "Ver gráficas de acumulados";
 
   if (v === "calendar") fetchLiveWeather();
+  // Al entrar a Gráficas: solo cargan si ya hay un filtro aplicado; si no, esperan al primero.
+  if (v === "chart") {
+    // Al entrar a Gráficas: filtros limpios y sin casillas marcadas; las gráficas esperan la selección.
+    seleccionFiltros.compania = []; seleccionFiltros.anios = []; seleccionFiltros.sector = []; seleccionFiltros.finca = [];
+    sinSeleccion = new Set(['compania','anios','sector','finca']);
+    CHART_LISTO = false;
+  } else {
+    sinSeleccion.clear();
+  }
+  construirTodosLosFiltros();
   render();
 }
 
@@ -909,6 +961,9 @@ async function loadData(){
 // ===================================================================
 let mesSeleccionado = null; // string único, ej. "07"
 let seleccionFiltros = { sector: [], finca: [], compania: [], anios: [] };
+// Filtros "sin selección" (todas las casillas desmarcadas): se usa al entrar a Gráficas para que
+// el usuario marque lo que desea o "(Seleccionar todo)". Mientras no elija, cuenta como "todos".
+let sinSeleccion = new Set();
 
 function normalizarTxt(t){ return String(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,''); }
 
@@ -955,7 +1010,7 @@ function construirTodosLosFiltros(){
     const valores = universo[llave];
     const panel = document.getElementById('ms'+cap(llave));
     let itemsHtml = valores.map(v=>{
-      const marcado = !seleccionFiltros[llave].length || seleccionFiltros[llave].includes(v);
+      const marcado = !sinSeleccion.has(llave) && (!seleccionFiltros[llave].length || seleccionFiltros[llave].includes(v));
       return `<div class="ms-item" data-val="${v}" data-texto="${normalizarTxt(v)}">
         <input type="checkbox" value="${v}" ${marcado?'checked':''} onchange="actualizarSelectAllMs('${llave}')">
         <span>${v}</span>
@@ -965,7 +1020,7 @@ function construirTodosLosFiltros(){
     panel.innerHTML = `
       <div class="ms-search"><input type="text" placeholder="Buscar..." oninput="buscarMs('${llave}', this.value)"></div>
       <div class="ms-item selectall">
-        <input type="checkbox" class="selectall-cb" checked onchange="toggleTodoMs('${llave}', this.checked)">
+        <input type="checkbox" class="selectall-cb" ${sinSeleccion.has(llave)?'':'checked'} onchange="toggleTodoMs('${llave}', this.checked)">
         <span>(Seleccionar todo)</span>
       </div>
       <div class="ms-items">${itemsHtml}</div>
@@ -1025,8 +1080,11 @@ window.aplicarMsFiltro = function(clave){
   const panel = document.getElementById('ms'+cap(clave));
   const marcados = Array.from(panel.querySelectorAll('.ms-items input[type=checkbox]:checked')).map(cb=>cb.value);
   const universoActual = universoCascada()[clave];
+  if(!marcados.length && sinSeleccion.has(clave)){ panel.classList.remove('show'); return; } // nada marcado: sigue pendiente
+  sinSeleccion.delete(clave);
   seleccionFiltros[clave] = (marcados.length && marcados.length < universoActual.length) ? marcados : [];
   panel.classList.remove('show');
+  if(CURRENT_VIEW === "chart") CHART_LISTO = true;
   // Reconstruir todo: Compañía→Sector→Finca están en cascada, aceptar cualquiera
   // de ellos puede acotar los siguientes.
   construirTodosLosFiltros();
@@ -1043,7 +1101,8 @@ function actualizarTextoDropFiltro(clave, totalUniverso){
   const sel = seleccionFiltros[clave];
   const defaults = { sector:'Todos', finca:'Todas', compania:'Todas', anios:'Todos los años' };
   if(!totalUniverso){ el.textContent='—'; return; }
-  if(!sel.length) el.textContent = defaults[clave];
+  if(sinSeleccion.has(clave)) el.textContent = 'Seleccionar…';
+  else if(!sel.length) el.textContent = defaults[clave];
   else if(sel.length===1) el.textContent = sel[0];
   else el.textContent = sel.length+' sel.';
 }
@@ -1586,7 +1645,7 @@ function seriesAcumuladas(rows, aniosGraf, aniosProm){
       borderWidth: 4, pointRadius: 3, tension: .25
     });
   }
-  return { labels: meses.map(m => MES_CORTO[m-1]), datasets };
+  return { labels: meses.map(m => MES_CORTO[m-1]), datasets, tm, meses, aniosHist };
 }
 
 // Dibuja el valor acumulado sobre cada punto, del color de su línea (como la gráfica de Excel)
@@ -1627,10 +1686,45 @@ const ETIQUETAS_VALOR = {
   }
 };
 
+// KPI general del Sector, calculado en el rango de meses seleccionado:
+// acumulado del año en curso a la fecha, promedio histórico al mismo corte, desviación %,
+// promedio histórico al cierre del rango y el año más lluvioso del histórico.
+function kpiSectorHtml(tm, meses, aniosHist){
+  const hoy = new Date(), anioAct = hoy.getFullYear(), mesAct = hoy.getMonth() + 1;
+  const fmt = v => v.toLocaleString("es-NI", {maximumFractionDigits:1});
+  const acum = (y, hasta) => meses.filter(m => m <= hasta).reduce((s,m)=> s + ((tm[y]||{})[m] || 0), 0);
+  const promA = hasta => aniosHist.length ? aniosHist.reduce((s,y)=> s + acum(y, hasta), 0) / aniosHist.length : null;
+
+  const corte = Math.min(mesAct, meses[meses.length-1]);
+  const hayActual = tm[anioAct] && mesAct >= meses[0];
+  const actual = hayActual ? acum(anioAct, corte) : null;
+  const promCorte = hayActual ? promA(corte) : null;
+  const desv = (actual != null && promCorte) ? (actual - promCorte) / promCorte * 100 : null;
+  const promCierre = promA(meses[meses.length-1]);
+  let top = null;
+  aniosHist.forEach(y => { const v = acum(y, meses[meses.length-1]); if(!top || v > top.v) top = { y, v }; });
+  const mesCorte = MES_CORTO[corte-1];
+
+  return `<div class="sec-kpis">
+    <div class="sec-kpi actual"><div class="sec-kpi-lbl">Acumulado ${anioAct}${hayActual ? " a " + mesCorte : ""}</div>
+      <div class="sec-kpi-val">${actual != null ? fmt(actual) + " <small>mm</small>" : "—"}</div></div>
+    <div class="sec-kpi prom"><div class="sec-kpi-lbl">Prom. histórico${hayActual ? " a " + mesCorte : ""}</div>
+      <div class="sec-kpi-val">${promCorte != null ? fmt(promCorte) + " <small>mm</small>" : "—"}</div></div>
+    <div class="sec-kpi desv"><div class="sec-kpi-lbl">Desviación vs promedio</div>
+      <div class="sec-kpi-val ${desv == null ? "" : (desv >= 0 ? "pos" : "neg")}">${desv != null ? (desv >= 0 ? "▲ +" : "▼ ") + fmt(desv) + "%" : "—"}</div></div>
+    <div class="sec-kpi"><div class="sec-kpi-lbl">Prom. histórico al cierre (${MES_CORTO[meses[meses.length-1]-1]})</div>
+      <div class="sec-kpi-val">${promCierre != null ? fmt(promCierre) + " <small>mm</small>" : "—"}</div></div>
+    <div class="sec-kpi"><div class="sec-kpi-lbl">Año más lluvioso</div>
+      <div class="sec-kpi-val">${top ? top.y + " <small>· " + fmt(top.v) + " mm</small>" : "—"}</div></div>
+  </div>`;
+}
+
 function crearTarjetaGrafica(contenedor, titulo, sub, rows, aniosGraf, aniosProm, extraClase){
   const card = document.createElement("div");
   card.className = "chart-card" + (extraClase ? " " + extraClase : "");
+  const serie = seriesAcumuladas(rows, aniosGraf, aniosProm);
   card.innerHTML = `<div class="chart-card-hdr"><span class="chart-card-title"></span><span class="chart-card-sub"></span></div>
+    ${kpiSectorHtml(serie.tm, serie.meses, serie.aniosHist)}
     <div class="chart-canvas-box"><canvas></canvas></div>`;
   card.querySelector(".chart-card-title").textContent = titulo;
   card.querySelector(".chart-card-sub").textContent = sub;
@@ -1642,7 +1736,7 @@ function crearTarjetaGrafica(contenedor, titulo, sub, rows, aniosGraf, aniosProm
   card.appendChild(lista);
   contenedor.appendChild(card);
 
-  const { labels, datasets } = seriesAcumuladas(rows, aniosGraf, aniosProm);
+  const { labels, datasets } = serie;
   CHART_INST.push(new Chart(card.querySelector("canvas"), {
     type: "line",
     data: { labels, datasets },
@@ -1673,6 +1767,17 @@ function buildCharts(){
     return;
   }
 
+  // Las gráficas se construyen solo cuando TODOS los filtros tienen selección
+  if(sinSeleccion.size){
+    const nombres = { compania:"Compañía", anios:"Años Históricos", sector:"Sector", finca:"Finca" };
+    const pendientes = ['compania','anios','sector','finca'].filter(k => sinSeleccion.has(k)).map(k => nombres[k]);
+    wrap.innerHTML = `<div class="chart-aviso"><span style="font-size:26px;">📈</span>
+      <b>Seleccione los filtros para generar las gráficas</b>
+      <span>Pendiente: ${pendientes.join(" · ")}</span></div>`;
+    document.getElementById("chartLabel").textContent = "Pluviómetro acumulado (mm) · por Sector";
+    return;
+  }
+
   const base = getFilteredSinMes();
   if(!base.length){
     wrap.innerHTML = `<div class="empty-msg">No se encontraron registros para los criterios seleccionados.</div>`;
@@ -1688,31 +1793,37 @@ function buildCharts(){
   // (no depende del filtro de Años, que solo decide qué líneas de año se dibujan). Excluye el año en curso.
   const aniosProm = todosAnios.map(String);
 
-  // Ubicación geográfica → Sector
-  const ubicaciones = [...new Set(base.map(r => r.ub || "Sin ubicación"))].sort();
-  ubicaciones.forEach(ub=>{
-    const rowsUb = base.filter(r => (r.ub || "Sin ubicación") === ub);
+  // Sector (todas sus fincas) → opcionalmente desglose por Ubicación geográfica
+  const verUbic = document.getElementById("chkVerUbicaciones").checked;
+  const sectores = [...new Set(base.map(r => r.se || "Sin sector"))].sort();
+  sectores.forEach(se=>{
+    const rowsSe = base.filter(r => (r.se || "Sin sector") === se);
     const bloque = document.createElement("div");
     bloque.className = "chart-ubic";
     const hdr = document.createElement("div");
     hdr.className = "chart-ubic-hdr";
-    hdr.textContent = `📍 ${ub}`;
+    hdr.textContent = `🌾 Sector ${se}`;
     bloque.appendChild(hdr);
     const grid = document.createElement("div");
     grid.className = "chart-grid";
     bloque.appendChild(grid);
     wrap.appendChild(bloque);
 
-    const sectores = [...new Set(rowsUb.map(r => r.se || "Sin sector"))].sort();
-    sectores.forEach(se=>{
-      const rowsSe = rowsUb.filter(r => (r.se || "Sin sector") === se);
-      const n = new Set(rowsSe.map(r=>r.fi)).size;
-      crearTarjetaGrafica(grid, `Sector ${se}`, `${n} finca${n===1?"":"s"}`, rowsSe, aniosGraf, aniosProm);
-    });
+    const nSe = new Set(rowsSe.map(r=>r.fi)).size;
+    crearTarjetaGrafica(grid, `Sector ${se} · todas las fincas`, `${nSe} finca${nSe===1?"":"s"}`, rowsSe, aniosGraf, aniosProm, "consolidado");
+
+    if(verUbic){
+      const ubicaciones = [...new Set(rowsSe.map(r => r.ub || "Sin ubicación"))].sort();
+      ubicaciones.forEach(ub=>{
+        const rowsUb = rowsSe.filter(r => (r.ub || "Sin ubicación") === ub);
+        const n = new Set(rowsUb.map(r=>r.fi)).size;
+        crearTarjetaGrafica(grid, `📍 ${ub}`, `Sector ${se} · ${n} finca${n===1?"":"s"}`, rowsUb, aniosGraf, aniosProm, "por-ubic");
+      });
+    }
   });
 
   document.getElementById("chartLabel").textContent =
-    `Pluviómetro acumulado (mm) · ${MES_CORTO[CHART_DESDE-1]}–${MES_CORTO[CHART_HASTA-1]} · años ${aniosGraf.join(", ")} · por Ubicación geográfica y Sector`;
+    `Pluviómetro acumulado (mm) · ${MES_CORTO[CHART_DESDE-1]}–${MES_CORTO[CHART_HASTA-1]} · años ${aniosGraf.join(", ")} · por Sector${verUbic ? " y Ubicación geográfica" : ""}`;
 }
 
 const gTooltip = document.getElementById("global-tooltip");
@@ -1746,7 +1857,7 @@ function hideGlobalTooltip() { gTooltip.style.display = "none"; }
 
 function render(){
   const data=getFiltered();
-  buildKPI(data);
+  if (CURRENT_VIEW !== "chart") buildKPI(data); // en Gráficas se usan los KPI por Sector
 
   if (CURRENT_VIEW === "table") {
     buildPivot(data);
