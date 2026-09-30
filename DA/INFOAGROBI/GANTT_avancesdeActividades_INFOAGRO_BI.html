@@ -3009,7 +3009,12 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
       };
     });
 
-    const llavesColumnas = Object.keys(columnasMapeadas).sort();
+    // Orden por padre y luego hijo (evita que "|||" desalinee p.ej. "Fungicida I" vs "Fungicida II")
+    const llavesColumnas = Object.keys(columnasMapeadas).sort((a, b) => {
+      const A = columnasMapeadas[a], B = columnasMapeadas[b];
+      return A.padre.localeCompare(B.padre, 'es', { numeric: true })
+          || A.hijo.localeCompare(B.hijo, 'es', { numeric: true });
+    });
     const matrizValores = {};
     const totalesColumnas = {}; 
     
@@ -3046,7 +3051,8 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
     html += `<th rowspan="3" class="col-fecha-sticky">Fecha</th>`;
 
     // Renderizar Fila Nivel 1 (Padre)
-    Object.keys(bloquesPadre).sort().forEach(padre => {
+    // Mismo orden que llavesColumnas (no re-ordenar)
+    Object.keys(bloquesPadre).forEach(padre => {
       html += `<th colspan="${bloquesPadre[padre]}">${padre}</th>`;
     });
     
