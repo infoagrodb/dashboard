@@ -3169,7 +3169,21 @@ table.detalle-modal-tabla tfoot td{border-top:2px solid #1B4332; border-bottom:n
 
     // Insumos usados ese mismo día en esas mismas fincas (ver nota arriba: cruce
     // por fecha+finca, no por ID — son dos modelos de Odoo sin relación directa).
-    const insumosCruce = DB_INSUMOS.filter(i => i.fecha === fecha && fincasEnDetalle.includes(i.finca));
+    // Cruce tolerante: la finca de Insumos viene de x_studio_keyfincainsumo y la de
+    // Avance de x_studio_finca — pueden no ser idénticas (mayúsculas, tildes, espacios
+    // o prefijos/sufijos). Se normaliza y se acepta coincidencia exacta, por contención,
+    // o por lote agrícola del mismo día. Fecha se compara solo por YYYY-MM-DD.
+    const normCruce = s => String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
+    const soloFecha = s => String(s||'').slice(0,10);
+    const fechaN = soloFecha(fecha);
+    const fincasN = fincasEnDetalle.map(normCruce).filter(Boolean);
+    const lotesN = new Set(dataset.map(d => normCruce(d.lote)).filter(l => l && l !== 'sin lote'));
+    const coincideFinca = f => { const x = normCruce(f); return !!x && fincasN.some(n => n === x || x.includes(n) || n.includes(x)); };
+    const insumosCruce = DB_INSUMOS.filter(i => soloFecha(i.fecha) === fechaN && (coincideFinca(i.finca) || lotesN.has(normCruce(i.lote))));
+    if (!insumosCruce.length) {
+      const mismoDia = DB_INSUMOS.filter(i => soloFecha(i.fecha) === fechaN);
+      console.warn('[Detalle Avance] Sin cruce de insumos', { fecha: fechaN, fincasAvance: fincasEnDetalle, lotesAvance: [...lotesN], totalInsumos: DB_INSUMOS.length, insumosMismoDia: mismoDia.length, fincasInsumosMismoDia: [...new Set(mismoDia.map(i => i.finca))] });
+    }
     const tbodyInsumos = document.querySelector('#avanceDetalleTablaInsumos tbody');
     tbodyInsumos.innerHTML = insumosCruce.length
       ? insumosCruce.map(i => `<tr>
