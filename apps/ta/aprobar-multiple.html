@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aprobación de Presupuestos — Infotaller COMASA</title>
+<script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<style>
+  :root { --verde:#134e3a; --rojo:#b91c1c; --gris:#6b7280; }
+  * { box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:#f3f4f6; margin:0; padding:16px; color:#1e2925; }
+  .contenedor { max-width: 980px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .subt { color:#6b7280; margin-bottom:16px; font-size:0.92rem; }
+  .panel-firma { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin-bottom:20px; }
+  .panel-firma label { display:block; font-weight:600; margin-bottom:6px; font-size:0.9rem; }
+  .panel-firma input[type=text] { width:100%; padding:8px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:0.95rem; margin-bottom:12px; }
+  canvas.firma { border:1px dashed #9ca3af; border-radius:6px; width:100%; max-width:420px; height:140px; touch-action:none; background:#fafafa; display:block; }
+  .btn-limpiar-firma { margin-top:6px; background:none; border:1px solid #d1d5db; border-radius:6px; padding:5px 10px; font-size:0.82rem; cursor:pointer; }
+  .tarjeta-presupuesto { background:#fff; border:1px solid #e5e7eb; border-radius:10px; margin-bottom:18px; overflow:hidden; }
+  .cab-presupuesto { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; gap:10px; padding:14px 16px; background:#f9fafb; border-bottom:1px solid #e5e7eb; }
+  .cab-datos { display:flex; flex-wrap:wrap; gap:4px 20px; font-size:0.86rem; color:#374151; margin-top:4px; }
+  .cab-datos b { color:#111827; }
+  .cab-presupuesto h2 { margin:0 0 4px; font-size:1.05rem; }
+  .badge-estado { display:inline-block; padding:2px 10px; border-radius:999px; font-size:0.74rem; font-weight:600; vertical-align:middle; margin-left:6px; }
+  .badge-borrador, .badge-enviado { background:#dbeafe; color:#1d4ed8; }
+  .badge-aprobado { background:#dcfce7; color:#15803d; }
+  .badge-rechazado { background:#fee2e2; color:#b91c1c; }
+  .acciones-presupuesto { display:flex; gap:8px; flex-shrink:0; }
+  .btn { border:none; border-radius:6px; padding:8px 14px; font-size:0.88rem; font-weight:600; cursor:pointer; }
+  .btn-aprobar { background:var(--verde); color:#fff; }
+  .btn-rechazar { background:#fff; color:var(--rojo); border:1px solid var(--rojo); }
+  .btn:disabled { opacity:0.5; cursor:not-allowed; }
+  table.tabla-lineas { width:100%; border-collapse:collapse; font-size:0.86rem; }
+  table.tabla-lineas th { text-align:left; padding:8px 16px; background:#fff; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb; }
+  table.tabla-lineas td { padding:7px 16px; border-bottom:1px solid #f3f4f6; }
+  table.tabla-lineas tr:last-child td { border-bottom:none; }
+  .total-presupuesto { text-align:right; padding:10px 16px; font-weight:700; background:#f9fafb; border-top:1px solid #e5e7eb; }
+  .caja-rechazo { padding:12px 16px; border-top:1px solid #e5e7eb; background:#fef2f2; }
+  .caja-rechazo textarea { width:100%; min-height:60px; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:0.86rem; font-family:inherit; }
+  .mensaje-error { color:var(--rojo); font-size:0.86rem; }
+  .cargando-pagina { text-align:center; padding:60px 20px; color:#6b7280; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const h = React.createElement;
+const WORKER_BASE = "https://weathered-recipe-d18c.ignagher.workers.dev";
+
+function moneda(v) {
+  v = Number(v) || 0;
+  return "$" + v.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+function formatearFecha(f) {
+  if (!f) return "—";
+  try {
+    const d = new Date(f.replace(" ", "T") + (f.length <= 10 ? "" : "Z"));
+    if (isNaN(d.getTime())) return f;
+    return d.toLocaleDateString("es-NI", { day: "2-digit", month: "short", year: "numeric" });
+  } catch(e) { return f; }
+}
+function campoM2O(v) { return Array.isArray(v) ? v[1] : "—"; }
+
+function PizarronFirma({ onCambio }) {
+  const ref = React.useRef(null);
+  const dibujando = React.useRef(false);
+
+  function posicion(e, canvas) {
+    const rect = canvas.getBoundingClientRect();
+    const p = e.touches ? e.touches[0] : e;
+    return { x: (p.clientX - rect.left) * (canvas.width / rect.width), y: (p.clientY - rect.top) * (canvas.height / rect.height) };
+  }
+  function iniciar(e) {
+    e.preventDefault();
+    dibujando.current = true;
+    const canvas = ref.current, ctx = canvas.getContext("2d");
+    const { x, y } = posicion(e, canvas);
+    ctx.beginPath(); ctx.moveTo(x, y);
+  }
+  function mover(e) {
+    if (!dibujando.current) return;
+    e.preventDefault();
+    const canvas = ref.current, ctx = canvas.getContext("2d");
+    const { x, y } = posicion(e, canvas);
+    ctx.lineWidth = 2; ctx.lineCap = "round"; ctx.strokeStyle = "#111827";
+    ctx.lineTo(x, y); ctx.stroke();
+    onCambio(ref.current.toDataURL("image/png"), false);
+  }
+  function soltar() { dibujando.current = false; }
+  function limpiar() {
+    const canvas = ref.current, ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    onCambio(null, true);
+  }
+
+  return h("div", null,
+    h("canvas", {
+      ref, className: "firma", width: 420, height: 140,
+      onMouseDown: iniciar, onMouseMove: mover, onMouseUp: soltar, onMouseLeave: soltar,
+      onTouchStart: iniciar, onTouchMove: mover, onTouchEnd: soltar
+    }),
+    h("button", { type: "button", className: "btn-limpiar-firma", onClick: limpiar }, "Borrar firma")
+  );
+}
+
+function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado }) {
+  const { useState } = React;
+  const [procesando, setProcesando] = useState(false);
+  const [error, setError] = useState("");
+  const [mostrarRechazo, setMostrarRechazo] = useState(false);
+  const [comentario, setComentario] = useState("");
+  const [estadoLocal, setEstadoLocal] = useState(datos.presupuesto.x_studio_estado);
+
+  const p = datos.presupuesto;
+  const orden = datos.orden;
+  const lineas = datos.lineas || [];
+  const totalPresupuesto = lineas.reduce((acc, l) => {
+    const precio = l.x_studio_precio_venta_unitario != null ? l.x_studio_precio_venta_unitario : l.x_studio_costo_manual;
+    const total = l.x_studio_total_venta_presupuestada != null ? l.x_studio_total_venta_presupuestada : (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
+    return acc + total;
+  }, 0);
+
+  const yaDecidido = estadoLocal === "Aprobado" || estadoLocal === "Rechazado";
+
+  async function aprobar() {
+    if (!nombreFirma || !nombreFirma.trim()) { setError("Escribe tu nombre completo arriba antes de aprobar."); return; }
+    if (!firmaBase64) { setError("Dibuja tu firma arriba antes de aprobar."); return; }
+    setProcesando(true); setError("");
+    try {
+      const res = await fetch(WORKER_BASE + "/taller/presupuesto/aprobar-publico", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: datos.id, token: datos.token, aprobado_por: nombreFirma.trim(), firma_base64: firmaBase64 })
+      });
+      const data = await res.json();
+      if (!data.ok) { setError(data.error || "No se pudo aprobar."); setProcesando(false); return; }
+      setEstadoLocal("Aprobado");
+      onCambioEstado(datos.id, "Aprobado");
+    } catch(e) {
+      setError("Error: " + e.message); setProcesando(false);
+    }
+  }
+
+  async function rechazar() {
+    if (!comentario.trim()) { setError("Escribe un comentario explicando el motivo del rechazo."); return; }
+    setProcesando(true); setError("");
+    try {
+      const res = await fetch(WORKER_BASE + "/taller/presupuesto/rechazar-publico", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: datos.id, token: datos.token, comentario: comentario.trim() })
+      });
+      const data = await res.json();
+      if (!data.ok) { setError(data.error || "No se pudo rechazar."); setProcesando(false); return; }
+      setEstadoLocal("Rechazado");
+      onCambioEstado(datos.id, "Rechazado");
+    } catch(e) {
+      setError("Error: " + e.message); setProcesando(false);
+    }
+  }
+
+  const claseBadge = estadoLocal === "Aprobado" ? "badge-aprobado" : estadoLocal === "Rechazado" ? "badge-rechazado" : "badge-enviado";
+
+  return h("div", { className: "tarjeta-presupuesto" },
+    h("div", { className: "cab-presupuesto" },
+      h("div", null,
+        h("h2", null, p.x_name, h("span", { className: "badge-estado " + claseBadge }, estadoLocal)),
+        h("div", { className: "cab-datos" },
+          h("span", null, h("b", null, "Fecha Ppto: "), formatearFecha(p.x_studio_fecha_presupuesto)),
+          h("span", null, h("b", null, "Equipo: "), orden ? campoM2O(orden.x_studio_equipo_id) : "—"),
+          h("span", null, h("b", null, "Horas motor: "), (orden && orden.x_studio_horometro_recepcion) ? orden.x_studio_horometro_recepcion : "—"),
+          h("span", null, h("b", null, "Tipo mantenimiento: "), (orden && orden.x_studio_tipo_mantenimiento_id) ? campoM2O(orden.x_studio_tipo_mantenimiento_id) : "—")
+        )
+      ),
+      !yaDecidido && h("div", { className: "acciones-presupuesto" },
+        h("button", { className: "btn btn-rechazar", disabled: procesando, onClick: () => setMostrarRechazo(v => !v) }, "Rechazar"),
+        h("button", { className: "btn btn-aprobar", disabled: procesando, onClick: aprobar }, procesando ? "Procesando..." : "✓ Aprobar este presupuesto")
+      )
+    ),
+    h("table", { className: "tabla-lineas" },
+      h("thead", null, h("tr", null,
+        h("th", null, "Línea"), h("th", null, "Artículo"), h("th", null, "N° de parte"),
+        h("th", null, "Cantidad"), h("th", null, "Precio Unitario"), h("th", null, "Total")
+      )),
+      h("tbody", null,
+        lineas.length ? lineas.map((l, i) => {
+          const precio = l.x_studio_precio_venta_unitario != null ? l.x_studio_precio_venta_unitario : l.x_studio_costo_manual;
+          const total = l.x_studio_total_venta_presupuestada != null ? l.x_studio_total_venta_presupuestada : (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
+          return h("tr", { key: i },
+            h("td", null, i + 1),
+            h("td", null, l.x_studio_descripcion || "—"),
+            h("td", null, l.x_studio_sku || "—"),
+            h("td", null, (l.x_studio_cantidad_presupuestada || 0) + " " + (l.x_studio_unidad_medida || "")),
+            h("td", null, moneda(precio)),
+            h("td", null, moneda(total))
+          );
+        }) : h("tr", null, h("td", { colSpan: 6, style: { textAlign: "center", color: "#9ca3af" } }, "(Sin líneas)"))
+      )
+    ),
+    h("div", { className: "total-presupuesto" }, "Total: " + moneda(totalPresupuesto)),
+    mostrarRechazo && !yaDecidido && h("div", { className: "caja-rechazo" },
+      h("textarea", { placeholder: "Motivo del rechazo (obligatorio)...", value: comentario, onChange: e => setComentario(e.target.value) }),
+      h("div", { style: { marginTop: "8px", textAlign: "right" } },
+        h("button", { className: "btn btn-rechazar", disabled: procesando, onClick: rechazar }, procesando ? "Procesando..." : "Confirmar rechazo")
+      )
+    ),
+    error && h("div", { className: "mensaje-error", style: { padding: "0 16px 12px" } }, error)
+  );
+}
+
+function AprobarMultiple() {
+  const { useState, useEffect } = React;
+  const [datos, setDatos] = useState(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState("");
+  const [nombreFirma, setNombreFirma] = useState("");
+  const [firmaBase64, setFirmaBase64] = useState(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("items") || "";
+    const parsed = raw.split(",").filter(Boolean).map(par => {
+      const [id, token] = par.split(":");
+      return { id: parseInt(id), token };
+    }).filter(it => it.id && it.token);
+    if (!parsed.length) { setError("Link inválido: no se especificaron presupuestos."); setCargando(false); return; }
+    cargarTodos(parsed);
+  }, []);
+
+  async function cargarTodos(lista) {
+    setCargando(true); setError("");
+    try {
+      const resultados = await Promise.all(lista.map(async it => {
+        const res = await fetch(WORKER_BASE + "/taller/presupuesto/publico?id=" + it.id + "&token=" + encodeURIComponent(it.token));
+        const data = await res.json();
+        if (!data.ok) return { id: it.id, token: it.token, error: data.error || "No se pudo cargar" };
+        return { id: it.id, token: it.token, presupuesto: data.presupuesto, lineas: data.lineas, orden: data.orden };
+      }));
+      setDatos(resultados);
+    } catch(e) {
+      setError("Error al cargar los presupuestos: " + e.message);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  function onCambioEstado() { /* el estado visual ya se refleja dentro de cada tarjeta */ }
+
+  if (cargando) return h("div", { className: "cargando-pagina" }, "Cargando presupuestos...");
+  if (error) return h("div", { className: "contenedor" }, h("div", { className: "mensaje-error", style: { fontSize: "1rem", padding: "40px 0", textAlign: "center" } }, error));
+
+  let clienteNombre = "";
+  for (const d of datos) { if (d.orden && Array.isArray(d.orden.x_studio_cliente_id)) { clienteNombre = d.orden.x_studio_cliente_id[1]; break; } }
+
+  return h("div", { className: "contenedor" },
+    h("h1", null, "Aprobación de Presupuestos"),
+    h("div", { className: "subt" }, (clienteNombre ? clienteNombre + " — " : "") + datos.length + " presupuesto(s) para tu revisión. Revisa cada uno y apruébalo o recházalo de forma individual con los botones de la derecha."),
+    h("div", { className: "panel-firma" },
+      h("label", null, "Tu nombre completo (se usa para aprobar cualquiera de los presupuestos de abajo)"),
+      h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Nombre y apellido" }),
+      h("label", null, "Tu firma"),
+      h(PizarronFirma, { onCambio: (data, vacio) => setFirmaBase64(vacio ? null : data) })
+    ),
+    datos.map(d => d.error
+      ? h("div", { className: "tarjeta-presupuesto", key: d.id }, h("div", { style: { padding: "16px", color: "#b91c1c" } }, "Presupuesto #" + d.id + ": " + d.error))
+      : h(TarjetaPresupuesto, { key: d.id, datos: d, nombreFirma, firmaBase64, onCambioEstado })
+    )
+  );
+}
+
+const nodoRaiz = document.getElementById("root");
+if (ReactDOM.createRoot) {
+  ReactDOM.createRoot(nodoRaiz).render(h(AprobarMultiple));
+} else {
+  ReactDOM.render(h(AprobarMultiple), nodoRaiz);
+}
+</script>
+</body>
+</html>
