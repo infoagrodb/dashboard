@@ -117,8 +117,8 @@ function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado })
   const orden = datos.orden;
   const lineas = datos.lineas || [];
   const totalPresupuesto = lineas.reduce((acc, l) => {
-    const precio = l.x_studio_precio_venta_unitario != null ? l.x_studio_precio_venta_unitario : l.x_studio_costo_manual;
-    const total = l.x_studio_total_venta_presupuestada != null ? l.x_studio_total_venta_presupuestada : (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
+    const precio = l.x_studio_precio_venta_unitario || l.x_studio_costo_manual;
+    const total = l.x_studio_total_venta_presupuestada || (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
     return acc + total;
   }, 0);
 
@@ -184,8 +184,8 @@ function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado })
       )),
       h("tbody", null,
         lineas.length ? lineas.map((l, i) => {
-          const precio = l.x_studio_precio_venta_unitario != null ? l.x_studio_precio_venta_unitario : l.x_studio_costo_manual;
-          const total = l.x_studio_total_venta_presupuestada != null ? l.x_studio_total_venta_presupuestada : (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
+          const precio = l.x_studio_precio_venta_unitario || l.x_studio_costo_manual;
+          const total = l.x_studio_total_venta_presupuestada || (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
           return h("tr", { key: i },
             h("td", null, i + 1),
             h("td", null, l.x_studio_descripcion || "—"),
