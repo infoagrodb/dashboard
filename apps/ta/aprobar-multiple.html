@@ -269,23 +269,23 @@ function construirFilasDetalle(datos) {
 }
 
 const COLUMNAS_DETALLE = [
+  { key: "linea", label: "Línea", valor: f => String(f.linea) },
   { key: "cotizacion", label: "Cotización", valor: f => f.cotizacion, sticky: 1 },
   { key: "fecha", label: "Fecha", valor: f => f.fecha, sticky: 2 },
   { key: "tipoMant", label: "Tipo mantenimiento", valor: f => f.tipoMant, sticky: 3, claseExtra: "col-tipomant" },
   { key: "equipo", label: "Equipo", valor: f => f.equipo, sticky: 4 },
   { key: "horas", label: "Horas Motor", valor: f => String(f.horas) },
-  { key: "linea", label: "Línea", valor: f => String(f.linea) },
   { key: "descripcion", label: "Descripción Art/Serv", valor: f => f.descripcion, claseExtra: "col-descripcion" },
   { key: "um", label: "UM", valor: f => f.um },
-  { key: "cantidad", label: "Cantidad", valor: f => String(f.cantidad), num: true },
+  { key: "cantidad", label: "Cantidad", valor: f => Number(f.cantidad).toFixed(2), num: true },
   { key: "precio", label: "Unit US$", valor: f => moneda(f.precio), num: true },
   { key: "total", label: "Total US$", valor: f => moneda(f.total), num: true }
 ];
 
 const ANCHOS_DEFECTO_DETALLE = {
-  cotizacion: 105, fecha: 85, tipoMant: 115, equipo: 140,
-  horas: 85, linea: 55, descripcion: 160, um: 55,
-  cantidad: 75, precio: 85, total: 95
+  linea: 45, cotizacion: 105, fecha: 85, tipoMant: 100, equipo: 120,
+  horas: 70, descripcion: 195, um: 55,
+  cantidad: 65, precio: 85, total: 95
 };
 
 function claseColumna(c) {
@@ -411,12 +411,12 @@ function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar, leftPorC
     COLUMNAS_DETALLE.map(c => h("td", { key: c.key, className: claseColumna(c), style: estiloSticky(c, leftPorColumna) }, c.valor(f)))
   ));
 
-  // Barra de subtotal: monto primero, luego los botones de acción, y al final la
-  // etiqueta "Total <equipo>" — orden pedido explícitamente (ya no hay columna Acción).
+  // Barra de subtotal: primero los botones de acción, luego la etiqueta "Total <equipo>"
+  // (en una celda que ocupa todas las columnas excepto Total US$), y el monto va aparte,
+  // alineado debajo de su propia columna Total US$ — igual que las filas de línea normales.
   const filaSubtotal = h("tr", { className: "fila-subtotal", key: grupo.id + "-sub" },
-    h("td", { colSpan: COLUMNAS_DETALLE.length },
+    h("td", { colSpan: COLUMNAS_DETALLE.length - 1 },
       h("div", { className: "barra-subtotal" },
-        h("span", { className: "monto-subtotal" }, moneda(grupo.subTotal)),
         yaDecidido
           ? h("span", { className: "badge-estado " + (est === "Aprobado" ? "badge-aprobado" : "badge-rechazado") }, est)
           : h("span", { className: "acciones-subtotal" },
@@ -425,7 +425,8 @@ function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar, leftPorC
             ),
         h("span", { className: "etiqueta-subtotal" }, "Total " + grupo.equipo)
       )
-    )
+    ),
+    h("td", { className: "num monto-subtotal" }, moneda(grupo.subTotal))
   );
 
   const filaRechazo = mostrarRechazo && !yaDecidido && h("tr", { key: grupo.id + "-rechazo" },
@@ -509,14 +510,15 @@ function TablaDetallada({ datos, estados, procesandoId, onAprobar, onRechazar })
   }
 
   function exportarExcel() {
+    const idxEtiqueta = COLUMNAS_DETALLE.findIndex(c => c.key === "equipo");
     const filasX = [COLUMNAS_DETALLE.map(c => c.label)];
     grupos.forEach(g => {
       g.filasLinea.forEach(f => {
         filasX.push(COLUMNAS_DETALLE.map(c => (c.key === "cantidad" || c.key === "precio" || c.key === "total") ? f[c.key] : c.valor(f)));
       });
-      filasX.push(COLUMNAS_DETALLE.map((c, i) => i === 0 ? ("Total " + g.equipo) : (c.key === "total" ? g.subTotal : "")));
+      filasX.push(COLUMNAS_DETALLE.map((c, i) => i === idxEtiqueta ? ("Total " + g.equipo) : (c.key === "total" ? g.subTotal : "")));
     });
-    filasX.push(COLUMNAS_DETALLE.map((c, i) => i === 0 ? "Total General" : (c.key === "total" ? totTotal : "")));
+    filasX.push(COLUMNAS_DETALLE.map((c, i) => i === idxEtiqueta ? "Total General" : (c.key === "total" ? totTotal : "")));
     const ws = XLSX.utils.aoa_to_sheet(filasX);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Presupuestos");
@@ -546,12 +548,12 @@ function TablaDetallada({ datos, estados, procesandoId, onAprobar, onRechazar })
             ocupado: procesandoId === g.id, onAprobar, onRechazar, leftPorColumna
           })),
           h("tr", { className: "fila-total-general" },
-            h("td", { colSpan: COLUMNAS_DETALLE.length },
+            h("td", { colSpan: COLUMNAS_DETALLE.length - 1 },
               h("div", { className: "barra-total-general" },
-                h("span", null, "Total General"),
-                h("span", null, moneda(totTotal))
+                h("span", null, "Total General")
               )
-            )
+            ),
+            h("td", { className: "num monto-subtotal" }, moneda(totTotal))
           )
         )
       )
