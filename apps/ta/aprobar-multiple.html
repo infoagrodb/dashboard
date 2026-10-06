@@ -58,13 +58,37 @@
 
   .tabla-detalle-wrap { overflow-x:auto; background:#fff; border:1px solid #e5e7eb; border-radius:10px; margin:14px 0 20px; }
   table.tabla-detalle { width:100%; border-collapse:collapse; font-size:0.81rem; white-space:nowrap; }
-  table.tabla-detalle th { background:var(--celeste-claro); text-align:left; padding:7px 10px; border-bottom:1px solid var(--celeste-borde); }
+  table.tabla-detalle th { background:var(--celeste-claro); text-align:left; padding:7px 10px; border-bottom:1px solid var(--celeste-borde); position:relative; }
   table.tabla-detalle td { padding:6px 10px; border-bottom:1px solid #f1f5f9; }
   table.tabla-detalle .num { text-align:right; }
   table.tabla-detalle tr.fila-subtotal td { font-weight:700; font-style:italic; background:#f9fafb; border-top:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
   table.tabla-detalle tr.fila-total-general td { font-weight:800; font-size:0.9rem; background:#eff6ff; border-top:2px solid #334155; }
   .btn-aprobar-mini { background:var(--verde); color:#fff; border:none; border-radius:5px; padding:4px 10px; font-size:0.76rem; font-weight:600; cursor:pointer; white-space:nowrap; }
   .btn-aprobar-mini:disabled { opacity:0.5; cursor:not-allowed; }
+  .btn-rechazar-mini { background:#fff; color:var(--rojo); border:1px solid var(--rojo); border-radius:5px; padding:4px 8px; font-size:0.76rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .btn-rechazar-mini:disabled { opacity:0.5; cursor:not-allowed; }
+  .textarea-rechazo-tabla { width:100%; min-height:50px; padding:6px; border:1px solid #d1d5db; border-radius:6px; font-size:0.82rem; font-family:inherit; box-sizing:border-box; }
+
+  .col-tipomant { font-size:0.68rem; line-height:1.15; white-space:normal !important; }
+
+  table.tabla-detalle th.sticky-col, table.tabla-detalle td.sticky-col { position:sticky; background:#fff; z-index:2; }
+  table.tabla-detalle thead th.sticky-col { z-index:4; background:var(--celeste-claro); }
+  table.tabla-detalle tr.fila-subtotal td.sticky-col { background:#f9fafb; }
+  table.tabla-detalle tr.fila-total-general td.sticky-col { background:#eff6ff; }
+  table.tabla-detalle .sticky-col-1 { left:0; min-width:100px; max-width:100px; overflow:hidden; text-overflow:ellipsis; }
+  table.tabla-detalle .sticky-col-2 { left:100px; min-width:85px; max-width:85px; overflow:hidden; text-overflow:ellipsis; }
+  table.tabla-detalle .sticky-col-3 { left:185px; min-width:115px; max-width:115px; }
+  table.tabla-detalle .sticky-col-4 { left:300px; min-width:150px; max-width:150px; overflow:hidden; text-overflow:ellipsis; box-shadow:3px 0 5px -2px rgba(0,0,0,.18); }
+
+  .btn-filtro-col { background:none; border:none; cursor:pointer; color:#64748b; font-size:0.7rem; margin-left:3px; padding:0 2px; vertical-align:middle; }
+  .btn-filtro-col.activo { color:var(--celeste); font-weight:800; }
+  .popover-filtro { position:absolute; top:100%; left:0; z-index:50; background:#fff; border:1px solid #d1d5db; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.15); padding:8px; width:180px; max-height:220px; overflow-y:auto; white-space:normal; font-weight:400; font-size:0.78rem; }
+  .input-filtro-busqueda { width:100%; padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:0.78rem; margin-bottom:6px; box-sizing:border-box; }
+  .acciones-filtro { display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.74rem; }
+  .acciones-filtro a { color:var(--celeste); text-decoration:none; cursor:pointer; }
+  .lista-filtro { display:flex; flex-direction:column; gap:3px; }
+  .item-filtro { display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:400; }
+  .item-filtro input { margin:0; }
 </style>
 </head>
 <body>
@@ -139,9 +163,8 @@ function PizarronFirma({ onCambio }) {
   );
 }
 
-function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazado }) {
+function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazar }) {
   const { useState } = React;
-  const [procesandoLocal, setProcesandoLocal] = useState(false);
   const [error, setError] = useState("");
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
   const [comentario, setComentario] = useState("");
@@ -155,22 +178,13 @@ function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazado 
 
   async function rechazar() {
     if (!comentario.trim()) { setError("Escribe un comentario explicando el motivo del rechazo."); return; }
-    setProcesandoLocal(true); setError("");
-    try {
-      const res = await fetch(WORKER_BASE + "/taller/presupuesto/rechazar-publico", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: datos.id, token: datos.token, comentario: comentario.trim() })
-      });
-      const data = await res.json();
-      if (!data.ok) { setError(data.error || "No se pudo rechazar."); setProcesandoLocal(false); return; }
-      onRechazado(datos.id);
-    } catch(e) {
-      setError("Error: " + e.message); setProcesandoLocal(false);
-    }
+    setError("");
+    const r = await onRechazar(datos.id, comentario.trim());
+    if (!r || !r.ok) setError((r && r.error) || "No se pudo rechazar.");
   }
 
   const claseBadge = estado === "Aprobado" ? "badge-aprobado" : estado === "Rechazado" ? "badge-rechazado" : "badge-enviado";
-  const ocupado = procesando || procesandoLocal;
+  const ocupado = procesando;
 
   return h("div", { className: "tarjeta-presupuesto" },
     h("div", { className: "cab-presupuesto" },
@@ -211,7 +225,7 @@ function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazado 
     mostrarRechazo && !yaDecidido && h("div", { className: "caja-rechazo" },
       h("textarea", { placeholder: "Motivo del rechazo (obligatorio)...", value: comentario, onChange: e => setComentario(e.target.value) }),
       h("div", { style: { marginTop: "8px", textAlign: "right" } },
-        h("button", { className: "btn btn-rechazar", disabled: ocupado, onClick: rechazar }, procesandoLocal ? "Procesando..." : "Confirmar rechazo")
+        h("button", { className: "btn btn-rechazar", disabled: ocupado, onClick: rechazar }, ocupado ? "Procesando..." : "Confirmar rechazo")
       )
     ),
     error && h("div", { className: "mensaje-error", style: { padding: "0 16px 12px" } }, error)
@@ -249,41 +263,184 @@ function ResumenAprobacion({ datos, estados }) {
 }
 
 function construirFilasDetalle(datos) {
-  const grupos = [];
-  let totCant = 0, totUnit = 0, totTotal = 0;
+  const filas = [];
+  const gruposMeta = {};
+  const ordenGrupos = [];
   datos.filter(d => !d.error).forEach(d => {
     const p = d.presupuesto, orden = d.orden, lineas = d.lineas || [];
-    const cliente = orden ? campoM2O(orden.x_studio_cliente_id) : "—";
     const equipo = orden ? campoM2O(orden.x_studio_equipo_id) : "—";
     const tipoMant = (orden && orden.x_studio_tipo_mantenimiento_id) ? campoM2O(orden.x_studio_tipo_mantenimiento_id) : "—";
     const horas = (orden && orden.x_studio_horometro_recepcion) ? orden.x_studio_horometro_recepcion : "—";
     const fecha = formatearFecha(p.x_studio_fecha_presupuesto);
-    let subCant = 0, subUnit = 0, subTotal = 0;
-    const filasLinea = lineas.map((l, i) => {
+    ordenGrupos.push(d.id);
+    gruposMeta[d.id] = { equipo, estadoInicial: p.x_studio_estado };
+    lineas.forEach((l, i) => {
       const { precio, total } = precioLinea(l);
       const cant = Number(l.x_studio_cantidad_presupuestada) || 0;
-      subCant += cant; subUnit += precio; subTotal += total;
-      return { cliente, cotizacion: p.x_name, fecha, tipoMant, equipo, horas, tipoLinea: l.x_studio_tipo_linea || "", linea: i + 1, descripcion: l.x_studio_descripcion || "—", um: l.x_studio_unidad_medida || "", cantidad: cant, precio, total };
+      filas.push({
+        grupoId: d.id, cotizacion: p.x_name, fecha, tipoMant, equipo, horas,
+        linea: i + 1, descripcion: l.x_studio_descripcion || "—", um: l.x_studio_unidad_medida || "",
+        cantidad: cant, precio, total
+      });
     });
-    totCant += subCant; totUnit += subUnit; totTotal += subTotal;
-    grupos.push({ id: d.id, equipo, filasLinea, subCant, subUnit, subTotal, estadoInicial: p.x_studio_estado });
   });
-  return { grupos, totCant, totUnit, totTotal };
+  return { filas, gruposMeta, ordenGrupos };
 }
 
-function TablaDetallada({ datos, estados, procesandoId, onAprobar }) {
-  const { grupos, totCant, totUnit, totTotal } = construirFilasDetalle(datos);
+const COLUMNAS_DETALLE = [
+  { key: "cotizacion", label: "Cotización", valor: f => f.cotizacion, sticky: 1 },
+  { key: "fecha", label: "Fecha", valor: f => f.fecha, sticky: 2 },
+  { key: "tipoMant", label: "Tipo mantenimiento", valor: f => f.tipoMant, sticky: 3, claseExtra: "col-tipomant" },
+  { key: "equipo", label: "Equipo", valor: f => f.equipo, sticky: 4 },
+  { key: "horas", label: "Horas Motor", valor: f => String(f.horas) },
+  { key: "linea", label: "Línea", valor: f => String(f.linea) },
+  { key: "descripcion", label: "Descripción Art/Serv", valor: f => f.descripcion },
+  { key: "um", label: "UM", valor: f => f.um },
+  { key: "cantidad", label: "Cantidad", valor: f => String(f.cantidad), num: true },
+  { key: "precio", label: "Unit US$", valor: f => moneda(f.precio), num: true },
+  { key: "total", label: "Total US$", valor: f => moneda(f.total), num: true }
+];
+
+function claseColumna(c) {
+  return (c.num ? "num " : "") + (c.sticky ? "sticky-col sticky-col-" + c.sticky + " " : "") + (c.claseExtra ? c.claseExtra : "");
+}
+
+function FiltroColumna({ valores, seleccion, onCambiar }) {
+  const { useState, useRef, useEffect } = React;
+  const [abierto, setAbierto] = useState(false);
+  const [busqueda, setBusqueda] = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!abierto) return;
+    function fuera(e) { if (ref.current && !ref.current.contains(e.target)) setAbierto(false); }
+    document.addEventListener("mousedown", fuera);
+    return () => document.removeEventListener("mousedown", fuera);
+  }, [abierto]);
+
+  const activo = seleccion != null;
+  const todasMarcadas = seleccion == null;
+  const filtradas = valores.filter(v => v.toLowerCase().includes(busqueda.toLowerCase()));
+
+  function toggleValor(v) {
+    const actual = seleccion && seleccion.size > 0 ? new Set(seleccion) : new Set(valores);
+    if (actual.has(v)) actual.delete(v); else actual.add(v);
+    onCambiar(actual.size === valores.length ? null : actual);
+  }
+
+  return h("span", { ref, style: { position: "relative" } },
+    h("button", {
+      type: "button", className: "btn-filtro-col" + (activo ? " activo" : ""),
+      onClick: (e) => { e.stopPropagation(); setAbierto(v => !v); }
+    }, "▾"),
+    abierto && h("div", { className: "popover-filtro", onClick: e => e.stopPropagation() },
+      h("input", { type: "text", placeholder: "Buscar...", value: busqueda, onChange: e => setBusqueda(e.target.value), className: "input-filtro-busqueda" }),
+      h("div", { className: "acciones-filtro" },
+        h("a", { onClick: () => onCambiar(null) }, "Todos"),
+        h("a", { onClick: () => onCambiar(new Set()) }, "Ninguno")
+      ),
+      h("div", { className: "lista-filtro" },
+        filtradas.map(v => h("label", { key: v, className: "item-filtro" },
+          h("input", { type: "checkbox", checked: todasMarcadas ? true : seleccion.has(v), onChange: () => toggleValor(v) }),
+          h("span", null, v || "(vacío)")
+        ))
+      )
+    )
+  );
+}
+
+function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar }) {
+  const { useState } = React;
+  const [mostrarRechazo, setMostrarRechazo] = useState(false);
+  const [comentario, setComentario] = useState("");
+  const [error, setError] = useState("");
+
+  const yaDecidido = est === "Aprobado" || est === "Rechazado";
+
+  async function confirmarRechazo() {
+    if (!comentario.trim()) { setError("Escribe un comentario explicando el motivo del rechazo."); return; }
+    setError("");
+    const r = await onRechazar(grupo.id, comentario.trim());
+    if (!r || !r.ok) setError((r && r.error) || "No se pudo rechazar.");
+  }
+
+  const filasLinea = grupo.filasLinea.map((f, i) => h("tr", { key: grupo.id + "-" + i },
+    COLUMNAS_DETALLE.map(c => h("td", { key: c.key, className: claseColumna(c) }, c.valor(f))),
+    h("td", null)
+  ));
+
+  const filaSubtotal = h("tr", { className: "fila-subtotal", key: grupo.id + "-sub" },
+    COLUMNAS_DETALLE.map((c, i) => h("td", { key: c.key, className: claseColumna(c) },
+      i === 0 ? ("Total " + grupo.equipo) : (c.key === "total" ? moneda(grupo.subTotal) : "")
+    )),
+    h("td", null,
+      yaDecidido
+        ? h("span", { className: "badge-estado " + (est === "Aprobado" ? "badge-aprobado" : "badge-rechazado") }, est)
+        : h("div", { style: { display: "flex", gap: "4px" } },
+            h("button", { className: "btn-aprobar-mini", disabled: ocupado, onClick: () => onAprobar(grupo.id) }, ocupado ? "..." : "✓ Aprobar"),
+            h("button", { className: "btn-rechazar-mini", disabled: ocupado, onClick: () => setMostrarRechazo(v => !v) }, "✕ Rechazar")
+          )
+    )
+  );
+
+  const filaRechazo = mostrarRechazo && !yaDecidido && h("tr", { key: grupo.id + "-rechazo" },
+    h("td", { colSpan: COLUMNAS_DETALLE.length + 1, style: { background: "#fef2f2", padding: "10px" } },
+      h("textarea", { className: "textarea-rechazo-tabla", placeholder: "Motivo del rechazo (obligatorio)...", value: comentario, onChange: e => setComentario(e.target.value) }),
+      h("div", { style: { marginTop: "6px", textAlign: "right" } },
+        h("button", { className: "btn btn-rechazar", disabled: ocupado, onClick: confirmarRechazo }, ocupado ? "Procesando..." : "Confirmar rechazo")
+      ),
+      error && h("div", { className: "mensaje-error" }, error)
+    )
+  );
+
+  return h(React.Fragment, { key: grupo.id }, filasLinea, filaSubtotal, filaRechazo);
+}
+
+function TablaDetallada({ datos, estados, procesandoId, onAprobar, onRechazar }) {
+  const { useState, useMemo } = React;
+  const [filtros, setFiltros] = useState({});
+  const { filas, gruposMeta, ordenGrupos } = useMemo(() => construirFilasDetalle(datos), [datos]);
+
+  const valoresUnicos = {};
+  COLUMNAS_DETALLE.forEach(c => {
+    const set = new Set();
+    filas.forEach(f => set.add(c.valor(f)));
+    valoresUnicos[c.key] = Array.from(set).sort();
+  });
+
+  const filasFiltradas = filas.filter(f => COLUMNAS_DETALLE.every(c => {
+    const sel = filtros[c.key];
+    if (sel === undefined) return true;
+    return sel.has(c.valor(f));
+  }));
+
+  const grupos = ordenGrupos.map(id => {
+    const propias = filasFiltradas.filter(f => f.grupoId === id);
+    if (!propias.length) return null;
+    const subTotal = propias.reduce((acc, f) => acc + f.total, 0);
+    return { id, equipo: gruposMeta[id].equipo, filasLinea: propias, subTotal };
+  }).filter(Boolean);
+
+  const totTotal = grupos.reduce((acc, g) => acc + g.subTotal, 0);
+
+  function cambiarFiltro(key, seleccion) {
+    setFiltros(prev => {
+      const copia = { ...prev };
+      if (!seleccion) delete copia[key]; else copia[key] = seleccion;
+      return copia;
+    });
+  }
 
   function exportarExcel() {
-    const filas = [["Cliente", "Cotización", "Fecha", "Tipo mantenimiento", "Equipo", "Horas Motor", "Tipo Línea", "Línea", "Descripción Art/Serv", "UM", "Cantidad", "Unit US$", "Total US$"]];
+    const filasX = [COLUMNAS_DETALLE.map(c => c.label)];
     grupos.forEach(g => {
       g.filasLinea.forEach(f => {
-        filas.push([f.cliente, f.cotizacion, f.fecha, f.tipoMant, f.equipo, f.horas, f.tipoLinea, f.linea, f.descripcion, f.um, f.cantidad, f.precio, f.total]);
+        filasX.push(COLUMNAS_DETALLE.map(c => (c.key === "cantidad" || c.key === "precio" || c.key === "total") ? f[c.key] : c.valor(f)));
       });
-      filas.push(["", "", "", "", "Total " + g.equipo, "", "", "", "", "", g.subCant, g.subUnit, g.subTotal]);
+      filasX.push(COLUMNAS_DETALLE.map((c, i) => i === 0 ? ("Total " + g.equipo) : (c.key === "total" ? g.subTotal : "")));
     });
-    filas.push(["", "", "", "", "Total General", "", "", "", "", "", totCant, totUnit, totTotal]);
-    const ws = XLSX.utils.aoa_to_sheet(filas);
+    filasX.push(COLUMNAS_DETALLE.map((c, i) => i === 0 ? "Total General" : (c.key === "total" ? totTotal : "")));
+    const ws = XLSX.utils.aoa_to_sheet(filasX);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Presupuestos");
     XLSX.writeFile(wb, "Presupuestos_aprobacion_" + new Date().toISOString().slice(0, 10) + ".xlsx");
@@ -297,37 +454,21 @@ function TablaDetallada({ datos, estados, procesandoId, onAprobar }) {
     h("div", { className: "tabla-detalle-wrap" },
       h("table", { className: "tabla-detalle" },
         h("thead", null, h("tr", null,
-          h("th", null, "Cliente"), h("th", null, "Cotización"), h("th", null, "Fecha"), h("th", null, "Tipo mantenimiento"),
-          h("th", null, "Equipo"), h("th", null, "Horas Motor"), h("th", null, "Tipo Línea"), h("th", null, "Línea"),
-          h("th", null, "Descripción Art/Serv"), h("th", null, "UM"), h("th", { className: "num" }, "Cantidad"),
-          h("th", { className: "num" }, "Unit US$"), h("th", { className: "num" }, "Total US$"), h("th", null, "Acción")
+          COLUMNAS_DETALLE.map(c => h("th", { key: c.key, className: claseColumna(c) },
+            h("span", null, c.label),
+            h(FiltroColumna, { valores: valoresUnicos[c.key], seleccion: filtros[c.key], onCambiar: (sel) => cambiarFiltro(c.key, sel) })
+          )),
+          h("th", null, "Acción")
         )),
         h("tbody", null,
-          grupos.map(g => {
-            const est = estados[g.id] || g.estadoInicial;
-            const yaDecidido = est === "Aprobado" || est === "Rechazado";
-            const filasLinea = g.filasLinea.map((f, i) => h("tr", { key: g.id + "-" + i },
-              h("td", null, f.cliente), h("td", null, f.cotizacion), h("td", null, f.fecha),
-              h("td", null, f.tipoMant), h("td", null, f.equipo), h("td", null, f.horas),
-              h("td", null, f.tipoLinea), h("td", null, f.linea),
-              h("td", null, f.descripcion), h("td", null, f.um),
-              h("td", { className: "num" }, f.cantidad), h("td", { className: "num" }, moneda(f.precio)), h("td", { className: "num" }, moneda(f.total)),
-              h("td", null)
-            ));
-            const filaSubtotal = h("tr", { className: "fila-subtotal", key: g.id + "-sub" },
-              h("td", null), h("td", null), h("td", null), h("td", null),
-              h("td", null, "Total " + g.equipo), h("td", null), h("td", null), h("td", null), h("td", null), h("td", null),
-              h("td", { className: "num" }, g.subCant), h("td", { className: "num" }, moneda(g.subUnit)), h("td", { className: "num" }, moneda(g.subTotal)),
-              h("td", null, yaDecidido
-                ? h("span", { className: "badge-estado " + (est === "Aprobado" ? "badge-aprobado" : "badge-rechazado") }, est)
-                : h("button", { className: "btn-aprobar-mini", disabled: procesandoId === g.id, onClick: () => onAprobar(g.id) }, procesandoId === g.id ? "..." : "✓ Aprobar"))
-            );
-            return [...filasLinea, filaSubtotal];
-          }),
+          grupos.map(g => h(FilaGrupoDetalle, {
+            key: g.id, grupo: g, est: estados[g.id] || gruposMeta[g.id].estadoInicial,
+            ocupado: procesandoId === g.id, onAprobar, onRechazar
+          })),
           h("tr", { className: "fila-total-general" },
-            h("td", null), h("td", null), h("td", null), h("td", null),
-            h("td", null, "Total General"), h("td", null), h("td", null), h("td", null), h("td", null), h("td", null),
-            h("td", { className: "num" }, totCant), h("td", { className: "num" }, moneda(totUnit)), h("td", { className: "num" }, moneda(totTotal)),
+            COLUMNAS_DETALLE.map((c, i) => h("td", { key: c.key, className: claseColumna(c) },
+              i === 0 ? "Total General" : (c.key === "total" ? moneda(totTotal) : "")
+            )),
             h("td", null)
           )
         )
@@ -397,8 +538,24 @@ function AprobarMultiple() {
     }
   }
 
-  function onRechazado(id) {
-    setEstados(prev => ({ ...prev, [id]: "Rechazado" }));
+  async function rechazarPresupuesto(id, comentario) {
+    const item = (datos || []).find(d => d.id === id);
+    if (!item || item.error) return { ok: false, error: "No encontrado." };
+    setProcesandoId(id);
+    try {
+      const res = await fetch(WORKER_BASE + "/taller/presupuesto/rechazar-publico", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, token: item.token, comentario })
+      });
+      const data = await res.json();
+      if (!data.ok) return { ok: false, error: data.error || "No se pudo rechazar." };
+      setEstados(prev => ({ ...prev, [id]: "Rechazado" }));
+      return { ok: true };
+    } catch(e) {
+      return { ok: false, error: "Error: " + e.message };
+    } finally {
+      setProcesandoId(null);
+    }
   }
 
   if (cargando) return h("div", { className: "cargando-pagina" }, "Cargando presupuestos...");
@@ -407,7 +564,7 @@ function AprobarMultiple() {
   let clienteNombre = "";
   for (const d of datos) { if (d.orden && Array.isArray(d.orden.x_studio_cliente_id)) { clienteNombre = d.orden.x_studio_cliente_id[1]; break; } }
 
-  return h("div", { className: "contenedor" },
+  return h("div", { className: "contenedor", style: mostrarTabla ? { maxWidth: "100%" } : undefined },
     h("h1", null, "Aprobación de Presupuestos"),
     h("div", { className: "subt" }, (clienteNombre ? clienteNombre + " — " : "") + datos.length + " presupuesto(s) para tu revisión. Revisa cada uno y apruébalo o recházalo de forma individual."),
     h("div", { className: "panel-firma" },
@@ -417,19 +574,19 @@ function AprobarMultiple() {
       h(PizarronFirma, { onCambio: (data, vacio) => setFirmaBase64(vacio ? null : data) }),
       errorAprobar && h("div", { className: "mensaje-error", style: { marginTop: "8px" } }, errorAprobar)
     ),
-    h(ResumenAprobacion, { datos, estados }),
+    !mostrarTabla && h(ResumenAprobacion, { datos, estados }),
     h("div", { style: { textAlign: "right", marginBottom: mostrarTabla ? "0" : "20px" } },
       h("button", { className: "btn-tabla", onClick: () => setMostrarTabla(v => !v) }, mostrarTabla ? "Ocultar tabla" : "📊 Ver en formato de tabla")
     ),
-    mostrarTabla && h(TablaDetallada, { datos, estados, procesandoId, onAprobar: aprobarPresupuesto }),
-    datos.map(d => d.error
+    mostrarTabla && h(TablaDetallada, { datos, estados, procesandoId, onAprobar: aprobarPresupuesto, onRechazar: rechazarPresupuesto }),
+    !mostrarTabla && datos.map(d => d.error
       ? h("div", { className: "tarjeta-presupuesto", key: d.id }, h("div", { style: { padding: "16px", color: "#b91c1c" } }, "Presupuesto #" + d.id + ": " + d.error))
       : h(TarjetaPresupuesto, {
           key: d.id, datos: d,
           estado: estados[d.id] || d.presupuesto.x_studio_estado,
           procesando: procesandoId === d.id,
           onAprobar: aprobarPresupuesto,
-          onRechazado
+          onRechazar: rechazarPresupuesto
         })
     )
   );
