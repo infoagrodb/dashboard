@@ -50,12 +50,17 @@
   .btn-exportar { background:#15803d; color:#fff; border:none; border-radius:6px; padding:8px 14px; font-size:0.85rem; font-weight:600; cursor:pointer; }
 
   .tabla-detalle-wrap { overflow-x:auto; background:#fff; border:1px solid #e5e7eb; border-radius:10px; margin:14px 0 20px; }
-  table.tabla-detalle { width:100%; border-collapse:collapse; font-size:0.81rem; white-space:nowrap; }
-  table.tabla-detalle th { background:var(--celeste-claro); text-align:left; padding:7px 10px; border-bottom:1px solid var(--celeste-borde); position:relative; }
-  table.tabla-detalle td { padding:6px 10px; border-bottom:1px solid #f1f5f9; }
+  table.tabla-detalle { width:auto; table-layout:fixed; border-collapse:collapse; font-size:0.81rem; white-space:nowrap; }
+  table.tabla-detalle th { background:#1e293b; color:#fff; text-align:left; padding:8px 10px; border-bottom:1px solid #0f172a; position:relative; text-transform:uppercase; letter-spacing:0.02em; font-size:0.68rem; font-weight:700; }
+  table.tabla-detalle td { padding:6px 10px; border-bottom:1px solid #f1f5f9; vertical-align:top; overflow:hidden; text-overflow:ellipsis; }
   table.tabla-detalle .num { text-align:right; }
-  table.tabla-detalle tr.fila-subtotal td { font-weight:700; font-style:italic; background:#f9fafb; border-top:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
-  table.tabla-detalle tr.fila-total-general td { font-weight:800; font-size:0.9rem; background:#eff6ff; border-top:2px solid #334155; }
+  table.tabla-detalle tr.fila-subtotal td { background:#f9fafb; border-top:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; padding:6px 10px; }
+  table.tabla-detalle tr.fila-total-general td { background:#eff6ff; border-top:2px solid #334155; padding:8px 10px; }
+  .barra-subtotal { display:flex; align-items:center; justify-content:flex-end; gap:12px; flex-wrap:wrap; }
+  .monto-subtotal { font-weight:800; font-size:0.92rem; }
+  .acciones-subtotal { display:flex; gap:4px; }
+  .etiqueta-subtotal { color:#64748b; font-style:italic; font-weight:600; font-size:0.78rem; }
+  .barra-total-general { display:flex; align-items:center; justify-content:flex-end; gap:16px; font-weight:800; font-size:0.92rem; }
   .btn-aprobar-mini { background:var(--verde); color:#fff; border:none; border-radius:5px; padding:4px 10px; font-size:0.76rem; font-weight:600; cursor:pointer; white-space:nowrap; }
   .btn-aprobar-mini:disabled { opacity:0.5; cursor:not-allowed; }
   .btn-rechazar-mini { background:#fff; color:var(--rojo); border:1px solid var(--rojo); border-radius:5px; padding:4px 8px; font-size:0.76rem; font-weight:600; cursor:pointer; white-space:nowrap; }
@@ -63,31 +68,31 @@
   .textarea-rechazo-tabla { width:100%; min-height:50px; padding:6px; border:1px solid #d1d5db; border-radius:6px; font-size:0.82rem; font-family:inherit; box-sizing:border-box; }
 
   .col-tipomant { font-size:0.68rem; line-height:1.15; white-space:normal !important; }
+  .col-descripcion { white-space:normal !important; word-break:break-word; }
 
   table.tabla-detalle th.sticky-col, table.tabla-detalle td.sticky-col { position:sticky; background:#fff; z-index:2; }
-  table.tabla-detalle thead th.sticky-col { z-index:4; background:var(--celeste-claro); }
-  table.tabla-detalle tr.fila-subtotal td.sticky-col { background:#f9fafb; }
-  table.tabla-detalle tr.fila-total-general td.sticky-col { background:#eff6ff; }
-  table.tabla-detalle .sticky-col-1 { left:0; min-width:100px; max-width:100px; overflow:hidden; text-overflow:ellipsis; }
-  table.tabla-detalle .sticky-col-2 { left:100px; min-width:85px; max-width:85px; overflow:hidden; text-overflow:ellipsis; }
-  table.tabla-detalle .sticky-col-3 { left:185px; min-width:115px; max-width:115px; }
-  table.tabla-detalle .sticky-col-4 { left:300px; min-width:150px; max-width:150px; overflow:hidden; text-overflow:ellipsis; box-shadow:3px 0 5px -2px rgba(0,0,0,.18); }
+  table.tabla-detalle thead th.sticky-col { z-index:4; background:#1e293b; }
+  table.tabla-detalle .sticky-col-4 { box-shadow:3px 0 5px -2px rgba(0,0,0,.18); }
 
   /* En celular, congelar las 4 columnas (Cotización/Fecha/Tipo mantenimiento/Equipo) deja
      muy poco ancho visible para los artículos. Se descongelan Fecha y Tipo mantenimiento
-     y solo quedan fijas Cotización y Equipo (las dos más importantes para no perder contexto). */
+     y solo quedan fijas Cotización y Equipo (las dos más importantes para no perder contexto);
+     el ancho en sí se controla por JS (colgroup + estado "anchos" en TablaDetallada). */
   @media (max-width: 640px) {
     table.tabla-detalle th.sticky-col-2, table.tabla-detalle td.sticky-col-2,
     table.tabla-detalle th.sticky-col-3, table.tabla-detalle td.sticky-col-3 {
-      position: static; min-width:0; max-width:none; box-shadow:none;
+      position: static;
     }
-    table.tabla-detalle .sticky-col-1 { min-width:80px; max-width:80px; }
-    table.tabla-detalle .sticky-col-4 { left:80px; min-width:110px; max-width:110px; }
   }
 
-  .btn-filtro-col { background:none; border:none; cursor:pointer; color:#64748b; font-size:0.7rem; margin-left:3px; padding:0 2px; vertical-align:middle; }
-  .btn-filtro-col.activo { color:var(--celeste); font-weight:800; }
-  .popover-filtro { position:absolute; top:100%; left:0; z-index:50; background:#fff; border:1px solid #d1d5db; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.15); padding:8px; width:180px; max-height:220px; overflow-y:auto; white-space:normal; font-weight:400; font-size:0.78rem; }
+  .th-contenido { display:flex; align-items:center; gap:4px; overflow:hidden; padding-right:8px; }
+  .th-contenido > span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .manija-resize { position:absolute; top:0; right:0; width:7px; height:100%; cursor:col-resize; z-index:6; }
+  .manija-resize:hover, .manija-resize:active { background:rgba(255,255,255,0.25); }
+
+  .btn-filtro-col { background:none; border:none; cursor:pointer; color:#94a3b8; font-size:0.7rem; padding:0 2px; vertical-align:middle; flex-shrink:0; }
+  .btn-filtro-col.activo { color:#38bdf8; font-weight:800; }
+  .popover-filtro { position:absolute; top:100%; left:0; z-index:50; background:#fff; color:#1e2925; border:1px solid #d1d5db; border-radius:6px; box-shadow:0 4px 12px rgba(0,0,0,.15); padding:8px; width:180px; max-height:220px; overflow-y:auto; white-space:normal; font-weight:400; font-size:0.78rem; text-transform:none; letter-spacing:normal; }
   .input-filtro-busqueda { width:100%; padding:4px 6px; border:1px solid #d1d5db; border-radius:4px; font-size:0.78rem; margin-bottom:6px; box-sizing:border-box; }
   .acciones-filtro { display:flex; justify-content:space-between; margin-bottom:6px; font-size:0.74rem; }
   .acciones-filtro a { color:var(--celeste); text-decoration:none; cursor:pointer; }
@@ -270,15 +275,44 @@ const COLUMNAS_DETALLE = [
   { key: "equipo", label: "Equipo", valor: f => f.equipo, sticky: 4 },
   { key: "horas", label: "Horas Motor", valor: f => String(f.horas) },
   { key: "linea", label: "Línea", valor: f => String(f.linea) },
-  { key: "descripcion", label: "Descripción Art/Serv", valor: f => f.descripcion },
+  { key: "descripcion", label: "Descripción Art/Serv", valor: f => f.descripcion, claseExtra: "col-descripcion" },
   { key: "um", label: "UM", valor: f => f.um },
   { key: "cantidad", label: "Cantidad", valor: f => String(f.cantidad), num: true },
   { key: "precio", label: "Unit US$", valor: f => moneda(f.precio), num: true },
   { key: "total", label: "Total US$", valor: f => moneda(f.total), num: true }
 ];
 
+const ANCHOS_DEFECTO_DETALLE = {
+  cotizacion: 105, fecha: 85, tipoMant: 115, equipo: 140,
+  horas: 85, linea: 55, descripcion: 160, um: 55,
+  cantidad: 75, precio: 85, total: 95
+};
+
 function claseColumna(c) {
   return (c.num ? "num " : "") + (c.sticky ? "sticky-col sticky-col-" + c.sticky + " " : "") + (c.claseExtra ? c.claseExtra : "");
+}
+
+function estiloSticky(c, leftPorColumna) {
+  if (!c.sticky || leftPorColumna[c.key] === undefined) return undefined;
+  return { left: leftPorColumna[c.key] + "px" };
+}
+
+// Arrastre manual del ancho de columna: no usa estado/React para el movimiento en sí
+// (evita re-renders en cada pixel), solo llama onResize(key, delta) que el padre aplica.
+function iniciarRedimensionColumna(e, key, onResize) {
+  e.preventDefault(); e.stopPropagation();
+  let x = e.clientX;
+  function mover(ev) {
+    const delta = ev.clientX - x;
+    x = ev.clientX;
+    onResize(key, delta);
+  }
+  function soltar() {
+    window.removeEventListener("mousemove", mover);
+    window.removeEventListener("mouseup", soltar);
+  }
+  window.addEventListener("mousemove", mover);
+  window.addEventListener("mouseup", soltar);
 }
 
 function FiltroColumna({ valores, seleccion, onCambiar }) {
@@ -338,7 +372,7 @@ function FiltroColumna({ valores, seleccion, onCambiar }) {
     h("button", {
       ref: refBoton, type: "button", className: "btn-filtro-col" + (activo ? " activo" : ""),
       onClick: (e) => { e.stopPropagation(); setAbierto(v => !v); }
-    }, "▾"),
+    }, "⇅"),
     abierto && h("div", {
       ref: refPop, className: "popover-filtro", onClick: e => e.stopPropagation(),
       style: { position: "fixed", top: pos.top + "px", left: pos.left + "px" }
@@ -358,7 +392,7 @@ function FiltroColumna({ valores, seleccion, onCambiar }) {
   );
 }
 
-function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar }) {
+function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar, leftPorColumna }) {
   const { useState } = React;
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
   const [comentario, setComentario] = useState("");
@@ -374,26 +408,28 @@ function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar }) {
   }
 
   const filasLinea = grupo.filasLinea.map((f, i) => h("tr", { key: grupo.id + "-" + i },
-    COLUMNAS_DETALLE.map(c => h("td", { key: c.key, className: claseColumna(c) }, c.valor(f))),
-    h("td", null)
+    COLUMNAS_DETALLE.map(c => h("td", { key: c.key, className: claseColumna(c), style: estiloSticky(c, leftPorColumna) }, c.valor(f)))
   ));
 
+  // Barra de subtotal: monto primero, luego los botones de acción, y al final la
+  // etiqueta "Total <equipo>" — orden pedido explícitamente (ya no hay columna Acción).
   const filaSubtotal = h("tr", { className: "fila-subtotal", key: grupo.id + "-sub" },
-    COLUMNAS_DETALLE.map((c, i) => h("td", { key: c.key, className: claseColumna(c) },
-      i === 0 ? ("Total " + grupo.equipo) : (c.key === "total" ? moneda(grupo.subTotal) : "")
-    )),
-    h("td", null,
-      yaDecidido
-        ? h("span", { className: "badge-estado " + (est === "Aprobado" ? "badge-aprobado" : "badge-rechazado") }, est)
-        : h("div", { style: { display: "flex", gap: "4px" } },
-            h("button", { className: "btn-aprobar-mini", disabled: ocupado, onClick: () => onAprobar(grupo.id) }, ocupado ? "..." : "✓ Aprobar"),
-            h("button", { className: "btn-rechazar-mini", disabled: ocupado, onClick: () => setMostrarRechazo(v => !v) }, "✕ Rechazar")
-          )
+    h("td", { colSpan: COLUMNAS_DETALLE.length },
+      h("div", { className: "barra-subtotal" },
+        h("span", { className: "monto-subtotal" }, moneda(grupo.subTotal)),
+        yaDecidido
+          ? h("span", { className: "badge-estado " + (est === "Aprobado" ? "badge-aprobado" : "badge-rechazado") }, est)
+          : h("span", { className: "acciones-subtotal" },
+              h("button", { className: "btn-aprobar-mini", disabled: ocupado, onClick: () => onAprobar(grupo.id) }, ocupado ? "..." : "✓ Aprobar"),
+              h("button", { className: "btn-rechazar-mini", disabled: ocupado, onClick: () => setMostrarRechazo(v => !v) }, "✕ Rechazar")
+            ),
+        h("span", { className: "etiqueta-subtotal" }, "Total " + grupo.equipo)
+      )
     )
   );
 
   const filaRechazo = mostrarRechazo && !yaDecidido && h("tr", { key: grupo.id + "-rechazo" },
-    h("td", { colSpan: COLUMNAS_DETALLE.length + 1, style: { background: "#fef2f2", padding: "10px" } },
+    h("td", { colSpan: COLUMNAS_DETALLE.length, style: { background: "#fef2f2", padding: "10px" } },
       h("textarea", { className: "textarea-rechazo-tabla", placeholder: "Motivo del rechazo (obligatorio)...", value: comentario, onChange: e => setComentario(e.target.value) }),
       h("div", { style: { marginTop: "6px", textAlign: "right" } },
         h("button", { className: "btn btn-rechazar", disabled: ocupado, onClick: confirmarRechazo }, ocupado ? "Procesando..." : "Confirmar rechazo")
@@ -406,9 +442,41 @@ function FilaGrupoDetalle({ grupo, est, ocupado, onAprobar, onRechazar }) {
 }
 
 function TablaDetallada({ datos, estados, procesandoId, onAprobar, onRechazar }) {
-  const { useState, useMemo } = React;
+  const { useState, useMemo, useEffect } = React;
   const [filtros, setFiltros] = useState({});
+  const [anchos, setAnchos] = useState({});
+  const [esMovil, setEsMovil] = useState(window.innerWidth <= 640);
   const { filas, gruposMeta, ordenGrupos } = useMemo(() => construirFilasDetalle(datos), [datos]);
+
+  useEffect(() => {
+    function alRedimensionar() { setEsMovil(window.innerWidth <= 640); }
+    window.addEventListener("resize", alRedimensionar);
+    return () => window.removeEventListener("resize", alRedimensionar);
+  }, []);
+
+  const anchosFinal = {};
+  COLUMNAS_DETALLE.forEach(c => { anchosFinal[c.key] = anchos[c.key] || ANCHOS_DEFECTO_DETALLE[c.key]; });
+
+  // Offset "left" de cada columna congelada, recalculado según los anchos actuales
+  // (incluyendo los que el usuario haya arrastrado) y según si estamos en celular
+  // (ahí solo Cotización y Equipo quedan realmente congeladas — ver media query).
+  const leftPorColumna = {};
+  let acumuladoIzq = 0;
+  COLUMNAS_DETALLE.forEach(c => {
+    if (!c.sticky) return;
+    const sigueFijo = !esMovil || c.sticky === 1 || c.sticky === 4;
+    if (sigueFijo) {
+      leftPorColumna[c.key] = acumuladoIzq;
+      acumuladoIzq += anchosFinal[c.key];
+    }
+  });
+
+  function cambiarAncho(key, delta) {
+    setAnchos(prev => {
+      const actual = prev[key] || ANCHOS_DEFECTO_DETALLE[key];
+      return { ...prev, [key]: Math.max(50, actual + delta) };
+    });
+  }
 
   const valoresUnicos = {};
   COLUMNAS_DETALLE.forEach(c => {
@@ -462,23 +530,28 @@ function TablaDetallada({ datos, estados, procesandoId, onAprobar, onRechazar })
     ),
     h("div", { className: "tabla-detalle-wrap" },
       h("table", { className: "tabla-detalle" },
+        h("colgroup", null, COLUMNAS_DETALLE.map(c => h("col", { key: c.key, style: { width: anchosFinal[c.key] + "px" } }))),
         h("thead", null, h("tr", null,
-          COLUMNAS_DETALLE.map(c => h("th", { key: c.key, className: claseColumna(c) },
-            h("span", null, c.label),
-            h(FiltroColumna, { valores: valoresUnicos[c.key], seleccion: filtros[c.key], onCambiar: (sel) => cambiarFiltro(c.key, sel) })
-          )),
-          h("th", null, "Acción")
+          COLUMNAS_DETALLE.map(c => h("th", { key: c.key, className: claseColumna(c), style: estiloSticky(c, leftPorColumna) },
+            h("div", { className: "th-contenido" },
+              h("span", null, c.label),
+              h(FiltroColumna, { valores: valoresUnicos[c.key], seleccion: filtros[c.key], onCambiar: (sel) => cambiarFiltro(c.key, sel) })
+            ),
+            h("span", { className: "manija-resize", onMouseDown: (e) => iniciarRedimensionColumna(e, c.key, cambiarAncho) })
+          ))
         )),
         h("tbody", null,
           grupos.map(g => h(FilaGrupoDetalle, {
             key: g.id, grupo: g, est: estados[g.id] || gruposMeta[g.id].estadoInicial,
-            ocupado: procesandoId === g.id, onAprobar, onRechazar
+            ocupado: procesandoId === g.id, onAprobar, onRechazar, leftPorColumna
           })),
           h("tr", { className: "fila-total-general" },
-            COLUMNAS_DETALLE.map((c, i) => h("td", { key: c.key, className: claseColumna(c) },
-              i === 0 ? "Total General" : (c.key === "total" ? moneda(totTotal) : "")
-            )),
-            h("td", null)
+            h("td", { colSpan: COLUMNAS_DETALLE.length },
+              h("div", { className: "barra-total-general" },
+                h("span", null, "Total General"),
+                h("span", null, moneda(totTotal))
+              )
+            )
           )
         )
       )
