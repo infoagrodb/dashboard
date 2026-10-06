@@ -6,11 +6,12 @@
 <title>Aprobación de Presupuestos — Infotaller COMASA</title>
 <script crossorigin src="https://unpkg.com/react@18.3.1/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-  :root { --verde:#134e3a; --rojo:#b91c1c; --gris:#6b7280; }
+  :root { --verde:#134e3a; --rojo:#b91c1c; --gris:#6b7280; --celeste:#0ea5e9; --celeste-claro:#dbeefa; --celeste-borde:#bcdcee; }
   * { box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background:#f3f4f6; margin:0; padding:16px; color:#1e2925; }
-  .contenedor { max-width: 980px; margin: 0 auto; }
+  .contenedor { max-width: 1180px; margin: 0 auto; }
   h1 { font-size: 1.3rem; margin: 0 0 4px; }
   .subt { color:#6b7280; margin-bottom:16px; font-size:0.92rem; }
   .panel-firma { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin-bottom:20px; }
@@ -24,6 +25,7 @@
   .cab-datos b { color:#111827; }
   .cab-presupuesto h2 { margin:0 0 4px; font-size:1.05rem; }
   .badge-estado { display:inline-block; padding:2px 10px; border-radius:999px; font-size:0.74rem; font-weight:600; vertical-align:middle; margin-left:6px; }
+  .badge-mini { font-size:0.66rem; padding:1px 8px; }
   .badge-borrador, .badge-enviado { background:#dbeafe; color:#1d4ed8; }
   .badge-aprobado { background:#dcfce7; color:#15803d; }
   .badge-rechazado { background:#fee2e2; color:#b91c1c; }
@@ -41,6 +43,28 @@
   .caja-rechazo textarea { width:100%; min-height:60px; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:0.86rem; font-family:inherit; }
   .mensaje-error { color:var(--rojo); font-size:0.86rem; }
   .cargando-pagina { text-align:center; padding:60px 20px; color:#6b7280; }
+
+  .bloque-resumen { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin-bottom:16px; }
+  .bloque-resumen h3 { margin:0 0 10px; font-size:1rem; }
+  table.tabla-resumen { width:100%; border-collapse:collapse; }
+  table.tabla-resumen th { background:var(--celeste-claro); text-align:left; padding:8px 14px; font-size:0.84rem; border:1px solid var(--celeste-borde); }
+  table.tabla-resumen td { padding:7px 14px; border:1px solid #e5e7eb; font-size:0.89rem; }
+  table.tabla-resumen .num { text-align:right; }
+  table.tabla-resumen tr.fila-total td { font-weight:700; border-top:2px solid #94a3b8; background:#f9fafb; }
+
+  .fila-controles-tabla { display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:8px; }
+  .btn-tabla { background:var(--celeste); color:#fff; border:none; border-radius:6px; padding:9px 16px; font-size:0.88rem; font-weight:600; cursor:pointer; }
+  .btn-exportar { background:#15803d; color:#fff; border:none; border-radius:6px; padding:8px 14px; font-size:0.85rem; font-weight:600; cursor:pointer; }
+
+  .tabla-detalle-wrap { overflow-x:auto; background:#fff; border:1px solid #e5e7eb; border-radius:10px; margin:14px 0 20px; }
+  table.tabla-detalle { width:100%; border-collapse:collapse; font-size:0.81rem; white-space:nowrap; }
+  table.tabla-detalle th { background:var(--celeste-claro); text-align:left; padding:7px 10px; border-bottom:1px solid var(--celeste-borde); }
+  table.tabla-detalle td { padding:6px 10px; border-bottom:1px solid #f1f5f9; }
+  table.tabla-detalle .num { text-align:right; }
+  table.tabla-detalle tr.fila-subtotal td { font-weight:700; font-style:italic; background:#f9fafb; border-top:1px solid #cbd5e1; border-bottom:1px solid #cbd5e1; }
+  table.tabla-detalle tr.fila-total-general td { font-weight:800; font-size:0.9rem; background:#eff6ff; border-top:2px solid #334155; }
+  .btn-aprobar-mini { background:var(--verde); color:#fff; border:none; border-radius:5px; padding:4px 10px; font-size:0.76rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+  .btn-aprobar-mini:disabled { opacity:0.5; cursor:not-allowed; }
 </style>
 </head>
 <body>
@@ -58,10 +82,20 @@ function formatearFecha(f) {
   try {
     const d = new Date(f.replace(" ", "T") + (f.length <= 10 ? "" : "Z"));
     if (isNaN(d.getTime())) return f;
-    return d.toLocaleDateString("es-NI", { day: "2-digit", month: "short", year: "numeric" });
+    const meses = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+    return String(d.getDate()).padStart(2, "0") + "-" + meses[d.getMonth()] + "-" + String(d.getFullYear()).slice(-2);
   } catch(e) { return f; }
 }
 function campoM2O(v) { return Array.isArray(v) ? v[1] : "—"; }
+
+function precioLinea(l) {
+  const precio = l.x_studio_precio_venta_unitario || l.x_studio_costo_manual;
+  const total = l.x_studio_total_venta_presupuestada || (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
+  return { precio: Number(precio) || 0, total: Number(total) || 0 };
+}
+function totalLineas(lineas) {
+  return (lineas || []).reduce((acc, l) => acc + precioLinea(l).total, 0);
+}
 
 function PizarronFirma({ onCambio }) {
   const ref = React.useRef(null);
@@ -105,66 +139,43 @@ function PizarronFirma({ onCambio }) {
   );
 }
 
-function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado }) {
+function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazado }) {
   const { useState } = React;
-  const [procesando, setProcesando] = useState(false);
+  const [procesandoLocal, setProcesandoLocal] = useState(false);
   const [error, setError] = useState("");
   const [mostrarRechazo, setMostrarRechazo] = useState(false);
   const [comentario, setComentario] = useState("");
-  const [estadoLocal, setEstadoLocal] = useState(datos.presupuesto.x_studio_estado);
 
   const p = datos.presupuesto;
   const orden = datos.orden;
   const lineas = datos.lineas || [];
-  const totalPresupuesto = lineas.reduce((acc, l) => {
-    const precio = l.x_studio_precio_venta_unitario || l.x_studio_costo_manual;
-    const total = l.x_studio_total_venta_presupuestada || (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
-    return acc + total;
-  }, 0);
+  const totalPresupuesto = totalLineas(lineas);
 
-  const yaDecidido = estadoLocal === "Aprobado" || estadoLocal === "Rechazado";
-
-  async function aprobar() {
-    if (!nombreFirma || !nombreFirma.trim()) { setError("Escribe tu nombre completo arriba antes de aprobar."); return; }
-    if (!firmaBase64) { setError("Dibuja tu firma arriba antes de aprobar."); return; }
-    setProcesando(true); setError("");
-    try {
-      const res = await fetch(WORKER_BASE + "/taller/presupuesto/aprobar-publico", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: datos.id, token: datos.token, aprobado_por: nombreFirma.trim(), firma_base64: firmaBase64 })
-      });
-      const data = await res.json();
-      if (!data.ok) { setError(data.error || "No se pudo aprobar."); setProcesando(false); return; }
-      setEstadoLocal("Aprobado");
-      onCambioEstado(datos.id, "Aprobado");
-    } catch(e) {
-      setError("Error: " + e.message); setProcesando(false);
-    }
-  }
+  const yaDecidido = estado === "Aprobado" || estado === "Rechazado";
 
   async function rechazar() {
     if (!comentario.trim()) { setError("Escribe un comentario explicando el motivo del rechazo."); return; }
-    setProcesando(true); setError("");
+    setProcesandoLocal(true); setError("");
     try {
       const res = await fetch(WORKER_BASE + "/taller/presupuesto/rechazar-publico", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: datos.id, token: datos.token, comentario: comentario.trim() })
       });
       const data = await res.json();
-      if (!data.ok) { setError(data.error || "No se pudo rechazar."); setProcesando(false); return; }
-      setEstadoLocal("Rechazado");
-      onCambioEstado(datos.id, "Rechazado");
+      if (!data.ok) { setError(data.error || "No se pudo rechazar."); setProcesandoLocal(false); return; }
+      onRechazado(datos.id);
     } catch(e) {
-      setError("Error: " + e.message); setProcesando(false);
+      setError("Error: " + e.message); setProcesandoLocal(false);
     }
   }
 
-  const claseBadge = estadoLocal === "Aprobado" ? "badge-aprobado" : estadoLocal === "Rechazado" ? "badge-rechazado" : "badge-enviado";
+  const claseBadge = estado === "Aprobado" ? "badge-aprobado" : estado === "Rechazado" ? "badge-rechazado" : "badge-enviado";
+  const ocupado = procesando || procesandoLocal;
 
   return h("div", { className: "tarjeta-presupuesto" },
     h("div", { className: "cab-presupuesto" },
       h("div", null,
-        h("h2", null, p.x_name, h("span", { className: "badge-estado " + claseBadge }, estadoLocal)),
+        h("h2", null, p.x_name, h("span", { className: "badge-estado " + claseBadge }, estado)),
         h("div", { className: "cab-datos" },
           h("span", null, h("b", null, "Fecha Ppto: "), formatearFecha(p.x_studio_fecha_presupuesto)),
           h("span", null, h("b", null, "Equipo: "), orden ? campoM2O(orden.x_studio_equipo_id) : "—"),
@@ -173,8 +184,8 @@ function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado })
         )
       ),
       !yaDecidido && h("div", { className: "acciones-presupuesto" },
-        h("button", { className: "btn btn-rechazar", disabled: procesando, onClick: () => setMostrarRechazo(v => !v) }, "Rechazar"),
-        h("button", { className: "btn btn-aprobar", disabled: procesando, onClick: aprobar }, procesando ? "Procesando..." : "✓ Aprobar este presupuesto")
+        h("button", { className: "btn btn-rechazar", disabled: ocupado, onClick: () => setMostrarRechazo(v => !v) }, "Rechazar"),
+        h("button", { className: "btn btn-aprobar", disabled: ocupado, onClick: () => onAprobar(datos.id) }, procesando ? "Procesando..." : "✓ Aprobar este presupuesto")
       )
     ),
     h("table", { className: "tabla-lineas" },
@@ -184,8 +195,7 @@ function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado })
       )),
       h("tbody", null,
         lineas.length ? lineas.map((l, i) => {
-          const precio = l.x_studio_precio_venta_unitario || l.x_studio_costo_manual;
-          const total = l.x_studio_total_venta_presupuestada || (Number(l.x_studio_cantidad_presupuestada) || 0) * (Number(precio) || 0);
+          const { precio, total } = precioLinea(l);
           return h("tr", { key: i },
             h("td", null, i + 1),
             h("td", null, l.x_studio_descripcion || "—"),
@@ -201,10 +211,128 @@ function TarjetaPresupuesto({ datos, nombreFirma, firmaBase64, onCambioEstado })
     mostrarRechazo && !yaDecidido && h("div", { className: "caja-rechazo" },
       h("textarea", { placeholder: "Motivo del rechazo (obligatorio)...", value: comentario, onChange: e => setComentario(e.target.value) }),
       h("div", { style: { marginTop: "8px", textAlign: "right" } },
-        h("button", { className: "btn btn-rechazar", disabled: procesando, onClick: rechazar }, procesando ? "Procesando..." : "Confirmar rechazo")
+        h("button", { className: "btn btn-rechazar", disabled: ocupado, onClick: rechazar }, procesandoLocal ? "Procesando..." : "Confirmar rechazo")
       )
     ),
     error && h("div", { className: "mensaje-error", style: { padding: "0 16px 12px" } }, error)
+  );
+}
+
+function ResumenAprobacion({ datos, estados }) {
+  const validos = datos.filter(d => !d.error);
+  const totalGeneral = validos.reduce((acc, d) => acc + totalLineas(d.lineas), 0);
+  return h("div", { className: "bloque-resumen" },
+    h("h3", null, "Resumen de lo que está aprobando"),
+    h("table", { className: "tabla-resumen" },
+      h("thead", null, h("tr", null,
+        h("th", null, "Cotización"), h("th", null, "Fecha Cotización"), h("th", null, "Equipo"), h("th", { className: "num" }, "Total U$")
+      )),
+      h("tbody", null,
+        validos.map(d => {
+          const p = d.presupuesto, orden = d.orden;
+          const est = estados[d.id] || p.x_studio_estado;
+          const claseBadge = est === "Aprobado" ? "badge-aprobado" : est === "Rechazado" ? "badge-rechazado" : "badge-enviado";
+          return h("tr", { key: d.id },
+            h("td", null, p.x_name, h("span", { className: "badge-estado badge-mini " + claseBadge }, est)),
+            h("td", null, formatearFecha(p.x_studio_fecha_presupuesto)),
+            h("td", null, orden ? campoM2O(orden.x_studio_equipo_id) : "—"),
+            h("td", { className: "num" }, moneda(totalLineas(d.lineas)))
+          );
+        }),
+        h("tr", { className: "fila-total" },
+          h("td", { colSpan: 3 }, "Total a aprobar"),
+          h("td", { className: "num" }, moneda(totalGeneral))
+        )
+      )
+    )
+  );
+}
+
+function construirFilasDetalle(datos) {
+  const grupos = [];
+  let totCant = 0, totUnit = 0, totTotal = 0;
+  datos.filter(d => !d.error).forEach(d => {
+    const p = d.presupuesto, orden = d.orden, lineas = d.lineas || [];
+    const cliente = orden ? campoM2O(orden.x_studio_cliente_id) : "—";
+    const equipo = orden ? campoM2O(orden.x_studio_equipo_id) : "—";
+    const tipoMant = (orden && orden.x_studio_tipo_mantenimiento_id) ? campoM2O(orden.x_studio_tipo_mantenimiento_id) : "—";
+    const horas = (orden && orden.x_studio_horometro_recepcion) ? orden.x_studio_horometro_recepcion : "—";
+    const fecha = formatearFecha(p.x_studio_fecha_presupuesto);
+    let subCant = 0, subUnit = 0, subTotal = 0;
+    const filasLinea = lineas.map((l, i) => {
+      const { precio, total } = precioLinea(l);
+      const cant = Number(l.x_studio_cantidad_presupuestada) || 0;
+      subCant += cant; subUnit += precio; subTotal += total;
+      return { cliente, cotizacion: p.x_name, fecha, tipoMant, equipo, horas, tipoLinea: l.x_studio_tipo_linea || "", linea: i + 1, descripcion: l.x_studio_descripcion || "—", um: l.x_studio_unidad_medida || "", cantidad: cant, precio, total };
+    });
+    totCant += subCant; totUnit += subUnit; totTotal += subTotal;
+    grupos.push({ id: d.id, equipo, filasLinea, subCant, subUnit, subTotal, estadoInicial: p.x_studio_estado });
+  });
+  return { grupos, totCant, totUnit, totTotal };
+}
+
+function TablaDetallada({ datos, estados, procesandoId, onAprobar }) {
+  const { grupos, totCant, totUnit, totTotal } = construirFilasDetalle(datos);
+
+  function exportarExcel() {
+    const filas = [["Cliente", "Cotización", "Fecha", "Tipo mantenimiento", "Equipo", "Horas Motor", "Tipo Línea", "Línea", "Descripción Art/Serv", "UM", "Cantidad", "Unit US$", "Total US$"]];
+    grupos.forEach(g => {
+      g.filasLinea.forEach(f => {
+        filas.push([f.cliente, f.cotizacion, f.fecha, f.tipoMant, f.equipo, f.horas, f.tipoLinea, f.linea, f.descripcion, f.um, f.cantidad, f.precio, f.total]);
+      });
+      filas.push(["", "", "", "", "Total " + g.equipo, "", "", "", "", "", g.subCant, g.subUnit, g.subTotal]);
+    });
+    filas.push(["", "", "", "", "Total General", "", "", "", "", "", totCant, totUnit, totTotal]);
+    const ws = XLSX.utils.aoa_to_sheet(filas);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Presupuestos");
+    XLSX.writeFile(wb, "Presupuestos_aprobacion_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+  }
+
+  return h("div", null,
+    h("div", { className: "fila-controles-tabla" },
+      h("div", null, "Detalle de todas las cotizaciones de este link"),
+      h("button", { className: "btn-exportar", onClick: exportarExcel }, "📥 Exportar Excel")
+    ),
+    h("div", { className: "tabla-detalle-wrap" },
+      h("table", { className: "tabla-detalle" },
+        h("thead", null, h("tr", null,
+          h("th", null, "Cliente"), h("th", null, "Cotización"), h("th", null, "Fecha"), h("th", null, "Tipo mantenimiento"),
+          h("th", null, "Equipo"), h("th", null, "Horas Motor"), h("th", null, "Tipo Línea"), h("th", null, "Línea"),
+          h("th", null, "Descripción Art/Serv"), h("th", null, "UM"), h("th", { className: "num" }, "Cantidad"),
+          h("th", { className: "num" }, "Unit US$"), h("th", { className: "num" }, "Total US$"), h("th", null, "Acción")
+        )),
+        h("tbody", null,
+          grupos.map(g => {
+            const est = estados[g.id] || g.estadoInicial;
+            const yaDecidido = est === "Aprobado" || est === "Rechazado";
+            const filasLinea = g.filasLinea.map((f, i) => h("tr", { key: g.id + "-" + i },
+              h("td", null, f.cliente), h("td", null, f.cotizacion), h("td", null, f.fecha),
+              h("td", null, f.tipoMant), h("td", null, f.equipo), h("td", null, f.horas),
+              h("td", null, f.tipoLinea), h("td", null, f.linea),
+              h("td", null, f.descripcion), h("td", null, f.um),
+              h("td", { className: "num" }, f.cantidad), h("td", { className: "num" }, moneda(f.precio)), h("td", { className: "num" }, moneda(f.total)),
+              h("td", null)
+            ));
+            const filaSubtotal = h("tr", { className: "fila-subtotal", key: g.id + "-sub" },
+              h("td", null), h("td", null), h("td", null), h("td", null),
+              h("td", null, "Total " + g.equipo), h("td", null), h("td", null), h("td", null), h("td", null), h("td", null),
+              h("td", { className: "num" }, g.subCant), h("td", { className: "num" }, moneda(g.subUnit)), h("td", { className: "num" }, moneda(g.subTotal)),
+              h("td", null, yaDecidido
+                ? h("span", { className: "badge-estado " + (est === "Aprobado" ? "badge-aprobado" : "badge-rechazado") }, est)
+                : h("button", { className: "btn-aprobar-mini", disabled: procesandoId === g.id, onClick: () => onAprobar(g.id) }, procesandoId === g.id ? "..." : "✓ Aprobar"))
+            );
+            return [...filasLinea, filaSubtotal];
+          }),
+          h("tr", { className: "fila-total-general" },
+            h("td", null), h("td", null), h("td", null), h("td", null),
+            h("td", null, "Total General"), h("td", null), h("td", null), h("td", null), h("td", null), h("td", null),
+            h("td", { className: "num" }, totCant), h("td", { className: "num" }, moneda(totUnit)), h("td", { className: "num" }, moneda(totTotal)),
+            h("td", null)
+          )
+        )
+      )
+    )
   );
 }
 
@@ -215,6 +343,10 @@ function AprobarMultiple() {
   const [error, setError] = useState("");
   const [nombreFirma, setNombreFirma] = useState("");
   const [firmaBase64, setFirmaBase64] = useState(null);
+  const [estados, setEstados] = useState({});
+  const [procesandoId, setProcesandoId] = useState(null);
+  const [errorAprobar, setErrorAprobar] = useState("");
+  const [mostrarTabla, setMostrarTabla] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -244,7 +376,30 @@ function AprobarMultiple() {
     }
   }
 
-  function onCambioEstado() { /* el estado visual ya se refleja dentro de cada tarjeta */ }
+  async function aprobarPresupuesto(id) {
+    if (!nombreFirma || !nombreFirma.trim()) { setErrorAprobar("Escribe tu nombre completo arriba antes de aprobar."); return; }
+    if (!firmaBase64) { setErrorAprobar("Dibuja tu firma arriba antes de aprobar."); return; }
+    const item = (datos || []).find(d => d.id === id);
+    if (!item || item.error) return;
+    setProcesandoId(id); setErrorAprobar("");
+    try {
+      const res = await fetch(WORKER_BASE + "/taller/presupuesto/aprobar-publico", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: item.id, token: item.token, aprobado_por: nombreFirma.trim(), firma_base64: firmaBase64 })
+      });
+      const data = await res.json();
+      if (!data.ok) { setErrorAprobar(data.error || "No se pudo aprobar."); setProcesandoId(null); return; }
+      setEstados(prev => ({ ...prev, [id]: "Aprobado" }));
+    } catch(e) {
+      setErrorAprobar("Error: " + e.message);
+    } finally {
+      setProcesandoId(null);
+    }
+  }
+
+  function onRechazado(id) {
+    setEstados(prev => ({ ...prev, [id]: "Rechazado" }));
+  }
 
   if (cargando) return h("div", { className: "cargando-pagina" }, "Cargando presupuestos...");
   if (error) return h("div", { className: "contenedor" }, h("div", { className: "mensaje-error", style: { fontSize: "1rem", padding: "40px 0", textAlign: "center" } }, error));
@@ -254,16 +409,28 @@ function AprobarMultiple() {
 
   return h("div", { className: "contenedor" },
     h("h1", null, "Aprobación de Presupuestos"),
-    h("div", { className: "subt" }, (clienteNombre ? clienteNombre + " — " : "") + datos.length + " presupuesto(s) para tu revisión. Revisa cada uno y apruébalo o recházalo de forma individual con los botones de la derecha."),
+    h("div", { className: "subt" }, (clienteNombre ? clienteNombre + " — " : "") + datos.length + " presupuesto(s) para tu revisión. Revisa cada uno y apruébalo o recházalo de forma individual."),
     h("div", { className: "panel-firma" },
       h("label", null, "Tu nombre completo (se usa para aprobar cualquiera de los presupuestos de abajo)"),
       h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Nombre y apellido" }),
       h("label", null, "Tu firma"),
-      h(PizarronFirma, { onCambio: (data, vacio) => setFirmaBase64(vacio ? null : data) })
+      h(PizarronFirma, { onCambio: (data, vacio) => setFirmaBase64(vacio ? null : data) }),
+      errorAprobar && h("div", { className: "mensaje-error", style: { marginTop: "8px" } }, errorAprobar)
     ),
+    h(ResumenAprobacion, { datos, estados }),
+    h("div", { style: { textAlign: "right", marginBottom: mostrarTabla ? "0" : "20px" } },
+      h("button", { className: "btn-tabla", onClick: () => setMostrarTabla(v => !v) }, mostrarTabla ? "Ocultar tabla" : "📊 Ver en formato de tabla")
+    ),
+    mostrarTabla && h(TablaDetallada, { datos, estados, procesandoId, onAprobar: aprobarPresupuesto }),
     datos.map(d => d.error
       ? h("div", { className: "tarjeta-presupuesto", key: d.id }, h("div", { style: { padding: "16px", color: "#b91c1c" } }, "Presupuesto #" + d.id + ": " + d.error))
-      : h(TarjetaPresupuesto, { key: d.id, datos: d, nombreFirma, firmaBase64, onCambioEstado })
+      : h(TarjetaPresupuesto, {
+          key: d.id, datos: d,
+          estado: estados[d.id] || d.presupuesto.x_studio_estado,
+          procesando: procesandoId === d.id,
+          onAprobar: aprobarPresupuesto,
+          onRechazado
+        })
     )
   );
 }
