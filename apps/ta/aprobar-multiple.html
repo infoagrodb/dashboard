@@ -34,7 +34,8 @@
   .btn-aprobar { background:var(--verde); color:#fff; }
   .btn-rechazar { background:#fff; color:var(--rojo); border:1px solid var(--rojo); }
   .btn:disabled { opacity:0.5; cursor:not-allowed; }
-  table.tabla-lineas { width:100%; border-collapse:collapse; font-size:0.86rem; }
+  .tabla-lineas-wrap { overflow-x:auto; }
+  table.tabla-lineas { width:100%; min-width:460px; border-collapse:collapse; font-size:0.86rem; }
   table.tabla-lineas th { text-align:left; padding:8px 16px; background:#fff; color:#6b7280; font-weight:600; border-bottom:1px solid #e5e7eb; }
   table.tabla-lineas td { padding:7px 16px; border-bottom:1px solid #f3f4f6; }
   table.tabla-lineas tr:last-child td { border-bottom:none; }
@@ -43,14 +44,6 @@
   .caja-rechazo textarea { width:100%; min-height:60px; padding:8px; border:1px solid #d1d5db; border-radius:6px; font-size:0.86rem; font-family:inherit; }
   .mensaje-error { color:var(--rojo); font-size:0.86rem; }
   .cargando-pagina { text-align:center; padding:60px 20px; color:#6b7280; }
-
-  .bloque-resumen { background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:16px; margin-bottom:16px; }
-  .bloque-resumen h3 { margin:0 0 10px; font-size:1rem; }
-  table.tabla-resumen { width:100%; border-collapse:collapse; }
-  table.tabla-resumen th { background:var(--celeste-claro); text-align:left; padding:8px 14px; font-size:0.84rem; border:1px solid var(--celeste-borde); }
-  table.tabla-resumen td { padding:7px 14px; border:1px solid #e5e7eb; font-size:0.89rem; }
-  table.tabla-resumen .num { text-align:right; }
-  table.tabla-resumen tr.fila-total td { font-weight:700; border-top:2px solid #94a3b8; background:#f9fafb; }
 
   .fila-controles-tabla { display:flex; justify-content:space-between; align-items:center; margin-top:12px; flex-wrap:wrap; gap:8px; }
   .btn-tabla { background:var(--celeste); color:#fff; border:none; border-radius:6px; padding:9px 16px; font-size:0.88rem; font-weight:600; cursor:pointer; }
@@ -79,6 +72,18 @@
   table.tabla-detalle .sticky-col-2 { left:100px; min-width:85px; max-width:85px; overflow:hidden; text-overflow:ellipsis; }
   table.tabla-detalle .sticky-col-3 { left:185px; min-width:115px; max-width:115px; }
   table.tabla-detalle .sticky-col-4 { left:300px; min-width:150px; max-width:150px; overflow:hidden; text-overflow:ellipsis; box-shadow:3px 0 5px -2px rgba(0,0,0,.18); }
+
+  /* En celular, congelar las 4 columnas (Cotización/Fecha/Tipo mantenimiento/Equipo) deja
+     muy poco ancho visible para los artículos. Se descongelan Fecha y Tipo mantenimiento
+     y solo quedan fijas Cotización y Equipo (las dos más importantes para no perder contexto). */
+  @media (max-width: 640px) {
+    table.tabla-detalle th.sticky-col-2, table.tabla-detalle td.sticky-col-2,
+    table.tabla-detalle th.sticky-col-3, table.tabla-detalle td.sticky-col-3 {
+      position: static; min-width:0; max-width:none; box-shadow:none;
+    }
+    table.tabla-detalle .sticky-col-1 { min-width:80px; max-width:80px; }
+    table.tabla-detalle .sticky-col-4 { left:80px; min-width:110px; max-width:110px; }
+  }
 
   .btn-filtro-col { background:none; border:none; cursor:pointer; color:#64748b; font-size:0.7rem; margin-left:3px; padding:0 2px; vertical-align:middle; }
   .btn-filtro-col.activo { color:var(--celeste); font-weight:800; }
@@ -202,23 +207,24 @@ function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazar }
         h("button", { className: "btn btn-aprobar", disabled: ocupado, onClick: () => onAprobar(datos.id) }, procesando ? "Procesando..." : "✓ Aprobar este presupuesto")
       )
     ),
-    h("table", { className: "tabla-lineas" },
-      h("thead", null, h("tr", null,
-        h("th", null, "Línea"), h("th", null, "Artículo"), h("th", null, "N° de parte"),
-        h("th", null, "Cantidad"), h("th", null, "Precio Unitario"), h("th", null, "Total")
-      )),
-      h("tbody", null,
-        lineas.length ? lineas.map((l, i) => {
-          const { precio, total } = precioLinea(l);
-          return h("tr", { key: i },
-            h("td", null, i + 1),
-            h("td", null, l.x_studio_descripcion || "—"),
-            h("td", null, l.x_studio_sku || "—"),
-            h("td", null, (l.x_studio_cantidad_presupuestada || 0) + " " + (l.x_studio_unidad_medida || "")),
-            h("td", null, moneda(precio)),
-            h("td", null, moneda(total))
-          );
-        }) : h("tr", null, h("td", { colSpan: 6, style: { textAlign: "center", color: "#9ca3af" } }, "(Sin líneas)"))
+    h("div", { className: "tabla-lineas-wrap" },
+      h("table", { className: "tabla-lineas" },
+        h("thead", null, h("tr", null,
+          h("th", null, "Línea"), h("th", null, "Artículo"),
+          h("th", null, "Cantidad"), h("th", null, "Precio Unitario"), h("th", null, "Total")
+        )),
+        h("tbody", null,
+          lineas.length ? lineas.map((l, i) => {
+            const { precio, total } = precioLinea(l);
+            return h("tr", { key: i },
+              h("td", null, i + 1),
+              h("td", null, l.x_studio_descripcion || "—"),
+              h("td", null, (l.x_studio_cantidad_presupuestada || 0) + " " + (l.x_studio_unidad_medida || "")),
+              h("td", null, moneda(precio)),
+              h("td", null, moneda(total))
+            );
+          }) : h("tr", null, h("td", { colSpan: 5, style: { textAlign: "center", color: "#9ca3af" } }, "(Sin líneas)"))
+        )
       )
     ),
     h("div", { className: "total-presupuesto" }, "Total: " + moneda(totalPresupuesto)),
@@ -229,36 +235,6 @@ function TarjetaPresupuesto({ datos, estado, procesando, onAprobar, onRechazar }
       )
     ),
     error && h("div", { className: "mensaje-error", style: { padding: "0 16px 12px" } }, error)
-  );
-}
-
-function ResumenAprobacion({ datos, estados }) {
-  const validos = datos.filter(d => !d.error);
-  const totalGeneral = validos.reduce((acc, d) => acc + totalLineas(d.lineas), 0);
-  return h("div", { className: "bloque-resumen" },
-    h("h3", null, "Resumen de lo que está aprobando"),
-    h("table", { className: "tabla-resumen" },
-      h("thead", null, h("tr", null,
-        h("th", null, "Cotización"), h("th", null, "Fecha Cotización"), h("th", null, "Equipo"), h("th", { className: "num" }, "Total U$")
-      )),
-      h("tbody", null,
-        validos.map(d => {
-          const p = d.presupuesto, orden = d.orden;
-          const est = estados[d.id] || p.x_studio_estado;
-          const claseBadge = est === "Aprobado" ? "badge-aprobado" : est === "Rechazado" ? "badge-rechazado" : "badge-enviado";
-          return h("tr", { key: d.id },
-            h("td", null, p.x_name, h("span", { className: "badge-estado badge-mini " + claseBadge }, est)),
-            h("td", null, formatearFecha(p.x_studio_fecha_presupuesto)),
-            h("td", null, orden ? campoM2O(orden.x_studio_equipo_id) : "—"),
-            h("td", { className: "num" }, moneda(totalLineas(d.lineas)))
-          );
-        }),
-        h("tr", { className: "fila-total" },
-          h("td", { colSpan: 3 }, "Total a aprobar"),
-          h("td", { className: "num" }, moneda(totalGeneral))
-        )
-      )
-    )
   );
 }
 
@@ -306,16 +282,46 @@ function claseColumna(c) {
 }
 
 function FiltroColumna({ valores, seleccion, onCambiar }) {
-  const { useState, useRef, useEffect } = React;
+  const { useState, useRef, useEffect, useLayoutEffect } = React;
   const [abierto, setAbierto] = useState(false);
   const [busqueda, setBusqueda] = useState("");
-  const ref = useRef(null);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const refBoton = useRef(null);
+  const refPop = useRef(null);
+
+  // El popover usa position:fixed con coordenadas calculadas en JS (en vez de absolute
+  // dentro del th) porque .tabla-detalle-wrap tiene overflow-x:auto, y eso recorta
+  // cualquier hijo absolutamente posicionado que se salga del área visible — la caja
+  // del filtro se cortaba. Con fixed, se posiciona respecto a la ventana y no se recorta.
+  useLayoutEffect(() => {
+    if (!abierto || !refBoton.current) return;
+    const r = refBoton.current.getBoundingClientRect();
+    const anchoPopover = 190;
+    let left = r.left;
+    if (left + anchoPopover > window.innerWidth - 8) left = window.innerWidth - anchoPopover - 8;
+    if (left < 8) left = 8;
+    let top = r.bottom + 2;
+    const altoEstimado = 240;
+    if (top + altoEstimado > window.innerHeight - 8) top = Math.max(8, r.top - altoEstimado - 2);
+    setPos({ top, left });
+  }, [abierto]);
 
   useEffect(() => {
     if (!abierto) return;
-    function fuera(e) { if (ref.current && !ref.current.contains(e.target)) setAbierto(false); }
+    function fuera(e) {
+      if (refBoton.current && refBoton.current.contains(e.target)) return;
+      if (refPop.current && refPop.current.contains(e.target)) return;
+      setAbierto(false);
+    }
+    function cerrarAlScroll() { setAbierto(false); }
     document.addEventListener("mousedown", fuera);
-    return () => document.removeEventListener("mousedown", fuera);
+    window.addEventListener("scroll", cerrarAlScroll, true);
+    window.addEventListener("resize", cerrarAlScroll);
+    return () => {
+      document.removeEventListener("mousedown", fuera);
+      window.removeEventListener("scroll", cerrarAlScroll, true);
+      window.removeEventListener("resize", cerrarAlScroll);
+    };
   }, [abierto]);
 
   const activo = seleccion != null;
@@ -328,12 +334,15 @@ function FiltroColumna({ valores, seleccion, onCambiar }) {
     onCambiar(actual.size === valores.length ? null : actual);
   }
 
-  return h("span", { ref, style: { position: "relative" } },
+  return h("span", null,
     h("button", {
-      type: "button", className: "btn-filtro-col" + (activo ? " activo" : ""),
+      ref: refBoton, type: "button", className: "btn-filtro-col" + (activo ? " activo" : ""),
       onClick: (e) => { e.stopPropagation(); setAbierto(v => !v); }
     }, "▾"),
-    abierto && h("div", { className: "popover-filtro", onClick: e => e.stopPropagation() },
+    abierto && h("div", {
+      ref: refPop, className: "popover-filtro", onClick: e => e.stopPropagation(),
+      style: { position: "fixed", top: pos.top + "px", left: pos.left + "px" }
+    },
       h("input", { type: "text", placeholder: "Buscar...", value: busqueda, onChange: e => setBusqueda(e.target.value), className: "input-filtro-busqueda" }),
       h("div", { className: "acciones-filtro" },
         h("a", { onClick: () => onCambiar(null) }, "Todos"),
@@ -567,14 +576,6 @@ function AprobarMultiple() {
   return h("div", { className: "contenedor", style: mostrarTabla ? { maxWidth: "100%" } : undefined },
     h("h1", null, "Aprobación de Presupuestos"),
     h("div", { className: "subt" }, (clienteNombre ? clienteNombre + " — " : "") + datos.length + " presupuesto(s) para tu revisión. Revisa cada uno y apruébalo o recházalo de forma individual."),
-    h("div", { className: "panel-firma" },
-      h("label", null, "Tu nombre completo (se usa para aprobar cualquiera de los presupuestos de abajo)"),
-      h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Nombre y apellido" }),
-      h("label", null, "Tu firma"),
-      h(PizarronFirma, { onCambio: (data, vacio) => setFirmaBase64(vacio ? null : data) }),
-      errorAprobar && h("div", { className: "mensaje-error", style: { marginTop: "8px" } }, errorAprobar)
-    ),
-    !mostrarTabla && h(ResumenAprobacion, { datos, estados }),
     h("div", { style: { textAlign: "right", marginBottom: mostrarTabla ? "0" : "20px" } },
       h("button", { className: "btn-tabla", onClick: () => setMostrarTabla(v => !v) }, mostrarTabla ? "Ocultar tabla" : "📊 Ver en formato de tabla")
     ),
@@ -588,6 +589,13 @@ function AprobarMultiple() {
           onAprobar: aprobarPresupuesto,
           onRechazar: rechazarPresupuesto
         })
+    ),
+    h("div", { className: "panel-firma" },
+      h("label", null, "Tu nombre completo (se usa para aprobar cualquiera de los presupuestos de arriba)"),
+      h("input", { type: "text", value: nombreFirma, onChange: e => setNombreFirma(e.target.value), placeholder: "Nombre y apellido" }),
+      h("label", null, "Tu firma"),
+      h(PizarronFirma, { onCambio: (data, vacio) => setFirmaBase64(vacio ? null : data) }),
+      errorAprobar && h("div", { className: "mensaje-error", style: { marginTop: "8px" } }, errorAprobar)
     )
   );
 }
