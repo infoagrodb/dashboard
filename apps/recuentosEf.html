@@ -245,6 +245,21 @@
     background:var(--verde-claro); color:var(--verde-oscuro); border:none; padding:7px 16px;
     border-radius:99px; font-weight:700; font-size:0.8rem; flex-shrink:0;
   }
+  .banner-pendientes{
+    background:#FFF8E6; border:1px solid #F2D58A; border-radius:14px; padding:12px 14px; margin-bottom:14px;
+  }
+  .banner-pendientes .bp-titulo{font-weight:800; font-size:0.92rem; color:#7A5300; margin-bottom:8px;}
+  .bp-item{
+    display:flex; align-items:center; justify-content:space-between; gap:10px; width:100%;
+    background:#fff; border:1px solid #EEDDAA; border-radius:10px; padding:10px 12px; margin-top:6px;
+    text-align:left; font:inherit; color:inherit; cursor:pointer;
+  }
+  .bp-item .bp-t1{font-weight:700; font-size:0.88rem;}
+  .bp-item .bp-t2{font-size:0.76rem; color:var(--texto-suave); margin-top:2px;}
+  .bp-item .bp-go{font-weight:800; font-size:0.78rem; white-space:nowrap; color:var(--verde-oscuro);}
+  .bp-item.venc .bp-t2{color:var(--rojo); font-weight:700;}
+  .bp-item.porv .bp-t2{color:var(--ambar); font-weight:700;}
+  .bp-activar{margin-top:8px; background:none; border:none; padding:4px 0; font-size:0.78rem; font-weight:700; color:var(--verde-oscuro); text-decoration:underline;}
   .banner-instalar{
     background:var(--verde-pastel); color:var(--verde-oscuro); padding:10px 14px;
     display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
@@ -446,6 +461,7 @@
     <!-- ============ HOME ============ -->
     <section id="screen-home" class="screen active">
 
+      <div id="bannerPendientes" style="display:none;"></div>
       <h2>Reportes</h2>
       <div id="sessionList"></div>
       <div id="emptyState" class="empty" style="display:none;">
@@ -628,6 +644,12 @@
         <h3>Este dispositivo</h3>
         <p>Se identifica solo en cada recuento, combinando el modelo del celular con el último nombre puesto en "Elaborado por" — no hay nada que configurar aquí.</p>
         <div id="dispositivoInfo" style="font-size:0.85rem;font-weight:600;color:var(--verde-oscuro);"></div>
+      </div>
+
+      <div class="card" id="cardNotif">
+        <h3>Avisos de "te toca evaluar"</h3>
+        <p id="notifTexto">Te avisa cuando toca el recuento de un lote que tú capturaste, según el calendario de la Torre de Control.</p>
+        <button class="btn btn-ghost" id="btnNotif" onclick="alternarNotificaciones()">🔔 Activar avisos</button>
       </div>
 
       <div class="card" id="cardInstalar">
@@ -1127,7 +1149,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.09.21-2";
+const APP_VERSION = "2026.10.09-1";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -1594,10 +1616,26 @@ function modeloDispositivoDetectado(){
 async function obtenerIdDispositivo(){
   const modelo = modeloDispositivoDetectado();
   const tecnico = await kvGet('ultimo_tecnico', '');
-  if(tecnico && tecnico.trim()) return `${modelo} (${tecnico.trim()})`;
-  let id = await kvGet('dispositivo_id', null);
-  if(!id){ id = uuid().slice(0,8); await kvSet('dispositivo_id', id); }
-  return `${modelo}-${id}`;
+  let etiqueta;
+  if(tecnico && tecnico.trim()) etiqueta = `${modelo} (${tecnico.trim()})`;
+  else{
+    let id = await kvGet('dispositivo_id', null);
+    if(!id){ id = uuid().slice(0,8); await kvSet('dispositivo_id', id); }
+    etiqueta = `${modelo}-${id}`;
+  }
+  await recordarEtiquetaDispositivo(etiqueta);
+  return etiqueta;
+}
+/** La etiqueta cambia si cambia "Elaborado por", pero los recuentos ya capturados quedaron en
+ *  Odoo con la etiqueta de ese momento. Guardamos TODAS las que ha tenido este celular para que
+ *  los avisos sigan encontrando sus lotes aunque el técnico haya cambiado de nombre. */
+async function recordarEtiquetaDispositivo(etiqueta){
+  try{
+    const lista = await kvGet('dispositivo_etiquetas', []);
+    if(lista.includes(etiqueta)) return;
+    lista.push(etiqueta);
+    await kvSet('dispositivo_etiquetas', lista.slice(-10));
+  }catch(e){}
 }
 function nuevaSesion(){
   const lines = {};
@@ -3661,6 +3699,7 @@ async function renderConfig(){
     ? `Última actualización: ${new Date(lastSync).toLocaleString()} · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`
     : `Usando catálogo de fábrica (sembrado) · ${FINCAS.length} fincas, ${LOTES.length} lotes, ${CICLOS.length} ciclos`;
   document.getElementById('dispositivoInfo').textContent = await obtenerIdDispositivo();
+  await renderEstadoNotif();
   if(appYaInstalada()){
     document.getElementById('instalarTexto').textContent = '✔ Ya está instalada en este dispositivo.';
     document.getElementById('btnInstalarConfig').style.display = 'none';
@@ -3794,6 +3833,179 @@ function mostrarBannerActualizacion(){
   `;
   document.body.insertAdjacentElement('afterbegin', banner);
 }
+
+/* =========================================================================
+   AVISOS "TE TOCA EVALUAR" (Torre de Control) — aviso dentro de la app + push
+   El Worker calcula qué recuentos están pendientes (misma lógica de la Torre) y los
+   reparte por dispositivo, según quién capturó cada lote (x_studio_dispositivo_de_captura).
+   ========================================================================= */
+let PENDIENTES_ACTUALES = [];
+async function baseWorker(){
+  const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
+  return url ? url.replace(/\/recuentos\/?$/, '') : null;
+}
+async function etiquetasDispositivo(){
+  await obtenerIdDispositivo(); // asegura que la etiqueta actual esté en la lista
+  return await kvGet('dispositivo_etiquetas', []);
+}
+function textoVencimiento(it){
+  const d = it.dias;
+  if(it.estado==='Vencido') return d<=1 ? 'Venció ayer' : `Venció hace ${d} días`;
+  if(d===0) return 'Vence hoy';
+  if(d===1) return 'Vence mañana';
+  return `Vence en ${d} días`;
+}
+async function yaCapturadoLocalmente(it){
+  // Si el técnico ya hizo (o está haciendo) ese lote dentro de la ventana, no insistirle aunque Odoo aún no lo sepa
+  const list = await idbGetAllSessions();
+  return list.some(s=>s.header && s.header.lote===it.lote_id && s.header.fecha && it.ini && s.header.fecha>=it.ini);
+}
+async function cargarPendientes(){
+  let datos = await kvGet('pendientes_cache', null);
+  const base = await baseWorker();
+  if(base && navigator.onLine){
+    try{
+      const etiquetas = await etiquetasDispositivo();
+      const qs = etiquetas.map(e=>'d='+encodeURIComponent(e)).join('&');
+      const res = await fetch(`${base}/pendientes?${qs}`);
+      if(res.ok){ datos = await res.json(); await kvSet('pendientes_cache', datos); }
+    }catch(e){}
+  }
+  const hoy = new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  // Un caché de otro día ya no sirve (los "días restantes" cambian)
+  if(!datos || datos.hoy !== hoy){ PENDIENTES_ACTUALES = []; return pintarPendientes(); }
+  const vistos = [];
+  for(const it of datos.items||[]){ if(!(await yaCapturadoLocalmente(it))) vistos.push(it); }
+  PENDIENTES_ACTUALES = vistos;
+  await pintarPendientes();
+}
+async function pintarPendientes(){
+  const box = document.getElementById('bannerPendientes');
+  if(!box) return;
+  const items = PENDIENTES_ACTUALES;
+  if(!items.length){ box.style.display='none'; box.innerHTML=''; return; }
+  const activo = await kvGet('push_activo', false);
+  const sopor = pushSoportado();
+  box.innerHTML = `<div class="bp-titulo">🔔 Te toca evaluar (${items.length})</div>` +
+    items.map((it,i)=>`<button class="bp-item ${it.estado==='Vencido'?'venc':it.estado==='Por vencer'?'porv':''}" onclick="iniciarDesdePendiente(${i})">
+      <div><div class="bp-t1">${it.finca} · ${it.lote}</div><div class="bp-t2">${it.regla} · ${textoVencimiento(it)}</div></div>
+      <span class="bp-go">Iniciar →</span></button>`).join('') +
+    (sopor && !activo && Notification.permission!=='denied' ? '<button class="bp-activar" onclick="alternarNotificaciones()">Recibir estos avisos como notificación</button>' : '');
+  box.style.display='block';
+}
+async function iniciarDesdePendiente(i){
+  const it = PENDIENTES_ACTUALES[i]; if(!it) return;
+  await nuevaEvaluacionClick();
+  const finca = FINCAS.find(f=>f.id===it.finca_id);
+  const lote = LOTES.find(l=>l.id===it.lote_id);
+  if(!finca || !lote){ toast('Ese lote aún no está en el catálogo del celular — elígelo manualmente', true); return; }
+  const h = sesionActual.header;
+  h.sector = finca.sector; h.finca = finca.id; h.lote = lote.id;
+  const ciclo = CICLOS.find(c=>c.id===it.ciclo_id) || CICLOS.find(c=>c.company===finca.company);
+  if(ciclo) h.ciclo = ciclo.id;
+  h.fecha = document.getElementById('f_fecha').value;
+  h.tecnico = await kvGet('ultimo_tecnico','');
+  await poblarFormularioDesdeSesion();
+}
+
+/* ---- Push ---- */
+function pushSoportado(){
+  return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window);
+}
+function b64uAUint8(b64u){
+  const pad = '='.repeat((4 - b64u.length % 4) % 4);
+  const raw = atob((b64u + pad).replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(raw, c=>c.charCodeAt(0));
+}
+async function guardarConfigParaSW(){
+  // El service worker no puede leer IndexedDB fácilmente: le dejamos la URL del Worker en Cache Storage
+  try{
+    const base = await baseWorker();
+    const c = await caches.open('rc-config');
+    await c.put('/config.json', new Response(JSON.stringify({base}), {headers:{'Content-Type':'application/json'}}));
+  }catch(e){}
+}
+async function registrarSuscripcionEnWorker(sub){
+  const base = await baseWorker(); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
+  if(!base) throw new Error('Falta la URL del servidor');
+  const etiquetas = await etiquetasDispositivo();
+  const res = await fetch(`${base}/push/suscribir`, {
+    method:'POST', headers:{'Content-Type':'application/json','X-Sync-Key':key||''},
+    body: JSON.stringify({subscription: sub.toJSON(), etiquetas, app_version: APP_VERSION})
+  });
+  if(!res.ok) throw new Error('El servidor rechazó el registro (' + res.status + ')');
+  await kvSet('push_firma', sub.endpoint + '|' + etiquetas.join('|'));
+  await kvSet('push_registrado_en', Date.now());
+}
+async function suscribirPush(){
+  const base = await baseWorker();
+  const rk = await fetch(`${base}/push/clave`);
+  if(!rk.ok) throw new Error('El servidor aún no tiene las llaves de notificación');
+  const {publicKey} = await rk.json();
+  const reg = await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64uAUint8(publicKey)});
+  await registrarSuscripcionEnWorker(sub);
+  return sub;
+}
+async function activarNotificaciones(){
+  if(!pushSoportado()){ toast('Este navegador no permite notificaciones. En iPhone, instala la app primero (Compartir → Añadir a pantalla de inicio).', true); return; }
+  if(!navigator.onLine){ toast('Necesitas señal para activar los avisos', true); return; }
+  const permiso = await Notification.requestPermission(); // se pide dentro del toque del usuario
+  if(permiso !== 'granted'){ toast('Sin permiso no se pueden mostrar avisos. Puedes habilitarlo en los ajustes del navegador.', true); await renderEstadoNotif(); return; }
+  try{
+    await guardarConfigParaSW();
+    await suscribirPush();
+    await kvSet('push_activo', true);
+    toast('✔ Avisos activados');
+  }catch(e){ toast('No se pudo activar: ' + e.message, true); }
+  await renderEstadoNotif(); await pintarPendientes();
+}
+async function desactivarNotificaciones(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(sub){
+      const base = await baseWorker(); const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
+      try{ await fetch(`${base}/push/baja`, {method:'POST', headers:{'Content-Type':'application/json','X-Sync-Key':key||''}, body: JSON.stringify({endpoint: sub.endpoint})}); }catch(e){}
+      await sub.unsubscribe();
+    }
+  }catch(e){}
+  await kvSet('push_activo', false);
+  toast('Avisos desactivados');
+  await renderEstadoNotif(); await pintarPendientes();
+}
+async function alternarNotificaciones(){
+  if(await kvGet('push_activo', false)) await desactivarNotificaciones(); else await activarNotificaciones();
+}
+async function renderEstadoNotif(){
+  const btn = document.getElementById('btnNotif'), txt = document.getElementById('notifTexto');
+  if(!btn) return;
+  const base = 'Te avisa cuando toca el recuento de un lote que tú capturaste, según el calendario de la Torre de Control.';
+  if(!pushSoportado()){ txt.textContent = base + ' Este navegador no permite notificaciones; igual verás el aviso arriba en Reportes. En iPhone hay que instalar la app primero.'; btn.style.display='none'; return; }
+  btn.style.display='';
+  if(Notification.permission==='denied'){ txt.textContent = base + ' Los avisos están bloqueados en este navegador: habilítalos en sus ajustes.'; btn.style.display='none'; return; }
+  const activo = await kvGet('push_activo', false);
+  txt.textContent = activo ? '✔ Avisos activados en este celular. Llegan por la mañana cuando hay un recuento por hacer.' : base;
+  btn.textContent = activo ? '🔕 Desactivar avisos' : '🔔 Activar avisos';
+}
+/** Al abrir la app: si los avisos están activos, vuelve a registrar el celular cuando algo cambió
+ *  (otra etiqueta por cambio de técnico, suscripción renovada) o cada 12 h, para que el Worker nunca pierda al dispositivo. */
+async function mantenerSuscripcionPush(){
+  try{
+    if(!pushSoportado() || !navigator.onLine) return;
+    if(!(await kvGet('push_activo', false)) || Notification.permission!=='granted') return;
+    await guardarConfigParaSW();
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(!sub){ await suscribirPush(); return; }
+    const etiquetas = await etiquetasDispositivo();
+    const firma = sub.endpoint + '|' + etiquetas.join('|');
+    const ult = await kvGet('push_registrado_en', 0);
+    if(firma !== await kvGet('push_firma', '') || Date.now()-ult > 12*3600*1000) await registrarSuscripcionEnWorker(sub);
+  }catch(e){}
+}
+
 async function init(){
   document.getElementById('appVersionTxt').textContent = APP_VERSION;
   mostrarBotonInstalarSiCorresponde();
@@ -3852,6 +4064,16 @@ async function init(){
     if(document.visibilityState === 'visible') revisarPendientesYForzarEnvio();
   });
   setInterval(revisarPendientesYForzarEnvio, 60*60*1000);
+
+  // Avisos "te toca evaluar": se consultan al abrir, al volver a primer plano y cada hora
+  cargarPendientes().catch(()=>{});
+  mantenerSuscripcionPush();
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.visibilityState === 'visible'){ cargarPendientes().catch(()=>{}); mantenerSuscripcionPush(); }
+  });
+  setInterval(()=> cargarPendientes().catch(()=>{}), 60*60*1000);
+  // Si llega un toque de notificación con la app abierta, el SW avisa para refrescar
+  if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e=>{ if(e.data && e.data.tipo==='pendientes') cargarPendientes().catch(()=>{}); });
 }
 init();
 </script>
