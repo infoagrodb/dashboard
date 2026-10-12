@@ -245,7 +245,9 @@
     background:var(--verde-claro); color:var(--verde-oscuro); border:none; padding:7px 16px;
     border-radius:99px; font-weight:700; font-size:0.8rem; flex-shrink:0;
   }
-  .banner-pendientes{
+  .aviso-pct100{background:#FFF4E0;border:1px solid #E8A33D;color:#7A4B00;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:.85rem;line-height:1.35}
+.fila-sobre100 td{color:#B3261E;font-weight:700}
+.banner-pendientes{
     background:#FFF8E6; border:1px solid #F2D58A; border-radius:14px; padding:12px 14px; margin-bottom:14px;
   }
   .banner-pendientes .bp-titulo{font-weight:800; font-size:0.92rem; color:#7A5300; margin-bottom:8px;}
@@ -1149,7 +1151,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.10.12-1";
+const APP_VERSION = "2026.10.12-3";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -2471,7 +2473,12 @@ function calcularResultados(){
         break;
       }
       case 'pct_poblacion': {
-        const denom = est*meta.mtrs*poblacion;
+        // Base = plantas por metro contadas en la fila 1 de ESTA hoja (así lo calcula el técnico a mano);
+        // si no hay fila 1, se usa la población del encabezado como respaldo.
+        const l1 = lines[1];
+        const plantasMetro = (l1 && est) ? l1.total/(est*(catById[1].mtrs||1)) : 0;
+        const base = plantasMetro || poblacion;
+        const denom = est*meta.mtrs*base;
         avg = 0;
         porcentaje = denom ? l.total/denom : 0;
         break;
@@ -2500,6 +2507,7 @@ function renderResumen(readOnly){
   const catById = {}; CATALOGO.forEach(t=>catById[t.id]=t);
   const cont = document.getElementById('resumenTablas');
   cont.innerHTML='';
+  const pctSobre100 = [];
   FAMILIAS_ORDEN.forEach(fam=>{
     const tipos = CATALOGO.filter(t=>t.familia===fam);
     const wrap = document.createElement('div');
@@ -2509,7 +2517,9 @@ function renderResumen(readOnly){
       const l = sesionActual.lines[t.id];
       const esPct = (t.calc==='pct_base'||t.calc==='pct_poblacion');
       const valor = esPct ? fmtPct(l.porcentaje) : fmt(l.avg);
-      rows += `<tr><td>${t.nombre}</td><td class="num">${fmt(l.total)}</td><td class="num">${valor}</td></tr>`;
+      const sobre = esPct && l.porcentaje > 1;
+      if(sobre) pctSobre100.push(`${t.nombre.replace(/^%\s*de\s*/i,'')}: ${fmtPct(l.porcentaje)}`);
+      rows += `<tr${sobre?' class="fila-sobre100"':''}><td>${t.nombre}</td><td class="num">${fmt(l.total)}</td><td class="num">${valor}${sobre?' ⚠️':''}</td></tr>`;
     });
     wrap.innerHTML = `<h3>${fam}</h3>
       <table class="resumen">
@@ -2518,6 +2528,15 @@ function renderResumen(readOnly){
       </table>`;
     cont.appendChild(wrap);
   });
+  document.getElementById('avisoPct100')?.remove();
+  if(pctSobre100.length && !readOnly){
+    const av = document.createElement('div');
+    av.id = 'avisoPct100';
+    av.className = 'aviso-pct100';
+    av.innerHTML = `⚠️ <b>Revisa estos datos:</b> hay porcentajes mayores a 100% (${pctSobre100.join(' · ')}). `+
+      `Un porcentaje de plantas no puede pasar de 100%: confirma que contaste las plantas enfermas en el mismo tramo que las plantas por metro (fila 1) y que no hay un número mal anotado. Si todo está correcto puedes enviar igual.`;
+    cont.insertAdjacentElement('beforebegin', av);
+  }
   document.querySelector('#screen-resumen .btn-primary').style.display = readOnly ? 'none' : 'block';
   document.getElementById('bannerSoloLecturaResumen')?.remove();
   if(readOnly){
