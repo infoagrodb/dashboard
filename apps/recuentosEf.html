@@ -1149,7 +1149,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.10.09-1";
+const APP_VERSION = "2026.10.12-1";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -2275,7 +2275,7 @@ function onCampoPlanta(input, idr){
 }
 
 /* ---- Fotos por planta ---- */
-function comprimirImagen(file, maxW=1280, calidad=0.72){
+function comprimirImagen(file, maxW=1024, calidad=0.68){
   return new Promise((resolve,reject)=>{
     const img = new Image();
     const reader = new FileReader();
@@ -3146,7 +3146,7 @@ async function construirDocPDF(sesion){
   if(fotos.length > 0){
     const fotosConDataUrl = [];
     for(const f of fotos.sort((a,b)=>(a.station||0)-(b.station||0))){
-      try{ fotosConDataUrl.push({ station: f.station, dataUrl: await blobADataUrl(f.blob) }); }
+      try{ fotosConDataUrl.push({ station: f.station, dataUrl: await blobADataUrl(await reducirFotoParaPDF(f.blob)) }); }
       catch(e){ /* si una foto individual falla, se omite y se sigue con el resto */ }
     }
     if(fotosConDataUrl.length > 0){
@@ -3161,6 +3161,26 @@ async function construirDocPDF(sesion){
 /** Convierte un Blob de imagen a data URL (base64), formato que jsPDF necesita
  *  para addImage(). Las fotos se guardan como Blob en IndexedDB para ahorrar
  *  espacio; solo se convierten a data URL al momento de armar el PDF. */
+/** En el PDF cada foto se imprime a ~9 cm de ancho: 800 px de lado ya se ven nítidos. Antes se
+ *  incrustaban a 1280 px y un reporte con ~30 fotos pesaba 17 MB (imposible de subir con señal
+ *  débil y pesado por WhatsApp). Se reduce solo para el PDF; la foto original que sube a Odoo no cambia. */
+function reducirFotoParaPDF(blob, maxW=800, calidad=0.6){
+  return new Promise((resolve)=>{
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const scale = Math.min(1, maxW/img.width);
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width*scale); c.height = Math.round(img.height*scale);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        c.toBlob(b=>{ URL.revokeObjectURL(url); resolve(b && b.size < blob.size ? b : blob); }, 'image/jpeg', calidad);
+      }catch(e){ URL.revokeObjectURL(url); resolve(blob); }
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); resolve(blob); };
+    img.src = url;
+  });
+}
 function blobADataUrl(blob){
   return new Promise((resolve, reject)=>{
     const reader = new FileReader();
@@ -3399,11 +3419,24 @@ async function sincronizarSesion(s){
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
   const key = await kvGet('sync_key', DEFAULT_SYNC_KEY);
   if(!url){ throw new Error('Configura la URL del servidor en Ajustes'); }
-  const res = await fetch(url, {
-    method:'POST',
-    headers:{'Content-Type':'application/json', 'X-Sync-Key': key||''},
-    body: JSON.stringify(await sesionToPayload(s))
-  });
+  const cuerpo = JSON.stringify(await sesionToPayload(s));
+  let res = null, errRed = null;
+  // Con señal inestable el navegador responde "Failed to fetch": se reintenta hasta 3 veces con
+  // tiempo límite. Es seguro repetir: el Worker revisa el folio temporal y no duplica el reporte.
+  for(let intento=1; intento<=3 && !res; intento++){
+    const ctl = new AbortController();
+    const t = setTimeout(()=>ctl.abort(), 60000);
+    try{
+      res = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json', 'X-Sync-Key': key||''}, body: cuerpo, signal: ctl.signal });
+    }catch(e){
+      errRed = e;
+      if(intento<3) await new Promise(r=>setTimeout(r, intento*3000));
+    }finally{ clearTimeout(t); }
+  }
+  if(!res){
+    const e = new Error('Sin señal estable — se reintentará solo en cuanto haya conexión');
+    e.esRed = true; throw e;
+  }
   if(!res.ok){
     const txt = await res.text().catch(()=> '');
     throw new Error(`Servidor respondió ${res.status}: ${txt.slice(0,200)}`);
@@ -3538,7 +3571,8 @@ async function sincronizarTodo(){
         }
         ok++;
       }catch(e){
-        fresca.status='error'; fresca.lastError=e.message;
+        // Un corte de señal no es un error del reporte: queda "Por enviar" y se reintenta solo
+        fresca.status = e.esRed ? 'pending_sync' : 'error'; fresca.lastError = e.message;
         await idbPutSession(fresca);
         fail++;
       }
