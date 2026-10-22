@@ -245,7 +245,11 @@
     background:var(--verde-claro); color:var(--verde-oscuro); border:none; padding:7px 16px;
     border-radius:99px; font-weight:700; font-size:0.8rem; flex-shrink:0;
   }
-  .aviso-pct100{background:#FFF4E0;border:1px solid #E8A33D;color:#7A4B00;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:.85rem;line-height:1.35}
+  .btn-editar-encabezado{display:block;width:100%;margin:0 0 10px;padding:9px 12px;border:1.5px dashed var(--verde-oscuro,#1C3C38);background:transparent;color:var(--verde-oscuro,#1C3C38);border-radius:10px;font-weight:700;font-size:.85rem;cursor:pointer}
+/* Evita que al tocar/seleccionar texto salga la barra "Buscar" del navegador; en campos de captura sí se puede seleccionar */
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+input,textarea,select{-webkit-user-select:text;user-select:text}
+.aviso-pct100{background:#FFF4E0;border:1px solid #E8A33D;color:#7A4B00;border-radius:10px;padding:10px 12px;margin:10px 0;font-size:.85rem;line-height:1.35}
 .fila-sobre100 td{color:#B3261E;font-weight:700}
 .banner-pendientes{
     background:#FFF8E6; border:1px solid #F2D58A; border-radius:14px; padding:12px 14px; margin-bottom:14px;
@@ -564,6 +568,8 @@
         <div class="progress-bar"><div id="plantaFill" class="progress-fill" style="width:14%;"></div></div>
       </div>
 
+      <button type="button" class="btn-editar-encabezado" id="btnEditarEncabezado" onclick="volverAFormulario()">✏️ Editar encabezado (finca, lote, edad, población…)</button>
+
       <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none;" onchange="onFotoSeleccionada(event)">
 
       <div id="familiaContainer"></div>
@@ -617,6 +623,7 @@
       <button class="btn btn-ghost" onclick="mostrarVistaPreviaTicket()" style="display:none;">🖨️ Imprimir ticket (Bluetooth)</button>
       <div style="height:8px;"></div>
       <p id="pdfCompartidoHint" class="hint-compartir-pdf"></p>
+      <button class="btn btn-ghost btn-sm" id="btnYaCompartido" onclick="marcarPdfCompartidoManual()" style="display:none;margin-bottom:8px;">Ya compartí el PDF (marcar como compartido)</button>
       <button class="btn btn-primary" onclick="guardarEvaluacionFinal()">✔ Guardar y enviar a INFOAGRO ODOO</button>
     </section>
 
@@ -1151,7 +1158,7 @@ function folioTemporalDeSesion(sesion){
 
 // Súbela cada vez que subas un cambio a producción (junto con CACHE_NAME en sw.js) — es lo
 // que permite saber qué versión tiene cada técnico y avisarle cuando hay una más nueva.
-const APP_VERSION = "2026.10.12-3";
+const APP_VERSION = "2026.10.22-2";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 
@@ -1753,9 +1760,14 @@ async function renderHome(){
         </div>
         <div class="lado-derecho">
           <span class="tag ${estadoTag}">${iconoTag}${tagTxt}</span>
-          <button class="btn-ver-reporte" onclick="abrirSesion('${s.localId}')">Ver reporte</button>
+          <button class="btn-ver-reporte" type="button">Ver reporte</button>
         </div>
       `;
+      // Toda la tarjeta abre el reporte (antes solo el botón: al tocar el texto el navegador
+      // lo tomaba como selección y mostraba su búsqueda nativa).
+      div.style.cursor = 'pointer';
+      div.addEventListener('click', ()=>abrirSesion(s.localId));
+      div.addEventListener('contextmenu', e=>e.preventDefault());
       cont.appendChild(div);
     });
   }
@@ -1810,10 +1822,48 @@ async function abrirSesion(localId){
 /* =========================================================================
    FORM HEADER
    ========================================================================= */
-function poblarSelects(){
+function poblarSelects(sinCascada){
   const sSel = document.getElementById('f_sector');
   sSel.innerHTML = SECTORES.map(s=>`<option value="${s.id}">${s.nombre}</option>`).join('');
-  onSectorChange();
+  if(!sinCascada) onSectorChange();
+}
+/* --- Restauración del encabezado de un reporte ya guardado ---------------------------------
+ * Al reabrir un reporte (sobre todo sin señal o con señal débil) o al refrescarse los catálogos
+ * con el formulario abierto, los selects se reconstruían desde cero y se quedaban en la primera
+ * opción (Palo de Pan · San Antonio), y el guardado automático persistía ese valor equivocado.
+ * Ahora: (1) los valores guardados se fijan SIEMPRE, aunque no estén en la lista filtrada, y
+ * (2) mientras se restaura no se consulta la red, así nada puede pisar la selección después. */
+let seleccionHeaderFija = null; // {sector,ciclo,finca,lote} mientras se restaura
+function nombreOpcionHeader(tipo, id){
+  if(tipo==='sector') return (SECTORES.find(x=>x.id===id)||{}).nombre;
+  if(tipo==='ciclo')  return (CICLOS.find(x=>x.id===id)||{}).nombre;
+  if(tipo==='finca')  return (FINCAS.find(x=>x.id===id)||{}).nombre;
+  if(tipo==='lote')   return (LOTES.find(x=>x.id===id)||{}).nombre;
+}
+function fijarSelect(sel, tipo, id){
+  if(!id) return;
+  if(![...sel.options].some(o=>String(o.value)===String(id))){
+    const o = document.createElement('option');
+    o.value = id; o.textContent = nombreOpcionHeader(tipo,id) || ('#'+id);
+    sel.appendChild(o);
+  }
+  sel.value = String(id);
+}
+function aplicarSeleccionFija(sel, tipo){
+  if(seleccionHeaderFija) fijarSelect(sel, tipo, seleccionHeaderFija[tipo]);
+}
+async function restaurarSeleccionHeader(v){
+  seleccionHeaderFija = v;
+  try{
+    fijarSelect(document.getElementById('f_sector'), 'sector', v.sector);
+    await onSectorChange();
+  } finally { seleccionHeaderFija = null; }
+}
+/** fetch con tiempo máximo: con señal débil no se queda colgado esperando. */
+async function fetchT(url, ms){
+  const ctl = new AbortController();
+  const t = setTimeout(()=>ctl.abort(), ms||6000);
+  try{ return await fetch(url, {signal: ctl.signal}); } finally { clearTimeout(t); }
 }
 // Cada Sector pertenece a una sola Compañía en la práctica (así están cargadas las fincas
 // hoy) — la derivamos de las fincas en vez de mantenerla por separado, para no duplicar datos.
@@ -1827,6 +1877,7 @@ async function onSectorChange(){
   const cSel = document.getElementById('f_ciclo');
   const ciclos = companyId ? CICLOS.filter(c=>c.company===companyId) : CICLOS;
   cSel.innerHTML = ciclos.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+  aplicarSeleccionFija(cSel, 'ciclo');
 
   await filtrarFincasPorSiembra();
 }
@@ -1846,14 +1897,16 @@ async function filtrarFincasPorSiembra(){
   const fSel = document.getElementById('f_finca');
   const fincasSector = FINCAS.filter(f=>f.sector===sectorId);
   fSel.innerHTML = fincasSector.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
+  aplicarSeleccionFija(fSel, 'finca');
   await onFincaChange();
 
+  if(seleccionHeaderFija) return; // restaurando un reporte guardado: sin red, no se toca la selección
   if(!cicloId || !sectorId) return;
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
   if(!url) return;
   try{
     const base = url.replace(/\/recuentos\/?$/, '');
-    const res = await fetch(`${base}/fincas-sembradas?ciclo_id=${cicloId}`);
+    const res = await fetchT(`${base}/fincas-sembradas?ciclo_id=${cicloId}`, 6000);
     if(!res.ok) return;
     const data = await res.json();
     const sembradas = new Set(data.finca_ids || []);
@@ -1861,7 +1914,8 @@ async function filtrarFincasPorSiembra(){
     if(filtradas.length > 0){
       const valorPrevio = fSel.value;
       fSel.innerHTML = filtradas.map(f=>`<option value="${f.id}">${f.nombre}</option>`).join('');
-      if(filtradas.some(f=>String(f.id)===valorPrevio)) fSel.value = valorPrevio;
+      // nunca perder la finca que ya estaba elegida, aunque no salga como "sembrada"
+      if(valorPrevio) fijarSelect(fSel, 'finca', parseInt(valorPrevio));
       await onFincaChange();
     }
     // si no hay ninguna sembrada detectada, se queda con la lista completa de respaldo
@@ -1901,14 +1955,16 @@ async function filtrarLotesPorSiembra(){
   const lSel = document.getElementById('f_lote');
   const lotesFinca = LOTES.filter(l=>l.finca===fincaId);
   lSel.innerHTML = lotesFinca.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
+  aplicarSeleccionFija(lSel, 'lote');
   onLoteChange();
 
+  if(seleccionHeaderFija) return; // restaurando un reporte guardado: sin red, no se toca la selección
   if(!cicloId || !fincaId || !navigator.onLine) return;
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
   if(!url) return;
   try{
     const base = url.replace(/\/recuentos\/?$/, '');
-    const res = await fetch(`${base}/lotes-sembrados?ciclo_id=${cicloId}&finca_id=${fincaId}`);
+    const res = await fetchT(`${base}/lotes-sembrados?ciclo_id=${cicloId}&finca_id=${fincaId}`, 6000);
     if(!res.ok) return;
     const data = await res.json();
     const sembrados = new Set(data.lote_ids || []);
@@ -1916,7 +1972,7 @@ async function filtrarLotesPorSiembra(){
     if(filtrados.length > 0){
       const valorPrevio = lSel.value;
       lSel.innerHTML = filtrados.map(l=>`<option value="${l.id}">${l.nombre}</option>`).join('');
-      if(filtrados.some(l=>String(l.id)===valorPrevio)) lSel.value = valorPrevio;
+      if(valorPrevio) fijarSelect(lSel, 'lote', parseInt(valorPrevio));
       onLoteChange();
     }
     // si no hay ninguno sembrado detectado, se queda con la lista completa de respaldo
@@ -1937,13 +1993,14 @@ async function onLoteChange(){
   const cicloId = parseInt(document.getElementById('f_ciclo').value) || null;
   const fincaId = parseInt(document.getElementById('f_finca').value) || null;
   const loteId = parseInt(document.getElementById('f_lote').value) || null;
+  if(seleccionHeaderFija) return; // restaurando: no autocompletar encima de lo guardado
   if(!cicloId || !fincaId || !loteId || !navigator.onLine) return;
 
   const url = await kvGet('worker_url', DEFAULT_WORKER_URL);
   if(!url) return;
   try{
     const base = url.replace(/\/recuentos\/?$/, '');
-    const res = await fetch(`${base}/siembra-datos?ciclo_id=${cicloId}&finca_id=${fincaId}&lote_id=${loteId}`);
+    const res = await fetchT(`${base}/siembra-datos?ciclo_id=${cicloId}&finca_id=${fincaId}&lote_id=${loteId}`, 6000);
     if(!res.ok) return;
     const data = await res.json();
 
@@ -1990,25 +2047,11 @@ function actualizarBotonIniciar(){
     : 'Iniciar reporte, evaluación por evaluación →';
 }
 async function poblarFormularioDesdeSesion(){
-  poblarSelects();
+  poblarSelects(true); // solo sectores: la cascada la hace restaurarSeleccionHeader, sin carreras
   const h = sesionActual.header;
   document.getElementById('f_fecha').value = h.fecha || new Date().toISOString().slice(0,10);
   actualizarFechaFormateada();
-  if(h.sector) document.getElementById('f_sector').value = h.sector;
-  await onSectorChange(); // espera Ciclo+Finca+Lote en cascada antes de seguir — si no, un
-                          // fetch que tarda en responder puede terminar pisando el Lote que
-                          // ya habíamos restaurado más abajo (esto pasaba de verdad)
-  if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
-  if(h.finca) document.getElementById('f_finca').value = h.finca;
-  await onFincaChange(); // espera el filtrado de Lote antes de seguir
-  if(h.lote) document.getElementById('f_lote').value = h.lote;
-
-  // Red de seguridad: si por algún motivo algo de arriba reconstruyó las opciones DESPUÉS
-  // de restaurar el valor, lo volvemos a poner — nunca debe quedar en pantalla algo distinto
-  // a lo que de verdad tiene guardado esta evaluación.
-  if(h.ciclo) document.getElementById('f_ciclo').value = h.ciclo;
-  if(h.finca) document.getElementById('f_finca').value = h.finca;
-  if(h.lote) document.getElementById('f_lote').value = h.lote;
+  await restaurarSeleccionHeader({sector:h.sector, ciclo:h.ciclo, finca:h.finca, lote:h.lote});
 
   document.getElementById('f_area').value = h.area_evaluada ?? '';
   document.getElementById('f_edad').value = h.edad_cultivo ?? ''; document.getElementById('f_edad').dataset.autofilled='false';
@@ -2113,10 +2156,10 @@ function renderGpsPlanta(){
 function leerFormularioHeader(){
   const h = sesionActual.header;
   h.fecha = document.getElementById('f_fecha').value;
-  h.ciclo = parseInt(document.getElementById('f_ciclo').value) || null;
-  h.sector = parseInt(document.getElementById('f_sector').value) || null;
-  h.finca = parseInt(document.getElementById('f_finca').value) || null;
-  h.lote = parseInt(document.getElementById('f_lote').value) || null;
+  h.ciclo = parseInt(document.getElementById('f_ciclo').value) || h.ciclo || null;
+  h.sector = parseInt(document.getElementById('f_sector').value) || h.sector || null;
+  h.finca = parseInt(document.getElementById('f_finca').value) || h.finca || null;
+  h.lote = parseInt(document.getElementById('f_lote').value) || h.lote || null;
   const finca = FINCAS.find(f=>f.id===h.finca);
   h.company = finca ? finca.company : null;
   h.area_evaluada = parseFloat(document.getElementById('f_area').value) || null;
@@ -2557,6 +2600,8 @@ function renderResumen(readOnly){
 function actualizarHintCompartirPDF(){
   const hint = document.getElementById('pdfCompartidoHint');
   if(!hint || !sesionActual) return;
+  const bYa = document.getElementById('btnYaCompartido');
+  if(bYa) bYa.style.display = sesionActual.pdfCompartido ? 'none' : '';
   if(sesionActual.pdfCompartido){
     hint.textContent = '✅ PDF compartido';
     hint.className = 'hint-compartir-pdf listo';
@@ -3368,14 +3413,22 @@ async function compartirPDF(){
     const { blob, folio } = await generarPDFBlob();
     const file = new File([blob], `${folio}.pdf`, { type:'application/pdf' });
     if(navigator.canShare && navigator.canShare({ files:[file] })){
+      // Se marca ANTES de abrir el panel: en celulares, al pasar a WhatsApp el sistema puede
+      // suspender o reiniciar la app y la línea de después nunca se ejecutaba (el PDF sí se
+      // compartía pero la app seguía diciendo que no).
+      sesionActual.pdfCompartido = true;
+      try{ await idbPutSession(sesionActual); }catch(_){}
+      actualizarHintCompartirPDF();
       try{
         await navigator.share({ files:[file], title:'Hoja de Recuentos', text: folio });
-        sesionActual.pdfCompartido = true;
-        await idbPutSession(sesionActual);
-        actualizarHintCompartirPDF();
         return;
       }catch(e){
-        if(e.name === 'AbortError') return; // el técnico canceló el panel de compartir
+        if(e.name === 'AbortError'){ // el técnico canceló el panel de compartir: se revierte la marca
+          sesionActual.pdfCompartido = false;
+          try{ await idbPutSession(sesionActual); }catch(_){}
+          actualizarHintCompartirPDF();
+          return;
+        }
       }
     }
     // Respaldo si el navegador no soporta compartir archivos: se descarga y se avisa
@@ -3393,6 +3446,16 @@ async function compartirPDF(){
   }
 }
 
+/** Salida para cuando el PDF sí se compartió (por ejemplo desde WhatsApp) pero la app no alcanzó a
+ *  registrarlo — evita que el técnico se quede sin poder enviar el reporte. */
+async function marcarPdfCompartidoManual(){
+  if(!sesionActual || esSoloLectura()) return;
+  if(!confirm('¿Confirmas que ya compartiste el PDF de este reporte?')) return;
+  sesionActual.pdfCompartido = true;
+  await idbPutSession(sesionActual);
+  actualizarHintCompartirPDF();
+  toast('Listo, ya puedes guardar y enviar ✔');
+}
 async function guardarEvaluacionFinal(){
   if(esSoloLectura()){ toast(mensajeSoloLectura(), true); goScreen('screen-home'); return; }
   const vacias = estacionesVacias();
@@ -3794,7 +3857,12 @@ async function refrescarCatalogos(silencioso){
     await kvSet('catalog_updated_at', new Date().toISOString());
     if(!silencioso) toast('Catálogos actualizados ✔');
     if(document.getElementById('screen-config').classList.contains('active')) renderConfig();
-    if(document.getElementById('screen-form').classList.contains('active')) poblarSelects();
+    if(document.getElementById('screen-form').classList.contains('active')){
+      const v = {sector:parseInt(document.getElementById('f_sector').value)||null, ciclo:parseInt(document.getElementById('f_ciclo').value)||null,
+                 finca:parseInt(document.getElementById('f_finca').value)||null, lote:parseInt(document.getElementById('f_lote').value)||null};
+      poblarSelects(true);
+      await restaurarSeleccionHeader(v); // antes: reiniciaba a Palo de Pan · San Antonio
+    }
   }catch(e){
     if(!silencioso) toast('No se pudo actualizar: '+e.message, true);
   }
