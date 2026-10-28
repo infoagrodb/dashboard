@@ -1,1 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Solicitud de Cotización — COMASA</title>
+<style>
+  :root{
+    --fondo:#F4F7F6; --panel:#fff; --borde:#DDE5E3; --texto:#14201E; --suave:#5F6F6C;
+    --primario:#1C3C38; --primario-2:#2D5A54; --acento:#E3EFEC; --ok:#15803D; --ok-suave:#DCFCE7;
+    --peligro:#B91C1C; --peligro-suave:#FEE2E2; --aviso:#92400E; --aviso-suave:#FEF3C7;
+    --radio:12px; --sombra:0 4px 16px rgba(20,32,30,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    background:var(--fondo);color:var(--texto);font-size:14px;line-height:1.45}
+  .envoltura{max-width:820px;margin:0 auto}
+  .marca{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px 0 18px;font-weight:700;color:var(--primario);font-size:15px;letter-spacing:.02em}
+  .marca span{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:8px;background:var(--primario);color:#fff;font-size:14px}
+  .panel{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);box-shadow:var(--sombra);padding:18px;margin-bottom:14px}
+  h1{font-size:19px;margin:0 0 4px}
+  h2{font-size:15px;margin:0 0 12px;color:var(--primario)}
+  .sub{font-size:12.5px;color:var(--suave)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px 12px}
+  .dato .et{font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--suave)}
+  .dato .va{font-weight:600}
+  .nota{background:var(--acento);border-radius:8px;padding:10px 12px;white-space:pre-wrap;margin-top:12px;font-size:13.5px}
+  label.et{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--suave);margin-bottom:4px}
+  input[type=text],input[type=number],textarea,select{width:100%;border:1px solid var(--borde);border-radius:8px;padding:9px 10px;font-size:15px;font-family:inherit;background:#fff;color:var(--texto)}
+  input:focus,textarea:focus,select:focus{outline:2px solid #9CC5BD;border-color:var(--primario-2)}
+  textarea{resize:vertical;min-height:60px}
+  .campo{margin-bottom:10px}
+  .linea{border:1px solid var(--borde);border-radius:10px;padding:14px;margin-bottom:12px;background:#fff}
+  .linea.nocot{background:#F8FAF9;opacity:.75}
+  .linea-cab{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;margin-bottom:10px}
+  .linea-cab .n{font-size:11px;color:var(--suave)}
+  .linea-cab .desc{font-weight:700;font-size:14.5px}
+  .chip{display:inline-block;background:var(--acento);color:var(--primario);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+  .espec{font-size:13px;color:var(--suave);white-space:pre-wrap;margin:-4px 0 10px}
+  .fila{display:grid;grid-template-columns:repeat(4,1fr);gap:8px 10px}
+  .fila.f3{grid-template-columns:repeat(3,1fr)}
+  @media (max-width:560px){.fila,.fila.f3{grid-template-columns:1fr 1fr}}
+  .check{display:flex;align-items:center;gap:7px;font-size:13.5px;cursor:pointer;user-select:none}
+  .check input{width:18px;height:18px;accent-color:var(--primario)}
+  .tot-linea{text-align:right;font-size:13px;color:var(--suave);margin-top:6px}
+  .tot-linea b{color:var(--texto);font-size:14px}
+  table.resumen{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.resumen th,table.resumen td{padding:7px 6px;border-bottom:1px solid var(--borde);text-align:right}
+  table.resumen th:first-child,table.resumen td:first-child{text-align:left}
+  table.resumen tr.total td{font-weight:700;border-bottom:none}
+  .btn{border:none;border-radius:10px;padding:13px 16px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
+  .btn-pri{background:var(--primario);color:#fff;width:100%}
+  .btn-pri:disabled{opacity:.55;cursor:not-allowed}
+  .btn-sec{background:#fff;color:var(--peligro);border:1px solid #F3C4C4;width:100%;margin-top:8px}
+  .btn-mini{background:var(--acento);color:var(--primario);padding:8px 12px;font-size:13px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+  .msg{border-radius:8px;padding:11px 13px;margin-bottom:12px;font-size:13.5px}
+  .msg.err{background:var(--peligro-suave);color:var(--peligro)}
+  .msg.ok{background:var(--ok-suave);color:var(--ok)}
+  .msg.aviso{background:var(--aviso-suave);color:var(--aviso)}
+  .centro{text-align:center;padding:50px 16px;color:var(--suave)}
+  .centro .ico{font-size:38px;margin-bottom:10px}
+  .adj{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--borde);font-size:13px}
+  .zona-arch{border:2px dashed var(--borde);border-radius:10px;padding:14px;text-align:center;color:var(--suave);font-size:13px}
+  .barra-acc{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .pie{text-align:center;font-size:11.5px;color:var(--suave);padding:8px 0 24px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="envoltura">
+  <div class="marca"><span>◆</span> COMASA · Solicitud de Cotización</div>
+  <div id="app"><div class="panel centro"><div class="ico">⏳</div>Cargando solicitud…</div></div>
+  <div class="pie">Sus precios son confidenciales y solo los ve el equipo de compras.</div>
+</div>
 
+<script>
+(function(){
+  'use strict';
+  var WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+  var IVA = 0.15;
+  var qs = new URLSearchParams(location.search);
+  var ID = parseInt(qs.get('id'), 10);
+  var TOKEN = qs.get('token') || '';
+  var app = document.getElementById('app');
+  var estado = { data:null, resp:{}, enviando:false, adjuntos:[] };
+
+  function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function num(v){ var n = parseFloat(String(v).replace(/,/g,'')); return isFinite(n) ? n : 0; }
+  function fmt(n){ return (Number(n)||0).toLocaleString('es-NI',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  function fmtCant(n){ return (Number(n)||0).toLocaleString('es-NI',{maximumFractionDigits:4}); }
+  function fFecha(d){ if(!d) return '—'; var p = String(d).slice(0,10).split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  function simb(m){ return m === 'COR' ? 'C$' : 'US$'; }
+
+  function pantalla(ico, titulo, texto){
+    app.innerHTML = '<div class="panel centro"><div class="ico">'+ico+'</div><h1>'+esc(titulo)+'</h1><div class="sub">'+esc(texto||'')+'</div></div>';
+  }
+
+  if (!ID || !TOKEN) { pantalla('🔗','Link incompleto','Pida al comprador que le reenvíe el link de la cotización.'); return; }
+
+  fetch(WORKER + '/abast/cotizacion/publico?id=' + ID + '&token=' + encodeURIComponent(TOKEN))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!d.ok) { pantalla('⚠️','No se pudo abrir la cotización', d.error || ''); return; }
+      estado.data = d;
+      estado.adjuntos = d.adjuntos || [];
+      var previas = {};
+      (d.respuestas || []).forEach(function(r){ var lid = Array.isArray(r.x_studio_linea_id) ? r.x_studio_linea_id[0] : r.x_studio_linea_id; previas[lid] = r; });
+      (d.lineas || []).forEach(function(l){
+        var p = previas[l.id];
+        estado.resp[l.id] = p ? {
+          no_cotiza: !!p.x_studio_no_cotiza, cantidad: p.x_studio_cantidad || '', precio_unitario: p.x_studio_precio_unitario || '',
+          moneda: p.x_studio_moneda || 'USD', descuento_pct: p.x_studio_descuento_pct || '', aplica_iva: !!p.x_studio_aplica_iva,
+          codigo_sac: p.x_studio_codigo_sac || '', marca: p.x_studio_marca || '', tiempo_entrega_dias: p.x_studio_tiempo_entrega_dias || '',
+          observacion: p.x_studio_observacion || ''
+        } : { no_cotiza:false, cantidad: l.x_studio_cantidad || '', precio_unitario:'', moneda:'USD', descuento_pct:'', aplica_iva:true,
+              codigo_sac:'', marca:'', tiempo_entrega_dias:'', observacion:'' };
+      });
+      pintar();
+    })
+    .catch(function(e){ pantalla('📡','Sin conexión', 'No se pudo contactar el servidor. Intente de nuevo. ('+e.message+')'); });
+
+  function calcLinea(r){
+    if (r.no_cotiza) return { sub:0, desc:0, iva:0, total:0 };
+    var sub = num(r.cantidad) * num(r.precio_unitario);
+    var desc = sub * Math.min(Math.max(num(r.descuento_pct),0),100) / 100;
+    var base = sub - desc;
+    var iva = r.aplica_iva ? base * IVA : 0;
+    return { sub:sub, desc:desc, iva:iva, total: base + iva };
+  }
+
+  function pintar(){
+    var d = estado.data, c = d.cotizacion, p = d.proveedor, soloLectura = !d.abierta;
+    var h = '';
+    h += '<div class="panel"><h1>Cotización '+esc(c.folio)+'</h1>';
+    h += '<div class="sub">'+esc(c.empresa || 'División Agrícola COMASA')+'</div>';
+    h += '<div class="grid" style="margin-top:14px">';
+    h += '<div class="dato"><div class="et">Proveedor</div><div class="va">'+esc(p.x_name)+'</div></div>';
+    h += '<div class="dato"><div class="et">Fecha</div><div class="va">'+fFecha(c.fecha)+'</div></div>';
+    h += '<div class="dato"><div class="et">Responder antes de</div><div class="va">'+fFecha(c.fecha_limite)+'</div></div>';
+    h += '<div class="dato"><div class="et">Comprador</div><div class="va">'+esc(c.comprador || '—')+'</div></div>';
+    h += '</div>';
+    if (c.comentario) h += '<div class="nota">'+esc(c.comentario)+'</div>';
+    h += '</div>';
+
+    if (d.vencida) h += '<div class="msg aviso">La fecha límite de respuesta ya pasó. Puede ver la solicitud, pero ya no se reciben cambios.</div>';
+    else if (soloLectura) h += '<div class="msg aviso">Esta cotización ya no recibe respuestas ('+esc(c.estado)+').</div>';
+    if (p.x_studio_estado === 'Respondido') h += '<div class="msg ok">Ya recibimos su cotización'+(p.x_studio_fecha_respuesta ? ' ('+fFecha(p.x_studio_fecha_respuesta)+')' : '')+'. '+(soloLectura ? '' : 'Puede corregirla y volver a enviarla hasta la fecha límite.')+'</div>';
+    if (p.x_studio_estado === 'Declinado') h += '<div class="msg aviso">Usted indicó que no cotizará. '+(soloLectura ? '' : 'Si cambia de opinión, llene los precios y envíe.')+'</div>';
+
+    // Líneas
+    h += '<div class="panel"><h2>Artículos y servicios solicitados ('+d.lineas.length+')</h2>';
+    if (!soloLectura) {
+      h += '<div class="barra-acc"><span class="sub" style="align-self:center">Aplicar a todas:</span>'
+        + '<button class="btn-mini" data-todas="USD">Moneda US$</button><button class="btn-mini" data-todas="COR">Moneda C$</button>'
+        + '<button class="btn-mini" data-todas="iva1">Con IVA</button><button class="btn-mini" data-todas="iva0">Sin IVA</button></div>';
+    }
+    d.lineas.forEach(function(l, i){
+      var r = estado.resp[l.id], dis = soloLectura ? ' disabled' : '', disL = (soloLectura || r.no_cotiza) ? ' disabled' : '';
+      h += '<div class="linea'+(r.no_cotiza?' nocot':'')+'" data-l="'+l.id+'">';
+      h += '<div class="linea-cab"><div><div class="n">Línea '+(i+1)+(l.x_studio_articulo ? ' · Código '+esc(l.x_studio_articulo) : '')+'</div><div class="desc">'+esc(l.x_name)+'</div></div>'
+         + '<span class="chip">'+fmtCant(l.x_studio_cantidad)+' '+esc(l.x_studio_unidad || '')+'</span></div>';
+      if (l.x_studio_especificacion) h += '<div class="espec">'+esc(l.x_studio_especificacion)+'</div>';
+      h += '<label class="check" style="margin-bottom:10px"><input type="checkbox" data-f="no_cotiza"'+(r.no_cotiza?' checked':'')+dis+'> No cotizo esta línea</label>';
+      h += '<div class="fila">'
+        + campo('Cantidad a proveer', '<input type="number" min="0" step="any" inputmode="decimal" data-f="cantidad" value="'+esc(r.cantidad)+'"'+disL+'>')
+        + campo('Precio unitario', '<input type="number" min="0" step="any" inputmode="decimal" data-f="precio_unitario" value="'+esc(r.precio_unitario)+'"'+disL+'>')
+        + campo('Moneda', '<select data-f="moneda"'+disL+'><option value="USD"'+(r.moneda==='USD'?' selected':'')+'>Dólar (US$)</option><option value="COR"'+(r.moneda==='COR'?' selected':'')+'>Córdoba (C$)</option></select>')
+        + campo('Descuento %', '<input type="number" min="0" max="100" step="any" inputmode="decimal" data-f="descuento_pct" value="'+esc(r.descuento_pct)+'"'+disL+'>')
+        + '</div>';
+      h += '<div class="fila">'
+        + campo('Código SAC', '<input type="text" data-f="codigo_sac" value="'+esc(r.codigo_sac)+'" placeholder="Para exoneración"'+disL+'>')
+        + campo('Marca / modelo', '<input type="text" data-f="marca" value="'+esc(r.marca)+'"'+disL+'>')
+        + campo('Entrega (días)', '<input type="number" min="0" step="1" inputmode="numeric" data-f="tiempo_entrega_dias" value="'+esc(r.tiempo_entrega_dias)+'"'+disL+'>')
+        + '<div class="campo"><label class="et">&nbsp;</label><label class="check"><input type="checkbox" data-f="aplica_iva"'+(r.aplica_iva?' checked':'')+disL+'> Aplica IVA (15%)</label></div>'
+        + '</div>';
+      h += campo('Observación', '<input type="text" data-f="observacion" value="'+esc(r.observacion)+'" placeholder="Alternativa, garantía, disponibilidad…"'+dis+'>');
+      h += '<div class="tot-linea" data-tot="'+l.id+'"></div>';
+      h += '</div>';
+    });
+    h += '</div>';
+
+    // Resumen
+    h += '<div class="panel"><h2>Resumen</h2><div id="resumen"></div></div>';
+
+    // Condiciones
+    h += '<div class="panel"><h2>Condiciones de la oferta</h2><div class="fila f3">'
+      + campo('Nombre de quien responde *', '<input type="text" id="contacto" value="'+esc(p.x_studio_contacto||'')+'"'+(soloLectura?' disabled':'')+'>')
+      + campo('Condiciones de pago', '<input type="text" id="condiciones" value="'+esc(p.x_studio_condiciones_pago||'')+'" placeholder="Contado, crédito 30 días…"'+(soloLectura?' disabled':'')+'>')
+      + campo('Validez de la oferta (días)', '<input type="number" min="0" step="1" id="validez" value="'+esc(p.x_studio_validez_dias||'')+'"'+(soloLectura?' disabled':'')+'>')
+      + '</div>'
+      + campo('Observaciones generales', '<textarea id="observacion"'+(soloLectura?' disabled':'')+'>'+esc(p.x_studio_observacion||'')+'</textarea>')
+      + '</div>';
+
+    // Adjuntos
+    h += '<div class="panel"><h2>Archivo de su cotización (PDF o imagen)</h2><div id="listaAdj"></div>';
+    if (!soloLectura) h += '<div class="zona-arch" style="margin-top:10px"><input type="file" id="archivo" accept="application/pdf,image/*" multiple style="max-width:100%"><div style="margin-top:6px">Máximo 10 MB por archivo.</div></div>';
+    h += '</div>';
+
+    h += '<div id="msgFinal"></div>';
+    if (!soloLectura) {
+      h += '<button class="btn btn-pri" id="btnEnviar">Enviar cotización</button>';
+      h += '<button class="btn btn-sec" id="btnDeclinar">No vamos a cotizar</button>';
+    }
+
+    app.innerHTML = h;
+    enlazar();
+    recalcular();
+    pintarAdjuntos();
+  }
+
+  function campo(et, input){ return '<div class="campo"><label class="et">'+esc(et)+'</label>'+input+'</div>'; }
+
+  function enlazar(){
+    app.querySelectorAll('.linea').forEach(function(box){
+      var lid = parseInt(box.getAttribute('data-l'), 10);
+      box.addEventListener('input', function(ev){ leer(ev.target, lid); });
+      box.addEventListener('change', function(ev){
+        leer(ev.target, lid);
+        if (ev.target.getAttribute('data-f') === 'no_cotiza') pintarConservando();
+      });
+    });
+    app.querySelectorAll('[data-todas]').forEach(function(b){
+      b.addEventListener('click', function(){
+        var k = b.getAttribute('data-todas');
+        Object.keys(estado.resp).forEach(function(id){
+          var r = estado.resp[id];
+          if (k === 'USD' || k === 'COR') r.moneda = k; else r.aplica_iva = (k === 'iva1');
+        });
+        pintarConservando();
+      });
+    });
+    var bE = document.getElementById('btnEnviar'); if (bE) bE.addEventListener('click', function(){ enviar(false); });
+    var bD = document.getElementById('btnDeclinar'); if (bD) bD.addEventListener('click', function(){
+      if (confirm('¿Confirma que no presentará cotización?')) enviar(true);
+    });
+    var f = document.getElementById('archivo'); if (f) f.addEventListener('change', function(){ subir(Array.prototype.slice.call(f.files)); f.value=''; });
+  }
+
+  function leer(el, lid){
+    var f = el.getAttribute('data-f'); if (!f) return;
+    var r = estado.resp[lid];
+    r[f] = el.type === 'checkbox' ? el.checked : el.value;
+    recalcular();
+  }
+
+  function pintarConservando(){
+    var cab = { c: valor('contacto'), co: valor('condiciones'), v: valor('validez'), o: valor('observacion') };
+    var p = estado.data.proveedor;
+    p.x_studio_contacto = cab.c; p.x_studio_condiciones_pago = cab.co; p.x_studio_validez_dias = cab.v; p.x_studio_observacion = cab.o;
+    var y = window.scrollY; pintar(); window.scrollTo(0, y);
+  }
+  function valor(id){ var e = document.getElementById(id); return e ? e.value : ''; }
+
+  function recalcular(){
+    var tot = { USD:{sub:0,desc:0,iva:0,total:0,n:0}, COR:{sub:0,desc:0,iva:0,total:0,n:0} };
+    estado.data.lineas.forEach(function(l){
+      var r = estado.resp[l.id], k = calcLinea(r), el = app.querySelector('[data-tot="'+l.id+'"]');
+      if (el) el.innerHTML = r.no_cotiza ? 'No cotizada' : (k.total > 0 ? 'Total línea: <b>'+simb(r.moneda)+' '+fmt(k.total)+'</b>' + (k.iva ? ' <span>(incl. IVA '+fmt(k.iva)+')</span>' : '') : '');
+      if (!r.no_cotiza && k.total > 0) { var t = tot[r.moneda === 'COR' ? 'COR' : 'USD']; t.sub+=k.sub; t.desc+=k.desc; t.iva+=k.iva; t.total+=k.total; t.n++; }
+    });
+    var cont = document.getElementById('resumen'); if (!cont) return;
+    var cols = ['USD','COR'].filter(function(m){ return tot[m].n; });
+    if (!cols.length) { cont.innerHTML = '<div class="sub">Llene cantidades y precios para ver el total.</div>'; return; }
+    var h = '<table class="resumen"><tr><th></th>' + cols.map(function(m){ return '<th>'+simb(m)+'</th>'; }).join('') + '</tr>';
+    [['Subtotal','sub'],['Descuento','desc'],['IVA','iva']].forEach(function(f){
+      h += '<tr><td>'+f[0]+'</td>' + cols.map(function(m){ return '<td>'+(f[1]==='desc' && tot[m].desc ? '−' : '')+fmt(tot[m][f[1]])+'</td>'; }).join('') + '</tr>';
+    });
+    h += '<tr class="total"><td>Total</td>' + cols.map(function(m){ return '<td>'+fmt(tot[m].total)+'</td>'; }).join('') + '</tr></table>';
+    cont.innerHTML = h;
+  }
+
+  function mensaje(tipo, txt){ var m = document.getElementById('msgFinal'); if (m) m.innerHTML = txt ? '<div class="msg '+tipo+'">'+esc(txt)+'</div>' : ''; }
+
+  function enviar(declinar){
+    if (estado.enviando) return;
+    var contacto = valor('contacto').trim();
+    if (!contacto) { mensaje('err','Escriba el nombre de quien responde.'); document.getElementById('contacto').focus(); return; }
+    var lineas = estado.data.lineas, respuestas = [];
+    if (!declinar) {
+      for (var i = 0; i < lineas.length; i++) {
+        var l = lineas[i], r = estado.resp[l.id];
+        if (!r.no_cotiza && (num(r.cantidad) <= 0 || num(r.precio_unitario) <= 0)) {
+          mensaje('err','Línea '+(i+1)+' ('+l.x_name+'): indique cantidad y precio, o marque "No cotizo".');
+          var box = app.querySelector('[data-l="'+l.id+'"]'); if (box) box.scrollIntoView({behavior:'smooth',block:'center'});
+          return;
+        }
+        respuestas.push({ linea_id:l.id, no_cotiza:!!r.no_cotiza, cantidad:num(r.cantidad), precio_unitario:num(r.precio_unitario),
+          moneda:r.moneda, descuento_pct:num(r.descuento_pct), aplica_iva:!!r.aplica_iva, codigo_sac:r.codigo_sac,
+          marca:r.marca, tiempo_entrega_dias:parseInt(r.tiempo_entrega_dias,10)||0, observacion:r.observacion });
+      }
+      if (respuestas.every(function(x){ return x.no_cotiza; })) { mensaje('err','No cotizó ninguna línea. Si no va a cotizar, use el botón "No vamos a cotizar".'); return; }
+    }
+    estado.enviando = true; mensaje('', '');
+    var b = document.getElementById('btnEnviar'); if (b) { b.disabled = true; b.textContent = 'Enviando…'; }
+    fetch(WORKER + '/abast/cotizacion/responder', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ id:ID, token:TOKEN, contacto:contacto, condiciones_pago:valor('condiciones'), validez_dias:parseInt(valor('validez'),10)||0,
+        observacion:valor('observacion'), declinar:!!declinar, respuestas:respuestas })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      estado.enviando = false;
+      if (!d.ok) { mensaje('err', d.error || 'No se pudo enviar.'); if (b) { b.disabled = false; b.textContent = 'Enviar cotización'; } return; }
+      app.innerHTML = '<div class="panel centro"><div class="ico">'+(declinar?'👋':'✅')+'</div><h1>'+(declinar?'Gracias por avisarnos':'¡Cotización recibida!')+'</h1>'
+        + '<div class="sub">'+(declinar?'Registramos que no cotizará esta solicitud.':'El equipo de compras de COMASA revisará su oferta. Puede volver a abrir este link para corregirla hasta la fecha límite.')+'</div>'
+        + '<button class="btn-mini" style="margin-top:16px" onclick="location.reload()">Ver mi respuesta</button></div>';
+      window.scrollTo(0,0);
+    }).catch(function(e){
+      estado.enviando = false; mensaje('err','Sin conexión: '+e.message);
+      if (b) { b.disabled = false; b.textContent = 'Enviar cotización'; }
+    });
+  }
+
+  function pintarAdjuntos(){
+    var cont = document.getElementById('listaAdj'); if (!cont) return;
+    if (!estado.adjuntos.length) { cont.innerHTML = '<div class="sub">Aún no ha adjuntado archivos.</div>'; return; }
+    cont.innerHTML = estado.adjuntos.map(function(a){
+      return '<div class="adj"><span>📎 '+esc(a.name)+'</span><span class="sub">'+(a.file_size ? fmt(a.file_size/1024/1024)+' MB' : (a.subiendo ? 'subiendo…' : 'listo'))+'</span></div>';
+    }).join('');
+  }
+
+  function subir(files){
+    if (!files.length) return;
+    var siguiente = function(){
+      var f = files.shift(); if (!f) return;
+      if (f.size > 10*1024*1024) { mensaje('err','"'+f.name+'" supera 10 MB.'); return siguiente(); }
+      var item = { name:f.name, subiendo:true }; estado.adjuntos.push(item); pintarAdjuntos();
+      var fd = new FormData(); fd.append('file', f); fd.append('id', String(ID)); fd.append('token', TOKEN); fd.append('filename', f.name);
+      fetch(WORKER + '/abast/cotizacion/adjunto', { method:'POST', body:fd })
+        .then(function(r){ return r.json(); })
+        .then(function(d){
+          if (!d.ok) { estado.adjuntos.splice(estado.adjuntos.indexOf(item),1); mensaje('err', d.error || 'No se pudo subir el archivo.'); }
+          else { item.subiendo = false; item.file_size = f.size; mensaje('ok','Archivo "'+f.name+'" recibido.'); }
+          pintarAdjuntos(); siguiente();
+        })
+        .catch(function(e){ estado.adjuntos.splice(estado.adjuntos.indexOf(item),1); pintarAdjuntos(); mensaje('err','Sin conexión: '+e.message); });
+    };
+    siguiente();
+  }
+})();
+</script>
+</body>
+</html>
