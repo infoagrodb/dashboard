@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Madurez y Estimación · Infoagro</title>
 <link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Madurez">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#1C3C38">
 <style>
 :root{--verde-oscuro:#1C3C38;--verde:#3C8C61;--verde-claro:#80B498;--verde-pastel:#E2EEE7;--crema:#F4F7F6;--ambar:#D5A021;--ambar-bg:#FAF4E4;--rojo:#C94E4E;--rojo-bg:#F9EAEA;--texto:#22332F;--texto-suave:#70837C;--borde:#D6DDDC;--blanco:#fff;--radio:14px;--sombra:0 2px 10px rgba(28,60,56,.08)}
@@ -56,6 +62,8 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
   <!-- HOME -->
   <section id="screen-home" class="screen active">
     <button class="btn" onclick="nuevoReporte()">＋ Nuevo reporte de madurez</button>
+    <button class="btn" id="btnInstalar" onclick="instalarApp()" style="display:none;background:var(--ambar);color:#22332F">📲 Instalar app en el teléfono</button>
+    <p class="sub" id="hintIOS" style="display:none;text-align:center">📲 Para instalar en iPhone: toca <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>.</p>
     <button class="btn ghost sm" id="btnSync" onclick="sincronizarTodo(true)">⟳ Enviar pendientes a INFOAGRO</button>
     <div id="lista" style="margin-top:14px"></div>
     <p class="sub" id="catInfo" style="text-align:center"></p>
@@ -527,7 +535,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.10.30-6";
+const APP_VERSION = "2026.10.30-8";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -1054,13 +1062,28 @@ async function refrescarCatalogos(){
   }catch(e){}
 }
 
+/* ============ INSTALAR (icono en la pantalla de inicio) ============ */
+let promptInstalar=null;
+const esStandalone=()=>window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+function actualizarInstalar(){
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream, ya=esStandalone();
+  $('btnInstalar').style.display=(!ya&&promptInstalar)?'':'none';
+  $('hintIOS').style.display=(!ya&&ios&&!promptInstalar)?'':'none';
+}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();promptInstalar=e;actualizarInstalar()});
+window.addEventListener('appinstalled',()=>{promptInstalar=null;actualizarInstalar();toast('App instalada ✔')});
+async function instalarApp(){
+  if(!promptInstalar)return;promptInstalar.prompt();
+  try{await promptInstalar.userChoice}catch(e){} promptInstalar=null;actualizarInstalar();
+}
+
 /* ============ INICIO ============ */
 function actualizarOnline(){$('dotOnline').classList.toggle('on',navigator.onLine)}
 window.addEventListener('online',()=>{actualizarOnline();refrescarCatalogos().then(()=>renderHome());sincronizarTodo(false)});
 window.addEventListener('offline',actualizarOnline);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator.onLine)sincronizarTodo(false)});
 (async()=>{
-  actualizarOnline(); await cargarCatalogosLocal(); await renderHome();
+  actualizarOnline(); actualizarInstalar(); await cargarCatalogosLocal(); await renderHome();
   refrescarCatalogos().then(renderHome); sincronizarTodo(false); setInterval(()=>sincronizarTodo(false),5*60*1000);
   if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 })();
