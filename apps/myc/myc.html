@@ -66,11 +66,12 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
     <div class="card">
       <div class="aviso" style="margin-top:0">🔢 El <b>Nº de reporte</b> lo asigna INFOAGRO automáticamente al enviar.</div>
       <div class="field"><label>Fecha *</label><input type="date" id="f_fecha" onchange="recalcularDDS()"></div>
+      <div class="field"><label>Compañía *</label><select id="f_company" onchange="onCompany()"></select></div>
       <div class="field"><label>Ciclo *</label><select id="f_ciclo" onchange="onCiclo()"></select></div>
       <div class="field"><label>Finca *</label><select id="f_finca" onchange="onFinca()"></select></div>
       <div class="field"><label>Lote *</label><select id="f_lote" onchange="onLote()"></select></div>
       <div class="field"><label>Siembra evaluada *</label><select id="f_siembra" onchange="onSiembra()"></select><div class="nota">Los combos salen de las siembras registradas (x_siembra).</div></div>
-      <div class="field"><label>Variedad</label><select id="f_variedad"></select></div>
+      <div class="field"><label>Variedad sembrada</label><select id="f_variedad" disabled></select><div class="nota">Es la variedad registrada en la siembra elegida.</div></div>
       <div class="field"><label>DDS (días después de siembra) *</label><input type="number" id="f_dds" inputmode="numeric" oninput="this.dataset.auto='false'"><div class="nota" id="ddsNota"></div></div>
     </div>
     <button class="btn" id="btnIniciar" onclick="iniciarMuestreo()">Continuar a las muestras →</button>
@@ -85,6 +86,13 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
         <div class="field"><label>Plantas (en metros)</label><input id="m_plantas" type="number" step="0.01" inputmode="decimal" oninput="leerMuestra()"></div>
         <div class="field"><label>Semillas por libra</label><input id="m_semillas" type="number" inputmode="numeric" oninput="leerMuestra()"></div>
       </div>
+    </div>
+    <div class="card"><h2>Ubicación y fotos de la muestra</h2>
+      <button class="btn ghost sm" id="btnGPS" onclick="tomarGPS(false)" style="margin-top:0">📍 Tomar ubicación GPS</button>
+      <p class="sub" id="gpsInfo" style="margin:8px 0 0"></p>
+      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="onFoto(event)">
+      <div id="fotoThumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
+      <button class="btn ghost sm" id="btnFoto" onclick="$('fotoInput').click()">📷 Agregar foto</button>
     </div>
     <div class="card"><h2>Cápsulas</h2>
       <div class="grid3">
@@ -520,7 +528,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.10.30-2";
+const APP_VERSION = "2026.10.30-3";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -577,11 +585,11 @@ function promedioEst(s){const v=s.lines.map(m=>calcMuestra(m).estQQ).filter(x=>x
 
 /* ============ SESIÓN ============ */
 let sesion=null, seleccionFija=null;
-function nuevaMuestra(semDefault){return {ubicacion:'',plantas:'',sana:'',podrida:'',germinada:'',negras:'',cafe:'',naranja:'',amarilla:'',blanca:'',semillas:semDefault||300}}
+function nuevaMuestra(semDefault){return {lat:null,lon:null,acc:null,fotos:[],ubicacion:'',plantas:'',sana:'',podrida:'',germinada:'',negras:'',cafe:'',naranja:'',amarilla:'',blanca:'',semillas:semDefault||300}}
 async function nuevoReporte(){
   const sem=await kvGet('ult_semillas',300);
   sesion={localId:uuid(),status:'draft',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),current:0,pdfCompartido:false,
-    header:{numero:'',siembra:null,fecha:new Date().toISOString().slice(0,10),ciclo:null,finca:null,lote:null,variedad:null,dds:'',company:null},lines:[nuevaMuestra(sem)]};
+    header:{numero:'',siembra:null,company:null,fecha:new Date().toISOString().slice(0,10),ciclo:null,finca:null,lote:null,variedad:null,dds:'',company:null},lines:[nuevaMuestra(sem)]};
   await poblarForm(); ir('screen-form');
 }
 function esSoloLectura(){return !!sesion&&(sesion.status==='synced'||sesion.status==='syncing')}
@@ -616,11 +624,11 @@ async function renderHome(){
     d.innerHTML=`<div class="meta"><div class="t1">${h.numero?'Nº '+h.numero:'Nº por asignar'} · ${nombre(FINCAS,h.finca)||'Finca sin definir'} · ${nombre(LOTES,h.lote)||'Lote sin definir'}</div>
       <div class="t2">${h.fecha||'sin fecha'} · ${s.lines.length} muestra${s.lines.length===1?'':'s'}${s.lines.some(m=>m.sana)?' · '+f2(promedioEst(s))+' qq/mz':''}</div>
       ${s.status==='error'&&s.lastError?`<div class="t2" style="color:var(--rojo)">⚠️ ${s.lastError}</div>`:''}</div>
-      <span class="tag ${st}">${ESTADO[st]||st}${s.pdfPendiente?' · PDF pend.':''}</span>`;
+      <span class="tag ${st}">${ESTADO[st]||st}${s.pdfPendiente?' · PDF pend.':''}${s.fotosPendientes?' · fotos pend.':''}</span>`;
     d.addEventListener('click',()=>abrirSesion(s.localId));
     if(s.status==='draft'){const x=document.createElement('button');x.textContent='🗑';x.style.cssText='border:0;background:none;font-size:1.1rem';x.onclick=async e=>{e.stopPropagation();if(confirm('¿Borrar este borrador?')){await idbDel(s.localId);renderHome()}};d.appendChild(x)}
     c.appendChild(d)});
-  const pend=all.filter(s=>s.status==='pending_sync'||s.status==='error'||s.pdfPendiente).length;
+  const pend=all.filter(s=>s.status==='pending_sync'||s.status==='error'||s.pdfPendiente||s.fotosPendientes).length;
   $('btnSync').style.display=pend?'':'none'; $('btnSync').textContent=`⟳ Enviar pendientes a INFOAGRO (${pend})`;
   $('catInfo').textContent=SIEMBRAS.length?`Siembras: ${SIEMBRAS.length} · ${FINCAS.length} fincas · ${LOTES.length} lotes · v${APP_VERSION}`:'⚠️ Sin catálogos: conéctate una vez a internet para descargarlos.';
 }
@@ -633,7 +641,11 @@ function opciones(sel,arr,fijoId,tipoArr){
 let SIEMBRAS=[];
 const porNombre=(a,b)=>a.nombre.localeCompare(b.nombre);
 function siembrasDe(ciclo,finca,lote){return SIEMBRAS.filter(x=>x.ciclo===ciclo&&x.finca===finca&&x.lote===lote).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))}
-function cargarCiclos(){ opciones($('f_ciclo'),[...CICLOS].sort((a,b)=>b.nombre.localeCompare(a.nombre)),seleccionFija?.ciclo,CICLOS) }
+function cargarCompanias(){ opciones($('f_company'),[...COMPANIAS].sort(porNombre),seleccionFija?.company,COMPANIAS) }
+function cargarCiclos(){
+  const comp=parseInt($('f_company').value)||null;
+  opciones($('f_ciclo'),CICLOS.filter(c=>!comp||c.company===comp).sort((a,b)=>b.nombre.localeCompare(a.nombre)),seleccionFija?.ciclo,CICLOS);
+}
 function cargarFincas(){
   const ciclo=parseInt($('f_ciclo').value)||null, ids=new Set(SIEMBRAS.filter(x=>x.ciclo===ciclo).map(x=>x.finca));
   opciones($('f_finca'),FINCAS.filter(f=>ids.has(f.id)).sort(porNombre),seleccionFija?.finca,FINCAS);
@@ -647,6 +659,7 @@ function cargarSiembras(){
   const lista=siembrasDe(ciclo,finca,lote).map(x=>({id:x.id,nombre:`${x.nombre} · ${x.fecha||'s/f'} · ${x.tipo||''}`.trim()}));
   opciones($('f_siembra'),lista,seleccionFija?.siembra,lista);
 }
+async function onCompany(){cargarCiclos();await onCiclo()}
 async function onCiclo(){cargarFincas();await onFinca()}
 async function onFinca(){cargarLotes();await onLote()}
 async function onLote(){cargarSiembras();await onSiembra()}
@@ -658,21 +671,26 @@ function recalcularDDS(){
   const dias=Math.round((new Date(fecha+'T00:00:00')-new Date(sb.fecha+'T00:00:00'))/86400000);
   if(dias>=0){f.value=dias;f.dataset.auto='true';$('ddsNota').textContent=`📅 Siembra ${sb.nombre} del ${sb.fecha} → ${dias} días a la fecha del reporte`}
 }
+function pintarVariedad(nombreVar){
+  const sel=$('f_variedad'), nom=String(nombreVar||'').trim();
+  const v=VARIEDADES.find(x=>x.nombre.trim().toLowerCase()===nom.toLowerCase());
+  sel.innerHTML=`<option value="${v?v.id:''}" data-nombre="${nom.replace(/"/g,'&quot;')}">${nom||'— La siembra no tiene variedad —'}</option>`;
+  sel.value=v?String(v.id):'';
+}
 async function onSiembra(){
   $('ddsNota').textContent='';
   if(seleccionFija)return;                                          // restaurando: no tocar lo guardado
   const sb=siembraActual(); if(!sb)return;
-  const v=VARIEDADES.find(x=>x.nombre.trim().toLowerCase()===String(sb.variedad||'').trim().toLowerCase());
-  if(v)$('f_variedad').value=String(v.id);
+  pintarVariedad(sb.variedad);
   recalcularDDS();
 }
 async function poblarForm(){
   const h=sesion.header;
-  seleccionFija={ciclo:h.ciclo,finca:h.finca,lote:h.lote,siembra:h.siembra};
+  seleccionFija={company:h.company,ciclo:h.ciclo,finca:h.finca,lote:h.lote,siembra:h.siembra};
   try{
     $('f_fecha').value=h.fecha||new Date().toISOString().slice(0,10);
-    cargarCiclos(); cargarFincas(); cargarLotes(); cargarSiembras();
-    opciones($('f_variedad'),[{id:'',nombre:'— Sin definir —'},...VARIEDADES],h.variedad,VARIEDADES);
+    cargarCompanias(); cargarCiclos(); cargarFincas(); cargarLotes(); cargarSiembras();
+    pintarVariedad(h.variedad_nombre);
     $('f_dds').value=h.dds??''; $('f_dds').dataset.auto='false'; $('ddsNota').textContent='';
   } finally { seleccionFija=null }
   const ro=esSoloLectura(); document.querySelectorAll('#screen-form input,#screen-form select').forEach(e=>e.disabled=ro);
@@ -682,14 +700,14 @@ async function poblarForm(){
 function leerForm(){
   const h=sesion.header;
   h.fecha=$('f_fecha').value;
-  h.ciclo=parseInt($('f_ciclo').value)||h.ciclo||null; h.finca=parseInt($('f_finca').value)||h.finca||null; h.lote=parseInt($('f_lote').value)||h.lote||null; h.siembra=parseInt($('f_siembra').value)||h.siembra||null;
-  h.variedad=parseInt($('f_variedad').value)||null; h.variedad_nombre=nombre(VARIEDADES,h.variedad);
+  h.company=parseInt($('f_company').value)||h.company||null; h.ciclo=parseInt($('f_ciclo').value)||h.ciclo||null; h.finca=parseInt($('f_finca').value)||h.finca||null; h.lote=parseInt($('f_lote').value)||h.lote||null; h.siembra=parseInt($('f_siembra').value)||h.siembra||null;
+  h.variedad=parseInt($('f_variedad').value)||null; h.variedad_nombre=($('f_variedad').selectedOptions[0]?.dataset.nombre)||null;
   h.dds=$('f_dds').value===''?'':parseInt($('f_dds').value);
-  const f=FINCAS.find(x=>x.id===h.finca); h.company=f?f.company:null;
+  const f=FINCAS.find(x=>x.id===h.finca); h.company=parseInt($('f_company').value)||h.company||(f?f.company:null);
 }
 async function iniciarMuestreo(){
   if(esSoloLectura())return; leerForm(); const h=sesion.header; const falta=[];
-  if(!h.fecha)falta.push('Fecha'); if(!h.ciclo)falta.push('Ciclo'); if(!h.finca)falta.push('Finca'); if(!h.lote)falta.push('Lote'); if(!h.siembra)falta.push('Siembra'); if(h.dds===''||h.dds==null||isNaN(h.dds))falta.push('DDS');
+  if(!h.fecha)falta.push('Fecha'); if(!h.company)falta.push('Compañía'); if(!h.ciclo)falta.push('Ciclo'); if(!h.finca)falta.push('Finca'); if(!h.lote)falta.push('Lote'); if(!h.siembra)falta.push('Siembra'); if(h.dds===''||h.dds==null||isNaN(h.dds))falta.push('DDS');
   if(falta.length){toast('Completa: '+falta.join(', '),true);return}
   await persistir(); renderMuestra(); ir('screen-muestra');
 }
@@ -703,6 +721,7 @@ function renderMuestra(){
   CAMPOS.forEach(k=>{const e=$('m_'+k);e.value=(m[k]===0&&k!=='semillas')?'0':(m[k]??'');e.disabled=ro});
   $('btnSig').textContent=sesion.current===sesion.lines.length-1?'+ Agregar muestra':'Siguiente →';
   $('btnQuitar').style.display=sesion.lines.length>1?'':'none';
+  pintarGPS(); pintarFotos(); if(!ro&&m.lat==null)tomarGPS(true);
   pintarCalculos();
 }
 function leerMuestra(){
@@ -739,9 +758,54 @@ async function quitarMuestra(){
   if(sesion.lines.length<2)return; if(!confirm('¿Quitar esta muestra?'))return;
   sesion.lines.splice(sesion.current,1); sesion.current=Math.max(0,sesion.current-1); await persistir(); renderMuestra();
 }
+/* ---- Ubicación GPS de la muestra (funciona sin señal) ---- */
+function pintarGPS(){
+  const m=sesion.lines[sesion.current],ro=esSoloLectura();
+  $('gpsInfo').innerHTML=m.lat==null?'📍 Sin ubicación todavía':`📍 ${Number(m.lat).toFixed(6)}, ${Number(m.lon).toFixed(6)} · precisión ±${Math.round(m.acc||0)} m`;
+  $('btnGPS').style.display=ro?'none':''; $('btnGPS').textContent=m.lat==null?'📍 Tomar ubicación GPS':'📍 Volver a tomar ubicación';
+}
+let gpsEnCurso=false;
+function tomarGPS(auto){
+  if(gpsEnCurso||esSoloLectura())return;
+  if(!navigator.geolocation){if(!auto)toast('Este teléfono no tiene GPS disponible',true);return}
+  gpsEnCurso=true;const idx=sesion.current;$('gpsInfo').textContent='📡 Buscando ubicación…';
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    gpsEnCurso=false;const m=sesion.lines[idx];if(!m)return;
+    m.lat=pos.coords.latitude;m.lon=pos.coords.longitude;m.acc=pos.coords.accuracy;await persistir();
+    if(sesion.current===idx&&pantalla==='screen-muestra')pintarGPS();
+    if(!auto)toast('Ubicación guardada ✔');
+  },err=>{gpsEnCurso=false;if(pantalla==='screen-muestra')pintarGPS();
+    if(!auto)toast(err.code===1?'Permiso de ubicación denegado: actívalo en el navegador':'No se pudo obtener la ubicación, intenta al aire libre',true)},
+  {enableHighAccuracy:true,timeout:20000,maximumAge:10000});
+}
+/* ---- Fotos de la muestra (se guardan en el teléfono y suben al enviar) ---- */
+function comprimirImagen(file,maxW=1280,calidad=0.7){
+  return new Promise((resolve,reject)=>{const img=new Image(),rd=new FileReader();
+    rd.onload=()=>{img.src=rd.result};rd.onerror=reject;
+    img.onload=()=>{const k=Math.min(1,maxW/img.width),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);c.toBlob(b=>b?resolve(b):reject(new Error('No se pudo comprimir')),'image/jpeg',calidad)};
+    img.onerror=reject;rd.readAsDataURL(file)});
+}
+async function onFoto(ev){
+  if(esSoloLectura())return;const file=ev.target.files[0];ev.target.value='';if(!file)return;
+  toast('Procesando foto…');
+  try{const m=sesion.lines[sesion.current];(m.fotos=m.fotos||[]).push({id:uuid(),blob:await comprimirImagen(file),synced:false,at:new Date().toISOString()});
+    await persistir();pintarFotos();toast('Foto agregada ✔')}catch(e){toast('No se pudo guardar la foto: '+e.message,true)}
+}
+function pintarFotos(){
+  const m=sesion.lines[sesion.current],ro=esSoloLectura(),c=$('fotoThumbs');c.innerHTML='';
+  (m.fotos||[]).forEach(f=>{const d=document.createElement('div');d.style.cssText='position:relative;width:70px;height:70px;border-radius:10px;overflow:hidden;border:1px solid var(--borde)';
+    d.innerHTML=`<img src="${URL.createObjectURL(f.blob)}" style="width:100%;height:100%;object-fit:cover">${f.synced?'<span style="position:absolute;left:3px;bottom:3px;background:#1d6b3b;color:#fff;border-radius:99px;font-size:.65rem;padding:0 5px">✔</span>':''}`;
+    if(!ro){const x=document.createElement('button');x.textContent='✕';x.style.cssText='position:absolute;right:2px;top:2px;border:0;background:rgba(0,0,0,.6);color:#fff;border-radius:99px;width:20px;height:20px';
+      x.onclick=async()=>{m.fotos=m.fotos.filter(z=>z.id!==f.id);await persistir();pintarFotos()};d.appendChild(x)}
+    c.appendChild(d)});
+  $('btnFoto').style.display=ro?'none':'';$('btnFoto').textContent=(m.fotos||[]).length?`📷 Agregar otra foto (${m.fotos.length})`:'📷 Agregar foto';
+}
 function problemas(){
   const p=[]; sesion.lines.forEach((m,i)=>{const r=calcMuestra(m),n=i+1;
-    if(!String(m.ubicacion||'').trim())p.push(`Muestra ${n}: falta la ubicación`);
+    if(!String(m.ubicacion||'').trim())p.push(`Muestra ${n}: falta el nombre de la ubicación`);
+    if(m.lat==null)p.push(`Muestra ${n}: falta la ubicación GPS`);
+    if(!(m.fotos&&m.fotos.length))p.push(`Muestra ${n}: falta al menos una foto`);
     if(!(n0(m.sana)>0))p.push(`Muestra ${n}: falta el número de cápsulas sanas`);
     if(n0(m.sana)>0&&!r.colorOk)p.push(`Muestra ${n}: los colores suman ${r.totalAnalisis} y las sanas son ${n0(m.sana)}`);
     if(!(Number(m.semillas)>0))p.push(`Muestra ${n}: falta semillas por libra`)});
@@ -752,7 +816,7 @@ function problemas(){
 function renderResumen(){
   const h=sesion.header; $('rTitulo').textContent=h.numero?`Reporte Nº ${h.numero}`:'Reporte (Nº se asigna al enviar)';
   $('rSub').textContent=`${h.fecha} · ${nombre(FINCAS,h.finca)||''} · ${nombre(LOTES,h.lote)||''} · ${nombre(CICLOS,h.ciclo)||''} · ${h.variedad_nombre||'sin variedad'} · ${h.dds} DDS`;
-  let rows='';sesion.lines.forEach((m,i)=>{const r=calcMuestra(m);rows+=`<tr class="${r.colorOk?'':'malo'}"><td>${i+1}. ${m.ubicacion||'—'}</td><td>${r.totalCap}</td><td>${pct(r.pSana)}</td><td>${pct(r.pNegCaf)}</td><td>${f2(r.estQQ)}</td></tr>`});
+  let rows='';sesion.lines.forEach((m,i)=>{const r=calcMuestra(m);rows+=`<tr class="${r.colorOk?'':'malo'}"><td>${i+1}. ${m.ubicacion||'—'} ${m.lat!=null?'📍':''}${(m.fotos||[]).length?'📷'+m.fotos.length:''}</td><td>${r.totalCap}</td><td>${pct(r.pSana)}</td><td>${pct(r.pNegCaf)}</td><td>${f2(r.estQQ)}</td></tr>`});
   $('rTabla').innerHTML=`<table class="res"><thead><tr><th>Muestra</th><th>Total cáps.</th><th>% Sanas</th><th>% Neg+Café</th><th>qq/mz</th></tr></thead><tbody>${rows}</tbody></table>`;
   $('rEst').textContent=f2(promedioEst(sesion));
   const p=problemas(); $('rAvisos').innerHTML=p.length?`<div class="aviso rojo"><b>Revisa antes de enviar:</b><br>${p.join('<br>')}</div>`:'';
@@ -770,13 +834,16 @@ async function construirPDF(s){
   doc.text('Hoja de Madurez y Estimación de Cosecha',10,10.5);doc.setFontSize(10);doc.text(h.numero?`Nº ${h.numero}`:'Nº por asignar',W-10,10.5,{align:'right'});
   doc.setTextColor(34,51,47);doc.setFont('helvetica','normal');doc.setFontSize(9.5);
   const sb=SIEMBRAS.find(x=>x.id===h.siembra);
-  const info=[['Siembra',sb?sb.nombre:'—'],['Fecha',h.fecha],['Ciclo',nombre(CICLOS,h.ciclo)||''],['Finca',nombre(FINCAS,h.finca)||''],['Lote',nombre(LOTES,h.lote)||''],['Variedad',h.variedad_nombre||'—'],['DDS',String(h.dds)]];
+  const info=[['Compañía',nombre(COMPANIAS,h.company)||'—'],['Siembra',sb?sb.nombre:'—'],['Fecha',h.fecha],['Ciclo',nombre(CICLOS,h.ciclo)||''],['Finca',nombre(FINCAS,h.finca)||''],['Lote',nombre(LOTES,h.lote)||''],['Variedad',h.variedad_nombre||'—'],['DDS',String(h.dds)]];
   info.forEach(([k,v],i)=>{const x=10+(i%4)*68,y=24+Math.floor(i/4)*6;doc.setFont('helvetica','bold');doc.text(k+':',x,y);doc.setFont('helvetica','normal');doc.text(String(v),x+20,y)});
   const head=[['Muestra / ubicación','Plantas','Sanas','Podr.','Germ.','Total','% Sanas','% Podr.','% Germ.','Neg.','Café','Nar.','Amar.','Blanca','% Neg','% Café','% Nar','% Ama','% Bla','% Neg+Caf','% Caf+Nar','% Am+Bl','Sem/lb','qq/mz']];
   const body=s.lines.map((m,i)=>{const r=calcMuestra(m);return[`${i+1}. ${m.ubicacion||''}`,m.plantas||0,n0(m.sana),n0(m.podrida),n0(m.germinada),r.totalCap,pct(r.pSana),pct(r.pPod),pct(r.pGer),n0(m.negras),n0(m.cafe),n0(m.naranja),n0(m.amarilla),n0(m.blanca),pct(r.pNeg),pct(r.pCaf),pct(r.pNar),pct(r.pAma),pct(r.pBla),pct(r.pNegCaf),pct(r.pCafNar),pct(r.pAmaBla),m.semillas||0,f2(r.estQQ)]});
   body.push([{content:'Promedio de estimación del reporte (qq/mz)',colSpan:23,styles:{halign:'right',fontStyle:'bold'}},{content:f2(promedioEst(s)),styles:{fontStyle:'bold'}}]);
   doc.autoTable({startY:40,head,body,theme:'grid',styles:{fontSize:6.3,cellPadding:1.1,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:6},columnStyles:{0:{halign:'left',cellWidth:30}},margin:{left:6,right:6}});
-  const y=doc.lastAutoTable.finalY+5;doc.setFontSize(7);doc.setTextColor(91,95,82);
+  let y=doc.lastAutoTable.finalY+5;doc.setFontSize(7);doc.setTextColor(91,95,82);
+  s.lines.forEach((m,i)=>{if(y>196){doc.addPage();y=14}
+    doc.text(`Muestra ${i+1} (${m.ubicacion||''}): ${m.lat!=null?Number(m.lat).toFixed(6)+', '+Number(m.lon).toFixed(6)+' (±'+Math.round(m.acc||0)+' m)':'sin GPS'} · ${(m.fotos||[]).length} foto(s)`,10,y);y+=4});
+  y+=2;
   doc.text(`Estimación = (cápsulas sanas ÷ semillas por libra) × ${FACTOR_QQ_MZN} ÷ 100. Los % de color se calculan sobre las cápsulas sanas. Generado por la app de campo v${APP_VERSION}.`,10,y);
   return {doc,folio:`Madurez_${h.numero||'borrador'}`};
 }
@@ -805,7 +872,7 @@ async function guardarYEnviar(){
   ir('screen-home'); sincronizarTodo(false);
 }
 function payload(s){const h=s.header;return{localId:s.localId,app_version:APP_VERSION,header:{numero:h.numero||'',siembra:h.siembra||null,fecha:h.fecha,ciclo:h.ciclo,finca:h.finca,lote:h.lote,variedad:h.variedad,variedad_nombre:h.variedad_nombre||null,dds:h.dds,company:h.company},
-  lines:s.lines.map(m=>({ubicacion:m.ubicacion,plantas:m.plantas,sana:m.sana,podrida:m.podrida,germinada:m.germinada,negras:m.negras,cafe:m.cafe,naranja:m.naranja,amarilla:m.amarilla,blanca:m.blanca,semillas:m.semillas}))}}
+  lines:s.lines.map(m=>({lat:m.lat,lon:m.lon,acc:m.acc,ubicacion:m.ubicacion,plantas:m.plantas,sana:m.sana,podrida:m.podrida,germinada:m.germinada,negras:m.negras,cafe:m.cafe,naranja:m.naranja,amarilla:m.amarilla,blanca:m.blanca,semillas:m.semillas}))}}
 async function postConReintentos(url,opts,ms){
   let res=null;
   for(let i=1;i<=3&&!res;i++){const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),ms);
@@ -822,18 +889,33 @@ async function enviar(s){
     if(!res.ok){const e=new Error(d.error||`Servidor respondió ${res.status}`);e.duplicado=!!d.duplicado;throw e}
     s.odooId=d.odoo_id; if(d.folio)s.header.numero=String(d.folio); await idbPut(s);
   }
-  try{
-    const {blob,folio}=await construirPDF(s).then(({doc,folio})=>({blob:doc.output('blob'),folio}));
-    const fd=new FormData();fd.append('file',blob,folio+'.pdf');fd.append('odoo_id',s.odooId);fd.append('filename',folio+'.pdf');
-    const r=await postConReintentos(base+'/madurez/pdf',{method:'POST',headers:{'X-Sync-Key':key||''},body:fd},90000);
-    s.pdfPendiente=!r.ok;
-  }catch(e){s.pdfPendiente=true}
+  if(!s.pdfSubido){
+    try{
+      const {blob,folio}=await construirPDF(s).then(({doc,folio})=>({blob:doc.output('blob'),folio}));
+      const fd=new FormData();fd.append('file',blob,folio+'.pdf');fd.append('odoo_id',s.odooId);fd.append('filename',folio+'.pdf');
+      const r=await postConReintentos(base+'/madurez/pdf',{method:'POST',headers:{'X-Sync-Key':key||''},body:fd},90000);
+      s.pdfSubido=r.ok;
+    }catch(e){s.pdfSubido=false}
+  }
+  // fotos de las muestras (adjuntas al reporte con el nombre de la muestra y sus coordenadas)
+  let faltan=0;
+  for(let i=0;i<s.lines.length;i++){const m=s.lines[i];
+    for(let k=0;k<(m.fotos||[]).length;k++){const f=m.fotos[k];if(f.synced)continue;
+      try{
+        const gps=m.lat!=null?` (${Number(m.lat).toFixed(6)}, ${Number(m.lon).toFixed(6)})`:'';
+        const nom=`Muestra ${i+1}.${k+1} - ${String(m.ubicacion||'').replace(/[\\/:*?"<>|]/g,'-')}${gps}.jpg`;
+        const fd=new FormData();fd.append('file',f.blob,'foto.jpg');fd.append('odoo_id',s.odooId);fd.append('filename',nom);
+        const r=await postConReintentos(base+'/madurez/foto',{method:'POST',headers:{'X-Sync-Key':key||''},body:fd},90000);
+        if(r.ok)f.synced=true;else faltan++;
+      }catch(e){faltan++}
+      await idbPut(s)}}
+  s.fotosPendientes=faltan>0; s.pdfPendiente=!s.pdfSubido;
 }
 let sincronizando=false;
 async function sincronizarTodo(manual){
   if(sincronizando)return; if(!navigator.onLine){if(manual)toast('Sin señal ahora mismo',true);return}
   sincronizando=true;let ok=0,mal=0;
-  try{for(const s of (await idbAll()).filter(x=>x.status==='pending_sync'||x.status==='error'||(x.status==='synced'&&x.pdfPendiente))){
+  try{for(const s of (await idbAll()).filter(x=>x.status==='pending_sync'||x.status==='error'||(x.status==='synced'&&(x.pdfPendiente||x.fotosPendientes)))){
     if(s.status==='error'&&!manual&&s.sinReintentoAuto)continue;
     sincronizandoId=s.localId;renderHome();
     try{await enviar(s);s.status='synced';s.lastError=null;s.sinReintentoAuto=false;ok++}
@@ -846,7 +928,7 @@ async function sincronizarTodo(manual){
 /* ============ CATÁLOGOS ============ */
 async function cargarCatalogosLocal(){
   const c=await kvGet('cat_sie',null);
-  if(c){SIEMBRAS=c.siembras||[];FINCAS=c.fincas||[];LOTES=c.lotes||[];CICLOS=c.ciclos||[];if(c.variedades&&c.variedades.length)VARIEDADES=c.variedades}
+  if(c){SIEMBRAS=c.siembras||[];FINCAS=c.fincas||[];LOTES=c.lotes||[];CICLOS=c.ciclos||[];COMPANIAS=c.companias||[];if(c.variedades&&c.variedades.length)VARIEDADES=c.variedades}
 }
 async function refrescarCatalogos(){
   if(!navigator.onLine)return; try{
@@ -854,8 +936,8 @@ async function refrescarCatalogos(){
     const key=await kvGet('sync_key',DEFAULT_SYNC_KEY);
     const [a,b]=await Promise.all([fetch(base+'/madurez/siembras',{headers:{'X-Sync-Key':key||''}}).then(r=>r.ok?r.json():null).catch(()=>null),fetch(base+'/madurez/catalogos').then(r=>r.ok?r.json():null).catch(()=>null)]);
     if(b&&b.variedades&&b.variedades.length)VARIEDADES=b.variedades;
-    if(a&&a.siembras&&a.siembras.length){SIEMBRAS=a.siembras;FINCAS=a.fincas;LOTES=a.lotes;CICLOS=a.ciclos;
-      await kvSet('cat_sie',{siembras:SIEMBRAS,fincas:FINCAS,lotes:LOTES,ciclos:CICLOS,variedades:VARIEDADES,at:new Date().toISOString()})}
+    if(a&&a.siembras&&a.siembras.length){SIEMBRAS=a.siembras;FINCAS=a.fincas;LOTES=a.lotes;CICLOS=a.ciclos;COMPANIAS=a.companias||[];
+      await kvSet('cat_sie',{siembras:SIEMBRAS,fincas:FINCAS,lotes:LOTES,ciclos:CICLOS,companias:COMPANIAS,variedades:VARIEDADES,at:new Date().toISOString()})}
   }catch(e){}
 }
 
