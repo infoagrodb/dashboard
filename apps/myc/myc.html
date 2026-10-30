@@ -64,11 +64,12 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
   <!-- ENCABEZADO -->
   <section id="screen-form" class="screen">
     <div class="card">
-      <div class="field"><label>Nº de reporte (hoja física) *</label><input id="f_numero" inputmode="numeric" autocomplete="off" placeholder="Ej. 0366"><div class="nota">Es el número impreso en la hoja; no se puede repetir.</div></div>
-      <div class="field"><label>Fecha *</label><input type="date" id="f_fecha"></div>
+      <div class="aviso" style="margin-top:0">🔢 El <b>Nº de reporte</b> lo asigna INFOAGRO automáticamente al enviar.</div>
+      <div class="field"><label>Fecha *</label><input type="date" id="f_fecha" onchange="recalcularDDS()"></div>
       <div class="field"><label>Ciclo *</label><select id="f_ciclo" onchange="onCiclo()"></select></div>
       <div class="field"><label>Finca *</label><select id="f_finca" onchange="onFinca()"></select></div>
       <div class="field"><label>Lote *</label><select id="f_lote" onchange="onLote()"></select></div>
+      <div class="field"><label>Siembra evaluada *</label><select id="f_siembra" onchange="onSiembra()"></select><div class="nota">Los combos salen de las siembras registradas (x_siembra).</div></div>
       <div class="field"><label>Variedad</label><select id="f_variedad"></select></div>
       <div class="field"><label>DDS (días después de siembra) *</label><input type="number" id="f_dds" inputmode="numeric" oninput="this.dataset.auto='false'"><div class="nota" id="ddsNota"></div></div>
     </div>
@@ -519,7 +520,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.10.30-1";
+const APP_VERSION = "2026.10.30-2";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -580,14 +581,14 @@ function nuevaMuestra(semDefault){return {ubicacion:'',plantas:'',sana:'',podrid
 async function nuevoReporte(){
   const sem=await kvGet('ult_semillas',300);
   sesion={localId:uuid(),status:'draft',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),current:0,pdfCompartido:false,
-    header:{numero:'',fecha:new Date().toISOString().slice(0,10),ciclo:null,finca:null,lote:null,variedad:null,dds:'',company:null},lines:[nuevaMuestra(sem)]};
+    header:{numero:'',siembra:null,fecha:new Date().toISOString().slice(0,10),ciclo:null,finca:null,lote:null,variedad:null,dds:'',company:null},lines:[nuevaMuestra(sem)]};
   await poblarForm(); ir('screen-form');
 }
 function esSoloLectura(){return !!sesion&&(sesion.status==='synced'||sesion.status==='syncing')}
 async function abrirSesion(id){
   const all=await idbAll(); sesion=all.find(s=>s.localId===id); if(!sesion) return;
   if(esSoloLectura()){renderResumen();ir('screen-resumen');return}
-  if(sesion.header.numero&&sesion.lines.some(m=>m.ubicacion||m.sana)){renderMuestra();ir('screen-muestra')}
+  if(sesion.header.siembra&&sesion.lines.some(m=>m.ubicacion||m.sana)){renderMuestra();ir('screen-muestra')}
   else{await poblarForm();ir('screen-form')}
 }
 
@@ -612,7 +613,7 @@ async function renderHome(){
   if(!all.length){c.innerHTML='<div class="vacio">🥜<br>Todavía no hay reportes.<br>Toca “Nuevo reporte de madurez”.</div>';}
   all.forEach(s=>{const h=s.header, st=sincronizandoId===s.localId?'syncing':s.status;
     const d=document.createElement('div');d.className='card session';
-    d.innerHTML=`<div class="meta"><div class="t1">Nº ${h.numero||'—'} · ${nombre(FINCAS,h.finca)||'Finca sin definir'} · ${nombre(LOTES,h.lote)||'Lote sin definir'}</div>
+    d.innerHTML=`<div class="meta"><div class="t1">${h.numero?'Nº '+h.numero:'Nº por asignar'} · ${nombre(FINCAS,h.finca)||'Finca sin definir'} · ${nombre(LOTES,h.lote)||'Lote sin definir'}</div>
       <div class="t2">${h.fecha||'sin fecha'} · ${s.lines.length} muestra${s.lines.length===1?'':'s'}${s.lines.some(m=>m.sana)?' · '+f2(promedioEst(s))+' qq/mz':''}</div>
       ${s.status==='error'&&s.lastError?`<div class="t2" style="color:var(--rojo)">⚠️ ${s.lastError}</div>`:''}</div>
       <span class="tag ${st}">${ESTADO[st]||st}${s.pdfPendiente?' · PDF pend.':''}</span>`;
@@ -621,7 +622,7 @@ async function renderHome(){
     c.appendChild(d)});
   const pend=all.filter(s=>s.status==='pending_sync'||s.status==='error'||s.pdfPendiente).length;
   $('btnSync').style.display=pend?'':'none'; $('btnSync').textContent=`⟳ Enviar pendientes a INFOAGRO (${pend})`;
-  $('catInfo').textContent=FINCAS.length?`Catálogos: ${FINCAS.length} fincas · ${LOTES.length} lotes · v${APP_VERSION}`:'⚠️ Sin catálogos: conéctate una vez a internet para descargarlos.';
+  $('catInfo').textContent=SIEMBRAS.length?`Siembras: ${SIEMBRAS.length} · ${FINCAS.length} fincas · ${LOTES.length} lotes · v${APP_VERSION}`:'⚠️ Sin catálogos: conéctate una vez a internet para descargarlos.';
 }
 
 /* ============ ENCABEZADO (con restauración robusta: nunca pierde lo guardado) ============ */
@@ -629,62 +630,67 @@ function opciones(sel,arr,fijoId,tipoArr){
   sel.innerHTML=arr.map(x=>`<option value="${x.id}">${x.nombre}</option>`).join('');
   if(fijoId){ if(![...sel.options].some(o=>String(o.value)===String(fijoId))){const o=document.createElement('option');o.value=fijoId;o.textContent=nombre(tipoArr,fijoId)||('#'+fijoId);sel.appendChild(o)} sel.value=String(fijoId) }
 }
-function cargarCiclos(){ opciones($('f_ciclo'),CICLOS,seleccionFija?.ciclo,CICLOS) }
+let SIEMBRAS=[];
+const porNombre=(a,b)=>a.nombre.localeCompare(b.nombre);
+function siembrasDe(ciclo,finca,lote){return SIEMBRAS.filter(x=>x.ciclo===ciclo&&x.finca===finca&&x.lote===lote).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))}
+function cargarCiclos(){ opciones($('f_ciclo'),[...CICLOS].sort((a,b)=>b.nombre.localeCompare(a.nombre)),seleccionFija?.ciclo,CICLOS) }
 function cargarFincas(){
-  const ciclo=CICLOS.find(c=>c.id===(parseInt($('f_ciclo').value)||null));
-  let lista=FINCAS.filter(f=>!ciclo||!ciclo.company||f.company===ciclo.company).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  if(!lista.length) lista=[...FINCAS].sort((a,b)=>a.nombre.localeCompare(b.nombre));
-  opciones($('f_finca'),lista,seleccionFija?.finca,FINCAS);
+  const ciclo=parseInt($('f_ciclo').value)||null, ids=new Set(SIEMBRAS.filter(x=>x.ciclo===ciclo).map(x=>x.finca));
+  opciones($('f_finca'),FINCAS.filter(f=>ids.has(f.id)).sort(porNombre),seleccionFija?.finca,FINCAS);
 }
 function cargarLotes(){
-  const fid=parseInt($('f_finca').value)||null;
-  opciones($('f_lote'),LOTES.filter(l=>l.finca===fid).sort((a,b)=>a.nombre.localeCompare(b.nombre)),seleccionFija?.lote,LOTES);
+  const ciclo=parseInt($('f_ciclo').value)||null, finca=parseInt($('f_finca').value)||null, ids=new Set(SIEMBRAS.filter(x=>x.ciclo===ciclo&&x.finca===finca).map(x=>x.lote));
+  opciones($('f_lote'),LOTES.filter(l=>ids.has(l.id)).sort(porNombre),seleccionFija?.lote,LOTES);
+}
+function cargarSiembras(){
+  const ciclo=parseInt($('f_ciclo').value)||null, finca=parseInt($('f_finca').value)||null, lote=parseInt($('f_lote').value)||null;
+  const lista=siembrasDe(ciclo,finca,lote).map(x=>({id:x.id,nombre:`${x.nombre} · ${x.fecha||'s/f'} · ${x.tipo||''}`.trim()}));
+  opciones($('f_siembra'),lista,seleccionFija?.siembra,lista);
 }
 async function onCiclo(){cargarFincas();await onFinca()}
 async function onFinca(){cargarLotes();await onLote()}
-async function onLote(){
+async function onLote(){cargarSiembras();await onSiembra()}
+function siembraActual(){const id=parseInt($('f_siembra').value)||null;return SIEMBRAS.find(x=>x.id===id)||null}
+function recalcularDDS(){
+  const f=$('f_dds'), sb=siembraActual(); if(seleccionFija||!sb||!sb.fecha)return;
+  if(f.value&&f.dataset.auto!=='true')return;                       // no pisar lo escrito a mano
+  const fecha=$('f_fecha').value||new Date().toISOString().slice(0,10);
+  const dias=Math.round((new Date(fecha+'T00:00:00')-new Date(sb.fecha+'T00:00:00'))/86400000);
+  if(dias>=0){f.value=dias;f.dataset.auto='true';$('ddsNota').textContent=`📅 Siembra ${sb.nombre} del ${sb.fecha} → ${dias} días a la fecha del reporte`}
+}
+async function onSiembra(){
   $('ddsNota').textContent='';
-  if(seleccionFija) return;                       // restaurando: no autocompletar encima de lo guardado
-  const ciclo=parseInt($('f_ciclo').value)||null,finca=parseInt($('f_finca').value)||null,lote=parseInt($('f_lote').value)||null;
-  if(!ciclo||!finca||!lote||!navigator.onLine) return;
-  const f=$('f_dds'); if(f.value&&f.dataset.auto!=='true') return;   // no pisar lo escrito a mano
-  try{
-    const base=(await kvGet('worker_url',DEFAULT_WORKER_URL)).replace(/\/recuentos\/?$/,'');
-    const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),6000);
-    const r=await fetch(`${base}/siembra-datos?ciclo_id=${ciclo}&finca_id=${finca}&lote_id=${lote}`,{signal:ctl.signal});clearTimeout(t);
-    if(!r.ok) return; const d=await r.json();
-    if(d.fecha_siembra){const fecha=$('f_fecha').value||new Date().toISOString().slice(0,10);
-      const dias=Math.round((new Date(fecha+'T00:00:00')-new Date(d.fecha_siembra+'T00:00:00'))/86400000);
-      if(dias>0){f.value=dias;f.dataset.auto='true';$('ddsNota').textContent=`📅 Calculado: siembra ${d.fecha_siembra} (${dias} días a la fecha del reporte)`}}
-  }catch(e){}
+  if(seleccionFija)return;                                          // restaurando: no tocar lo guardado
+  const sb=siembraActual(); if(!sb)return;
+  const v=VARIEDADES.find(x=>x.nombre.trim().toLowerCase()===String(sb.variedad||'').trim().toLowerCase());
+  if(v)$('f_variedad').value=String(v.id);
+  recalcularDDS();
 }
 async function poblarForm(){
   const h=sesion.header;
-  seleccionFija={ciclo:h.ciclo,finca:h.finca,lote:h.lote};
+  seleccionFija={ciclo:h.ciclo,finca:h.finca,lote:h.lote,siembra:h.siembra};
   try{
-    $('f_numero').value=h.numero||''; $('f_fecha').value=h.fecha||new Date().toISOString().slice(0,10);
-    cargarCiclos(); cargarFincas(); cargarLotes();
+    $('f_fecha').value=h.fecha||new Date().toISOString().slice(0,10);
+    cargarCiclos(); cargarFincas(); cargarLotes(); cargarSiembras();
     opciones($('f_variedad'),[{id:'',nombre:'— Sin definir —'},...VARIEDADES],h.variedad,VARIEDADES);
     $('f_dds').value=h.dds??''; $('f_dds').dataset.auto='false'; $('ddsNota').textContent='';
   } finally { seleccionFija=null }
   const ro=esSoloLectura(); document.querySelectorAll('#screen-form input,#screen-form select').forEach(e=>e.disabled=ro);
   $('btnIniciar').style.display=ro?'none':'';
-  if(!h.ciclo||!h.lote||h.dds==='') onLote();   // reporte nuevo: intenta autocompletar DDS
+  if(!h.ciclo||!h.lote||h.dds==='') onSiembra();   // reporte nuevo: variedad y DDS salen de la siembra elegida
 }
 function leerForm(){
   const h=sesion.header;
-  h.numero=$('f_numero').value.trim(); h.fecha=$('f_fecha').value;
-  h.ciclo=parseInt($('f_ciclo').value)||h.ciclo||null; h.finca=parseInt($('f_finca').value)||h.finca||null; h.lote=parseInt($('f_lote').value)||h.lote||null;
+  h.fecha=$('f_fecha').value;
+  h.ciclo=parseInt($('f_ciclo').value)||h.ciclo||null; h.finca=parseInt($('f_finca').value)||h.finca||null; h.lote=parseInt($('f_lote').value)||h.lote||null; h.siembra=parseInt($('f_siembra').value)||h.siembra||null;
   h.variedad=parseInt($('f_variedad').value)||null; h.variedad_nombre=nombre(VARIEDADES,h.variedad);
   h.dds=$('f_dds').value===''?'':parseInt($('f_dds').value);
   const f=FINCAS.find(x=>x.id===h.finca); h.company=f?f.company:null;
 }
 async function iniciarMuestreo(){
   if(esSoloLectura())return; leerForm(); const h=sesion.header; const falta=[];
-  if(!h.numero)falta.push('Nº de reporte'); if(!h.fecha)falta.push('Fecha'); if(!h.ciclo)falta.push('Ciclo'); if(!h.finca)falta.push('Finca'); if(!h.lote)falta.push('Lote'); if(h.dds===''||h.dds==null||isNaN(h.dds))falta.push('DDS');
+  if(!h.fecha)falta.push('Fecha'); if(!h.ciclo)falta.push('Ciclo'); if(!h.finca)falta.push('Finca'); if(!h.lote)falta.push('Lote'); if(!h.siembra)falta.push('Siembra'); if(h.dds===''||h.dds==null||isNaN(h.dds))falta.push('DDS');
   if(falta.length){toast('Completa: '+falta.join(', '),true);return}
-  const dup=(await idbAll()).find(s=>s.localId!==sesion.localId&&s.header.numero===h.numero);
-  if(dup&&!confirm(`Ya hay en este teléfono otro reporte con el Nº ${h.numero}. ¿Continuar de todos modos?`))return;
   await persistir(); renderMuestra(); ir('screen-muestra');
 }
 
@@ -693,7 +699,7 @@ const CAMPOS=['ubicacion','plantas','semillas','sana','podrida','germinada','neg
 function renderMuestra(){
   const m=sesion.lines[sesion.current],h=sesion.header,ro=esSoloLectura();
   $('mLabel').textContent=`Muestra ${sesion.current+1} de ${sesion.lines.length}`;
-  $('mLote').textContent=`Nº ${h.numero} · ${nombre(FINCAS,h.finca)||''} · ${nombre(LOTES,h.lote)||''}`;
+  $('mLote').textContent=`${h.numero?'Nº '+h.numero:'Nº por asignar'} · ${nombre(FINCAS,h.finca)||''} · ${nombre(LOTES,h.lote)||''}`;
   CAMPOS.forEach(k=>{const e=$('m_'+k);e.value=(m[k]===0&&k!=='semillas')?'0':(m[k]??'');e.disabled=ro});
   $('btnSig').textContent=sesion.current===sesion.lines.length-1?'+ Agregar muestra':'Siguiente →';
   $('btnQuitar').style.display=sesion.lines.length>1?'':'none';
@@ -744,7 +750,7 @@ function problemas(){
 
 /* ============ RESUMEN ============ */
 function renderResumen(){
-  const h=sesion.header; $('rTitulo').textContent=`Reporte Nº ${h.numero}`;
+  const h=sesion.header; $('rTitulo').textContent=h.numero?`Reporte Nº ${h.numero}`:'Reporte (Nº se asigna al enviar)';
   $('rSub').textContent=`${h.fecha} · ${nombre(FINCAS,h.finca)||''} · ${nombre(LOTES,h.lote)||''} · ${nombre(CICLOS,h.ciclo)||''} · ${h.variedad_nombre||'sin variedad'} · ${h.dds} DDS`;
   let rows='';sesion.lines.forEach((m,i)=>{const r=calcMuestra(m);rows+=`<tr class="${r.colorOk?'':'malo'}"><td>${i+1}. ${m.ubicacion||'—'}</td><td>${r.totalCap}</td><td>${pct(r.pSana)}</td><td>${pct(r.pNegCaf)}</td><td>${f2(r.estQQ)}</td></tr>`});
   $('rTabla').innerHTML=`<table class="res"><thead><tr><th>Muestra</th><th>Total cáps.</th><th>% Sanas</th><th>% Neg+Café</th><th>qq/mz</th></tr></thead><tbody>${rows}</tbody></table>`;
@@ -753,23 +759,26 @@ function renderResumen(){
   actualizarHintPDF(); ir('screen-resumen'); $('btnEnviar').style.display=esSoloLectura()?'none':'';
 }
 async function verResumen(){leerMuestra();await persistir();renderResumen()}
-function actualizarHintPDF(){const ok=sesion.pdfCompartido,h=$('pdfHint');h.textContent=ok?'✅ PDF compartido':'⚠️ Comparte el PDF antes de guardar y enviar';h.style.color=ok?'var(--verde)':'var(--ambar)';$('btnYa').style.display=(ok||esSoloLectura())?'none':''}
+function actualizarHintPDF(){const h=$('pdfHint'),ok=sesion.status==='synced';
+  h.textContent=ok?`✅ Enviado a INFOAGRO · Nº ${sesion.header.numero||''}${sesion.pdfPendiente?' (PDF por adjuntar)':''} — ya puedes compartir el PDF con su número`:'ℹ️ El Nº oficial lo asigna INFOAGRO al enviar; después podrás compartir el PDF con su número.';
+  h.style.color=ok?'var(--verde)':'var(--texto-suave)';$('btnYa').style.display='none'}
 
 /* ============ PDF ============ */
 async function construirPDF(s){
   const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'letter',orientation:'landscape'}),h=s.header,W=doc.internal.pageSize.getWidth();
   doc.setFillColor(28,60,56);doc.rect(0,0,W,16,'F');doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(13);
-  doc.text('Hoja de Madurez y Estimación de Cosecha',10,10.5);doc.setFontSize(10);doc.text(`Nº ${h.numero}`,W-10,10.5,{align:'right'});
+  doc.text('Hoja de Madurez y Estimación de Cosecha',10,10.5);doc.setFontSize(10);doc.text(h.numero?`Nº ${h.numero}`:'Nº por asignar',W-10,10.5,{align:'right'});
   doc.setTextColor(34,51,47);doc.setFont('helvetica','normal');doc.setFontSize(9.5);
-  const info=[['Fecha',h.fecha],['Ciclo',nombre(CICLOS,h.ciclo)||''],['Finca',nombre(FINCAS,h.finca)||''],['Lote',nombre(LOTES,h.lote)||''],['Variedad',h.variedad_nombre||'—'],['DDS',String(h.dds)]];
-  info.forEach(([k,v],i)=>{const x=10+(i%3)*90,y=24+Math.floor(i/3)*6;doc.setFont('helvetica','bold');doc.text(k+':',x,y);doc.setFont('helvetica','normal');doc.text(String(v),x+20,y)});
+  const sb=SIEMBRAS.find(x=>x.id===h.siembra);
+  const info=[['Siembra',sb?sb.nombre:'—'],['Fecha',h.fecha],['Ciclo',nombre(CICLOS,h.ciclo)||''],['Finca',nombre(FINCAS,h.finca)||''],['Lote',nombre(LOTES,h.lote)||''],['Variedad',h.variedad_nombre||'—'],['DDS',String(h.dds)]];
+  info.forEach(([k,v],i)=>{const x=10+(i%4)*68,y=24+Math.floor(i/4)*6;doc.setFont('helvetica','bold');doc.text(k+':',x,y);doc.setFont('helvetica','normal');doc.text(String(v),x+20,y)});
   const head=[['Muestra / ubicación','Plantas','Sanas','Podr.','Germ.','Total','% Sanas','% Podr.','% Germ.','Neg.','Café','Nar.','Amar.','Blanca','% Neg','% Café','% Nar','% Ama','% Bla','% Neg+Caf','% Caf+Nar','% Am+Bl','Sem/lb','qq/mz']];
   const body=s.lines.map((m,i)=>{const r=calcMuestra(m);return[`${i+1}. ${m.ubicacion||''}`,m.plantas||0,n0(m.sana),n0(m.podrida),n0(m.germinada),r.totalCap,pct(r.pSana),pct(r.pPod),pct(r.pGer),n0(m.negras),n0(m.cafe),n0(m.naranja),n0(m.amarilla),n0(m.blanca),pct(r.pNeg),pct(r.pCaf),pct(r.pNar),pct(r.pAma),pct(r.pBla),pct(r.pNegCaf),pct(r.pCafNar),pct(r.pAmaBla),m.semillas||0,f2(r.estQQ)]});
   body.push([{content:'Promedio de estimación del reporte (qq/mz)',colSpan:23,styles:{halign:'right',fontStyle:'bold'}},{content:f2(promedioEst(s)),styles:{fontStyle:'bold'}}]);
   doc.autoTable({startY:40,head,body,theme:'grid',styles:{fontSize:6.3,cellPadding:1.1,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:6},columnStyles:{0:{halign:'left',cellWidth:30}},margin:{left:6,right:6}});
   const y=doc.lastAutoTable.finalY+5;doc.setFontSize(7);doc.setTextColor(91,95,82);
   doc.text(`Estimación = (cápsulas sanas ÷ semillas por libra) × ${FACTOR_QQ_MZN} ÷ 100. Los % de color se calculan sobre las cápsulas sanas. Generado por la app de campo v${APP_VERSION}.`,10,y);
-  return {doc,folio:`Madurez_${h.numero}`};
+  return {doc,folio:`Madurez_${h.numero||'borrador'}`};
 }
 async function pdfBlob(){const {doc,folio}=await construirPDF(sesion);return{blob:doc.output('blob'),folio}}
 async function descargarPDF(){toast('Generando PDF…');try{const {blob,folio}=await pdfBlob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=folio+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),8000)}catch(e){toast('No se pudo generar el PDF: '+e.message,true)}}
@@ -791,12 +800,11 @@ async function marcarCompartidoManual(){if(!confirm('¿Confirmas que ya comparti
 async function guardarYEnviar(){
   if(esSoloLectura())return; const p=problemas();
   if(p.length){alert('No se puede enviar:\n\n'+p.join('\n'));return}
-  if(!sesion.pdfCompartido){alert('Antes de guardar y enviar, comparte el PDF del reporte con el botón “Compartir PDF”.');return}
   sesion.status='pending_sync';sesion.lastError=null;await persistir();
   toast(navigator.onLine?'Guardado ✔ — enviando a INFOAGRO ODOO…':'Guardado ✔ — sin señal, se enviará en cuanto haya conexión');
   ir('screen-home'); sincronizarTodo(false);
 }
-function payload(s){const h=s.header;return{localId:s.localId,app_version:APP_VERSION,header:{numero:h.numero,fecha:h.fecha,ciclo:h.ciclo,finca:h.finca,lote:h.lote,variedad:h.variedad,variedad_nombre:h.variedad_nombre||null,dds:h.dds,company:h.company},
+function payload(s){const h=s.header;return{localId:s.localId,app_version:APP_VERSION,header:{numero:h.numero||'',siembra:h.siembra||null,fecha:h.fecha,ciclo:h.ciclo,finca:h.finca,lote:h.lote,variedad:h.variedad,variedad_nombre:h.variedad_nombre||null,dds:h.dds,company:h.company},
   lines:s.lines.map(m=>({ubicacion:m.ubicacion,plantas:m.plantas,sana:m.sana,podrida:m.podrida,germinada:m.germinada,negras:m.negras,cafe:m.cafe,naranja:m.naranja,amarilla:m.amarilla,blanca:m.blanca,semillas:m.semillas}))}}
 async function postConReintentos(url,opts,ms){
   let res=null;
@@ -812,7 +820,7 @@ async function enviar(s){
     const res=await postConReintentos(base+'/madurez',{method:'POST',headers:{'Content-Type':'application/json','X-Sync-Key':key||''},body:JSON.stringify(payload(s))},60000);
     const txt=await res.text(); let d={}; try{d=JSON.parse(txt)}catch(_){}
     if(!res.ok){const e=new Error(d.error||`Servidor respondió ${res.status}`);e.duplicado=!!d.duplicado;throw e}
-    s.odooId=d.odoo_id; await idbPut(s);
+    s.odooId=d.odoo_id; if(d.folio)s.header.numero=String(d.folio); await idbPut(s);
   }
   try{
     const {blob,folio}=await construirPDF(s).then(({doc,folio})=>({blob:doc.output('blob'),folio}));
@@ -837,17 +845,17 @@ async function sincronizarTodo(manual){
 
 /* ============ CATÁLOGOS ============ */
 async function cargarCatalogosLocal(){
-  let c=await kvGet('cat',null);
-  if(!c){const r=await kvRecuentos(['fincas','lotes','ciclos','companias']);if(r.fincas&&r.fincas.length)c={fincas:r.fincas,lotes:r.lotes||[],ciclos:r.ciclos||[],companias:r.companias||[]}}
-  if(c){FINCAS=c.fincas||[];LOTES=c.lotes||[];CICLOS=c.ciclos||[];COMPANIAS=c.companias||[];if(c.variedades&&c.variedades.length)VARIEDADES=c.variedades}
+  const c=await kvGet('cat_sie',null);
+  if(c){SIEMBRAS=c.siembras||[];FINCAS=c.fincas||[];LOTES=c.lotes||[];CICLOS=c.ciclos||[];if(c.variedades&&c.variedades.length)VARIEDADES=c.variedades}
 }
 async function refrescarCatalogos(){
   if(!navigator.onLine)return; try{
     const base=(await kvGet('worker_url',DEFAULT_WORKER_URL)).replace(/\/recuentos\/?$/,'');
-    const [a,b]=await Promise.all([fetch(base+'/catalogos-recuentos').then(r=>r.ok?r.json():null),fetch(base+'/madurez/catalogos').then(r=>r.ok?r.json():null).catch(()=>null)]);
-    if(a&&a.fincas){FINCAS=a.fincas;LOTES=a.lotes;CICLOS=a.ciclos;COMPANIAS=a.companias||[]}
+    const key=await kvGet('sync_key',DEFAULT_SYNC_KEY);
+    const [a,b]=await Promise.all([fetch(base+'/madurez/siembras',{headers:{'X-Sync-Key':key||''}}).then(r=>r.ok?r.json():null).catch(()=>null),fetch(base+'/madurez/catalogos').then(r=>r.ok?r.json():null).catch(()=>null)]);
     if(b&&b.variedades&&b.variedades.length)VARIEDADES=b.variedades;
-    if(a&&a.fincas)await kvSet('cat',{fincas:FINCAS,lotes:LOTES,ciclos:CICLOS,companias:COMPANIAS,variedades:VARIEDADES,at:new Date().toISOString()});
+    if(a&&a.siembras&&a.siembras.length){SIEMBRAS=a.siembras;FINCAS=a.fincas;LOTES=a.lotes;CICLOS=a.ciclos;
+      await kvSet('cat_sie',{siembras:SIEMBRAS,fincas:FINCAS,lotes:LOTES,ciclos:CICLOS,variedades:VARIEDADES,at:new Date().toISOString()})}
   }catch(e){}
 }
 
