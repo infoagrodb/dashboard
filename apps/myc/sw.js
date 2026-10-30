@@ -1,4 +1,4 @@
-const CACHE_NAME='madurez-campo-v3';
+const CACHE_NAME='madurez-campo-v5';
 const ARCHIVOS=['./','./index.html','./manifest.json'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(ARCHIVOS)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.startsWith('madurez-campo-')&&x!==CACHE_NAME).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});
