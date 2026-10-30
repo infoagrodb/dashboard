@@ -126,6 +126,7 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
       <div class="est"><div class="n" id="rEst">0</div><div class="l">Promedio de estimación del reporte (qq/mz)</div></div>
       <div id="rAvisos"></div>
     </div>
+    <div class="card"><h2>📈 Tendencia de madurez</h2><div id="rTend"><p class="sub">Calculando…</p></div></div>
     <button class="btn ghost" onclick="descargarPDF()">📄 Vista previa del reporte</button>
     <button class="btn ghost" onclick="compartirPDF()">📤 Compartir PDF (WhatsApp, correo…)</button>
     <p class="sub" id="pdfHint" style="margin-top:8px"></p>
@@ -528,7 +529,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.10.30-3";
+const APP_VERSION = "2026.10.30-5";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -581,6 +582,61 @@ function calcMuestra(m){
 }
 const pct=v=>(Math.round(v*1000)/10)+'%';
 const f2=v=>(Math.round(v*100)/100).toString();
+const CERO_SUMAS=()=>({sana:0,pod:0,ger:0,neg:0,caf:0,nar:0,ama:0,bla:0});
+function sumasLineas(lines){const t=CERO_SUMAS();lines.forEach(m=>{t.sana+=n0(m.sana);t.pod+=n0(m.podrida);t.ger+=n0(m.germinada);t.neg+=n0(m.negras);t.caf+=n0(m.cafe);t.nar+=n0(m.naranja);t.ama+=n0(m.amarilla);t.bla+=n0(m.blanca)});return t}
+function metricas(t,est){const cap=t.sana+t.pod+t.ger,d=(x,b)=>b>0?x/b:0;
+  return{cap,sana:t.sana,pSana:d(t.sana,cap),pPod:d(t.pod,cap),pGer:d(t.ger,cap),pNegCaf:d(t.neg+t.caf,t.sana),pCafNar:d(t.caf+t.nar,t.sana),pAmaBla:d(t.ama+t.bla,t.sana),est:est||0}}
+function fmtFecha(f){const p=String(f||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:String(f||'')}
+/** Evaluaciones de la misma siembra (ciclo+finca+lote): las de Odoo, las del teléfono y la actual, ordenadas por fecha. */
+async function puntosTendencia(s){
+  const h=s.header,out=[],vistos=new Set();
+  (s.historial||[]).forEach(r=>{if(h.numero&&String(r.numero)===String(h.numero))return;out.push({fecha:r.fecha,dds:r.dds,numero:r.numero,m:metricas(r.sums,r.est)});vistos.add(String(r.numero))});
+  try{(await idbAll()).filter(x=>x.localId!==s.localId&&x.status!=='draft'&&x.header.ciclo===h.ciclo&&x.header.finca===h.finca&&x.header.lote===h.lote).forEach(x=>{
+    if(x.header.numero&&vistos.has(String(x.header.numero)))return;
+    out.push({fecha:x.header.fecha,dds:x.header.dds,numero:x.header.numero||'por enviar',m:metricas(sumasLineas(x.lines),promedioEst(x))})})}catch(e){}
+  out.push({fecha:h.fecha,dds:h.dds,numero:h.numero||'actual',actual:true,m:metricas(sumasLineas(s.lines),promedioEst(s))});
+  return out.filter(p=>p.fecha).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+}
+async function bajarHistorial(s){
+  const h=s.header;if(!navigator.onLine||!h.ciclo||!h.finca||!h.lote)return false;
+  try{const base=(await kvGet('worker_url',DEFAULT_WORKER_URL)).replace(/\/recuentos\/?$/,'');
+    const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),8000);
+    const r=await fetch(`${base}/madurez/historial?ciclo=${h.ciclo}&finca=${h.finca}&lote=${h.lote}`,{signal:ctl.signal});clearTimeout(t);
+    if(!r.ok)return false;const d=await r.json();s.historial=d.reportes||[];s.historialAt=new Date().toISOString();await idbPut(s);return true}catch(e){return false}
+}
+/** Lectura de la tendencia: compara la evaluación actual con la anterior (madurez = % Negra + Café). */
+function lecturaTendencia(pts){
+  const act=pts.find(p=>p.actual),ant=pts.filter(p=>!p.actual&&p.fecha<=act.fecha).pop();
+  if(!ant)return{clase:'',icono:'ℹ️',texto:'Primera evaluación de esta siembra: queda como punto de partida para ver la tendencia en las próximas.'};
+  const dias=Math.round((new Date(act.fecha+'T00:00:00')-new Date(ant.fecha+'T00:00:00'))/86400000)||0;
+  const dM=(act.m.pNegCaf-ant.m.pNegCaf)*100,dI=(act.m.pAmaBla-ant.m.pAmaBla)*100,ritmo=dias>0?dM/dias:null;
+  const cuando=dias>0?`en ${dias} día${dias===1?'':'s'} (desde el ${fmtFecha(ant.fecha)})`:'el mismo día';
+  const base=`% Negra+Café pasó de ${pct(ant.m.pNegCaf)} a ${pct(act.m.pNegCaf)} (${dM>=0?'+':''}${(Math.round(dM*10)/10)} pts) ${cuando}${ritmo!==null?` · ${ritmo>=0?'+':''}${(Math.round(ritmo*10)/10)} pts/día`:''}. % Amarillo+Blanco: ${pct(ant.m.pAmaBla)} → ${pct(act.m.pAmaBla)}.`;
+  if(dM>=1)return{clase:'',icono:'✅',texto:'Está madurando. '+base};
+  if(dM<=-1)return{clase:'aviso',icono:'⚠️',texto:'La madurez bajó respecto a la evaluación anterior (revisar muestreo o clima). '+base};
+  return{clase:'aviso',icono:'⏸️',texto:'Sin avance de madurez desde la evaluación anterior. '+base};
+}
+const SERIES=[['pNegCaf','% Negra + Café','#5a3418'],['pCafNar','% Café + Naranja','#e8892b'],['pAmaBla','% Amarillo + Blanco','#c9a400']];
+function graficoSVG(pts){
+  const W=330,H=170,L=34,R=10,T=10,B=34,pw=W-L-R,ph=H-T-B,t=pts.map(p=>new Date(p.fecha+'T00:00:00').getTime()),t0=Math.min(...t),t1=Math.max(...t);
+  const X=i=>L+(t1===t0?pw/2:(t[i]-t0)/(t1-t0)*pw),Y=v=>T+(1-v)*ph;
+  let g=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">`;
+  [0,.25,.5,.75,1].forEach(v=>{g+=`<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="#d6dddc" stroke-width=".6"/><text x="${L-4}" y="${Y(v)+3}" font-size="8" text-anchor="end" fill="#70837c">${v*100}%</text>`});
+  SERIES.forEach(([k,,c])=>{g+=`<polyline fill="none" stroke="${c}" stroke-width="2" points="${pts.map((p,i)=>X(i)+','+Y(p.m[k])).join(' ')}"/>`;
+    pts.forEach((p,i)=>{g+=`<circle cx="${X(i)}" cy="${Y(p.m[k])}" r="${p.actual?4.2:2.8}" fill="${p.actual?c:'#fff'}" stroke="${c}" stroke-width="1.6"/>`})});
+  pts.forEach((p,i)=>{g+=`<text x="${X(i)}" y="${H-20}" font-size="8" text-anchor="middle" fill="#22332f" font-weight="${p.actual?700:400}">${fmtFecha(p.fecha)}</text><text x="${X(i)}" y="${H-10}" font-size="7.5" text-anchor="middle" fill="#70837c">${p.dds?p.dds+' DDS':''}</text>`});
+  return g+'</svg>';
+}
+async function pintarTendencia(){
+  const c=$('rTend');if(!c||!sesion)return;
+  if(!sesion.historial&&navigator.onLine&&!pintarTendencia._bajando){pintarTendencia._bajando=true;await bajarHistorial(sesion);pintarTendencia._bajando=false}
+  const pts=await puntosTendencia(sesion),lec=lecturaTendencia(pts);
+  const leyenda='<div class="leyenda" style="margin:4px 0 8px">'+SERIES.map(([,n,col])=>`<span><i style="background:${col}"></i>${n}</span>`).join('')+'</div>';
+  const filas=pts.map(p=>`<tr class="${p.actual?'':''}"><td>${fmtFecha(p.fecha)}${p.actual?' (hoy)':''}</td><td>${p.dds||'—'}</td><td>${pct(p.m.pNegCaf)}</td><td>${pct(p.m.pCafNar)}</td><td>${pct(p.m.pAmaBla)}</td><td>${f2(p.m.est)}</td></tr>`).join('');
+  c.innerHTML=`<div class="${lec.clase||'aviso'}" style="${lec.clase?'':'background:#e8f5ec;border-color:#3c8c61;color:#1d6b3b'}">${lec.icono} ${lec.texto}</div>${pts.length>1?graficoSVG(pts)+leyenda:''}
+    <table class="res"><thead><tr><th>Fecha</th><th>DDS</th><th>% Neg+Café</th><th>% Café+Nar</th><th>% Ama+Bla</th><th>QQ/mz</th></tr></thead><tbody>${filas}</tbody></table>
+    ${navigator.onLine||sesion.historial?'':'<p class="sub">Sin señal: se comparan solo las evaluaciones guardadas en este teléfono.</p>'}`;
+}
 function promedioEst(s){const v=s.lines.map(m=>calcMuestra(m).estQQ).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0}
 
 /* ============ SESIÓN ============ */
@@ -710,6 +766,7 @@ async function iniciarMuestreo(){
   if(!h.fecha)falta.push('Fecha'); if(!h.company)falta.push('Compañía'); if(!h.ciclo)falta.push('Ciclo'); if(!h.finca)falta.push('Finca'); if(!h.lote)falta.push('Lote'); if(!h.siembra)falta.push('Siembra'); if(h.dds===''||h.dds==null||isNaN(h.dds))falta.push('DDS');
   if(falta.length){toast('Completa: '+falta.join(', '),true);return}
   await persistir(); renderMuestra(); ir('screen-muestra');
+  bajarHistorial(sesion);
 }
 
 /* ============ MUESTRAS ============ */
@@ -816,11 +873,11 @@ function problemas(){
 function renderResumen(){
   const h=sesion.header; $('rTitulo').textContent=h.numero?`Reporte Nº ${h.numero}`:'Reporte (Nº se asigna al enviar)';
   $('rSub').textContent=`${h.fecha} · ${nombre(FINCAS,h.finca)||''} · ${nombre(LOTES,h.lote)||''} · ${nombre(CICLOS,h.ciclo)||''} · ${h.variedad_nombre||'sin variedad'} · ${h.dds} DDS`;
-  let rows='';sesion.lines.forEach((m,i)=>{const r=calcMuestra(m);rows+=`<tr class="${r.colorOk?'':'malo'}"><td>${i+1}. ${m.ubicacion||'—'} ${m.lat!=null?'📍':''}${(m.fotos||[]).length?'📷'+m.fotos.length:''}</td><td>${r.totalCap}</td><td>${pct(r.pSana)}</td><td>${pct(r.pNegCaf)}</td><td>${f2(r.estQQ)}</td></tr>`});
-  $('rTabla').innerHTML=`<table class="res"><thead><tr><th>Muestra</th><th>Total cáps.</th><th>% Sanas</th><th>% Neg+Café</th><th>qq/mz</th></tr></thead><tbody>${rows}</tbody></table>`;
+  let rows='';sesion.lines.forEach((m,i)=>{const r=calcMuestra(m);rows+=`<tr class="${r.colorOk?'':'malo'}"><td>${i+1}. ${m.ubicacion||'—'} ${m.lat!=null?'📍':''}${(m.fotos||[]).length?'📷'+m.fotos.length:''}</td><td><b>${f2(r.estQQ)}</b></td><td>${r.totalCap}</td><td>${n0(m.sana)}</td><td>${pct(r.pSana)}</td><td>${pct(r.pPod)}</td><td>${pct(r.pGer)}</td><td>${pct(r.pAmaBla)}</td><td>${pct(r.pCafNar)}</td><td>${pct(r.pNegCaf)}</td></tr>`});
+  $('rTabla').innerHTML=`<div style="overflow-x:auto;margin:0 -4px"><table class="res" style="min-width:560px"><thead><tr><th>Muestra</th><th>QQ estimados</th><th>Cap. totales</th><th>Cap. sanas</th><th>% Sanas</th><th>% Podridas</th><th>% Germ.</th><th>% Amarillo y Blanco</th><th>% Café + Naranja</th><th>% Negra + Café</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   $('rEst').textContent=f2(promedioEst(sesion));
   const p=problemas(); $('rAvisos').innerHTML=p.length?`<div class="aviso rojo"><b>Revisa antes de enviar:</b><br>${p.join('<br>')}</div>`:'';
-  actualizarHintPDF(); ir('screen-resumen'); $('btnEnviar').style.display=esSoloLectura()?'none':'';
+  actualizarHintPDF(); ir('screen-resumen'); pintarTendencia(); $('btnEnviar').style.display=esSoloLectura()?'none':'';
 }
 async function verResumen(){leerMuestra();await persistir();renderResumen()}
 function actualizarHintPDF(){const h=$('pdfHint'),ok=sesion.status==='synced';
@@ -828,23 +885,81 @@ function actualizarHintPDF(){const h=$('pdfHint'),ok=sesion.status==='synced';
   h.style.color=ok?'var(--verde)':'var(--texto-suave)';$('btnYa').style.display='none'}
 
 /* ============ PDF ============ */
+function blobADataURL(b){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(b)})}
+async function fotoParaPDF(blob){   // reduce a 900px para que el PDF no pese demasiado
+  const url=await blobADataURL(blob);
+  return new Promise(res=>{const im=new Image();im.onload=()=>{const k=Math.min(1,900/im.width),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+    c.getContext('2d').drawImage(im,0,0,c.width,c.height);res({data:c.toDataURL('image/jpeg',0.62),w:c.width,h:c.height})};im.onerror=()=>res(null);im.src=url});
+}
 async function construirPDF(s){
-  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'letter',orientation:'landscape'}),h=s.header,W=doc.internal.pageSize.getWidth();
-  doc.setFillColor(28,60,56);doc.rect(0,0,W,16,'F');doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(13);
-  doc.text('Hoja de Madurez y Estimación de Cosecha',10,10.5);doc.setFontSize(10);doc.text(h.numero?`Nº ${h.numero}`:'Nº por asignar',W-10,10.5,{align:'right'});
-  doc.setTextColor(34,51,47);doc.setFont('helvetica','normal');doc.setFontSize(9.5);
-  const sb=SIEMBRAS.find(x=>x.id===h.siembra);
-  const info=[['Compañía',nombre(COMPANIAS,h.company)||'—'],['Siembra',sb?sb.nombre:'—'],['Fecha',h.fecha],['Ciclo',nombre(CICLOS,h.ciclo)||''],['Finca',nombre(FINCAS,h.finca)||''],['Lote',nombre(LOTES,h.lote)||''],['Variedad',h.variedad_nombre||'—'],['DDS',String(h.dds)]];
-  info.forEach(([k,v],i)=>{const x=10+(i%4)*68,y=24+Math.floor(i/4)*6;doc.setFont('helvetica','bold');doc.text(k+':',x,y);doc.setFont('helvetica','normal');doc.text(String(v),x+20,y)});
-  const head=[['Muestra / ubicación','Plantas','Sanas','Podr.','Germ.','Total','% Sanas','% Podr.','% Germ.','Neg.','Café','Nar.','Amar.','Blanca','% Neg','% Café','% Nar','% Ama','% Bla','% Neg+Caf','% Caf+Nar','% Am+Bl','Sem/lb','qq/mz']];
-  const body=s.lines.map((m,i)=>{const r=calcMuestra(m);return[`${i+1}. ${m.ubicacion||''}`,m.plantas||0,n0(m.sana),n0(m.podrida),n0(m.germinada),r.totalCap,pct(r.pSana),pct(r.pPod),pct(r.pGer),n0(m.negras),n0(m.cafe),n0(m.naranja),n0(m.amarilla),n0(m.blanca),pct(r.pNeg),pct(r.pCaf),pct(r.pNar),pct(r.pAma),pct(r.pBla),pct(r.pNegCaf),pct(r.pCafNar),pct(r.pAmaBla),m.semillas||0,f2(r.estQQ)]});
-  body.push([{content:'Promedio de estimación del reporte (qq/mz)',colSpan:23,styles:{halign:'right',fontStyle:'bold'}},{content:f2(promedioEst(s)),styles:{fontStyle:'bold'}}]);
-  doc.autoTable({startY:40,head,body,theme:'grid',styles:{fontSize:6.3,cellPadding:1.1,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:6},columnStyles:{0:{halign:'left',cellWidth:30}},margin:{left:6,right:6}});
-  let y=doc.lastAutoTable.finalY+5;doc.setFontSize(7);doc.setTextColor(91,95,82);
-  s.lines.forEach((m,i)=>{if(y>196){doc.addPage();y=14}
-    doc.text(`Muestra ${i+1} (${m.ubicacion||''}): ${m.lat!=null?Number(m.lat).toFixed(6)+', '+Number(m.lon).toFixed(6)+' (±'+Math.round(m.acc||0)+' m)':'sin GPS'} · ${(m.fotos||[]).length} foto(s)`,10,y);y+=4});
-  y+=2;
-  doc.text(`Estimación = (cápsulas sanas ÷ semillas por libra) × ${FACTOR_QQ_MZN} ÷ 100. Los % de color se calculan sobre las cápsulas sanas. Generado por la app de campo v${APP_VERSION}.`,10,y);
+  const {jsPDF}=window.jspdf, doc=new jsPDF({unit:'mm',format:'letter',orientation:'portrait'}),h=s.header,W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),M=10;
+  const pts=await puntosTendencia(s),lec=lecturaTendencia(pts),sb=SIEMBRAS.find(x=>x.id===h.siembra);
+  const tot=metricas(sumasLineas(s.lines),promedioEst(s));
+  const verde=[28,60,56];let y=0;
+  const titulo=(t)=>{if(y>H-40){doc.addPage();y=14}doc.setFont('helvetica','bold');doc.setFontSize(10.5);doc.setTextColor(...verde);doc.text(t,M,y);y+=2;doc.setDrawColor(60,140,97);doc.line(M,y,W-M,y);y+=5};
+  // encabezado
+  doc.setFillColor(...verde);doc.rect(0,0,W,18,'F');doc.setTextColor(255);doc.setFont('helvetica','bold');doc.setFontSize(14);
+  doc.text('Madurez y Estimación de Cosecha',M,11.5);doc.setFontSize(11);doc.text(h.numero?`Nº ${h.numero}`:'Nº por asignar',W-M,11.5,{align:'right'});
+  doc.setTextColor(34,51,47);doc.setFontSize(9);
+  const info=[['Compañía',nombre(COMPANIAS,h.company)||'—'],['Ciclo',nombre(CICLOS,h.ciclo)||''],['Finca',nombre(FINCAS,h.finca)||''],['Lote',nombre(LOTES,h.lote)||''],['Siembra',sb?`${sb.nombre} (${sb.fecha||''})`:'—'],['Variedad',h.variedad_nombre||'—'],['Fecha',h.fecha],['DDS',String(h.dds)]];
+  info.forEach(([k,v],i)=>{const x=M+(i%2)*98,yy=25+Math.floor(i/2)*5.6;doc.setFont('helvetica','bold');doc.text(k+':',x,yy);doc.setFont('helvetica','normal');doc.text(String(v),x+22,yy)});
+  y=25+4*5.6+4;
+  // 1) resumen por muestra
+  titulo('Resumen por muestra');
+  const fila=(nom,r,sanas,cap,est)=>[nom,f2(est),cap,sanas,pct(r.pSana),pct(r.pPod),pct(r.pGer),pct(r.pAmaBla),pct(r.pCafNar),pct(r.pNegCaf)];
+  const body=s.lines.map((m,i)=>{const c=calcMuestra(m);return fila(`${i+1}. ${m.ubicacion||''}`,c,n0(m.sana),c.totalCap,c.estQQ)});
+  body.push(fila('REPORTE (promedio)',tot,tot.sana,tot.cap,tot.est).map(c=>({content:String(c),styles:{fontStyle:'bold',fillColor:[226,238,231]}})));
+  doc.autoTable({startY:y,head:[['Muestra','QQ estimados','Cap. totales','Cap. sanas','% Sanas','% Podridas','% Germinada','% Amarillo y Blanco','% Café + Naranja','% Negra + Café']],body,theme:'grid',
+    styles:{fontSize:7.5,cellPadding:1.5,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},columnStyles:{0:{halign:'left',cellWidth:34}},margin:{left:M,right:M}});
+  y=doc.lastAutoTable.finalY+7;
+  // 2) tendencia
+  titulo('Tendencia de madurez');
+  doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(34,51,47);
+  const lin=doc.splitTextToSize(lec.texto.replace(/→/g,'a'),W-2*M);doc.text(lin,M,y);y+=lin.length*4+2;
+  if(pts.length>1){
+    const gx=M+10,gy=y,gw=W-2*M-14,gh=48,t=pts.map(p=>new Date(p.fecha+'T00:00:00').getTime()),t0=Math.min(...t),t1=Math.max(...t);
+    const X=i=>gx+(t1===t0?gw/2:(t[i]-t0)/(t1-t0)*gw),Y=v=>gy+(1-v)*gh;
+    doc.setFontSize(6.5);doc.setDrawColor(214,221,220);doc.setLineWidth(.15);
+    [0,.25,.5,.75,1].forEach(v=>{doc.line(gx,Y(v),gx+gw,Y(v));doc.setTextColor(112,131,124);doc.text(`${v*100}%`,gx-1.5,Y(v)+1,{align:'right'})});
+    SERIES.forEach(([k,,col])=>{const c=[parseInt(col.slice(1,3),16),parseInt(col.slice(3,5),16),parseInt(col.slice(5,7),16)];doc.setDrawColor(...c);doc.setFillColor(...c);doc.setLineWidth(.6);
+      for(let i=1;i<pts.length;i++)doc.line(X(i-1),Y(pts[i-1].m[k]),X(i),Y(pts[i].m[k]));
+      pts.forEach((p,i)=>doc.circle(X(i),Y(p.m[k]),p.actual?1.3:.8,p.actual?'F':'S'))});
+    doc.setTextColor(34,51,47);pts.forEach((p,i)=>{doc.text(fmtFecha(p.fecha),X(i),gy+gh+4,{align:'center'});doc.setTextColor(112,131,124);doc.text(p.dds?`${p.dds} DDS`:'',X(i),gy+gh+7.5,{align:'center'});doc.setTextColor(34,51,47)});
+    y=gy+gh+11;let lx=M;SERIES.forEach(([,n,col])=>{doc.setFillColor(parseInt(col.slice(1,3),16),parseInt(col.slice(3,5),16),parseInt(col.slice(5,7),16));doc.rect(lx,y-2.2,3,3,'F');doc.setTextColor(34,51,47);doc.text(n,lx+4.5,y+.3);lx+=44});y+=5;
+  }
+  doc.autoTable({startY:y,head:[['Fecha','Nº','DDS','% Negra + Café','% Café + Naranja','% Amarillo y Blanco','QQ estimados']],
+    body:pts.map(p=>[fmtFecha(p.fecha)+(p.actual?' (este reporte)':''),p.numero,p.dds||'—',pct(p.m.pNegCaf),pct(p.m.pCafNar),pct(p.m.pAmaBla),f2(p.m.est)]),
+    theme:'grid',styles:{fontSize:7.5,cellPadding:1.4,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},margin:{left:M,right:M}});
+  y=doc.lastAutoTable.finalY+7;
+  // 3) detalle del conteo
+  titulo('Detalle del conteo de cápsulas');
+  doc.autoTable({startY:y,head:[['Muestra','Plantas','Sanas','Podr.','Germ.','Negra','Café','Naranja','Amarilla','Blanca','Sem/lb']],
+    body:s.lines.map((m,i)=>[`${i+1}. ${m.ubicacion||''}`,m.plantas||0,n0(m.sana),n0(m.podrida),n0(m.germinada),n0(m.negras),n0(m.cafe),n0(m.naranja),n0(m.amarilla),n0(m.blanca),m.semillas||0]),
+    theme:'grid',styles:{fontSize:7.5,cellPadding:1.4,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},columnStyles:{0:{halign:'left',cellWidth:38}},margin:{left:M,right:M}});
+  y=doc.lastAutoTable.finalY+7;
+  // 4) ubicación y fotos
+  titulo('Ubicación y fotos de las muestras');
+  for(let i=0;i<s.lines.length;i++){const m=s.lines[i];
+    const fotos=[];for(const f of (m.fotos||[])){const r=await fotoParaPDF(f.blob);if(r)fotos.push(r)}
+    const cw=(W-2*M-8)/3,hPrimera=fotos.length?Math.min(cw*fotos[0].h/fotos[0].w,70):6;
+    if(y+12+hPrimera>H-12){doc.addPage();y=14}      // el título nunca queda separado de su primera foto
+    doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(34,51,47);doc.text(`Muestra ${i+1} — ${m.ubicacion||''}`,M,y);y+=4.5;
+    doc.setFont('helvetica','normal');doc.setFontSize(8);
+    if(m.lat!=null){const txt=`GPS: ${Number(m.lat).toFixed(6)}, ${Number(m.lon).toFixed(6)} (±${Math.round(m.acc||0)} m)`;doc.text(txt,M,y);
+      doc.setTextColor(30,100,200);doc.textWithLink('Ver en el mapa',M+doc.getTextWidth(txt)+3,y,{url:`https://www.google.com/maps?q=${m.lat},${m.lon}`});doc.setTextColor(34,51,47)}
+    else doc.text('GPS: sin ubicación',M,y);
+    y+=3.5;
+    if(!fotos.length){doc.text('Sin fotos',M,y+2);y+=7;continue}
+    let col=0,filaH=0,x=M;
+    for(const f of fotos){const ph=Math.min(cw*f.h/f.w,70);
+      if(col===0){if(y+ph>H-12){doc.addPage();y=14}filaH=0}
+      doc.addImage(f.data,'JPEG',x,y,cw,ph);filaH=Math.max(filaH,ph);col++;x+=cw+4;
+      if(col===3){y+=filaH+4;col=0;x=M}}
+    if(col>0)y+=filaH+4;
+    y+=2}
+  // pie con número de página
+  const n=doc.internal.getNumberOfPages();doc.setFontSize(7);doc.setTextColor(112,131,124);
+  for(let p=1;p<=n;p++){doc.setPage(p);doc.text(`Estimación = (cápsulas sanas ÷ semillas por libra) × ${FACTOR_QQ_MZN} ÷ 100 · % de color sobre cápsulas sanas · app v${APP_VERSION}`,M,H-6);doc.text(`${p}/${n}`,W-M,H-6,{align:'right'})}
   return {doc,folio:`Madurez_${h.numero||'borrador'}`};
 }
 async function pdfBlob(){const {doc,folio}=await construirPDF(sesion);return{blob:doc.output('blob'),folio}}
