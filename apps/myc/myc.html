@@ -80,19 +80,17 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
   <!-- MUESTRA -->
   <section id="screen-muestra" class="screen">
     <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center"><b id="mLabel">Muestra 1 de 1</b><span class="sub" id="mLote" style="margin:0"></span></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><b id="mLabel">Muestra 1 de 1</b><button class="btn ghost sm" id="btnGPS" onclick="tomarGPS(false)" style="width:auto;margin:0;padding:7px 11px">📍 Tomar ubicación</button></div>
+      <div class="sub" id="mLote" style="margin:4px 0 0"></div>
+      <p class="sub" id="gpsInfo" style="margin:4px 0 0"></p>
       <div class="field" style="margin-top:10px"><label>Ubicación de la muestra *</label><input id="m_ubicacion" autocomplete="off" placeholder="Ej. costado norte" oninput="leerMuestra()"></div>
+      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="onFoto(event)">
+      <div id="fotoThumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:4px"></div>
+      <button class="btn ghost sm" id="btnFoto" onclick="$('fotoInput').click()" style="margin:0 0 12px">📷 Agregar foto</button>
       <div class="grid2">
         <div class="field"><label>Plantas (en metros)</label><input id="m_plantas" type="number" step="0.01" inputmode="decimal" oninput="leerMuestra()"></div>
         <div class="field"><label>Semillas por libra</label><input id="m_semillas" type="number" inputmode="numeric" oninput="leerMuestra()"></div>
       </div>
-    </div>
-    <div class="card"><h2>Ubicación y fotos de la muestra</h2>
-      <button class="btn ghost sm" id="btnGPS" onclick="tomarGPS(false)" style="margin-top:0">📍 Tomar ubicación GPS</button>
-      <p class="sub" id="gpsInfo" style="margin:8px 0 0"></p>
-      <input type="file" id="fotoInput" accept="image/*" capture="environment" style="display:none" onchange="onFoto(event)">
-      <div id="fotoThumbs" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px"></div>
-      <button class="btn ghost sm" id="btnFoto" onclick="$('fotoInput').click()">📷 Agregar foto</button>
     </div>
     <div class="card"><h2>Cápsulas</h2>
       <div class="grid3">
@@ -529,7 +527,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.10.30-5";
+const APP_VERSION = "2026.10.30-6";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -819,7 +817,7 @@ async function quitarMuestra(){
 function pintarGPS(){
   const m=sesion.lines[sesion.current],ro=esSoloLectura();
   $('gpsInfo').innerHTML=m.lat==null?'📍 Sin ubicación todavía':`📍 ${Number(m.lat).toFixed(6)}, ${Number(m.lon).toFixed(6)} · precisión ±${Math.round(m.acc||0)} m`;
-  $('btnGPS').style.display=ro?'none':''; $('btnGPS').textContent=m.lat==null?'📍 Tomar ubicación GPS':'📍 Volver a tomar ubicación';
+  $('btnGPS').style.display=ro?'none':''; $('btnGPS').textContent=m.lat==null?'📍 Tomar ubicación':'📍 Repetir ubicación';
 }
 let gpsEnCurso=false;
 function tomarGPS(auto){
