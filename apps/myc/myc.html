@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Madurez y Estimación · Infoagro</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="myc-manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="myc-icon-192.png">
+<link rel="apple-touch-icon" href="myc-apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Madurez">
@@ -1097,15 +1097,15 @@ async function diagnosticoInstalacion(){
   ok(!/FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)|Telegram/i.test(ua),'Se abrió en un navegador normal','Parece un navegador interno (WhatsApp/Facebook u otra app). Copia el enlace y ábrelo en Chrome (Android) o Safari (iPhone).');
   ok(!esStandalone(),'La app aún no está instalada','Ya está instalada o abierta como app: búscala en la pantalla de inicio.');
   try{
-    const r=await fetch('manifest.json',{cache:'no-store'});ok(r.ok,'manifest.json se descarga (código '+r.status+')','Sube manifest.json a la MISMA carpeta que index.html.');
+    const murl=document.querySelector('link[rel=manifest]').href;const r=await fetch(murl,{cache:'no-store'});ok(r.ok,'myc-manifest.json se descarga (código '+r.status+')','Sube myc-manifest.json a la MISMA carpeta que myc.html.');
     if(r.ok){const m=await r.json();ok(!!(m.name||m.short_name),'El manifiesto tiene nombre');ok(!!m.start_url&&m.display==='standalone','start_url y display correctos');
       let t192=false,t512=false;
-      for(const ic of (m.icons||[])){let b=false,tipo='';try{const x=await fetch(ic.src,{cache:'no-store'});b=x.ok;tipo=x.headers.get('content-type')||''}catch(e){}
+      for(const ic of (m.icons||[])){let b=false,tipo='';try{const x=await fetch(new URL(ic.src,murl),{cache:'no-store'});b=x.ok;tipo=x.headers.get('content-type')||''}catch(e){}
         ok(b&&/png/i.test(tipo),`Icono ${ic.src} (${ic.sizes})`,'Falta subir este archivo PNG a la misma carpeta (o se subió con otro nombre).');
         if(b&&/png/i.test(tipo)){if(/192/.test(ic.sizes))t192=true;if(/512/.test(ic.sizes))t512=true}}
       ok(t192&&t512,'Hay iconos PNG de 192 y 512','Chrome exige los dos tamaños para ofrecer la instalación.')}
-  }catch(e){ok(false,'No se pudo leer manifest.json','Revisa que el archivo exista en la carpeta de la app. '+e.message)}
-  try{const reg=await navigator.serviceWorker.getRegistration();ok(!!(reg&&(reg.active||reg.installing||reg.waiting)),'Service worker registrado (sw.js)','Sube sw.js a la misma carpeta y recarga la página dos veces.')}catch(e){ok(false,'Service worker no disponible','Este navegador no lo permite en esta dirección.')}
+  }catch(e){ok(false,'No se pudo leer myc-manifest.json','Revisa que el archivo exista en la carpeta de la app. '+e.message)}
+  try{const reg=await navigator.serviceWorker.getRegistration();ok(!!(reg&&(reg.active||reg.installing||reg.waiting)),'Service worker registrado (myc-sw.js)','Sube myc-sw.js a la misma carpeta y recarga la página dos veces.')}catch(e){ok(false,'Service worker no disponible','Este navegador no lo permite en esta dirección.')}
   ok(!!promptInstalar,'El navegador ofreció instalar',ios?'En iPhone no hay botón: Compartir → Añadir a pantalla de inicio.':'Si todo lo demás está ✅, usa el menú ⋮ de Chrome → Instalar app. Si no aparece, cierra y vuelve a abrir Chrome (a veces tarda en reconocer la app).');
   L.push('\nNavegador: '+ua.slice(0,120));
   out.textContent=L.join('\n');
@@ -1123,7 +1123,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&navigator
 (async()=>{
   actualizarOnline(); actualizarInstalar(); await cargarCatalogosLocal(); await renderHome();
   refrescarCatalogos().then(renderHome); sincronizarTodo(false); setInterval(()=>sincronizarTodo(false),5*60*1000);
-  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('myc-sw.js',{scope:location.pathname}).catch(()=>{});
 })();
 </script>
 </body>
