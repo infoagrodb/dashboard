@@ -538,7 +538,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.11.03-2";
+const APP_VERSION = "2026.11.03-3";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -567,6 +567,9 @@ async function kvRecuentos(keys){
     db.close(); return out;
   }catch(e){return {}}
 }
+/* Fechas SIEMPRE en hora local del teléfono (toISOString() usa UTC: en Nicaragua, después de las 6 pm da el día siguiente). */
+const hoyLocal=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const diasEntre=(a,b)=>{const p=x=>{const [y,m,d]=String(x).slice(0,10).split('-').map(Number);return Date.UTC(y,m-1,d)};return Math.round((p(b)-p(a))/86400000)};
 function uuid(){return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0,v=c==='x'?r:(r&0x3|0x8);return v.toString(16)})}
 function toast(m,err){const t=document.getElementById('toast');t.textContent=m;t.className='toast show'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),2800)}
 const $=id=>document.getElementById(id);
@@ -617,7 +620,7 @@ async function bajarHistorial(s){
 function lecturaTendencia(pts){
   const act=pts.find(p=>p.actual),ant=pts.filter(p=>!p.actual&&p.fecha<=act.fecha).pop();
   if(!ant)return{clase:'',icono:'ℹ️',texto:'Primera evaluación de esta siembra: queda como punto de partida para ver la tendencia en las próximas.'};
-  const dias=Math.round((new Date(act.fecha+'T00:00:00')-new Date(ant.fecha+'T00:00:00'))/86400000)||0;
+  const dias=diasEntre(ant.fecha,act.fecha)||0;
   const dM=(act.m.pNegCaf-ant.m.pNegCaf)*100,dI=(act.m.pAmaBla-ant.m.pAmaBla)*100,ritmo=dias>0?dM/dias:null;
   const cuando=dias>0?`en ${dias} día${dias===1?'':'s'} (desde el ${fmtFecha(ant.fecha)})`:'el mismo día';
   const base=`% Negra+Café pasó de ${pct(ant.m.pNegCaf)} a ${pct(act.m.pNegCaf)} (${dM>=0?'+':''}${(Math.round(dM*10)/10)} pts) ${cuando}${ritmo!==null?` · ${ritmo>=0?'+':''}${(Math.round(ritmo*10)/10)} pts/día`:''}. % Amarillo+Blanco: ${pct(ant.m.pAmaBla)} → ${pct(act.m.pAmaBla)}.`;
@@ -654,7 +657,7 @@ function nuevaMuestra(semDefault){return {lat:null,lon:null,acc:null,fotos:[],ub
 async function nuevoReporte(){
   const sem=await kvGet('ult_semillas',300);
   sesion={localId:uuid(),status:'draft',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),current:0,pdfCompartido:false,
-    header:{numero:'',temporal:genTemporal(),siembra:null,company:null,fecha:new Date().toISOString().slice(0,10),ciclo:null,finca:null,lote:null,variedad:null,dds:'',company:null},lines:[nuevaMuestra(sem)]};
+    header:{numero:'',temporal:genTemporal(),siembra:null,company:null,fecha:hoyLocal(),ciclo:null,finca:null,lote:null,variedad:null,dds:'',company:null},lines:[nuevaMuestra(sem)]};
   await poblarForm(); ir('screen-form');
 }
 /** Nº temporal: lo crea el teléfono al empezar el reporte (sirve aunque no haya señal). Odoo asigna el Nº oficial al enviar. */
@@ -714,7 +717,12 @@ function opciones(sel,arr,fijoId,tipoArr){
 }
 let SIEMBRAS=[];
 const porNombre=(a,b)=>a.nombre.localeCompare(b.nombre);
-function siembrasDe(ciclo,finca,lote){return SIEMBRAS.filter(x=>x.ciclo===ciclo&&x.finca===finca&&x.lote===lote).sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''))}
+function siembrasDe(ciclo,finca,lote){return SIEMBRAS.filter(x=>x.ciclo===ciclo&&x.finca===finca&&x.lote===lote).sort((a,b)=>((a.tipo==='Resiembra')-(b.tipo==='Resiembra'))||(a.fecha||'').localeCompare(b.fecha||''))}
+/** Fecha base de los DDS = primera siembra del lote en ese ciclo (igual que la app de Recuentos). Las resiembras no cuentan si hay siembra. */
+function fechaBaseDDS(ciclo,finca,lote){
+  const t=siembrasDe(ciclo,finca,lote).filter(x=>x.fecha),ini=t.filter(x=>x.tipo!=='Resiembra'),base=ini.length?ini:t;
+  if(!base.length)return null;const f=base.map(x=>x.fecha).sort();return{desde:f[0],hasta:f[f.length-1],n:base.length};
+}
 function cargarCompanias(){ opciones($('f_company'),[...COMPANIAS].sort(porNombre),seleccionFija?.company,COMPANIAS) }
 function cargarCiclos(){
   const comp=parseInt($('f_company').value)||null;
@@ -739,11 +747,12 @@ async function onFinca(){cargarLotes();await onLote()}
 async function onLote(){cargarSiembras();await onSiembra()}
 function siembraActual(){const id=parseInt($('f_siembra').value)||null;return SIEMBRAS.find(x=>x.id===id)||null}
 function recalcularDDS(){
-  const f=$('f_dds'), sb=siembraActual(); if(seleccionFija||!sb||!sb.fecha)return;
+  const f=$('f_dds'); if(seleccionFija)return;
+  const base=fechaBaseDDS(parseInt($('f_ciclo').value)||null,parseInt($('f_finca').value)||null,parseInt($('f_lote').value)||null); if(!base)return;
   if(f.value&&f.dataset.auto!=='true')return;                       // no pisar lo escrito a mano
-  const fecha=$('f_fecha').value||new Date().toISOString().slice(0,10);
-  const dias=Math.round((new Date(fecha+'T00:00:00')-new Date(sb.fecha+'T00:00:00'))/86400000);
-  if(dias>=0){f.value=dias;f.dataset.auto='true';$('ddsNota').textContent=`📅 Siembra ${sb.nombre} del ${sb.fecha} → ${dias} días a la fecha del reporte`}
+  const dias=diasEntre(base.desde,$('f_fecha').value||hoyLocal());
+  if(dias>=0){f.value=dias;f.dataset.auto='true';
+    $('ddsNota').textContent=`📅 Primera siembra del lote: ${base.desde} → ${dias} días al ${$('f_fecha').value||hoyLocal()}`+(base.hasta!==base.desde?` (el lote se sembró del ${base.desde} al ${base.hasta}; puedes ajustar el valor)`:'')}
 }
 function pintarVariedad(nombreVar){
   const sel=$('f_variedad'), nom=String(nombreVar||'').trim();
@@ -763,7 +772,7 @@ async function poblarForm(){
   seleccionFija={company:h.company,ciclo:h.ciclo,finca:h.finca,lote:h.lote,siembra:h.siembra};
   try{
     $('tmpNum').textContent=h.temporal||'';
-    $('f_fecha').value=h.fecha||new Date().toISOString().slice(0,10);
+    $('f_fecha').value=h.fecha||hoyLocal();
     cargarCompanias(); cargarCiclos(); cargarFincas(); cargarLotes(); cargarSiembras();
     pintarVariedad(h.variedad_nombre);
     $('f_dds').value=h.dds??''; $('f_dds').dataset.auto='false'; $('ddsNota').textContent='';
