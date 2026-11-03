@@ -63,6 +63,9 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
   <section id="screen-home" class="screen active">
     <button class="btn" onclick="nuevoReporte()">＋ Nuevo reporte de madurez</button>
     <button class="btn" id="btnInstalar" onclick="instalarApp()" style="display:none;background:var(--ambar);color:#22332F">📲 Instalar app en el teléfono</button>
+    <p class="sub" id="hintAndroid" style="display:none;text-align:center">📲 Si no aparece el botón, en Chrome toca el menú <b>⋮</b> y elige <b>Instalar app</b> (o <b>Añadir a pantalla de inicio</b>).</p>
+    <button class="btn ghost sm" id="btnDiag" onclick="diagnosticoInstalacion()" style="display:none">🔧 No me deja instalar: diagnóstico</button>
+    <pre id="diagOut" style="display:none;white-space:pre-wrap;font-size:.76rem;background:#fff;border:1px solid var(--borde);border-radius:10px;padding:10px;margin:8px 0;-webkit-user-select:text;user-select:text"></pre>
     <p class="sub" id="hintIOS" style="display:none;text-align:center">📲 Para instalar en iPhone: toca <b>Compartir</b> y luego <b>Añadir a pantalla de inicio</b>.</p>
     <button class="btn ghost sm" id="btnSync" onclick="sincronizarTodo(true)">⟳ Enviar pendientes a INFOAGRO</button>
     <div id="lista" style="margin-top:14px"></div>
@@ -535,7 +538,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.11.03-1";
+const APP_VERSION = "2026.11.03-2";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -1080,9 +1083,33 @@ function actualizarInstalar(){
   const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.MSStream, ya=esStandalone();
   $('btnInstalar').style.display=(!ya&&promptInstalar)?'':'none';
   $('hintIOS').style.display=(!ya&&ios&&!promptInstalar)?'':'none';
+  $('hintAndroid').style.display=(!ya&&!ios&&!promptInstalar)?'':'none';
+  $('btnDiag').style.display=(!ya&&!promptInstalar)?'':'none';
 }
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();promptInstalar=e;actualizarInstalar()});
 window.addEventListener('appinstalled',()=>{promptInstalar=null;actualizarInstalar();toast('App instalada ✔')});
+async function diagnosticoInstalacion(){
+  const out=$('diagOut'),L=[],ok=(b,t,mal)=>L.push((b?'✅ ':'❌ ')+t+(!b&&mal?'\n     → '+mal:''));
+  out.style.display='block';out.textContent='Revisando…';
+  const ua=navigator.userAgent,ios=/iphone|ipad|ipod/i.test(ua);
+  ok(location.protocol==='https:'||location.hostname==='localhost','Dirección segura (https)','La app debe abrirse con https://, no desde un archivo ni http://. Dirección actual: '+location.href);
+  ok(window.top===window,'La app no está dentro de otra página','Ábrela directamente en el navegador, no dentro de otra página.');
+  ok(!/FBAN|FBAV|Instagram|WhatsApp|Line\/|; wv\)|Telegram/i.test(ua),'Se abrió en un navegador normal','Parece un navegador interno (WhatsApp/Facebook u otra app). Copia el enlace y ábrelo en Chrome (Android) o Safari (iPhone).');
+  ok(!esStandalone(),'La app aún no está instalada','Ya está instalada o abierta como app: búscala en la pantalla de inicio.');
+  try{
+    const r=await fetch('manifest.json',{cache:'no-store'});ok(r.ok,'manifest.json se descarga (código '+r.status+')','Sube manifest.json a la MISMA carpeta que index.html.');
+    if(r.ok){const m=await r.json();ok(!!(m.name||m.short_name),'El manifiesto tiene nombre');ok(!!m.start_url&&m.display==='standalone','start_url y display correctos');
+      let t192=false,t512=false;
+      for(const ic of (m.icons||[])){let b=false,tipo='';try{const x=await fetch(ic.src,{cache:'no-store'});b=x.ok;tipo=x.headers.get('content-type')||''}catch(e){}
+        ok(b&&/png/i.test(tipo),`Icono ${ic.src} (${ic.sizes})`,'Falta subir este archivo PNG a la misma carpeta (o se subió con otro nombre).');
+        if(b&&/png/i.test(tipo)){if(/192/.test(ic.sizes))t192=true;if(/512/.test(ic.sizes))t512=true}}
+      ok(t192&&t512,'Hay iconos PNG de 192 y 512','Chrome exige los dos tamaños para ofrecer la instalación.')}
+  }catch(e){ok(false,'No se pudo leer manifest.json','Revisa que el archivo exista en la carpeta de la app. '+e.message)}
+  try{const reg=await navigator.serviceWorker.getRegistration();ok(!!(reg&&(reg.active||reg.installing||reg.waiting)),'Service worker registrado (sw.js)','Sube sw.js a la misma carpeta y recarga la página dos veces.')}catch(e){ok(false,'Service worker no disponible','Este navegador no lo permite en esta dirección.')}
+  ok(!!promptInstalar,'El navegador ofreció instalar',ios?'En iPhone no hay botón: Compartir → Añadir a pantalla de inicio.':'Si todo lo demás está ✅, usa el menú ⋮ de Chrome → Instalar app. Si no aparece, cierra y vuelve a abrir Chrome (a veces tarda en reconocer la app).');
+  L.push('\nNavegador: '+ua.slice(0,120));
+  out.textContent=L.join('\n');
+}
 async function instalarApp(){
   if(!promptInstalar)return;promptInstalar.prompt();
   try{await promptInstalar.userChoice}catch(e){} promptInstalar=null;actualizarInstalar();
