@@ -113,10 +113,12 @@
           no_cotiza: !!p.x_studio_no_cotiza, cantidad: p.x_studio_cantidad || '', precio_unitario: p.x_studio_precio_unitario || '',
           moneda: p.x_studio_moneda || 'USD', descuento_pct: p.x_studio_descuento_pct || '', aplica_iva: !!p.x_studio_aplica_iva,
           codigo_sac: p.x_studio_codigo_sac || '', marca: p.x_studio_marca || '', tiempo_entrega_dias: p.x_studio_tiempo_entrega_dias || '',
-          disponibilidad: p.x_studio_disponibilidad || '', garantia_meses: p.x_studio_garantia_meses || '',
+          disp_cant: p.x_studio_disponibilidad_dias == null ? '' : (p.x_studio_disponibilidad_dias >= 30 && p.x_studio_disponibilidad_dias % 30 === 0 ? p.x_studio_disponibilidad_dias / 30 : p.x_studio_disponibilidad_dias),
+          disp_unidad: p.x_studio_disponibilidad_dias >= 30 && p.x_studio_disponibilidad_dias % 30 === 0 ? 'meses' : 'dias',
+          garantia_meses: p.x_studio_garantia_meses || '',
           observacion: p.x_studio_observacion || ''
         } : { no_cotiza:false, cantidad: l.x_studio_cantidad || '', precio_unitario:'', moneda:'USD', descuento_pct:'', aplica_iva:true,
-              codigo_sac:'', marca:'', tiempo_entrega_dias:'', disponibilidad:'', garantia_meses:'', observacion:'' };
+              codigo_sac:'', marca:'', tiempo_entrega_dias:'', disp_cant:'', disp_unidad:'dias', garantia_meses:'', observacion:'' };
       });
       pintar();
     })
@@ -180,8 +182,8 @@
         + '<div class="campo"><label class="et">&nbsp;</label><label class="check"><input type="checkbox" data-f="aplica_iva"'+(r.aplica_iva?' checked':'')+disL+'> Aplica IVA (15%)</label></div>'
         + '</div>';
       h += '<div class="fila">'
-        + campo('Disponibilidad', '<select data-f="disponibilidad"'+disL+'><option value="">— Seleccione —</option>' + ['Inmediata','Sobre pedido','Importación'].map(function(k){
-            return '<option value="'+k+'"'+(r.disponibilidad===k?' selected':'')+'>'+(k==='Inmediata'?'Inmediata (en stock)':k)+'</option>'; }).join('') + '</select>')
+        + campo('Disponibilidad (tiempo) *', '<div style="display:flex;gap:6px"><input type="number" min="0" step="1" inputmode="numeric" data-f="disp_cant" value="'+esc(r.disp_cant)+'" placeholder="0 = en stock" style="flex:1"'+disL+'>'
+            + '<select data-f="disp_unidad" style="width:90px"'+disL+'><option value="dias"'+(r.disp_unidad!=='meses'?' selected':'')+'>días</option><option value="meses"'+(r.disp_unidad==='meses'?' selected':'')+'>meses</option></select></div>')
         + campo('Garantía (meses)', '<input type="number" min="0" step="1" inputmode="numeric" data-f="garantia_meses" value="'+esc(r.garantia_meses)+'" placeholder="0 = sin garantía"'+disL+'>')
         + '</div>';
       h += campo('Observación', '<input type="text" data-f="observacion" value="'+esc(r.observacion)+'" placeholder="Alternativa, condiciones de la garantía…"'+dis+'>');
@@ -290,6 +292,11 @@
     if (!declinar) {
       for (var i = 0; i < lineas.length; i++) {
         var l = lineas[i], r = estado.resp[l.id];
+        if (!r.no_cotiza && String(r.disp_cant).trim() === '') {
+          mensaje('err','Línea '+(i+1)+' ('+l.x_name+'): indique en cuánto tiempo tiene disponible el artículo (0 si está en stock).');
+          var bx = app.querySelector('[data-l="'+l.id+'"]'); if (bx) bx.scrollIntoView({behavior:'smooth',block:'center'});
+          return;
+        }
         if (!r.no_cotiza && (num(r.cantidad) <= 0 || num(r.precio_unitario) <= 0)) {
           mensaje('err','Línea '+(i+1)+' ('+l.x_name+'): indique cantidad y precio, o marque "No cotizo".');
           var box = app.querySelector('[data-l="'+l.id+'"]'); if (box) box.scrollIntoView({behavior:'smooth',block:'center'});
@@ -298,7 +305,8 @@
         respuestas.push({ linea_id:l.id, no_cotiza:!!r.no_cotiza, cantidad:num(r.cantidad), precio_unitario:num(r.precio_unitario),
           moneda:r.moneda, descuento_pct:num(r.descuento_pct), aplica_iva:!!r.aplica_iva, codigo_sac:r.codigo_sac,
           marca:r.marca, tiempo_entrega_dias:parseInt(r.tiempo_entrega_dias,10)||0,
-          disponibilidad:r.disponibilidad||'', garantia_meses:parseInt(r.garantia_meses,10)||0, observacion:r.observacion });
+          disponibilidad_dias: Math.max(0, parseInt(r.disp_cant,10)||0) * (r.disp_unidad === 'meses' ? 30 : 1),
+          garantia_meses:parseInt(r.garantia_meses,10)||0, observacion:r.observacion });
       }
       if (respuestas.every(function(x){ return x.no_cotiza; })) { mensaje('err','No cotizó ninguna línea. Si no va a cotizar, use el botón "No vamos a cotizar".'); return; }
     }
