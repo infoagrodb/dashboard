@@ -123,7 +123,7 @@ table.res tr.malo td{color:var(--rojo);font-weight:700}
       <div id="avisoColores"></div>
     </div>
     <div class="card"><h2>Resultados de esta muestra</h2><div class="calc" id="calcPanel"></div>
-      <div class="est"><div class="n" id="estN">0</div><div class="l">Estimación de rendimiento (qq/mz)</div></div>
+      <div class="est" style="display:none"><div class="n" id="estN">0</div><div class="l">Estimación de rendimiento (qq/mz)</div></div>
     </div>
     <div class="row"><button class="btn ghost" onclick="cambiarMuestra(-1)">← Anterior</button><button class="btn" id="btnSig" onclick="cambiarMuestra(1)">+ Agregar muestra</button></div>
     <button class="btn rojo sm" id="btnQuitar" onclick="quitarMuestra()" style="display:none">🗑 Quitar esta muestra</button>
@@ -538,7 +538,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.11.03-3";
+const APP_VERSION = "2026.11.11-2";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -597,7 +597,9 @@ const f2=v=>(Math.round(v*100)/100).toString();
 const CERO_SUMAS=()=>({sana:0,pod:0,ger:0,neg:0,caf:0,nar:0,ama:0,bla:0});
 function sumasLineas(lines){const t=CERO_SUMAS();lines.forEach(m=>{t.sana+=n0(m.sana);t.pod+=n0(m.podrida);t.ger+=n0(m.germinada);t.neg+=n0(m.negras);t.caf+=n0(m.cafe);t.nar+=n0(m.naranja);t.ama+=n0(m.amarilla);t.bla+=n0(m.blanca)});return t}
 function metricas(t,est){const cap=t.sana+t.pod+t.ger,d=(x,b)=>b>0?x/b:0;
-  return{cap,sana:t.sana,pSana:d(t.sana,cap),pPod:d(t.pod,cap),pGer:d(t.ger,cap),pNegCaf:d(t.neg+t.caf,t.sana),pCafNar:d(t.caf+t.nar,t.sana),pAmaBla:d(t.ama+t.bla,t.sana),est:est||0}}
+  return{cap,sana:t.sana,pSana:d(t.sana,cap),pPod:d(t.pod,cap),pGer:d(t.ger,cap),pNegCaf:d(t.neg+t.caf,t.sana),pCafNar:d(t.caf+t.nar,t.sana),pAmaBla:d(t.ama+t.bla,t.sana),pNeg:d(t.neg,t.sana),pCaf:d(t.caf,t.sana),pNar:d(t.nar,t.sana),pMad:d(t.neg+t.caf+t.nar,t.sana),est:est||0}}
+/** Estimado madurez = % Naranja + % Café + % Negra. Junto con % Amarillo y Blanco suma 100%: se ajusta el redondeo para que se vea exacto. */
+function parMadurez(m){const a=Math.round(m.pAmaBla*1000),ok=Math.abs((m.pAmaBla+m.pMad)-1)<0.002&&m.pAmaBla+m.pMad>0;return[(a/10)+'%',(ok?(1000-a)/10:Math.round(m.pMad*1000)/10)+'%']}
 function fmtFecha(f){const p=String(f||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:String(f||'')}
 /** Evaluaciones de la misma siembra (ciclo+finca+lote): las de Odoo, las del teléfono y la actual, ordenadas por fecha. */
 async function puntosTendencia(s){
@@ -621,14 +623,14 @@ function lecturaTendencia(pts){
   const act=pts.find(p=>p.actual),ant=pts.filter(p=>!p.actual&&p.fecha<=act.fecha).pop();
   if(!ant)return{clase:'',icono:'ℹ️',texto:'Primera evaluación de esta siembra: queda como punto de partida para ver la tendencia en las próximas.'};
   const dias=diasEntre(ant.fecha,act.fecha)||0;
-  const dM=(act.m.pNegCaf-ant.m.pNegCaf)*100,dI=(act.m.pAmaBla-ant.m.pAmaBla)*100,ritmo=dias>0?dM/dias:null;
+  const dM=(act.m.pMad-ant.m.pMad)*100,dI=(act.m.pAmaBla-ant.m.pAmaBla)*100,ritmo=dias>0?dM/dias:null;
   const cuando=dias>0?`en ${dias} día${dias===1?'':'s'} (desde el ${fmtFecha(ant.fecha)})`:'el mismo día';
-  const base=`% Negra+Café pasó de ${pct(ant.m.pNegCaf)} a ${pct(act.m.pNegCaf)} (${dM>=0?'+':''}${(Math.round(dM*10)/10)} pts) ${cuando}${ritmo!==null?` · ${ritmo>=0?'+':''}${(Math.round(ritmo*10)/10)} pts/día`:''}. % Amarillo+Blanco: ${pct(ant.m.pAmaBla)} → ${pct(act.m.pAmaBla)}.`;
+  const base=`Estimado madurez (Naranja+Café+Negra) pasó de ${parMadurez(ant.m)[1]} a ${parMadurez(act.m)[1]} (${dM>=0?'+':''}${(Math.round(dM*10)/10)} pts) ${cuando}${ritmo!==null?` · ${ritmo>=0?'+':''}${(Math.round(ritmo*10)/10)} pts/día`:''}. % Amarillo y Blanco: ${parMadurez(ant.m)[0]} → ${parMadurez(act.m)[0]}.`;
   if(dM>=1)return{clase:'',icono:'✅',texto:'Está madurando. '+base};
   if(dM<=-1)return{clase:'aviso',icono:'⚠️',texto:'La madurez bajó respecto a la evaluación anterior (revisar muestreo o clima). '+base};
   return{clase:'aviso',icono:'⏸️',texto:'Sin avance de madurez desde la evaluación anterior. '+base};
 }
-const SERIES=[['pNegCaf','% Negra + Café','#5a3418'],['pCafNar','% Café + Naranja','#e8892b'],['pAmaBla','% Amarillo + Blanco','#c9a400']];
+const SERIES=[['pAmaBla','% Amarillo y Blanco','#c9a400'],['pNar','% Naranja','#e8892b'],['pCaf','% Café','#8a5a2b'],['pNeg','% Negra','#2b2b2b'],['pMad','Estimado madurez (Nar+Café+Negra)','#3c8c61']];
 function graficoSVG(pts){
   const W=330,H=170,L=34,R=10,T=10,B=34,pw=W-L-R,ph=H-T-B,t=pts.map(p=>new Date(p.fecha+'T00:00:00').getTime()),t0=Math.min(...t),t1=Math.max(...t);
   const X=i=>L+(t1===t0?pw/2:(t[i]-t0)/(t1-t0)*pw),Y=v=>T+(1-v)*ph;
@@ -644,9 +646,9 @@ async function pintarTendencia(){
   if(!sesion.historial&&navigator.onLine&&!pintarTendencia._bajando){pintarTendencia._bajando=true;await bajarHistorial(sesion);pintarTendencia._bajando=false}
   const pts=await puntosTendencia(sesion),lec=lecturaTendencia(pts);
   const leyenda='<div class="leyenda" style="margin:4px 0 8px">'+SERIES.map(([,n,col])=>`<span><i style="background:${col}"></i>${n}</span>`).join('')+'</div>';
-  const filas=pts.map(p=>`<tr class="${p.actual?'':''}"><td>${fmtFecha(p.fecha)}${p.actual?' (hoy)':''}</td><td>${p.dds||'—'}</td><td>${pct(p.m.pNegCaf)}</td><td>${pct(p.m.pCafNar)}</td><td>${pct(p.m.pAmaBla)}</td><td>${f2(p.m.est)}</td></tr>`).join('');
+  const filas=pts.map(p=>`<tr class="${p.actual?'':''}"><td>${fmtFecha(p.fecha)}${p.actual?' (hoy)':''}</td><td>${p.dds||'—'}</td><td>${parMadurez(p.m)[0]}</td><td>${pct(p.m.pNar)}</td><td>${pct(p.m.pCaf)}</td><td>${pct(p.m.pNeg)}</td><td><b>${parMadurez(p.m)[1]}</b></td></tr>`).join('');
   c.innerHTML=`<div class="${lec.clase||'aviso'}" style="${lec.clase?'':'background:#e8f5ec;border-color:#3c8c61;color:#1d6b3b'}">${lec.icono} ${lec.texto}</div>${pts.length>1?graficoSVG(pts)+leyenda:''}
-    <table class="res"><thead><tr><th>Fecha</th><th>DDS</th><th>% Neg+Café</th><th>% Café+Nar</th><th>% Ama+Bla</th><th>QQ/mz</th></tr></thead><tbody>${filas}</tbody></table>
+    <table class="res"><thead><tr><th>Fecha</th><th>DDS</th><th>% Amarillo y Blanco</th><th>% Naranja</th><th>% Café</th><th>% Negra</th><th>Estimado madurez<br><span style="font-weight:400;font-size:.68rem">(% Naranja + Café + Negra)</span></th></tr></thead><tbody>${filas}</tbody></table>
     ${navigator.onLine||sesion.historial?'':'<p class="sub">Sin señal: se comparan solo las evaluaciones guardadas en este teléfono.</p>'}`;
 }
 function promedioEst(s){const v=s.lines.map(m=>calcMuestra(m).estQQ).filter(x=>x>0);return v.length?v.reduce((a,b)=>a+b,0)/v.length:0}
@@ -935,12 +937,13 @@ async function construirPDF(s){
   y=25+4*5.6+4;
   // 1) resumen por muestra
   titulo('Resumen por muestra');
-  const fila=(nom,r,sanas,cap,est)=>[nom,f2(est),cap,sanas,pct(r.pSana),pct(r.pPod),pct(r.pGer),pct(r.pAmaBla),pct(r.pCafNar),pct(r.pNegCaf)];
-  const body=s.lines.map((m,i)=>{const c=calcMuestra(m);return fila(`${i+1}. ${m.ubicacion||''}`,c,n0(m.sana),c.totalCap,c.estQQ)});
-  body.push(fila('REPORTE (promedio)',tot,tot.sana,tot.cap,tot.est).map(c=>({content:String(c),styles:{fontStyle:'bold',fillColor:[226,238,231]}})));
-  doc.autoTable({startY:y,head:[['Muestra','QQ estimados','Cap. totales','Cap. sanas','% Sanas','% Podridas','% Germinada','% Amarillo y Blanco','% Café + Naranja','% Negra + Café']],body,theme:'grid',
-    styles:{fontSize:7.5,cellPadding:1.5,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},columnStyles:{0:{halign:'left',cellWidth:34}},margin:{left:M,right:M}});
-  y=doc.lastAutoTable.finalY+7;
+  const fila=(nom,r,sanas,cap)=>{const [ab,em]=parMadurez(r);return[nom,cap,sanas,pct(r.pSana),pct(r.pPod),pct(r.pGer),ab,pct(r.pNar),pct(r.pCaf),pct(r.pNeg),em]};
+  const body=s.lines.map((m,i)=>{const c=calcMuestra(m);return fila(`${i+1}. ${m.ubicacion||''}`,{...c,pMad:c.pNeg+c.pCaf+c.pNar},n0(m.sana),c.totalCap)});
+  body.push(fila('REPORTE (promedio)',tot,tot.sana,tot.cap).map(c=>({content:String(c),styles:{fontStyle:'bold',fillColor:[226,238,231]}})));
+  doc.autoTable({startY:y,head:[['Muestra','Cap. totales','Cap. sanas','% Sanas','% Podridas','% Germinada','% Amarillo y Blanco','% Naranja','% Café','% Negra','Estimado madurez\n(% Naranja + Café + Negra)']],body,theme:'grid',
+    styles:{fontSize:7.5,cellPadding:1.5,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},columnStyles:{0:{halign:'left',cellWidth:30},10:{fontStyle:'bold'}},margin:{left:M,right:M}});
+  y=doc.lastAutoTable.finalY+4;doc.setFont('helvetica','italic');doc.setFontSize(7);doc.setTextColor(112,131,124);
+  doc.text('Estimado madurez = % Naranja + % Café + % Negra.  % Amarillo y Blanco + Estimado madurez = 100%.',M,y);y+=6;
   // 2) tendencia
   titulo('Tendencia de madurez');
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);doc.setTextColor(34,51,47);
@@ -954,11 +957,11 @@ async function construirPDF(s){
       for(let i=1;i<pts.length;i++)doc.line(X(i-1),Y(pts[i-1].m[k]),X(i),Y(pts[i].m[k]));
       pts.forEach((p,i)=>doc.circle(X(i),Y(p.m[k]),p.actual?1.3:.8,p.actual?'F':'S'))});
     doc.setTextColor(34,51,47);pts.forEach((p,i)=>{doc.text(fmtFecha(p.fecha),X(i),gy+gh+4,{align:'center'});doc.setTextColor(112,131,124);doc.text(p.dds?`${p.dds} DDS`:'',X(i),gy+gh+7.5,{align:'center'});doc.setTextColor(34,51,47)});
-    y=gy+gh+11;let lx=M;SERIES.forEach(([,n,col])=>{doc.setFillColor(parseInt(col.slice(1,3),16),parseInt(col.slice(3,5),16),parseInt(col.slice(5,7),16));doc.rect(lx,y-2.2,3,3,'F');doc.setTextColor(34,51,47);doc.text(n,lx+4.5,y+.3);lx+=44});y+=5;
+    y=gy+gh+11;let lx=M;SERIES.forEach(([,n,col])=>{doc.setFillColor(parseInt(col.slice(1,3),16),parseInt(col.slice(3,5),16),parseInt(col.slice(5,7),16));doc.rect(lx,y-2.2,3,3,'F');doc.setTextColor(34,51,47);doc.text(n,lx+4.5,y+.3);lx+=(n.length>20?52:34)});y+=5;
   }
-  doc.autoTable({startY:y,head:[['Fecha','Nº','DDS','% Negra + Café','% Café + Naranja','% Amarillo y Blanco','QQ estimados']],
-    body:pts.map(p=>[fmtFecha(p.fecha)+(p.actual?' (este reporte)':''),p.numero,p.dds||'—',pct(p.m.pNegCaf),pct(p.m.pCafNar),pct(p.m.pAmaBla),f2(p.m.est)]),
-    theme:'grid',styles:{fontSize:7.5,cellPadding:1.4,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},margin:{left:M,right:M}});
+  doc.autoTable({startY:y,head:[['Fecha','Nº','DDS','% Amarillo y Blanco','% Naranja','% Café','% Negra','Estimado madurez\n(% Naranja + Café + Negra)']],
+    body:pts.map(p=>{const [ab,em]=parMadurez(p.m);return[fmtFecha(p.fecha)+(p.actual?' (este reporte)':''),p.numero,p.dds||'—',ab,pct(p.m.pNar),pct(p.m.pCaf),pct(p.m.pNeg),em]}),
+    theme:'grid',styles:{fontSize:7.5,cellPadding:1.4,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},columnStyles:{7:{fontStyle:'bold'}},margin:{left:M,right:M}});
   y=doc.lastAutoTable.finalY+7;
   // 3) detalle del conteo
   titulo('Detalle del conteo de cápsulas');
@@ -967,6 +970,7 @@ async function construirPDF(s){
     theme:'grid',styles:{fontSize:7.5,cellPadding:1.4,halign:'center'},headStyles:{fillColor:[60,140,97],textColor:255,fontSize:7},columnStyles:{0:{halign:'left',cellWidth:38}},margin:{left:M,right:M}});
   y=doc.lastAutoTable.finalY+7;
   // 4) ubicación y fotos
+  if(y>H-85){doc.addPage();y=14}   // el título no queda solo al final de la hoja
   titulo('Ubicación y fotos de las muestras');
   for(let i=0;i<s.lines.length;i++){const m=s.lines[i];
     const fotos=[];for(const f of (m.fotos||[])){const r=await fotoParaPDF(f.blob);if(r)fotos.push(r)}
@@ -988,7 +992,7 @@ async function construirPDF(s){
     y+=2}
   // pie con número de página
   const n=doc.internal.getNumberOfPages();doc.setFontSize(7);doc.setTextColor(112,131,124);
-  for(let p=1;p<=n;p++){doc.setPage(p);doc.text(`Estimación = (cápsulas sanas ÷ semillas por libra) × ${FACTOR_QQ_MZN} ÷ 100 · % de color sobre cápsulas sanas · app v${APP_VERSION}`,M,H-6);doc.text(`${p}/${n}`,W-M,H-6,{align:'right'})}
+  for(let p=1;p<=n;p++){doc.setPage(p);doc.text(`% de color sobre cápsulas sanas · Estimado madurez = % Naranja + % Café + % Negra (con % Amarillo y Blanco suma 100%) · app v${APP_VERSION}`,M,H-6);doc.text(`${p}/${n}`,W-M,H-6,{align:'right'})}
   return {doc,folio:`Madurez_${h.numero||h.temporal||'borrador'}`};
 }
 async function pdfBlob(){const {doc,folio}=await construirPDF(sesion);return{blob:doc.output('blob'),folio}}
