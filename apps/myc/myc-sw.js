@@ -1,4 +1,4 @@
-const CACHE_NAME='madurez-campo-v12';
+const CACHE_NAME='madurez-campo-v14';
 const ARCHIVOS=['./myc.html','./myc-manifest.json','./myc-icon-192.png','./myc-icon-512.png','./myc-icon-maskable-512.png','./myc-apple-touch-icon.png'];
 // Cada archivo se guarda por separado: si uno falta, el service worker igual se instala (antes uno faltante lo tumbaba todo).
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE_NAME).then(c=>Promise.all(ARCHIVOS.map(u=>c.add(u).catch(()=>null)))).then(()=>self.skipWaiting()))});
