@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6f43">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Recuentos Arranque y Combina</title>
+<style>
+:root{--verde:#1f6f43;--verde2:#2e8b57;--claro:#eaf4ee;--ambar:#c77d12;--rojo:#b3261e;--gris:#5f6b66;--borde:#d5ddd8;--bg:#f4f7f5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#1c2421;padding-bottom:90px}
+header.top{background:var(--verde);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20}
+header.top h1{font-size:17px;margin:0;flex:1;font-weight:600}
+header.top button{background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:8px;padding:8px 10px;font-size:14px}
+main{max-width:720px;margin:0 auto;padding:14px}
+.net{font-size:12px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.2)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px}
+.mod{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.mod:active{transform:scale(.98)}
+.mod svg{width:84px;height:84px}
+.mod h2{font-size:16px;margin:8px 0 2px}
+.mod small{color:var(--gris);display:block;font-size:12px}
+.badge{display:inline-block;background:var(--ambar);color:#fff;border-radius:10px;font-size:12px;padding:1px 8px;margin-top:6px}
+.badge.ok{background:var(--verde2)}
+.card{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:12px;margin:10px 0}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--verde)}
+label{display:block;font-size:12px;color:var(--gris);margin:8px 0 3px}
+input,select,textarea{width:100%;font-size:16px;padding:10px;border:1px solid var(--borde);border-radius:8px;background:#fff;font-family:inherit}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--verde2);border-color:var(--verde2)}
+input[readonly]{background:#f0f3f1}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;background:var(--verde);color:#fff}
+.btn.sec{background:#fff;color:var(--verde);border:1px solid var(--verde)}
+.btn.rojo{background:var(--rojo)}
+.btn.sm{padding:7px 10px;font-size:13px}
+.btn:disabled{opacity:.5}
+.bar{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--borde);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px;z-index:30;justify-content:center}
+.bar .btn{flex:1;max-width:260px}
+.muestra{border-left:4px solid var(--verde2)}
+.muestra .cab{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.muestra .cab b{flex:1;color:var(--verde)}
+.calc{background:var(--claro);border-radius:8px;padding:8px;margin-top:10px;font-size:13px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;text-align:center}
+.calc b{display:block;font-size:16px;color:var(--verde)}
+.item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--borde)}
+.item:last-child{border:0}
+.item .t{flex:1;min-width:0}.item .t b{display:block}.item .t small{color:var(--gris)}
+.chip{font-size:11px;border-radius:10px;padding:2px 8px;color:#fff;background:var(--gris);white-space:nowrap}
+.chip.borrador{background:var(--ambar)}.chip.listo{background:#2b6cb0}.chip.enviado{background:var(--verde2)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--borde)}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--gris);font-weight:600;font-size:12px}
+.aviso{background:#fff7e6;border:1px solid #f0d49b;border-radius:10px;padding:10px;font-size:13px;margin:10px 0}
+.err{background:#fdecea;border-color:#f3b9b4}
+.okbox{background:#e8f5ee;border-color:#a9d8bd}
+.tabs{display:flex;gap:6px;margin:8px 0}
+.tabs button{flex:1;padding:9px;border:1px solid var(--borde);background:#fff;border-radius:10px;font-size:14px}
+.tabs button.on{background:var(--verde);color:#fff;border-color:var(--verde)}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90%;text-align:center}
+#toast.on{opacity:.95}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<header class="top">
+  <button id="btnBack" class="hide">‹ Atrás</button>
+  <h1 id="titulo">Recuentos Arranque y Combina</h1>
+  <span class="net" id="net">en línea</span>
+  <button id="btnCfg">⚙</button>
+</header>
+<main id="main"></main>
+<div class="bar hide" id="bar"></div>
+<div id="toast"></div>
+
+<script src="calc.js"></script>
+<script>
+'use strict';
+/* ====== Configuración ====== */
+const APP_VERSION = '2026.11.16-1';
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
+const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v1', cfg: 'rac_cfg_v1' };
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(16).slice(2));
+const hoy = () => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000); return d.toISOString().slice(0, 10); };
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const save = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+
+const TIPOS = {
+  arranque: {
+    nombre: 'Recuentos de Arranque', corto: 'Arranque', path: '/arranque', color: '#1f6f43',
+    lineaVacia: () => ({ lote: null, lote_nombre: '', arrancador: null, plantas_m: '', moho_m: '', dano_arrancador: '', podridas: '', mohono: '', germinadas: '', obs: '' }),
+  },
+  combina: {
+    nombre: 'Recuentos de Combina', corto: 'Combina', path: '/combina', color: '#8a5a12',
+    lineaVacia: () => ({ lote: null, lote_nombre: '', combina: null, metros: 16, sanas: '', vanas: '', obs: '' }),
+  },
+};
+const VARIEDADES = ['GA 06-G APTA','GA 06-G AUTORIZADA','GA 06-G REGISTRADA','GA 06-G BASICA','CO494 BASICA','GA 06-G BASICA 488','GA 06-G COMERCIAL','GA 06-G CERTIFICADA','GA 06-G CERTIFICADA IMPORTADA','GA 06-G GENETICA','GA 06-G GENETICA C0494','PRUEBA 1 BASICA','PRUEBA 1 GENETICA','PRUEBA 3','PRUEBA 2','PRUEBA 4','PRUEBA 5','PRUEBA 6 COMERCIAL','C0494','48916-1','48816-2','48916-6','49416-14-BI','USA'];
+
+/* ====== Estado ====== */
+let reportes = load(LS.rep, []);
+let cat = load(LS.cat, { companias: [], ciclos: [], fincas: [], lotes: [], arrancadores: [], combinas: [], variedades: VARIEDADES });
+let cfg = load(LS.cfg, { tecnico: '' });
+let vista = { name: 'home' };
+let actual = null;          // reporte en edición
+const persist = () => save(LS.rep, reportes);
+
+function toast(m, ms = 2400) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), ms); }
+function setNet() { const n = $('#net'); n.textContent = navigator.onLine ? 'en línea' : 'sin señal'; n.style.background = navigator.onLine ? 'rgba(255,255,255,.2)' : '#c77d12'; }
+addEventListener('online', () => { setNet(); }); addEventListener('offline', setNet);
+
+/* ====== Catálogos ====== */
+async function cargarCatalogos(silencioso) {
+  if (!navigator.onLine) { if (!silencioso) toast('Sin señal: se usan los catálogos guardados'); return false; }
+  try {
+    const [a, b] = await Promise.all([
+      fetch(WORKER + '/catalogos-recuentos').then((r) => r.json()),
+      fetch(WORKER + '/arranque-combina/catalogos').then((r) => r.json()),
+    ]);
+    if (a.error || b.error) throw new Error(a.error || b.error);
+    cat = { companias: a.companias, ciclos: a.ciclos, fincas: a.fincas, lotes: a.lotes,
+            arrancadores: b.arrancadores, combinas: b.combinas, variedades: (b.variedades && b.variedades.length ? b.variedades : VARIEDADES), updated_at: a.updated_at };
+    save(LS.cat, cat);
+    if (!silencioso) toast('Catálogos actualizados');
+    return true;
+  } catch (e) { if (!silencioso) toast('No se pudieron actualizar los catálogos: ' + e.message, 4000); return false; }
+}
+
+/* ====== Navegación ====== */
+function ir(v) { vista = v; render(); window.scrollTo(0, 0); }
+$('#btnBack').onclick = () => {
+  if (vista.name === 'editar') { guardarBorrador(true); ir({ name: 'lista', tipo: actual.tipo }); }
+  else if (vista.name === 'resumen') ir({ name: 'editar' });
+  else if (vista.name === 'detalle') ir({ name: 'lista', tipo: vista.tipo });
+  else ir({ name: 'home' });
+};
+$('#btnCfg').onclick = () => ir({ name: 'cfg' });
+
+function render() {
+  const back = vista.name !== 'home';
+  $('#btnBack').classList.toggle('hide', !back);
+  $('#bar').classList.add('hide');
+  ({ home: rHome, lista: rLista, editar: rEditar, resumen: rResumen, detalle: rDetalle, cfg: rCfg }[vista.name])();
+}
+
+/* ====== Home: dos iconos ====== */
+const ICON_ARR = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#eaf4ee"/><path d="M20 76h60" stroke="#6b4a2a" stroke-width="6" stroke-linecap="round"/><path d="M50 76V46" stroke="#2e8b57" stroke-width="5" stroke-linecap="round"/><path d="M50 52c-12 0-20-6-22-16 12-1 20 5 22 16zM50 46c0-11 7-18 19-19 0 11-7 18-19 19z" fill="#2e8b57"/><path d="M34 84l-8 8M50 84v10M66 84l8 8" stroke="#6b4a2a" stroke-width="4" stroke-linecap="round"/><ellipse cx="50" cy="80" rx="9" ry="5" fill="#c79a5b"/></svg>`;
+const ICON_COM = `<svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#fbf1de"/><rect x="18" y="38" width="46" height="26" rx="5" fill="#c77d12"/><rect x="40" y="26" width="22" height="16" rx="3" fill="#e0a64a"/><rect x="62" y="48" width="22" height="9" rx="3" fill="#8a5a12"/><circle cx="32" cy="70" r="11" fill="#3a3a3a"/><circle cx="32" cy="70" r="4" fill="#bbb"/><circle cx="62" cy="72" r="8" fill="#3a3a3a"/><circle cx="62" cy="72" r="3" fill="#bbb"/><path d="M12 84h76" stroke="#6b4a2a" stroke-width="4" stroke-linecap="round"/></svg>`;
+
+function conteos(tipo) {
+  const l = reportes.filter((r) => r.tipo === tipo);
+  return { pend: l.filter((r) => r.estado !== 'enviado').length, env: l.filter((r) => r.estado === 'enviado').length };
+}
+function rHome() {
+  $('#titulo').textContent = 'Recuentos Arranque y Combina';
+  const card = (t, icon) => { const c = conteos(t); const T = TIPOS[t];
+    return `<div class="mod" data-t="${t}">${icon}<h2>${T.corto}</h2><small>${t === 'arranque' ? 'Pérdidas al arrancar el maní' : 'Pérdidas en la cosecha (combina)'}</small>
+      ${c.pend ? `<span class="badge">${c.pend} sin enviar</span>` : `<span class="badge ok">al día</span>`}</div>`; };
+  $('#main').innerHTML = `
+    <div class="cards">${card('arranque', ICON_ARR)}${card('combina', ICON_COM)}</div>
+    ${cat.fincas.length ? '' : '<div class="aviso">Aún no hay catálogos guardados. Conéctate a internet y toca ⚙ → <b>Actualizar catálogos</b> antes de salir al campo.</div>'}
+    <div class="card"><h3>Pendientes de envío</h3>${pendientesHTML()}</div>
+    <div style="text-align:center;color:var(--gris);font-size:12px;margin-top:16px">Versión ${APP_VERSION}</div>`;
+  document.querySelectorAll('.mod').forEach((e) => e.onclick = () => ir({ name: 'lista', tipo: e.dataset.t }));
+  document.querySelectorAll('[data-open]').forEach((e) => e.onclick = () => abrir(e.dataset.open));
+}
+function pendientesHTML() {
+  const p = reportes.filter((r) => r.estado !== 'enviado').sort((a, b) => b.mod - a.mod);
+  if (!p.length) return '<div style="color:var(--gris)">No hay reportes pendientes.</div>';
+  return p.map((r) => itemHTML(r)).join('');
+}
+function itemHTML(r) {
+  const h = r.header, nl = r.lines.length;
+  return `<div class="item" data-open="${r.id}"><div class="t"><b>${TIPOS[r.tipo].corto} · ${esc(h.numero || 'sin Nº')} · ${esc(nombreDe(cat.fincas, h.finca) || 'sin finca')}</b>
+    <small>${RAC.fmtFecha(h.fecha)} · ${nl} muestra${nl === 1 ? '' : 's'}${r.odoo ? ' · INFOAGRO ' + esc(r.odoo.folio) : ''}</small></div><span class="chip ${r.estado}">${r.estado}</span></div>`;
+}
+const nombreDe = (arr, id) => { const x = arr.find((a) => a.id === id); return x ? x.nombre : ''; };
+
+/* ====== Lista por tipo ====== */
+function rLista() {
+  const t = vista.tipo, T = TIPOS[t]; vista.tab = vista.tab || 'pend';
+  $('#titulo').textContent = T.nombre;
+  const l = reportes.filter((r) => r.tipo === t && (vista.tab === 'pend' ? r.estado !== 'enviado' : r.estado === 'enviado')).sort((a, b) => b.mod - a.mod);
+  $('#main').innerHTML = `
+    <button class="btn" id="nuevo" style="width:100%">＋ Nuevo recuento de ${T.corto.toLowerCase()}</button>
+    <div class="tabs"><button data-tab="pend" class="${vista.tab === 'pend' ? 'on' : ''}">Pendientes</button><button data-tab="env" class="${vista.tab === 'env' ? 'on' : ''}">Enviados</button></div>
+    <div class="card">${l.length ? l.map(itemHTML).join('') : '<div style="color:var(--gris)">Sin reportes.</div>'}</div>`;
+  $('#nuevo').onclick = () => nuevo(t);
+  document.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => { vista.tab = b.dataset.tab; rLista(); });
+  document.querySelectorAll('[data-open]').forEach((e) => e.onclick = () => abrir(e.dataset.open));
+}
+function abrir(id) {
+  const r = reportes.find((x) => x.id === id); if (!r) return;
+  if (r.estado === 'enviado') ir({ name: 'detalle', tipo: r.tipo, id });
+  else { actual = JSON.parse(JSON.stringify(r)); ir({ name: 'editar' }); }
+}
+
+/* ====== Nuevo / editar ====== */
+function nuevo(tipo) {
+  const ult = reportes.filter((r) => r.tipo === tipo).sort((a, b) => b.mod - a.mod)[0];
+  actual = { id: uid(), tipo, estado: 'borrador', creado: Date.now(), mod: Date.now(),
+    header: { numero: '', fecha: hoy(), company: ult ? ult.header.company : (cat.companias[0] || {}).id || null, ciclo: ult ? ult.header.ciclo : null,
+              finca: ult ? ult.header.finca : null, variedad: '', dds: '' },
+    lines: [TIPOS[tipo].lineaVacia()], tecnico: cfg.tecnico };
+  ir({ name: 'editar' });
+}
+function guardarBorrador(silencioso) {
+  actual.mod = Date.now();
+  const i = reportes.findIndex((r) => r.id === actual.id);
+  if (i >= 0) reportes[i] = JSON.parse(JSON.stringify(actual)); else reportes.push(JSON.parse(JSON.stringify(actual)));
+  persist(); if (!silencioso) toast('Borrador guardado');
+}
+
+const opt = (arr, sel, ph) => `<option value="">${ph || '— elegir —'}</option>` + arr.map((a) => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('');
+const optS = (arr, sel, ph) => `<option value="">${ph || '— elegir —'}</option>` + arr.map((a) => `<option ${a === sel ? 'selected' : ''}>${esc(a)}</option>`).join('');
+
+function ciclosDe(company) { return cat.ciclos.filter((c) => !company || c.company === company); }
+function fincasDe(company) { return cat.fincas.filter((f) => !company || f.company === company); }
+function lotesDe(finca) { return cat.lotes.filter((l) => l.finca === finca); }
+function equiposDe(tipo, company) { const l = tipo === 'arranque' ? cat.arrancadores : cat.combinas; return l.filter((e) => !company || e.company === company); }
+
+function rEditar() {
+  const r = actual, h = r.header, t = r.tipo, T = TIPOS[t];
+  $('#titulo').textContent = T.corto + (h.numero ? ' · ' + h.numero : ' · nuevo');
+  $('#main').innerHTML = `
+    <div class="card"><h3>Datos del reporte</h3>
+      <div class="row"><div><label>Nº de reporte (hoja)</label><input id="h_numero" inputmode="numeric" placeholder="vacío = automático" value="${esc(h.numero)}"></div>
+        <div><label>Fecha</label><input type="date" id="h_fecha" value="${h.fecha}"></div></div>
+      <label>Compañía</label><select id="h_company">${opt(cat.companias, h.company)}</select>
+      <label>Ciclo</label><select id="h_ciclo">${opt(ciclosDe(h.company), h.ciclo)}</select>
+      <label>Finca</label><select id="h_finca">${opt(fincasDe(h.company), h.finca)}</select>
+      ${t === 'arranque' ? `<div class="row"><div><label>Variedad</label><select id="h_variedad">${optS(cat.variedades, h.variedad)}</select></div>
+        <div><label>DDS (días de siembra)</label><div style="display:flex;gap:6px"><input id="h_dds" type="number" inputmode="numeric" value="${esc(h.dds)}"><button class="btn sec sm" id="btnDds" title="Calcular desde la fecha de siembra">↻</button></div></div></div>` : ''}
+    </div>
+    <div id="muestras"></div>
+    <button class="btn sec" id="addM" style="width:100%">＋ Agregar muestra</button>`;
+  pintarMuestras();
+  const bar = $('#bar'); bar.classList.remove('hide');
+  bar.innerHTML = `<button class="btn sec" id="bBorr">Guardar borrador</button><button class="btn" id="bRes">Resumen y enviar</button>`;
+  $('#bBorr').onclick = () => { leerHeader(); guardarBorrador(); };
+  $('#bRes').onclick = () => { leerHeader(); const e = validar(); if (e.length) { alert('Falta corregir:\n\n• ' + e.join('\n• ')); return; } guardarBorrador(true); ir({ name: 'resumen' }); };
+  $('#addM').onclick = () => { leerHeader(); const ult = r.lines[r.lines.length - 1];
+    const n = T.lineaVacia(); if (ult) { n.lote = ult.lote; n.lote_nombre = ult.lote_nombre; n.arrancador = ult.arrancador; n.combina = ult.combina; if (t === 'combina') n.metros = ult.metros; }
+    r.lines.push(n); pintarMuestras(); const m = document.querySelectorAll('.muestra'); m[m.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' }); };
+  $('#h_company').onchange = () => { leerHeader(); h.ciclo = null; h.finca = null; rEditar(); };
+  $('#h_finca').onchange = () => { leerHeader(); r.lines.forEach((l) => { l.lote = null; l.lote_nombre = ''; }); pintarMuestras(); };
+  if (t === 'arranque') $('#btnDds').onclick = calcularDds;
+}
+function leerHeader() {
+  const h = actual.header, g = (id) => { const e = document.getElementById(id); return e ? e.value : undefined; };
+  h.numero = (g('h_numero') || '').trim(); h.fecha = g('h_fecha') || h.fecha;
+  h.company = parseInt(g('h_company')) || null; h.ciclo = parseInt(g('h_ciclo')) || null; h.finca = parseInt(g('h_finca')) || null;
+  if (actual.tipo === 'arranque') { h.variedad = g('h_variedad') || ''; h.dds = g('h_dds') === '' ? '' : parseInt(g('h_dds')); }
+}
+async function calcularDds() {
+  leerHeader(); const h = actual.header, l = actual.lines.find((x) => x.lote);
+  if (!h.ciclo || !h.finca || !l) return toast('Elige ciclo, finca y el lote de la primera muestra');
+  if (!navigator.onLine) return toast('Sin señal: escribe el DDS a mano');
+  try {
+    const d = await fetch(`${WORKER}/siembra-datos?ciclo_id=${h.ciclo}&finca_id=${h.finca}&lote_id=${l.lote}`).then((r) => r.json());
+    if (!d.fecha_siembra) return toast('No hay fecha de siembra registrada para ese lote');
+    const dias = Math.round((Date.parse(h.fecha) - Date.parse(d.fecha_siembra)) / 86400000);
+    h.dds = dias; $('#h_dds').value = dias; toast('DDS = ' + dias + ' (siembra ' + RAC.fmtFecha(d.fecha_siembra) + ')', 3500);
+  } catch (e) { toast('No se pudo consultar la siembra'); }
+}
+
+function pintarMuestras() {
+  const r = actual, t = r.tipo, h = r.header, box = $('#muestras');
+  const lotes = lotesDe(h.finca), eq = equiposDe(t, h.company);
+  const num = (i, k, lab, step) => `<div><label>${lab}</label><input type="number" inputmode="decimal" step="${step || 'any'}" data-i="${i}" data-k="${k}" value="${esc(r.lines[i][k])}"></div>`;
+  box.innerHTML = r.lines.map((l, i) => {
+    const eqSel = t === 'arranque' ? l.arrancador : l.combina;
+    const cuerpo = t === 'arranque'
+      ? `<div class="row3">${num(i, 'plantas_m', 'Plantas /m')}${num(i, 'moho_m', 'Con moho /m')}${num(i, 'dano_arrancador', 'Daño arranc.')}</div>
+         <div class="row3">${num(i, 'podridas', 'Podridas')}${num(i, 'mohono', 'Mohono')}${num(i, 'germinadas', 'Germinadas')}</div>`
+      : `<div class="row3"><div><label>Metros lineales</label><select data-i="${i}" data-k="metros"><option ${l.metros == 12 ? 'selected' : ''}>12</option><option ${l.metros == 16 ? 'selected' : ''}>16</option></select></div>${num(i, 'sanas', 'Cáps. sanas')}${num(i, 'vanas', 'Cáps. vanas')}</div>`;
+    return `<div class="card muestra" data-m="${i}"><div class="cab"><b>Muestra ${i + 1}</b>
+      <button class="btn sec sm" data-dup="${i}">Duplicar</button><button class="btn rojo sm" data-del="${i}">✕</button></div>
+      <div class="row"><div><label>Lote</label><select data-i="${i}" data-k="lote">${opt(lotes, l.lote)}</select></div>
+      <div><label>${t === 'arranque' ? 'Arrancador' : 'Combina'}</label><select data-i="${i}" data-k="equipo">${opt(eq, eqSel)}</select></div></div>
+      ${cuerpo}
+      <label>Observación</label><input data-i="${i}" data-k="obs" value="${esc(l.obs)}">
+      <div class="calc" id="calc${i}"></div></div>`;
+  }).join('');
+  box.querySelectorAll('[data-k]').forEach((e) => e.oninput = e.onchange = () => {
+    const i = +e.dataset.i, k = e.dataset.k, l = actual.lines[i];
+    if (k === 'lote') { l.lote = parseInt(e.value) || null; l.lote_nombre = nombreDe(lotesDe(actual.header.finca), l.lote); }
+    else if (k === 'equipo') { l[actual.tipo === 'arranque' ? 'arrancador' : 'combina'] = parseInt(e.value) || null; }
+    else if (k === 'metros') l.metros = parseInt(e.value);
+    else l[k] = e.value;
+    pintarCalc(i);
+  });
+  box.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { if (r.lines.length === 1) return toast('Debe quedar al menos una muestra'); if (confirm('¿Quitar la muestra ' + (+b.dataset.del + 1) + '?')) { r.lines.splice(+b.dataset.del, 1); pintarMuestras(); } });
+  box.querySelectorAll('[data-dup]').forEach((b) => b.onclick = () => { const c = JSON.parse(JSON.stringify(r.lines[+b.dataset.dup])); ['plantas_m', 'moho_m', 'dano_arrancador', 'podridas', 'mohono', 'germinadas', 'sanas', 'vanas', 'obs'].forEach((k) => { if (k in c) c[k] = ''; }); r.lines.splice(+b.dataset.dup + 1, 0, c); pintarMuestras(); });
+  r.lines.forEach((_, i) => pintarCalc(i));
+}
+function pintarCalc(i) {
+  const l = actual.lines[i], e = $('#calc' + i); if (!e) return;
+  if (actual.tipo === 'arranque') { const c = RAC.arranqueLinea(l);
+    e.innerHTML = `<div>Plantas c/moho<b>${RAC.fmt(c.plantas_con_moho)}</b></div><div>QQ sin arrancar<b>${RAC.fmt(c.qq_sin_arrancar)}</b></div><div>QQ x Mzn<b>${RAC.fmt(c.qq_mzn)}</b></div>`;
+  } else { const c = RAC.combinaLinea(l);
+    e.innerHTML = `<div>Sanas x m<b>${RAC.fmt(c.sanas_x_metro)}</b></div><div>Pérdida QQ x Mzn<b>${RAC.fmt(c.qq_mzn)}</b></div><div>Vanas en 2 m<b>${RAC.fmt(c.vanas_2m)}</b></div>`;
+  }
+}
+
+function validar() {
+  const r = actual, h = r.header, e = [];
+  if (!h.fecha) e.push('Fecha');
+  if (!h.company) e.push('Compañía'); if (!h.ciclo) e.push('Ciclo'); if (!h.finca) e.push('Finca');
+  if (r.tipo === 'arranque' && !h.variedad) e.push('Variedad');
+  r.lines.forEach((l, i) => {
+    const p = 'Muestra ' + (i + 1) + ': ';
+    if (!l.lote) e.push(p + 'elige el lote');
+    if (r.tipo === 'arranque') {
+      if (!l.arrancador) e.push(p + 'elige el arrancador');
+      ['plantas_m', 'moho_m', 'dano_arrancador', 'podridas', 'mohono', 'germinadas'].forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta ' + k.replace(/_/g, ' ')); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
+    } else {
+      if (!l.combina) e.push(p + 'elige la combina');
+      if (!(+l.metros > 0)) e.push(p + 'metros lineales');
+      ['sanas', 'vanas'].forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta cápsulas ' + k); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
+    }
+  });
+  return e;
+}
+
+/* ====== Resumen y envío ====== */
+function tablaResumen(r) {
+  const s = RAC.resumen(r.tipo, r.lines.map((l) => ({ ...l, lote_nombre: l.lote_nombre || nombreDe(cat.lotes, l.lote) })));
+  const f = RAC.fmt;
+  if (r.tipo === 'arranque') {
+    const fila = (n, x) => `<tr><td>${esc(n)}</td><td>${x.muestras}</td><td>${f(x.plantas_m, 1)}</td><td>${f(x.qq_sin_arrancar)}</td><td><b>${f(x.qq_mzn)}</b></td></tr>`;
+    return `<table><tr><th>Lote</th><th>Mues.</th><th>Plantas/m</th><th>QQ sin arr.</th><th>QQ x Mzn</th></tr>${s.lotes.map((x) => fila(x.lote, x)).join('')}${s.lotes.length > 1 ? fila('Promedio general', s.general) : ''}</table>`;
+  }
+  const fila = (n, x) => `<tr><td>${esc(n)}</td><td>${x.muestras}</td><td>${f(x.sanas, 1)}</td><td>${f(x.sanas_x_metro)}</td><td><b>${f(x.qq_mzn)}</b></td></tr>`;
+  return `<table><tr><th>Lote</th><th>Mues.</th><th>Sanas</th><th>Sanas/m</th><th>Pérdida QQ/Mzn</th></tr>${s.lotes.map((x) => fila(x.lote, x)).join('')}${s.lotes.length > 1 ? fila('Promedio general', s.general) : ''}</table>`;
+}
+function rResumen() {
+  const r = actual, h = r.header, T = TIPOS[r.tipo];
+  $('#titulo').textContent = 'Resumen · ' + T.corto;
+  $('#main').innerHTML = `
+    <div class="card"><h3>${esc(T.nombre)}</h3>
+      <div>Nº <b>${esc(h.numero || '(automático)')}</b> · ${RAC.fmtFecha(h.fecha)}</div>
+      <div>${esc(nombreDe(cat.companias, h.company))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div>
+      <div>Finca <b>${esc(nombreDe(cat.fincas, h.finca))}</b>${r.tipo === 'arranque' ? ` · ${esc(h.variedad)} · DDS ${esc(h.dds === '' ? '—' : h.dds)}` : ''}</div></div>
+    <div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}
+      <div style="font-size:12px;color:var(--gris);margin-top:8px">Vista previa. INFOAGRO recalcula al recibir el reporte.</div></div>
+    <div class="card"><label>Elaborado por</label><input id="tec" value="${esc(r.tecnico || cfg.tecnico)}" placeholder="Nombre del técnico"></div>
+    <div id="resEnvio"></div>`;
+  const bar = $('#bar'); bar.classList.remove('hide');
+  bar.innerHTML = `<button class="btn sec" id="bVolver">Editar</button><button class="btn" id="bEnviar">Enviar a INFOAGRO</button>`;
+  $('#bVolver').onclick = () => ir({ name: 'editar' });
+  $('#bEnviar').onclick = enviar;
+}
+
+let enviando = false;
+async function enviar() {
+  if (enviando) return;
+  const r = actual; r.tecnico = ($('#tec').value || '').trim(); cfg.tecnico = r.tecnico || cfg.tecnico; save(LS.cfg, cfg);
+  r.estado = 'listo'; guardarBorrador(true);
+  if (!navigator.onLine) { $('#resEnvio').innerHTML = '<div class="aviso">Sin señal. El reporte quedó guardado como <b>listo</b>; se enviará cuando tengas internet (abre la app y entra a Pendientes).</div>'; return; }
+  enviando = true; const b = $('#bEnviar'); b.disabled = true; b.textContent = 'Enviando…';
+  const h = r.header;
+  const payload = { localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico,
+    header: { numero: h.numero, fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds },
+    lines: r.lines.map((l) => ({ ...l })) };
+  try {
+    const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify(payload) });
+    const j = await res.json().catch(() => ({}));
+    if (!res.ok || !j.ok) throw new Error(j.error || 'Error ' + res.status);
+    r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, ya_existia: !!j.ya_existia, confirmado: j.lineas || null, enviado: Date.now() };
+    guardarBorrador(true);
+    $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${difCalc(r, j.lineas)}</div>`;
+    $('#bar').innerHTML = `<button class="btn" id="bFin">Terminar</button>`; $('#bFin').onclick = () => ir({ name: 'home' });
+  } catch (e) {
+    r.estado = 'listo'; guardarBorrador(true);
+    $('#resEnvio').innerHTML = `<div class="aviso err"><b>No se envió.</b> ${esc(e.message)}<br>El reporte sigue guardado en el teléfono; puedes reintentar sin riesgo de duplicarlo.</div>`;
+    b.disabled = false; b.textContent = 'Reintentar envío';
+  } finally { enviando = false; }
+}
+// Compara lo que calculó el teléfono con lo que calculó Odoo
+function difCalc(r, odooLineas) {
+  if (!Array.isArray(odooLineas) || odooLineas.length !== r.lines.length) return '';
+  let dif = 0;
+  odooLineas.forEach((o, i) => {
+    const l = r.lines[i];
+    if (r.tipo === 'arranque') { const c = RAC.arranqueLinea(l); if (Math.abs(c.qq_mzn - o.qq_mzn) > 0.01 || Math.abs(c.qq_sin_arrancar - o.qq_sin_arrancar) > 0.01 || Math.abs(c.plantas_con_moho - o.plantas_con_moho) > 0.01) dif++; }
+    else { const c = RAC.combinaLinea(l); if (Math.abs(c.qq_mzn - o.qq_mzn) > 0.01 || Math.abs(c.sanas_x_metro - o.sanas_x_metro) > 0.01 || Math.abs(c.vanas_2m - o.vanas_2m) > 0.01) dif++; }
+  });
+  return dif ? `<br><span style="color:var(--rojo)">⚠ ${dif} muestra(s) con cálculo distinto al de INFOAGRO. Avisa al administrador.</span>` : '<br>Cálculos confirmados por INFOAGRO ✓';
+}
+
+/* ====== Detalle de enviado (solo lectura) ====== */
+function rDetalle() {
+  const r = reportes.find((x) => x.id === vista.id), h = r.header, T = TIPOS[r.tipo];
+  $('#titulo').textContent = T.corto + ' · ' + (r.odoo ? r.odoo.folio : '');
+  $('#main').innerHTML = `
+    <div class="aviso okbox">Enviado a INFOAGRO ${r.odoo ? 'como Nº <b>' + esc(r.odoo.folio) + '</b>' : ''}. Solo lectura: para corregirlo, hazlo en INFOAGRO.</div>
+    <div class="card"><div>${RAC.fmtFecha(h.fecha)} · ${esc(nombreDe(cat.fincas, h.finca))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div></div>
+    <div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}</div>
+    <button class="btn rojo" id="quitar" style="width:100%">Quitar del teléfono</button>`;
+  $('#quitar').onclick = () => { if (confirm('Esto solo borra la copia del teléfono; el reporte sigue en INFOAGRO. ¿Continuar?')) { reportes = reportes.filter((x) => x.id !== r.id); persist(); ir({ name: 'lista', tipo: r.tipo }); } };
+}
+
+/* ====== Configuración ====== */
+function rCfg() {
+  $('#titulo').textContent = 'Configuración';
+  $('#main').innerHTML = `
+    <div class="card"><label>Nombre del técnico (aparece en "Elaborado por")</label><input id="c_tec" value="${esc(cfg.tecnico)}"></div>
+    <div class="card"><h3>Catálogos</h3>
+      <div style="font-size:13px;color:var(--gris)">${cat.fincas.length} fincas · ${cat.lotes.length} lotes · ${cat.arrancadores.length} arrancadores · ${cat.combinas.length} combinas${cat.updated_at ? '<br>Actualizado: ' + new Date(cat.updated_at).toLocaleString('es-NI') : ''}</div>
+      <button class="btn" id="c_cat" style="width:100%;margin-top:10px">Actualizar catálogos</button></div>
+    <div class="card"><h3>Pendientes</h3><button class="btn sec" id="c_env" style="width:100%">Enviar todos los reportes "listos"</button></div>
+    <div style="text-align:center;color:var(--gris);font-size:12px">Versión ${APP_VERSION}</div>`;
+  $('#c_tec').onchange = (e) => { cfg.tecnico = e.target.value.trim(); save(LS.cfg, cfg); toast('Guardado'); };
+  $('#c_cat').onclick = async (e) => { e.target.disabled = true; await cargarCatalogos(false); rCfg(); };
+  $('#c_env').onclick = enviarListos;
+}
+async function enviarListos() {
+  const l = reportes.filter((r) => r.estado === 'listo'); if (!l.length) return toast('No hay reportes listos');
+  if (!navigator.onLine) return toast('Sin señal');
+  let ok = 0, mal = 0;
+  for (const r of l) {
+    actual = JSON.parse(JSON.stringify(r));
+    try {
+      const h = r.header;
+      const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY },
+        body: JSON.stringify({ localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico || cfg.tecnico, header: { numero: h.numero, fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds }, lines: r.lines }) });
+      const j = await res.json(); if (!res.ok || !j.ok) throw new Error(j.error);
+      r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, enviado: Date.now() }; ok++;
+    } catch (e) { mal++; }
+  }
+  persist(); toast(`Enviados: ${ok}${mal ? ' · con error: ' + mal : ''}`, 3500); rCfg();
+}
+
+/* ====== Inicio ====== */
+setNet();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+render();
+cargarCatalogos(true).then((ok) => { if (ok && vista.name === 'home') render(); });
+</script>
+</body>
+</html>
