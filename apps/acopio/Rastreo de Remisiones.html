@@ -57,7 +57,7 @@ input,select{min-height:44px}
 <input type="file" id="fileQR" accept="image/*" capture="environment" class="hide">
 <script>
 'use strict';
-const APP_VERSION = '2026.11.17-4';
+const APP_VERSION = '2026.11.17-5';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { cfg: 'rr_cfg_v1', cat: 'rr_cat_v1', sal: 'rr_salidas_v1', trk: 'rr_track_v1', hist: 'rr_hist_v1', seg: 'rr_seg_v1' };
@@ -157,7 +157,17 @@ function rHome() {
 }
 
 /* ---------- REMISIONISTA: captura de la remisión (escribe directo en x_acopio) ---------- */
-const CS = () => cat.cs || { companias: [], sectores: [], fincas: [], productor_por_company: {}, ciclos: [], productores: [], variedades: [], camiones: [], furgones: [], conductores: [] };
+const CIAS_FIJAS = { 2: 'Division Agricola Comasa', 3: 'Grupo ZP' };
+const CS = () => {   // listas del catálogo; si faltan compañías/fincas (Worker anterior o catálogo sin bajar) se arman con los lotes guardados
+  const c = Object.assign({ companias: [], sectores: [], fincas: [], productor_por_company: {}, ciclos: [], productores: [], variedades: [], camiones: [], furgones: [], conductores: [] }, cat.cs || {});
+  if (!c.companias.length || !c.fincas.length) {
+    const cm = new Map(), fm = new Map();
+    cat.lotes.forEach((l) => { if (l.company && !cm.has(l.company)) cm.set(l.company, { id: l.company, nombre: CIAS_FIJAS[l.company] || ('Compañía ' + l.company) }); if (l.finca_id && !fm.has(l.finca_id)) fm.set(l.finca_id, { id: l.finca_id, nombre: l.finca, company: l.company }); });
+    if (!c.companias.length) c.companias = [...cm.values()];
+    if (!c.fincas.length) c.fincas = [...fm.values()].sort((x, y) => String(x.nombre).localeCompare(String(y.nombre)));
+  }
+  return c;
+};
 const tmpRem = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return 'TR' + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase(); };
 const num = (v) => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; };
 const K_MED = 65 / 75;                                        // una tolvada mediana equivale a 65/75 de una grande
@@ -200,6 +210,8 @@ function pintaEqSt(id, key, lista, furg) {
 function rSalida() {
   if (!cfg.nombre) { toast('Primero indica quién usa este dispositivo', 4000); return ir('cfg'); }   // el nombre se pide una sola vez y se guarda en el dispositivo
   sf = sf || nuevoSf();
+  if (!sf.company) { const u = cfg.ult || {}, cs0 = CS(); sf.company = (cs0.companias.some((x) => x.id === u.company) ? u.company : (cs0.companias[0] || {}).id) || 0; }
+  fijaCiclo();
   const c = CS(), lista = salidas.slice().reverse().slice(0, 15);
   const comp = companiaSf(), ciclos = c.ciclos.filter((x) => !comp || x.company === comp);
   $('#main').innerHTML = `
@@ -213,8 +225,6 @@ function rSalida() {
       <div><label>Sector</label><select id="s_sec">${optsL(sectoresSf(), sf.sector, 'Todos')}</select></div></div>
     <div class="g2"><div><label>Ciclo</label><select id="s_ciclo">${optsL(ciclos, sf.ciclo_id, '— elegir —')}</select></div>
       <div><label>Finca</label><select id="s_finca">${optsL(fincasSf(), sf.finca, '— elegir —')}</select></div></div>
-    <label>Productor asignado <small style="color:var(--gris)">(fijo según la compañía)</small></label>
-    <input id="s_prod" readonly value="${esc(productorSf() ? productorSf().nombre : '—')}" style="background:#eef2ef">
     <label>Variedad</label><select id="s_var">${optsL(c.variedades, sf.variedad_id, '— elegir —')}</select>
     <div class="g2" style="margin-top:2px">${eqCampo('s_cam', 'Camión (cabezal)', c.camiones, 'camion', 'dl_cam', false, 'ej. CH16345')}
       <div><label>Placa remolque</label><input id="s_rem2" autocapitalize="characters" value="${esc(sf.remolque)}"></div></div>
@@ -398,7 +408,7 @@ function rCfg() {
 
 /* ---------- Arranque ---------- */
 actualizaRed(); render();
-cargarCatalogo(true).then(() => { if (vista === 'home') rHome(); }); sincronizar();
+cargarCatalogo(true).then(() => { if (vista === 'home') rHome(); else if (vista === 'salida' && sf && !sf.company) rSalida(); }); sincronizar();
 if (track && !track.llegada) comenzar(); else if (track) flush();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
