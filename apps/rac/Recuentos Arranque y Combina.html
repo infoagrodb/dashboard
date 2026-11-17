@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.17-10';
+const APP_VERSION = '2026.11.17-13';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -186,7 +186,16 @@ function pendientesHTML() {
 function itemHTML(r) {
   const h = r.header, nl = r.lines.length;
   return `<div class="item" data-open="${r.id}"><div class="t"><b>${TIPOS[r.tipo].corto} · ${esc(r.odoo ? r.odoo.folio : (h.numero || tmpDe(r)))} · ${esc(nombreDe(cat.fincas, h.finca) || 'sin finca')}</b>
-    <small>${RAC.fmtFecha(h.fecha)} · ${nl} muestra${nl === 1 ? '' : 's'}${r.odoo ? ' · INFOAGRO ' + esc(r.odoo.folio) : ''}</small></div><span class="chip ${r.estado}">${r.estado}</span></div>`;
+    <small>${RAC.fmtFecha(h.fecha)} · ${nl} muestra${nl === 1 ? '' : 's'}${r.odoo ? ' · INFOAGRO ' + esc(r.odoo.folio) : ''}</small></div><span class="chip ${r.estado}">${r.estado}</span>${r.estado !== 'enviado' ? `<button class="btn rojo sm" data-del="${r.id}" aria-label="Eliminar borrador" style="margin-left:8px;padding:2px 9px">🗑</button>` : ''}</div>`;
+}
+// Elimina un reporte que NO se ha enviado (borrador/listo). Los enviados no se tocan: viven en INFOAGRO.
+function eliminarReporte(id) {
+  const r = reportes.find((x) => x.id === id) || (actual && actual.id === id ? actual : null);
+  if (!r || r.estado === 'enviado') return false;
+  if (!confirm('¿Eliminar este reporte en borrador?\n\nNo se ha enviado a INFOAGRO, así que se pierde del teléfono y no se puede recuperar.')) return false;
+  reportes = reportes.filter((x) => x.id !== id); persist();
+  if (actual && actual.id === id) { actual = null; form = null; }
+  toast('Borrador eliminado'); return true;
 }
 const nombreDe = (arr, id) => { const x = arr.find((a) => a.id === id); return x ? x.nombre : ''; };
 
@@ -202,6 +211,7 @@ function rLista() {
   $('#nuevo').onclick = () => nuevo(t);
   document.querySelectorAll('.tabs button').forEach((b) => b.onclick = () => { vista.tab = b.dataset.tab; rLista(); });
   document.querySelectorAll('[data-open]').forEach((e) => e.onclick = () => abrir(e.dataset.open));
+  document.querySelectorAll('[data-del]').forEach((b) => b.onclick = (ev) => { ev.stopPropagation(); if (eliminarReporte(b.dataset.del)) rLista(); });
 }
 function abrir(id) {
   const r = reportes.find((x) => x.id === id); if (!r) return;
@@ -281,8 +291,10 @@ function rEditar() {
     </div>
     <div id="formM"></div>
     <div class="card"><h3>Muestras creadas <span id="nMuestras" style="color:var(--gris);font-weight:400"></span></h3><div id="tablaM"></div></div>
-    <div id="fotosM"></div>`;
+    <div id="fotosM"></div>
+    <button class="btn rojo" id="bElim" style="width:100%;margin-top:6px">🗑 Eliminar este borrador</button>`;
   pintarForm(); pintarTabla(); pintarFotos();
+  $('#bElim').onclick = () => { const t = actual.tipo; if (eliminarReporte(actual.id)) ir({ name: 'lista', tipo: t }); };
   const bar = $('#bar'); bar.classList.remove('hide');
   bar.innerHTML = `<button class="btn sec" id="bBorr">Guardar borrador</button><button class="btn" id="bRes">Resumen y enviar</button>`;
   $('#bBorr').onclick = () => { leerHeader(); guardarBorrador(); };
@@ -338,7 +350,7 @@ function pintarForm() {
   const lotes = lotesDe(h), eq = equiposDe(t, h.company), eqSel = t === 'arranque' ? d.arrancador : d.combina;
   const num = (k, lab) => `<div><label>${lab}</label><input type="number" inputmode="decimal" step="any" id="f_${k}" value="${esc(d[k])}"></div>`;
   const titulo = form.idx != null ? `Editando la muestra ${form.idx + 1}` : (form.dup ? `Nueva muestra (copia de la ${form.dup}: ajusta los valores)` : `Nueva muestra ${r.lines.length + 1}`);
-  const optLote = '<option value="">— elegir —</option>' + lotes.map((l) => `<option value="${l.id}" ${l.id === d.lote ? 'selected' : ''}>${esc(l.nombre)}${l.variedades.length ? ' · ' + esc(l.variedades.join(' / ')) : ''}</option>`).join('');
+  const optLote = '<option value="">— elegir —</option>' + lotes.map((l) => `<option value="${l.id}" ${l.id === d.lote ? 'selected' : ''}>${esc(l.nombre)}</option>`).join('');
   const cuerpo = t === 'arranque'
     ? `<div class="row3">${num('plantas_m', 'Plantas /m')}${num('moho_m', 'Con moho /m')}${num('dano_arrancador', 'Daño arranc.')}</div><div class="row3">${num('podridas', 'Podridas')}${num('mohono', 'Moho')}${num('germinadas', 'Germinadas')}</div>`
     : `<div class="row3"><div><label>Metros lineales</label><select id="f_metros"><option ${d.metros == 12 ? 'selected' : ''}>12</option><option ${d.metros == 16 ? 'selected' : ''}>16</option></select></div>${num('sanas', 'Cáps. sanas')}${num('vanas', 'Cáps. vanas')}</div>`;
@@ -459,7 +471,7 @@ const fRes = (tipo) => {
     : { th: '<th>Mues.</th><th>Sanas</th><th>Sanas/m</th><th>Pérdida QQ/Mzn</th>', td: (x) => `<td>${x.muestras}</td><td>${f(x.sanas, 1)}</td><td>${f(x.sanas_x_metro)}</td><td><b>${f(x.qq_mzn)}</b></td>` };
 };
 const variedadDeLote = (r, id) => { const s = cat.siembras.find((x) => x.lote === id && x.variedad && (!r.header.finca || x.finca === r.header.finca)); return s ? s.variedad : ''; };
-const loteTxt = (r, l) => { const n = l.lote_nombre || nombreDe(cat.lotes, l.lote), v = variedadDeLote(r, l.lote); return v ? `${n} · ${v}` : n; };
+const loteTxt = (r, l) => l.lote_nombre || nombreDe(cat.lotes, l.lote);
 const lineasR = (r) => r.lines.map((l) => ({ ...l, lote_nombre: loteTxt(r, l) }));
 function gruposLote(r) { const s = RAC.resumen(r.tipo, lineasR(r)); return { filas: s.lotes.map((x) => ({ n: x.lote, x })), general: s.general }; }
 function gruposEquipo(r) {
@@ -535,7 +547,8 @@ function fotosHTML(r) {
     <div style="display:flex;gap:8px;flex-wrap:wrap">${fs.map((s, i) => `<div style="position:relative"><img src="${s.d}" style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid ${s.sub ? 'var(--verde2)' : 'var(--borde)'}">${s.sub ? '<span style="position:absolute;left:4px;bottom:4px;background:#1f6f43;color:#fff;border-radius:8px;font-size:11px;padding:0 6px">✓ adjunta</span>' : ''}<button data-fdel="${i}" class="btn rojo sm" style="position:absolute;top:2px;right:2px;padding:0 7px">✕</button></div>`).join('')}</div>
     <input type="file" id="fFile" accept="image/*" capture="environment" style="display:none">
     <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sec" id="fFoto" style="flex:1" ${fs.length >= MAX_FOTOS ? 'disabled' : ''}>📷 Agregar foto (${fs.length}/${MAX_FOTOS})</button></div>
-    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sec" id="fPdf" style="flex:1">📄 Ver PDF</button><button class="btn" id="fShare" style="flex:1">Compartir PDF</button></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sec" id="fPdf" style="flex:1">📄 Ver PDF</button>${r.estado === 'enviado' ? '<button class="btn" id="fShare" style="flex:1">Compartir PDF</button>' : ''}</div>
+    ${r.estado === 'enviado' ? '' : '<div style="font-size:12px;color:var(--gris);margin-top:6px">Orden: 1) Enviar a INFOAGRO · 2) Compartir PDF (se habilita al enviar).</div>'}
     <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px"><input type="checkbox" id="fNota" ${r.notaCalc === false ? '' : 'checked'} style="width:auto"> Incluir en el PDF la nota «Cómo se calcula» (QQ sin arrancar y QQ x Mzn)</label>
     <div style="font-size:12px;color:var(--gris);margin-top:6px">Las fotos y el PDF (con tablas y fotos) se adjuntan al recuento en INFOAGRO al enviarlo${pend && r.estado === 'enviado' ? ` · ${pend} pendiente${pend === 1 ? '' : 's'} de subir: se envían al tener señal` : ''}. También puedes compartirlas.</div></div>`;
 }
@@ -724,7 +737,7 @@ function bindFotos(r, guardar, repinta) {
     repinta();
   };
   document.querySelectorAll('[data-fdel]').forEach((b) => b.onclick = () => { if (r.fotos[+b.dataset.fdel].sub && !confirm('Esta foto ya está adjunta en INFOAGRO; aquí solo se quita del teléfono. ¿Continuar?')) return; r.fotos.splice(+b.dataset.fdel, 1); try { guardar(); } catch (e) { /* nada */ } repinta(); });
-  $('#fShare').onclick = () => compartir(r);
+  if ($('#fShare')) $('#fShare').onclick = () => compartir(r);
   $('#fPdf').onclick = () => verPdf(r);
   $('#fNota').onchange = async () => { r.notaCalc = $('#fNota').checked; try { guardar(); } catch (e) { /* nada */ } if (r.estado === 'enviado' && await subirPdf(r)) { try { guardar(); } catch (e) { /* nada */ } toast('PDF actualizado en INFOAGRO ✓'); } };
 }
@@ -740,13 +753,19 @@ function rResumen() {
     <div class="card"><label>Elaborado por</label><input id="tec" value="${esc(r.tecnico || cfg.tecnico)}" placeholder="Nombre del técnico"></div>
     <div id="resEnvio"></div>`;
   const bar = $('#bar'); bar.classList.remove('hide');
-  bar.innerHTML = `<button class="btn sec" id="bVolver">Editar</button><button class="btn" id="bEnviar">Enviar a INFOAGRO</button>`;
-  $('#bVolver').onclick = () => ir({ name: 'editar' });
-  $('#bEnviar').onclick = enviar;
+  if (r.estado === 'enviado') barraEnviado(r);
+  else { bar.innerHTML = `<button class="btn sec" id="bVolver">Editar</button><button class="btn" id="bEnviar">1 · Enviar a INFOAGRO</button>`;
+    $('#bVolver').onclick = () => ir({ name: 'editar' });
+    $('#bEnviar').onclick = enviar; }
   bindFotos(r, () => guardarBorrador(true), () => { const y = window.scrollY; rResumen(); window.scrollTo(0, y); });
 }
 
 let enviando = false;
+// Ya enviado a INFOAGRO: el siguiente paso lógico es compartir el PDF
+function barraEnviado(r) {
+  $('#bar').innerHTML = `<button class="btn sec" id="bFin">Terminar</button><button class="btn" id="bShare">2 · Compartir PDF</button>`;
+  $('#bFin').onclick = () => ir({ name: 'home' }); $('#bShare').onclick = () => compartir(r);
+}
 // Envía el reporte a INFOAGRO, y luego fotos y PDF. Lo usan «Enviar a INFOAGRO» y «Compartir PDF» (compartir exige que el reporte esté en INFOAGRO).
 async function enviarCore(r, alFotos) {
   const h = r.header;
@@ -772,8 +791,9 @@ async function enviar() {
   try {
     const { j, nf, pdfOk } = await enviarCore(r, () => { $('#resEnvio').innerHTML = '<div class="aviso">Reporte enviado. Subiendo fotos…</div>'; });
     const fp = fotosDe(r).filter((f) => !f.sub).length;
-    $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${pdfOk ? '<br>PDF del recuento adjunto ✓' : '<br>PDF pendiente de subir: se envía solo al tener señal.'}${nf ? (fp ? `<br><b>${fp} de ${nf} foto(s) quedaron pendientes</b>: se suben solas al tener señal.` : `<br>${nf} foto(s) adjuntas al recuento ✓`) : ''}${difCalc(r, j.lineas)}</div>`;
-    $('#bar').innerHTML = `<button class="btn" id="bFin">Terminar</button>`; $('#bFin').onclick = () => ir({ name: 'home' });
+    const resEnvioOk = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${pdfOk ? '<br>PDF del recuento adjunto ✓' : '<br>PDF pendiente de subir: se envía solo al tener señal.'}${nf ? (fp ? `<br><b>${fp} de ${nf} foto(s) quedaron pendientes</b>: se suben solas al tener señal.` : `<br>${nf} foto(s) adjuntas al recuento ✓`) : ''}${difCalc(r, j.lineas)}</div>`;
+    barraEnviado(r); const y = window.scrollY; rResumen(); window.scrollTo(0, y);
+    $('#resEnvio').innerHTML = resEnvioOk;
   } catch (e) {
     r.estado = 'listo'; guardarBorrador(true);
     $('#resEnvio').innerHTML = `<div class="aviso err"><b>No se envió.</b> ${esc(e.message)}<br>El reporte sigue guardado en el teléfono; puedes reintentar sin riesgo de duplicarlo.</div>`;
