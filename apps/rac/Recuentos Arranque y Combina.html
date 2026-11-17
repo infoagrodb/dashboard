@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.17-7';
+const APP_VERSION = '2026.11.17-8';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -288,7 +288,11 @@ function rEditar() {
   $('#bBorr').onclick = () => { leerHeader(); guardarBorrador(); };
   $('#bRes').onclick = () => {
     leerHeader();
-    if (formTieneDatos() && !confirm('Hay una muestra capturada que todavía no está en la tabla. ¿Continuar sin ella?')) return;
+    if (formTieneDatos()) {
+      // Tarjeta con datos: si está completa se agrega sola; si está incompleta se avisa en pantalla (sin diálogos del navegador) y se puede descartar.
+      if (!validarLinea(form.d, '').length) { actual.lines.push(clonar(form.d)); toast('Muestra ' + actual.lines.length + ' agregada a la tabla'); form = { rid: actual.id, idx: null, d: lineaNueva() }; }
+      else { form.descartable = true; form.msg = 'Esta tarjeta tiene datos incompletos. Complétala y agrégala, o descártala para continuar al resumen.'; pintarForm(); const m = $('#formM'); if (m) m.scrollIntoView({ block: 'center' }); return; }
+    }
     const e = validar(); if (e.length) { alert('Falta corregir:\n\n• ' + e.join('\n• ')); return; }
     guardarBorrador(true); ir({ name: 'resumen' });
   };
@@ -346,7 +350,9 @@ function pintarForm() {
     ${cuerpo}
     <label>Observación</label><input id="f_obs" value="${esc(d.obs)}">
     <div class="calc" id="calcF"></div>
-    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="fAdd" style="flex:1">${form.idx != null ? 'Guardar cambios' : '＋ Agregar a la tabla'}</button>${(form.idx != null || form.dup) ? '<button class="btn sec" id="fCancel">Cancelar</button>' : ''}</div></div>`;
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="fAdd" style="flex:1">${form.idx != null ? 'Guardar cambios' : '＋ Agregar a la tabla'}</button>${(form.idx != null || form.dup) ? '<button class="btn sec" id="fCancel">Cancelar</button>' : ''}</div>
+    ${form.descartable ? '<button class="btn sec" id="fDesc" style="width:100%;margin-top:8px">Descartar esta tarjeta y continuar al resumen</button>' : (form.idx == null && r.lines.length ? '<div style="font-size:12px;color:#666;margin-top:8px">¿No hay más muestras? Deja esta tarjeta vacía y toca «Resumen y enviar»: no se agrega ni se exige.</div>' : '')}</div>`;
+  const dsc = $('#fDesc'); if (dsc) dsc.onclick = () => { form = { rid: r.id, idx: null, d: lineaNueva() }; $('#bRes').click(); };
   box.querySelectorAll('[id^="f_"]').forEach((e) => e.oninput = e.onchange = () => {
     const k = e.id.slice(2);
     if (k === 'lote') {
