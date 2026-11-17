@@ -85,7 +85,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.16-3';
+const APP_VERSION = '2026.11.17-3';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -118,7 +118,7 @@ const persist = () => save(LS.rep, reportes);
 
 function toast(m, ms = 2400) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), ms); }
 function setNet() { const n = $('#net'); n.textContent = navigator.onLine ? 'en línea' : 'sin señal'; n.style.background = navigator.onLine ? 'rgba(255,255,255,.2)' : '#c77d12'; }
-addEventListener('online', () => { setNet(); }); addEventListener('offline', setNet);
+addEventListener('online', () => { setNet(); reintentaFotos(); }); addEventListener('offline', setNet);
 
 /* ====== Catálogos ====== */
 async function cargarCatalogos(silencioso) {
@@ -330,9 +330,10 @@ function pintarForm() {
   const titulo = form.idx != null ? `Editando la muestra ${form.idx + 1}` : (form.dup ? `Nueva muestra (copia de la ${form.dup}: ajusta los valores)` : `Nueva muestra ${r.lines.length + 1}`);
   const optLote = '<option value="">— elegir —</option>' + lotes.map((l) => `<option value="${l.id}" ${l.id === d.lote ? 'selected' : ''}>${esc(l.nombre)}${l.variedades.length ? ' · ' + esc(l.variedades.join(' / ')) : ''}</option>`).join('');
   const cuerpo = t === 'arranque'
-    ? `<div class="row3">${num('plantas_m', 'Plantas /m')}${num('moho_m', 'Con moho /m')}${num('dano_arrancador', 'Daño arranc.')}</div><div class="row3">${num('podridas', 'Podridas')}${num('mohono', 'Mohono')}${num('germinadas', 'Germinadas')}</div>`
+    ? `<div class="row3">${num('plantas_m', 'Plantas /m')}${num('moho_m', 'Con moho /m')}${num('dano_arrancador', 'Daño arranc.')}</div><div class="row3">${num('podridas', 'Podridas')}${num('mohono', 'Moho')}${num('germinadas', 'Germinadas')}</div>`
     : `<div class="row3"><div><label>Metros lineales</label><select id="f_metros"><option ${d.metros == 12 ? 'selected' : ''}>12</option><option ${d.metros == 16 ? 'selected' : ''}>16</option></select></div>${num('sanas', 'Cáps. sanas')}${num('vanas', 'Cáps. vanas')}</div>`;
   box.innerHTML = `<div class="card muestra"><h3>${titulo}</h3>
+    ${form.msg ? `<div class="aviso">${esc(form.msg)}</div>` : ''}
     ${h.finca ? '' : '<div class="aviso">Elige primero la finca: solo aparecen los lotes sembrados en ' + esc(cat.ciclo || 'el ciclo') + '.</div>'}
     <div class="row"><div><label>Lote (sembrado)</label><select id="f_lote">${optLote}</select></div>
       <div><label>${t === 'arranque' ? 'Arrancador' : 'Combina'}</label><select id="f_equipo">${opt(eq, eqSel)}</select></div></div>
@@ -362,7 +363,10 @@ function pintarForm() {
     else { r.lines.push(clonar(d)); toast('Muestra ' + r.lines.length + ' agregada a la tabla'); }
     if (t === 'arranque' && h.dds === '') calcularDds(true);
     guardarBorrador(true);
-    form = { rid: r.id, idx: null, d: lineaNueva() }; pintarForm(); pintarTabla();
+    const nuevaLinea = form.idx == null;   // la tarjeta siguiente conserva lote y equipo, con los valores vacíos y un aviso
+    form = { rid: r.id, idx: null, d: lineaNueva() };
+    if (nuevaLinea) form.msg = t === 'arranque' ? `Muestra ${r.lines.length} agregada. Se conservaron el lote y el arrancador: agrega los nuevos datos de plantas y cápsulas.` : `Muestra ${r.lines.length} agregada. Se conservaron el lote y la combina: agrega el nuevo conteo de cápsulas.`;
+    pintarForm(); pintarTabla();
     const p = $('#f_' + CAMPOS_NUM[t][0]); if (p) p.focus({ preventScroll: true });
   };
   const c = $('#fCancel'); if (c) c.onclick = () => { form = { rid: r.id, idx: null, d: lineaNueva() }; pintarForm(); };
@@ -384,7 +388,7 @@ function tablaLineas(r, acciones) {
   const eqn = (id) => { const x = (t === 'arranque' ? cat.arrancadores : cat.combinas).find((e) => e.id === id); return x ? esc(x.nombre.split(' ')[0]) : '—'; };
   const num = (v) => (v === '' || v == null ? '—' : esc(Number(v)));
   const heads = t === 'arranque'
-    ? ['#', 'Lote', 'Arranc.', 'Plant/m', 'Moho/m', 'Daño', 'Podr.', 'Mohono', 'Germ.', 'QQ/Mzn']
+    ? ['#', 'Lote', 'Arranc.', 'Plant/m', 'Moho/m', 'Daño', 'Podr.', 'Moho', 'Germ.', 'QQ/Mzn']
     : ['#', 'Lote', 'Combina', 'Mtrs', 'Sanas', 'Vanas', 'Sanas/m', 'Pérd. QQ/Mzn'];
   const filas = r.lines.map((l, i) => {
     const lote = esc(l.lote_nombre || nombreDe(cat.lotes, l.lote));
@@ -435,15 +439,125 @@ function validar() {
 }
 
 /* ====== Resumen y envío ====== */
-function tablaResumen(r) {
-  const s = RAC.resumen(r.tipo, r.lines.map((l) => ({ ...l, lote_nombre: l.lote_nombre || nombreDe(cat.lotes, l.lote) })));
+const fRes = (tipo) => {
   const f = RAC.fmt;
-  if (r.tipo === 'arranque') {
-    const fila = (n, x) => `<tr><td>${esc(n)}</td><td>${x.muestras}</td><td>${f(x.plantas_m, 1)}</td><td>${f(x.qq_sin_arrancar)}</td><td><b>${f(x.qq_mzn)}</b></td></tr>`;
-    return `<table><tr><th>Lote</th><th>Mues.</th><th>Plantas/m</th><th>QQ sin arr.</th><th>QQ x Mzn</th></tr>${s.lotes.map((x) => fila(x.lote, x)).join('')}${s.lotes.length > 1 ? fila('Promedio general', s.general) : ''}</table>`;
+  return tipo === 'arranque'
+    ? { th: '<th>Mues.</th><th>Plantas/m</th><th>QQ sin arr.</th><th>QQ x Mzn</th>', td: (x) => `<td>${x.muestras}</td><td>${f(x.plantas_m, 1)}</td><td>${f(x.qq_sin_arrancar)}</td><td><b>${f(x.qq_mzn)}</b></td>` }
+    : { th: '<th>Mues.</th><th>Sanas</th><th>Sanas/m</th><th>Pérdida QQ/Mzn</th>', td: (x) => `<td>${x.muestras}</td><td>${f(x.sanas, 1)}</td><td>${f(x.sanas_x_metro)}</td><td><b>${f(x.qq_mzn)}</b></td>` };
+};
+const lineasR = (r) => r.lines.map((l) => ({ ...l, lote_nombre: l.lote_nombre || nombreDe(cat.lotes, l.lote) }));
+function gruposLote(r) { const s = RAC.resumen(r.tipo, lineasR(r)); return { filas: s.lotes.map((x) => ({ n: x.lote, x })), general: s.general }; }
+function gruposEquipo(r) {
+  const campo = r.tipo === 'arranque' ? 'arrancador' : 'combina', lista = r.tipo === 'arranque' ? cat.arrancadores : cat.combinas, ls = lineasR(r), m = new Map();
+  ls.forEach((l) => { const k = l[campo] || 0; (m.get(k) || m.set(k, []).get(k)).push(l); });
+  return { filas: [...m].map(([k, v]) => ({ n: nombreDe(lista, k) || 'Sin equipo', x: RAC.resumen(r.tipo, v).general })), general: RAC.resumen(r.tipo, ls).general };
+}
+function tablaProm(r, g, col) {
+  const t = fRes(r.tipo), fila = (n, x, b) => `<tr${b ? ' style="font-weight:600;background:#eef5f0"' : ''}><td>${esc(n)}</td>${t.td(x)}</tr>`;
+  return `<div class="scroll"><table><tr><th>${col}</th>${t.th}</tr>${g.filas.map((x) => fila(x.n, x.x)).join('')}${g.filas.length > 1 ? fila('Promedio general', g.general, true) : ''}</table></div>`;
+}
+const tablaResumen = (r) => tablaProm(r, gruposLote(r), 'Lote');
+function seccionesResumen(r) {
+  const eq = r.tipo === 'arranque' ? 'arrancador' : 'combina';
+  return `<div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}<div style="font-size:12px;color:var(--gris);margin-top:8px">Vista previa. INFOAGRO recalcula al recibir el reporte.</div></div>
+    <div class="card"><h3>Promedios por ${eq}</h3>${tablaProm(r, gruposEquipo(r), eq === 'arrancador' ? 'Arrancador' : 'Combina')}</div>
+    <div class="card"><h3>Detalle de muestras (${r.lines.length})</h3>${tablaLineas(r, false)}</div>
+    ${comparacionHTML(r)}${fotosHTML(r)}`;
+}
+
+/* ----- Mañana vs tarde (mismo día, finca y compañía; menor pérdida = mejoró) ----- */
+const periodoDe = (r) => (new Date(r.creado || Date.now()).getHours() < 12 ? 'Mañana' : 'Tarde');
+function compara(r) {
+  const h = r.header, pool = reportes.filter((x) => x.id !== r.id).concat([r]);
+  const mis = pool.filter((x) => x.tipo === r.tipo && x.lines.length && x.header.fecha === h.fecha && x.header.finca === h.finca && x.header.company === h.company);
+  const ult = (p) => mis.filter((x) => periodoDe(x) === p).sort((a, b) => (b.creado || 0) - (a.creado || 0))[0];
+  const am = ult('Mañana'), pm = ult('Tarde'); if (!am || !pm) return null;
+  const ga = gruposLote(am), gp = gruposLote(pm), mp = new Map(gp.filas.map((x) => [x.n, x.x]));
+  const ev = (a, b) => { const d = b - a; return Math.abs(d) < 0.005 ? { d, t: 'Igual', c: '#5f6b66' } : d < 0 ? { d, t: 'Mejoró', c: '#1f6f43' } : { d, t: 'Empeoró', c: '#b3261e' }; };
+  const filas = ga.filas.filter((x) => mp.has(x.n)).map((x) => ({ n: x.n, a: x.x.qq_mzn, p: mp.get(x.n).qq_mzn, e: ev(x.x.qq_mzn, mp.get(x.n).qq_mzn) }));
+  return { filas, general: { a: ga.general.qq_mzn, p: gp.general.qq_mzn, e: ev(ga.general.qq_mzn, gp.general.qq_mzn) }, am, pm };
+}
+function comparacionHTML(r) {
+  const c = compara(r); if (!c) return '';
+  const f = RAC.fmt, ft = (e, d) => `<span style="color:${e.c};font-weight:600">${e.t === 'Mejoró' ? '▼ ' : e.t === 'Empeoró' ? '▲ ' : ''}${e.t}${e.t === 'Igual' ? '' : ` (${d > 0 ? '+' : ''}${f(d)})`}</span>`;
+  const fila = (n, x, b) => `<tr${b ? ' style="font-weight:600;background:#eef5f0"' : ''}><td>${esc(n)}</td><td>${f(x.a)}</td><td>${f(x.p)}</td><td>${ft(x.e, x.p - x.a)}</td></tr>`;
+  const eg = c.general.e;
+  return `<div class="card"><h3>Mañana vs tarde · ${RAC.fmtFecha(r.header.fecha)}</h3>
+    <div class="aviso" style="margin-top:0;background:${eg.t === 'Mejoró' ? '#e8f4ec' : eg.t === 'Empeoró' ? '#fdeceb' : '#f3f5f4'}"><b>${eg.t === 'Mejoró' ? 'Mejoró: la pérdida bajó en el recuento de la tarde.' : eg.t === 'Empeoró' ? 'Empeoró: la pérdida subió en el recuento de la tarde.' : 'Sin cambio entre mañana y tarde.'}</b></div>
+    <div class="scroll"><table><tr><th>Lote</th><th>Mañana QQ/Mzn</th><th>Tarde QQ/Mzn</th><th>Resultado</th></tr>${c.filas.map((x) => fila(x.n, x)).join('')}${c.filas.length > 1 ? fila('Promedio general', c.general, true) : ''}</table></div>
+    <div style="font-size:12px;color:var(--gris);margin-top:6px">Se comparan los recuentos de este teléfono del mismo día y finca. Menor pérdida (QQ/Mzn) = mejor.</div></div>`;
+}
+
+/* ----- Fotos y compartir ----- */
+const MAX_FOTOS = 4;
+const fotosDe = (r) => (r.fotos = (r.fotos || []).map((x) => (typeof x === 'string' ? { id: uid(), d: x, sub: false } : x)));
+async function subirFotos(r) {   // adjunta las fotos al recuento en INFOAGRO (como Enfermedades); idempotente por nombre
+  if (!r.odoo || !r.odoo.id || !navigator.onLine) return 0;
+  let n = 0;
+  for (const [i, f] of fotosDe(r).entries()) {
+    if (f.sub) continue;
+    try {
+      const blob = await (await fetch(f.d)).blob(), fd = new FormData();
+      fd.append('file', blob, 'foto.jpg'); fd.append('odoo_id', r.odoo.id); fd.append('filename', `Foto ${i + 1} - ${r.odoo.folio || r.header.fecha} - ${f.id.slice(0, 6)}.jpg`);
+      const res = await fetch(WORKER + TIPOS[r.tipo].path + '/foto', { method: 'POST', headers: { 'X-Sync-Key': SYNC_KEY }, body: fd });
+      const j = await res.json().catch(() => ({})); if (!res.ok || !j.ok) throw new Error(j.error || res.status);
+      f.sub = true; n++;
+    } catch (e) { /* queda pendiente; se reintenta al volver la señal */ }
   }
-  const fila = (n, x) => `<tr><td>${esc(n)}</td><td>${x.muestras}</td><td>${f(x.sanas, 1)}</td><td>${f(x.sanas_x_metro)}</td><td><b>${f(x.qq_mzn)}</b></td></tr>`;
-  return `<table><tr><th>Lote</th><th>Mues.</th><th>Sanas</th><th>Sanas/m</th><th>Pérdida QQ/Mzn</th></tr>${s.lotes.map((x) => fila(x.lote, x)).join('')}${s.lotes.length > 1 ? fila('Promedio general', s.general) : ''}</table>`;
+  return n;
+}
+async function reintentaFotos() {
+  let cambio = false;
+  for (const r of reportes) if (r.estado === 'enviado' && fotosDe(r).some((f) => !f.sub)) { if (await subirFotos(r)) cambio = true; }
+  if (cambio) { persist(); if (vista.name === 'detalle') rDetalle(); }
+}
+function fotosHTML(r) {
+  const fs = fotosDe(r), pend = fs.filter((f) => !f.sub).length;
+  return `<div class="card"><h3>Fotos y compartir</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${fs.map((s, i) => `<div style="position:relative"><img src="${s.d}" style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid ${s.sub ? 'var(--verde2)' : 'var(--borde)'}">${s.sub ? '<span style="position:absolute;left:4px;bottom:4px;background:#1f6f43;color:#fff;border-radius:8px;font-size:11px;padding:0 6px">✓ adjunta</span>' : ''}<button data-fdel="${i}" class="btn rojo sm" style="position:absolute;top:2px;right:2px;padding:0 7px">✕</button></div>`).join('')}</div>
+    <input type="file" id="fFile" accept="image/*" capture="environment" style="display:none">
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sec" id="fFoto" style="flex:1" ${fs.length >= MAX_FOTOS ? 'disabled' : ''}>📷 Agregar foto (${fs.length}/${MAX_FOTOS})</button><button class="btn" id="fShare" style="flex:1">Compartir</button></div>
+    <div style="font-size:12px;color:var(--gris);margin-top:6px">Las fotos se adjuntan al recuento en INFOAGRO al enviarlo (igual que Enfermedades)${pend && r.estado === 'enviado' ? ` · ${pend} pendiente${pend === 1 ? '' : 's'} de subir: se envían al tener señal` : ''}. También puedes compartirlas.</div></div>`;
+}
+function comprimeFoto(file) {
+  return new Promise((ok, mal) => {
+    const rd = new FileReader();
+    rd.onerror = mal;
+    rd.onload = () => { const im = new Image(); im.onerror = mal; im.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(im.width, im.height)), c = document.createElement('canvas'); c.width = Math.round(im.width * k); c.height = Math.round(im.height * k);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); ok(c.toDataURL('image/jpeg', 0.72)); }; im.src = rd.result; };
+    rd.readAsDataURL(file);
+  });
+}
+function textoResumen(r) {
+  const h = r.header, T = TIPOS[r.tipo], f = RAC.fmt, eq = r.tipo === 'arranque' ? 'Arrancador' : 'Combina';
+  const lin = (g, key) => g.filas.map((x) => `• ${x.n}: ${r.tipo === 'arranque' ? `${x.x.muestras} mues., plantas/m ${f(x.x.plantas_m, 1)}, QQ x Mzn ${f(x.x.qq_mzn)}` : `${x.x.muestras} mues., sanas/m ${f(x.x.sanas_x_metro)}, pérdida QQ/Mzn ${f(x.x.qq_mzn)}`}`).join('\n');
+  const c = compara(r);
+  return `${T.nombre}\nFinca ${nombreDe(cat.fincas, h.finca)} · ${RAC.fmtFecha(h.fecha)}${h.variedad ? ' · ' + h.variedad : ''}${r.tipo === 'arranque' && h.dds !== '' ? ' · DDS ' + h.dds : ''}\n\nPromedio por lote:\n${lin(gruposLote(r))}\n\nPromedio por ${eq.toLowerCase()}:\n${lin(gruposEquipo(r))}`
+    + (c ? `\n\nMañana vs tarde: ${c.general.e.t} (${f(c.general.a)} → ${f(c.general.p)} QQ/Mzn)` : '') + `\n\nElaborado por ${r.tecnico || cfg.tecnico || '—'}`;
+}
+async function compartir(r) {
+  const texto = textoResumen(r), files = [];
+  try { for (let i = 0; i < fotosDe(r).length; i++) { const b = await (await fetch(r.fotos[i].d)).blob(); files.push(new File([b], `recuento-${i + 1}.jpg`, { type: 'image/jpeg' })); } } catch (e) { /* sin fotos */ }
+  try {
+    if (files.length && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files, text: texto, title: TIPOS[r.tipo].nombre }); return; }
+    if (navigator.share) { await navigator.share({ text: texto, title: TIPOS[r.tipo].nombre }); if (files.length) toast('Tu teléfono no permite compartir fotos desde aquí; se compartió el texto'); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+}
+function bindFotos(r, guardar, repinta) {
+  const inp = $('#fFile'); if (!inp) return;
+  $('#fFoto').onclick = () => inp.click();
+  inp.onchange = async () => {
+    const fl = [...inp.files]; inp.value = ''; if (!fl.length) return;
+    fotosDe(r);
+    for (const fi of fl) { if (r.fotos.length >= MAX_FOTOS) break; try { r.fotos.push({ id: uid(), d: await comprimeFoto(fi), sub: false }); } catch (e) { toast('No se pudo leer la foto'); } }
+    try { guardar(); } catch (e) { r.fotos.pop(); toast('Almacenamiento lleno: no se guardó la foto'); }
+    if (r.estado === 'enviado') { toast('Subiendo foto a INFOAGRO…'); if (await subirFotos(r)) { try { guardar(); } catch (e) { /* nada */ } toast('Foto adjunta en INFOAGRO ✓'); } }
+    repinta();
+  };
+  document.querySelectorAll('[data-fdel]').forEach((b) => b.onclick = () => { if (r.fotos[+b.dataset.fdel].sub && !confirm('Esta foto ya está adjunta en INFOAGRO; aquí solo se quita del teléfono. ¿Continuar?')) return; r.fotos.splice(+b.dataset.fdel, 1); try { guardar(); } catch (e) { /* nada */ } repinta(); });
+  $('#fShare').onclick = () => compartir(r);
 }
 function rResumen() {
   const r = actual, h = r.header, T = TIPOS[r.tipo];
@@ -453,15 +567,14 @@ function rResumen() {
       <div>Nº <b>${esc(h.numero || '(automático)')}</b> · ${RAC.fmtFecha(h.fecha)}</div>
       <div>${esc(nombreDe(cat.companias, h.company))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div>
       <div>Finca <b>${esc(nombreDe(cat.fincas, h.finca))}</b>${r.tipo === 'arranque' ? ` · ${esc(h.variedad)} · DDS ${esc(h.dds === '' ? '—' : h.dds)}` : ''}</div></div>
-    <div class="card"><h3>Muestras (${r.lines.length})</h3>${tablaLineas(r, false)}</div>
-    <div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}
-      <div style="font-size:12px;color:var(--gris);margin-top:8px">Vista previa. INFOAGRO recalcula al recibir el reporte.</div></div>
+    ${seccionesResumen(r)}
     <div class="card"><label>Elaborado por</label><input id="tec" value="${esc(r.tecnico || cfg.tecnico)}" placeholder="Nombre del técnico"></div>
     <div id="resEnvio"></div>`;
   const bar = $('#bar'); bar.classList.remove('hide');
   bar.innerHTML = `<button class="btn sec" id="bVolver">Editar</button><button class="btn" id="bEnviar">Enviar a INFOAGRO</button>`;
   $('#bVolver').onclick = () => ir({ name: 'editar' });
   $('#bEnviar').onclick = enviar;
+  bindFotos(r, () => guardarBorrador(true), () => { const y = window.scrollY; rResumen(); window.scrollTo(0, y); });
 }
 
 let enviando = false;
@@ -481,7 +594,9 @@ async function enviar() {
     if (!res.ok || !j.ok) throw new Error(j.error || 'Error ' + res.status);
     r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, ya_existia: !!j.ya_existia, confirmado: j.lineas || null, enviado: Date.now() };
     guardarBorrador(true);
-    $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${difCalc(r, j.lineas)}</div>`;
+    const nf = fotosDe(r).length; if (nf) { $('#resEnvio').innerHTML = '<div class="aviso">Reporte enviado. Subiendo fotos…</div>'; await subirFotos(r); guardarBorrador(true); }
+    const fp = fotosDe(r).filter((f) => !f.sub).length;
+    $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${nf ? (fp ? `<br><b>${fp} de ${nf} foto(s) quedaron pendientes</b>: se suben solas al tener señal.` : `<br>${nf} foto(s) adjuntas al recuento ✓`) : ''}${difCalc(r, j.lineas)}</div>`;
     $('#bar').innerHTML = `<button class="btn" id="bFin">Terminar</button>`; $('#bFin').onclick = () => ir({ name: 'home' });
   } catch (e) {
     r.estado = 'listo'; guardarBorrador(true);
@@ -508,9 +623,10 @@ function rDetalle() {
   $('#main').innerHTML = `
     <div class="aviso okbox">Enviado a INFOAGRO ${r.odoo ? 'como Nº <b>' + esc(r.odoo.folio) + '</b>' : ''}. Solo lectura: para corregirlo, hazlo en INFOAGRO.</div>
     <div class="card"><div>${RAC.fmtFecha(h.fecha)} · ${esc(nombreDe(cat.fincas, h.finca))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div></div>
-    <div class="card"><h3>Muestras (${r.lines.length})</h3>${tablaLineas(r, false)}</div>
-    <div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}</div>
+    ${seccionesResumen(r)}
     <button class="btn rojo" id="quitar" style="width:100%">Quitar del teléfono</button>`;
+  $('#bar').classList.add('hide');
+  bindFotos(r, persist, rDetalle);
   $('#quitar').onclick = () => { if (confirm('Esto solo borra la copia del teléfono; el reporte sigue en INFOAGRO. ¿Continuar?')) { reportes = reportes.filter((x) => x.id !== r.id); persist(); ir({ name: 'lista', tipo: r.tipo }); } };
 }
 
@@ -539,7 +655,7 @@ async function enviarListos() {
       const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY },
         body: JSON.stringify({ localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico || cfg.tecnico, header: { numero: h.numero, fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds }, lines: r.lines }) });
       const j = await res.json(); if (!res.ok || !j.ok) throw new Error(j.error);
-      r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, enviado: Date.now() }; ok++;
+      r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, enviado: Date.now() }; ok++; try { await subirFotos(r); } catch (e) { /* queda pendiente */ }
     } catch (e) { mal++; }
   }
   persist(); toast(`Enviados: ${ok}${mal ? ' · con error: ' + mal : ''}`, 3500); rCfg();
@@ -550,6 +666,7 @@ setNet();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 render();
 cargarCatalogos(true).then((ok) => { if (ok && vista.name === 'home') render(); });
+setTimeout(reintentaFotos, 3000);
 </script>
 </body>
 </html>
