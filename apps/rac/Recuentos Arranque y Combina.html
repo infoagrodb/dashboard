@@ -82,15 +82,19 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <div id="toast"></div>
 
 <script src="calc.js"></script>
+<script src="pdf.js"></script>
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.17-3';
+const APP_VERSION = '2026.11.17-7';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const tmpNuevo = (tipo) => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return 'T' + (tipo === 'arranque' ? 'A' : 'C') + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase(); };
+const tmpDe = (r) => { if (!r.temporal) r.temporal = tmpNuevo(r.tipo); return r.temporal; };
+const numDe = (r) => (r.odoo && r.odoo.folio) || (r.header.numero || '').trim() || tmpDe(r) + ' (temporal)';
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(16).slice(2));
 const hoy = () => { const d = new Date(Date.now() - new Date().getTimezoneOffset() * 60000); return d.toISOString().slice(0, 10); };
 const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
@@ -181,7 +185,7 @@ function pendientesHTML() {
 }
 function itemHTML(r) {
   const h = r.header, nl = r.lines.length;
-  return `<div class="item" data-open="${r.id}"><div class="t"><b>${TIPOS[r.tipo].corto} · ${esc(h.numero || 'sin Nº')} · ${esc(nombreDe(cat.fincas, h.finca) || 'sin finca')}</b>
+  return `<div class="item" data-open="${r.id}"><div class="t"><b>${TIPOS[r.tipo].corto} · ${esc(r.odoo ? r.odoo.folio : (h.numero || tmpDe(r)))} · ${esc(nombreDe(cat.fincas, h.finca) || 'sin finca')}</b>
     <small>${RAC.fmtFecha(h.fecha)} · ${nl} muestra${nl === 1 ? '' : 's'}${r.odoo ? ' · INFOAGRO ' + esc(r.odoo.folio) : ''}</small></div><span class="chip ${r.estado}">${r.estado}</span></div>`;
 }
 const nombreDe = (arr, id) => { const x = arr.find((a) => a.id === id); return x ? x.nombre : ''; };
@@ -208,7 +212,7 @@ function abrir(id) {
 /* ====== Nuevo / editar ====== */
 function nuevo(tipo) {
   const ult = reportes.filter((r) => r.tipo === tipo).sort((a, b) => b.mod - a.mod)[0];
-  actual = { id: uid(), tipo, estado: 'borrador', creado: Date.now(), mod: Date.now(),
+  actual = { id: uid(), tipo, temporal: tmpNuevo(tipo), estado: 'borrador', creado: Date.now(), mod: Date.now(),
     header: { numero: '', fecha: hoy(), company: (ult && cat.companias.some((c) => c.id === ult.header.company)) ? ult.header.company : (cat.companias[0] || {}).id || null, ciclo: ult ? ult.header.ciclo : null,
               finca: ult ? ult.header.finca : null, variedad: '', dds: '' },
     lines: [], tecnico: cfg.tecnico };
@@ -261,12 +265,13 @@ function formTieneDatos() { return !!form && form.idx == null && CAMPOS_NUM[actu
 function rEditar() {
   const r = actual, h = r.header, t = r.tipo, T = TIPOS[r.tipo];
   if (!form || form.rid !== r.id) form = { rid: r.id, idx: null, d: lineaNueva() };
-  $('#titulo').textContent = T.corto + (h.numero ? ' · ' + h.numero : ' · nuevo');
+  $('#titulo').textContent = T.corto + ' · ' + (h.numero || tmpDe(r));
   const vars = variedadesDe(h);
   $('#main').innerHTML = `
     <div class="card"><h3>Datos del reporte</h3>
       <div class="row"><div><label>Nº de reporte (hoja)</label><input id="h_numero" inputmode="numeric" placeholder="vacío = automático" value="${esc(h.numero)}"></div>
         <div><label>Fecha</label><input type="date" id="h_fecha" value="${h.fecha}"></div></div>
+      <div class="nota" style="font-size:12px;color:#666;margin:2px 0 6px">Nº temporal: <b>${esc(tmpDe(r))}</b>. Al enviar, INFOAGRO asigna el consecutivo y queda ligado a este temporal.</div>
       <label>Compañía</label><select id="h_company">${opt(cat.companias, h.company)}</select>
       <label>Sector</label><select id="h_sector">${opt(sectoresDe(h), h.sector)}</select>
       <label>Ciclo</label><select id="h_ciclo">${opt(ciclosDe(h.company), h.ciclo)}</select>
@@ -275,8 +280,9 @@ function rEditar() {
         <div><label>DDS (días de siembra)</label><div style="display:flex;gap:6px"><input id="h_dds" type="number" inputmode="numeric" value="${esc(h.dds)}"><button class="btn sec sm" id="btnDds" title="Calcular desde la fecha de siembra">↻</button></div></div></div>` : ''}
     </div>
     <div id="formM"></div>
-    <div class="card"><h3>Muestras creadas <span id="nMuestras" style="color:var(--gris);font-weight:400"></span></h3><div id="tablaM"></div></div>`;
-  pintarForm(); pintarTabla();
+    <div class="card"><h3>Muestras creadas <span id="nMuestras" style="color:var(--gris);font-weight:400"></span></h3><div id="tablaM"></div></div>
+    <div id="fotosM"></div>`;
+  pintarForm(); pintarTabla(); pintarFotos();
   const bar = $('#bar'); bar.classList.remove('hide');
   bar.innerHTML = `<button class="btn sec" id="bBorr">Guardar borrador</button><button class="btn" id="bRes">Resumen y enviar</button>`;
   $('#bBorr').onclick = () => { leerHeader(); guardarBorrador(); };
@@ -391,7 +397,7 @@ function tablaLineas(r, acciones) {
     ? ['#', 'Lote', 'Arranc.', 'Plant/m', 'Moho/m', 'Daño', 'Podr.', 'Moho', 'Germ.', 'QQ/Mzn']
     : ['#', 'Lote', 'Combina', 'Mtrs', 'Sanas', 'Vanas', 'Sanas/m', 'Pérd. QQ/Mzn'];
   const filas = r.lines.map((l, i) => {
-    const lote = esc(l.lote_nombre || nombreDe(cat.lotes, l.lote));
+    const lote = esc(loteTxt(r, l));
     const cols = t === 'arranque'
       ? (() => { const c = RAC.arranqueLinea(l); return [eqn(l.arrancador), num(l.plantas_m), num(l.moho_m), num(l.dano_arrancador), num(l.podridas), num(l.mohono), num(l.germinadas), `<b>${f(c.qq_mzn)}</b>`]; })()
       : (() => { const c = RAC.combinaLinea(l); return [eqn(l.combina), num(l.metros), num(l.sanas), num(l.vanas), f(c.sanas_x_metro), `<b>${f(c.qq_mzn)}</b>`]; })();
@@ -400,6 +406,7 @@ function tablaLineas(r, acciones) {
   }).join('');
   return `<div class="scroll"><table class="tl"><tr>${heads.map((x) => `<th>${x}</th>`).join('')}${acciones ? '<th></th>' : ''}</tr>${filas}</table></div>`;
 }
+function pintarFotos() { const b = $('#fotosM'); if (!b) return; b.innerHTML = fotosHTML(actual); bindFotos(actual, () => guardarBorrador(true), pintarFotos); }
 function pintarTabla() {
   const r = actual, box = $('#tablaM'); if (!box) return;
   box.innerHTML = tablaLineas(r, true);
@@ -445,7 +452,9 @@ const fRes = (tipo) => {
     ? { th: '<th>Mues.</th><th>Plantas/m</th><th>QQ sin arr.</th><th>QQ x Mzn</th>', td: (x) => `<td>${x.muestras}</td><td>${f(x.plantas_m, 1)}</td><td>${f(x.qq_sin_arrancar)}</td><td><b>${f(x.qq_mzn)}</b></td>` }
     : { th: '<th>Mues.</th><th>Sanas</th><th>Sanas/m</th><th>Pérdida QQ/Mzn</th>', td: (x) => `<td>${x.muestras}</td><td>${f(x.sanas, 1)}</td><td>${f(x.sanas_x_metro)}</td><td><b>${f(x.qq_mzn)}</b></td>` };
 };
-const lineasR = (r) => r.lines.map((l) => ({ ...l, lote_nombre: l.lote_nombre || nombreDe(cat.lotes, l.lote) }));
+const variedadDeLote = (r, id) => { const s = cat.siembras.find((x) => x.lote === id && x.variedad && (!r.header.finca || x.finca === r.header.finca)); return s ? s.variedad : ''; };
+const loteTxt = (r, l) => { const n = l.lote_nombre || nombreDe(cat.lotes, l.lote), v = variedadDeLote(r, l.lote); return v ? `${n} · ${v}` : n; };
+const lineasR = (r) => r.lines.map((l) => ({ ...l, lote_nombre: loteTxt(r, l) }));
 function gruposLote(r) { const s = RAC.resumen(r.tipo, lineasR(r)); return { filas: s.lotes.map((x) => ({ n: x.lote, x })), general: s.general }; }
 function gruposEquipo(r) {
   const campo = r.tipo === 'arranque' ? 'arrancador' : 'combina', lista = r.tipo === 'arranque' ? cat.arrancadores : cat.combinas, ls = lineasR(r), m = new Map();
@@ -508,7 +517,10 @@ async function subirFotos(r) {   // adjunta las fotos al recuento en INFOAGRO (c
 }
 async function reintentaFotos() {
   let cambio = false;
-  for (const r of reportes) if (r.estado === 'enviado' && fotosDe(r).some((f) => !f.sub)) { if (await subirFotos(r)) cambio = true; }
+  for (const r of reportes) if (r.estado === 'enviado') {
+    if (fotosDe(r).some((f) => !f.sub) && await subirFotos(r)) cambio = true;
+    if (r.pdfSig !== firmaPdf(r) && await subirPdf(r)) cambio = true;
+  }
   if (cambio) { persist(); if (vista.name === 'detalle') rDetalle(); }
 }
 function fotosHTML(r) {
@@ -516,8 +528,10 @@ function fotosHTML(r) {
   return `<div class="card"><h3>Fotos y compartir</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${fs.map((s, i) => `<div style="position:relative"><img src="${s.d}" style="width:92px;height:92px;object-fit:cover;border-radius:10px;border:1px solid ${s.sub ? 'var(--verde2)' : 'var(--borde)'}">${s.sub ? '<span style="position:absolute;left:4px;bottom:4px;background:#1f6f43;color:#fff;border-radius:8px;font-size:11px;padding:0 6px">✓ adjunta</span>' : ''}<button data-fdel="${i}" class="btn rojo sm" style="position:absolute;top:2px;right:2px;padding:0 7px">✕</button></div>`).join('')}</div>
     <input type="file" id="fFile" accept="image/*" capture="environment" style="display:none">
-    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sec" id="fFoto" style="flex:1" ${fs.length >= MAX_FOTOS ? 'disabled' : ''}>📷 Agregar foto (${fs.length}/${MAX_FOTOS})</button><button class="btn" id="fShare" style="flex:1">Compartir</button></div>
-    <div style="font-size:12px;color:var(--gris);margin-top:6px">Las fotos se adjuntan al recuento en INFOAGRO al enviarlo (igual que Enfermedades)${pend && r.estado === 'enviado' ? ` · ${pend} pendiente${pend === 1 ? '' : 's'} de subir: se envían al tener señal` : ''}. También puedes compartirlas.</div></div>`;
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn sec" id="fFoto" style="flex:1" ${fs.length >= MAX_FOTOS ? 'disabled' : ''}>📷 Agregar foto (${fs.length}/${MAX_FOTOS})</button></div>
+    <div style="display:flex;gap:8px;margin-top:8px"><button class="btn sec" id="fPdf" style="flex:1">📄 Ver PDF</button><button class="btn" id="fShare" style="flex:1">Compartir PDF</button></div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:10px;font-size:13px"><input type="checkbox" id="fNota" ${r.notaCalc === false ? '' : 'checked'} style="width:auto"> Incluir en el PDF la nota «Cómo se calcula» (QQ sin arrancar y QQ x Mzn)</label>
+    <div style="font-size:12px;color:var(--gris);margin-top:6px">Las fotos y el PDF (con tablas y fotos) se adjuntan al recuento en INFOAGRO al enviarlo${pend && r.estado === 'enviado' ? ` · ${pend} pendiente${pend === 1 ? '' : 's'} de subir: se envían al tener señal` : ''}. También puedes compartirlas.</div></div>`;
 }
 function comprimeFoto(file) {
   return new Promise((ok, mal) => {
@@ -529,6 +543,136 @@ function comprimeFoto(file) {
     rd.readAsDataURL(file);
   });
 }
+
+/* ----- PDF del recuento (con tablas, comparación y fotos); se genera en el teléfono, sin internet ----- */
+function construirPDF(r) {
+  const h = r.header, T = TIPOS[r.tipo], f = RAC.fmt, d = new MiniPDF(`${T.nombre} ${(r.odoo && r.odoo.folio) || h.numero || tmpDe(r)}`.trim());
+  const W = d.W, H = d.H, M = 36, CW = W - 2 * M, VERDE = '#1f6f43', GRIS = '#5f6b66';
+  let y = 0; const pie = 30;
+  const nueva = () => { d.newPage(); d.rect(0, 0, W, 46, { fill: VERDE }); d.text(M, 29, `${T.nombre}`, { size: 15, bold: true, color: '#ffffff' }); d.text(W - M, 29, `Nº ${numDe(r)} · ${RAC.fmtFecha(h.fecha)}`, { size: 10, color: '#ffffff', align: 'right' }); y = 66; };
+  const hay = (alto) => { if (y + alto > H - pie) nueva(); };
+  const titulo = (s) => { hay(40); d.text(M, y, s, { size: 12, bold: true, color: VERDE }); y += 6; d.line(M, y, W - M, y, { color: VERDE, lw: 0.8 }); y += 14; };
+  const tabla = (cols, filas, op = {}) => {   // cols: [{t, w (fracción), al}]
+    const sz = op.size || 8.5, rh = 15, tot = cols.reduce((a, c) => a + c.w, 0), xs = []; let x = M;
+    cols.forEach((c) => { xs.push(x); x += (c.w / tot) * CW; });
+    const cab = () => { d.rect(M, y - 10.5, CW, rh, { fill: '#e8f1ec' }); cols.forEach((c, i) => d.text(c.al === 'r' ? xs[i] + (c.w / tot) * CW - 3 : xs[i] + 3, y, c.t, { size: sz, bold: true, align: c.al === 'r' ? 'right' : 'left' })); y += rh; };
+    hay(rh * 2 + 6); cab();
+    filas.forEach((fila) => {
+      if (y + rh > H - pie) { nueva(); cab(); }
+      const b = fila.total; if (b) d.rect(M, y - 10.5, CW, rh, { fill: '#f1f6f3' });
+      cols.forEach((c, i) => { const cw = (c.w / tot) * CW - 6, s = d.fit(fila.c[i], cw, sz, b); d.text(c.al === 'r' ? xs[i] + (c.w / tot) * CW - 3 : xs[i] + 3, y, s, { size: sz, bold: b, align: c.al === 'r' ? 'right' : 'left' }); });
+      d.line(M, y + 4.5, W - M, y + 4.5, { color: '#e1e7e3', lw: 0.4 }); y += rh;
+    });
+    y += 10;
+  };
+  const filasProm = (g) => { const arr = g.filas.map((x) => ({ c: [x.n, ...resCols(r.tipo, x.x)] })); if (g.filas.length > 1) arr.push({ total: true, c: ['Promedio general', ...resCols(r.tipo, g.general)] }); return arr; };
+  const resCols = (tipo, x) => (tipo === 'arranque' ? [String(x.muestras), f(x.plantas_m, 1), f(x.qq_sin_arrancar), f(x.qq_mzn)] : [String(x.muestras), f(x.sanas, 1), f(x.sanas_x_metro), f(x.qq_mzn)]);
+  const hres = r.tipo === 'arranque' ? ['Mues.', 'Plantas/m', 'QQ sin arr.', 'QQ x Mzn'] : ['Mues.', 'Sanas', 'Sanas/m', 'Pérd. QQ/Mzn'];
+  const colsProm = (n) => [{ t: n, w: 4 }, ...hres.map((t) => ({ t, w: 1.4, al: 'r' }))];
+
+  nueva();
+  // encabezado del reporte
+  const fila2 = (a, b) => { d.text(M, y, a, { size: 9, color: GRIS }); d.text(M + 78, y, b, { size: 10, bold: true }); y += 15; };
+  fila2('Compañía', nombreDe(cat.companias, h.company)); fila2('Ciclo', nombreDe(cat.ciclos, h.ciclo)); fila2('Finca', nombreDe(cat.fincas, h.finca));
+  if (r.tipo === 'arranque') { fila2('Variedad', h.variedad || '—'); fila2('DDS', h.dds === '' ? '—' : String(h.dds)); }
+  fila2('Elaborado por', r.tecnico || cfg.tecnico || '—'); y += 8;
+
+  titulo('Promedios por lote'); tabla(colsProm('Lote'), filasProm(gruposLote(r)));
+  const eq = r.tipo === 'arranque' ? 'Arrancador' : 'Combina';
+  titulo(`Promedios por ${eq.toLowerCase()}`); tabla(colsProm(eq), filasProm(gruposEquipo(r)));
+
+  // detalle
+  titulo(`Detalle de muestras (${r.lines.length})`);
+  const eqn = (id) => { const x = (r.tipo === 'arranque' ? cat.arrancadores : cat.combinas).find((e) => e.id === id); return x ? x.nombre.split(' ')[0] : '—'; };
+  const nv = (v) => (v === '' || v == null ? '—' : String(Number(v)));
+  const cd = r.tipo === 'arranque'
+    ? [{ t: '#', w: 0.6 }, { t: 'Lote', w: 4 }, { t: 'Arranc.', w: 1.4 }, ...['Plant/m', 'Moho/m', 'Daño', 'Podr.', 'Moho', 'Germ.', 'QQ/Mzn'].map((t) => ({ t, w: 1.3, al: 'r' }))]
+    : [{ t: '#', w: 0.6 }, { t: 'Lote', w: 4 }, { t: 'Combina', w: 1.4 }, ...['Mtrs', 'Sanas', 'Vanas', 'Sanas/m', 'Pérd. QQ/Mzn'].map((t) => ({ t, w: 1.5, al: 'r' }))];
+  tabla(cd, r.lines.map((l, i) => ({ c: r.tipo === 'arranque'
+    ? [String(i + 1), loteTxt(r, l), eqn(l.arrancador), nv(l.plantas_m), nv(l.moho_m), nv(l.dano_arrancador), nv(l.podridas), nv(l.mohono), nv(l.germinadas), f(RAC.arranqueLinea(l).qq_mzn)]
+    : [String(i + 1), loteTxt(r, l), eqn(l.combina), nv(l.metros), nv(l.sanas), nv(l.vanas), f(RAC.combinaLinea(l).sanas_x_metro), f(RAC.combinaLinea(l).qq_mzn)] })), { size: 8 });
+  const obs = r.lines.map((l, i) => (l.obs ? `${i + 1}. ${l.obs}` : '')).filter(Boolean);
+  if (obs.length) { titulo('Observaciones'); obs.forEach((o) => { hay(14); d.text(M, y, d.fit(o, CW, 9), { size: 9 }); y += 13; }); y += 6; }
+
+  // mañana vs tarde
+  const c = compara(r);
+  if (c) {
+    titulo(`Mañana vs tarde · ${RAC.fmtFecha(h.fecha)}`);
+    const eg = c.general.e;
+    hay(24); d.text(M, y, eg.t === 'Mejoró' ? 'MEJORÓ: la pérdida bajó en el recuento de la tarde.' : eg.t === 'Empeoró' ? 'EMPEORÓ: la pérdida subió en el recuento de la tarde.' : 'Sin cambio entre mañana y tarde.', { size: 10, bold: true, color: eg.t === 'Mejoró' ? VERDE : eg.t === 'Empeoró' ? '#b3261e' : GRIS }); y += 18;
+    const ev = (x) => (x.e.t === 'Igual' ? 'Igual' : `${x.e.t} (${x.p - x.a > 0 ? '+' : ''}${f(x.p - x.a)})`);
+    const fc = c.filas.map((x) => ({ c: [x.n, f(x.a), f(x.p), ev(x)] })); if (c.filas.length > 1) fc.push({ total: true, c: ['Promedio general', f(c.general.a), f(c.general.p), ev(c.general)] });
+    tabla([{ t: 'Lote', w: 4 }, { t: 'Mañana QQ/Mzn', w: 1.8, al: 'r' }, { t: 'Tarde QQ/Mzn', w: 1.8, al: 'r' }, { t: 'Resultado', w: 2.4, al: 'r' }], fc);
+  }
+
+
+  // nota de cálculo (tipo comentario)
+  if (r.notaCalc !== false && r.lines.length) {
+    const K = r.tipo === 'arranque' ? '0.2561' : '0.2561', l0 = r.lines[0], c0 = r.tipo === 'arranque' ? RAC.arranqueLinea(l0) : RAC.combinaLinea(l0), n0 = (v) => Number(v) || 0;
+    const parr = r.tipo === 'arranque' ? [
+      'Qué significa cada valor (todo es por metro lineal de surco muestreado):',
+      '• QQ sin arrancar = (Moho + Germinadas + Podridas) × 0.2561. Es lo que queda en el campo por pérdida de cápsulas/plantas (moho, germinación y podredumbre).',
+      '• QQ x Mzn = (Daño del arrancador + Moho + Germinadas + Podridas) × 0.2561. Es la pérdida total estimada en quintales por manzana: lo que queda sin arrancar más el daño que causa el arrancador.',
+      '• El factor 0.2561 equivale a 0.7682 ÷ 3: cada unidad contada en 1 metro lineal representa 0.2561 qq por manzana.',
+      `• Ejemplo con la muestra 1: Moho ${n0(l0.mohono)} + Germinadas ${n0(l0.germinadas)} + Podridas ${n0(l0.podridas)} = ${n0(l0.mohono) + n0(l0.germinadas) + n0(l0.podridas)} → × 0.2561 = ${f(c0.qq_sin_arrancar)} QQ sin arrancar. Con el daño del arrancador (${n0(l0.dano_arrancador)}) el total es ${f(c0.qq_mzn)} QQ x Mzn.`,
+      '• Los promedios por lote y por arrancador son el promedio simple de sus muestras. INFOAGRO recalcula estos valores al recibir el reporte.',
+    ] : [
+      'Qué significa cada valor:',
+      '• Sanas/m = cápsulas sanas contadas ÷ metros lineales de la muestra.',
+      '• Pérdida QQ/Mzn = Sanas/m × 0.2561. Es la pérdida estimada en quintales por manzana: cada cápsula sana que queda por metro representa 0.2561 qq por manzana.',
+      `• Ejemplo con la muestra 1: ${n0(l0.sanas)} cápsulas sanas ÷ ${n0(l0.metros)} m = ${f(c0.sanas_x_metro)} por metro → × 0.2561 = ${f(c0.qq_mzn)} QQ/Mzn.`,
+      '• Los promedios por lote y por combina son el promedio simple de sus muestras. INFOAGRO recalcula estos valores al recibir el reporte.',
+    ];
+    const ls = []; parr.forEach((p, i) => {
+      const words = p.split(' '); let cur = '';
+      words.forEach((w) => { const t = cur ? cur + ' ' + w : w; if (d.ancho(t, 8.5, i === 0) > CW - 20 && cur) { ls.push({ t: cur, b: i === 0 }); cur = '  ' + w; } else cur = t; });
+      ls.push({ t: cur, b: i === 0 });
+    });
+    const alto = ls.length * 11.5 + 26; hay(alto + 8);
+    d.rect(M, y - 4, CW, alto, { fill: '#f6f7f2', stroke: '#d9dccb' });
+    d.text(M + 10, y + 10, 'Cómo se calcula', { size: 9.5, bold: true, color: GRIS });
+    let yy = y + 25; ls.forEach((x) => { d.text(M + 10, yy, x.t, { size: 8.5, bold: x.b, color: '#3a423e' }); yy += 11.5; });
+    y += alto + 10;
+  }
+
+  // fotos
+  const fs = fotosDe(r);
+  if (fs.length) {
+    titulo(`Fotos (${fs.length})`);
+    const cw = (CW - 14) / 2; let col = 0, filaAlto = 0;
+    fs.forEach((fo, i) => {
+      const idx = d.addJpeg(fo.d), im = d.imgs[idx], k = Math.min(cw / im.w, 210 / im.h), w = im.w * k, hh = im.h * k;
+      if (col === 0) { hay(hh + 22); filaAlto = 0; }
+      const x = M + col * (cw + 14);
+      d.rect(x - 1, y - 1, w + 2, hh + 2, { stroke: '#cfd8d2' }); d.image(idx, x, y, w, hh); d.text(x, y + hh + 12, `Foto ${i + 1}`, { size: 8, color: GRIS });
+      filaAlto = Math.max(filaAlto, hh + 22); col++;
+      if (col === 2 || i === fs.length - 1) { y += filaAlto; col = 0; }
+    });
+  }
+  // pie de página
+  const total = d.pages.length;
+  for (let i = 0; i < total; i++) { d.pagina(i); d.text(M, H - 16, `INFOAGRO · ${T.nombre}`, { size: 7.5, color: GRIS }); d.text(W - M, H - 16, `Página ${i + 1} de ${total}`, { size: 7.5, color: GRIS, align: 'right' }); }
+  d.pagina(null);
+  return d.build();
+}
+const nombrePdf = (r) => `Recuento ${TIPOS[r.tipo].corto} ${(r.odoo && r.odoo.folio) || r.header.numero || tmpDe(r)}.pdf`;
+const blobPdf = (r) => new Blob([construirPDF(r)], { type: 'application/pdf' });
+const firmaPdf = (r) => fotosDe(r).map((x) => x.id).join(',') + '|' + r.lines.length + '|' + (r.notaCalc === false ? 'sn' : 'cn');
+async function subirPdf(r) {   // adjunta el PDF al recuento en INFOAGRO (reemplaza el anterior con el mismo nombre)
+  if (!r.odoo || !r.odoo.id || !navigator.onLine) return false;
+  try {
+    const fd = new FormData(); fd.append('file', blobPdf(r), 'recuento.pdf'); fd.append('odoo_id', r.odoo.id); fd.append('filename', nombrePdf(r));
+    const res = await fetch(WORKER + TIPOS[r.tipo].path + '/pdf', { method: 'POST', headers: { 'X-Sync-Key': SYNC_KEY }, body: fd });
+    const j = await res.json().catch(() => ({})); if (!res.ok || !j.ok) throw new Error(j.error || res.status);
+    r.pdfSig = firmaPdf(r); return true;
+  } catch (e) { return false; }
+}
+async function verPdf(r) {
+  const blob = blobPdf(r), file = new File([blob], nombrePdf(r), { type: 'application/pdf' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombrePdf(r); document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('PDF generado');
+  return file;
+}
 function textoResumen(r) {
   const h = r.header, T = TIPOS[r.tipo], f = RAC.fmt, eq = r.tipo === 'arranque' ? 'Arrancador' : 'Combina';
   const lin = (g, key) => g.filas.map((x) => `• ${x.n}: ${r.tipo === 'arranque' ? `${x.x.muestras} mues., plantas/m ${f(x.x.plantas_m, 1)}, QQ x Mzn ${f(x.x.qq_mzn)}` : `${x.x.muestras} mues., sanas/m ${f(x.x.sanas_x_metro)}, pérdida QQ/Mzn ${f(x.x.qq_mzn)}`}`).join('\n');
@@ -537,13 +681,12 @@ function textoResumen(r) {
     + (c ? `\n\nMañana vs tarde: ${c.general.e.t} (${f(c.general.a)} → ${f(c.general.p)} QQ/Mzn)` : '') + `\n\nElaborado por ${r.tecnico || cfg.tecnico || '—'}`;
 }
 async function compartir(r) {
-  const texto = textoResumen(r), files = [];
-  try { for (let i = 0; i < fotosDe(r).length; i++) { const b = await (await fetch(r.fotos[i].d)).blob(); files.push(new File([b], `recuento-${i + 1}.jpg`, { type: 'image/jpeg' })); } } catch (e) { /* sin fotos */ }
+  const texto = textoResumen(r), file = new File([blobPdf(r)], nombrePdf(r), { type: 'application/pdf' });
   try {
-    if (files.length && navigator.canShare && navigator.canShare({ files })) { await navigator.share({ files, text: texto, title: TIPOS[r.tipo].nombre }); return; }
-    if (navigator.share) { await navigator.share({ text: texto, title: TIPOS[r.tipo].nombre }); if (files.length) toast('Tu teléfono no permite compartir fotos desde aquí; se compartió el texto'); return; }
+    if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: texto, title: TIPOS[r.tipo].nombre }); return; }
+    if (navigator.share) { await navigator.share({ text: texto, title: TIPOS[r.tipo].nombre }); toast('Este teléfono no permite compartir el PDF desde aquí; se compartió el texto'); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
-  window.open('https://wa.me/?text=' + encodeURIComponent(texto), '_blank');
+  await verPdf(r);
 }
 function bindFotos(r, guardar, repinta) {
   const inp = $('#fFile'); if (!inp) return;
@@ -553,18 +696,20 @@ function bindFotos(r, guardar, repinta) {
     fotosDe(r);
     for (const fi of fl) { if (r.fotos.length >= MAX_FOTOS) break; try { r.fotos.push({ id: uid(), d: await comprimeFoto(fi), sub: false }); } catch (e) { toast('No se pudo leer la foto'); } }
     try { guardar(); } catch (e) { r.fotos.pop(); toast('Almacenamiento lleno: no se guardó la foto'); }
-    if (r.estado === 'enviado') { toast('Subiendo foto a INFOAGRO…'); if (await subirFotos(r)) { try { guardar(); } catch (e) { /* nada */ } toast('Foto adjunta en INFOAGRO ✓'); } }
+    if (r.estado === 'enviado') { toast('Subiendo foto a INFOAGRO…'); if (await subirFotos(r)) { await subirPdf(r); try { guardar(); } catch (e) { /* nada */ } toast('Foto y PDF actualizados en INFOAGRO ✓'); } }
     repinta();
   };
   document.querySelectorAll('[data-fdel]').forEach((b) => b.onclick = () => { if (r.fotos[+b.dataset.fdel].sub && !confirm('Esta foto ya está adjunta en INFOAGRO; aquí solo se quita del teléfono. ¿Continuar?')) return; r.fotos.splice(+b.dataset.fdel, 1); try { guardar(); } catch (e) { /* nada */ } repinta(); });
   $('#fShare').onclick = () => compartir(r);
+  $('#fPdf').onclick = () => verPdf(r);
+  $('#fNota').onchange = async () => { r.notaCalc = $('#fNota').checked; try { guardar(); } catch (e) { /* nada */ } if (r.estado === 'enviado' && await subirPdf(r)) { try { guardar(); } catch (e) { /* nada */ } toast('PDF actualizado en INFOAGRO ✓'); } };
 }
 function rResumen() {
   const r = actual, h = r.header, T = TIPOS[r.tipo];
   $('#titulo').textContent = 'Resumen · ' + T.corto;
   $('#main').innerHTML = `
     <div class="card"><h3>${esc(T.nombre)}</h3>
-      <div>Nº <b>${esc(h.numero || '(automático)')}</b> · ${RAC.fmtFecha(h.fecha)}</div>
+      <div>Nº <b>${esc(numDe(r))}</b> · ${RAC.fmtFecha(h.fecha)}</div>
       <div>${esc(nombreDe(cat.companias, h.company))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div>
       <div>Finca <b>${esc(nombreDe(cat.fincas, h.finca))}</b>${r.tipo === 'arranque' ? ` · ${esc(h.variedad)} · DDS ${esc(h.dds === '' ? '—' : h.dds)}` : ''}</div></div>
     ${seccionesResumen(r)}
@@ -586,7 +731,7 @@ async function enviar() {
   enviando = true; const b = $('#bEnviar'); b.disabled = true; b.textContent = 'Enviando…';
   const h = r.header;
   const payload = { localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico,
-    header: { numero: h.numero, fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds },
+    header: { numero: h.numero, temporal: tmpDe(r), fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds },
     lines: r.lines.map((l) => ({ ...l })) };
   try {
     const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify(payload) });
@@ -594,9 +739,10 @@ async function enviar() {
     if (!res.ok || !j.ok) throw new Error(j.error || 'Error ' + res.status);
     r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, ya_existia: !!j.ya_existia, confirmado: j.lineas || null, enviado: Date.now() };
     guardarBorrador(true);
-    const nf = fotosDe(r).length; if (nf) { $('#resEnvio').innerHTML = '<div class="aviso">Reporte enviado. Subiendo fotos…</div>'; await subirFotos(r); guardarBorrador(true); }
+    const nf = fotosDe(r).length; if (nf) { $('#resEnvio').innerHTML = '<div class="aviso">Reporte enviado. Subiendo fotos…</div>'; await subirFotos(r); }
+    const pdfOk = await subirPdf(r); guardarBorrador(true);
     const fp = fotosDe(r).filter((f) => !f.sub).length;
-    $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${nf ? (fp ? `<br><b>${fp} de ${nf} foto(s) quedaron pendientes</b>: se suben solas al tener señal.` : `<br>${nf} foto(s) adjuntas al recuento ✓`) : ''}${difCalc(r, j.lineas)}</div>`;
+    $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${pdfOk ? '<br>PDF del recuento adjunto ✓' : '<br>PDF pendiente de subir: se envía solo al tener señal.'}${nf ? (fp ? `<br><b>${fp} de ${nf} foto(s) quedaron pendientes</b>: se suben solas al tener señal.` : `<br>${nf} foto(s) adjuntas al recuento ✓`) : ''}${difCalc(r, j.lineas)}</div>`;
     $('#bar').innerHTML = `<button class="btn" id="bFin">Terminar</button>`; $('#bFin').onclick = () => ir({ name: 'home' });
   } catch (e) {
     r.estado = 'listo'; guardarBorrador(true);
@@ -653,9 +799,9 @@ async function enviarListos() {
     try {
       const h = r.header;
       const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY },
-        body: JSON.stringify({ localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico || cfg.tecnico, header: { numero: h.numero, fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds }, lines: r.lines }) });
+        body: JSON.stringify({ localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico || cfg.tecnico, header: { numero: h.numero, temporal: tmpDe(r), fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds }, lines: r.lines }) });
       const j = await res.json(); if (!res.ok || !j.ok) throw new Error(j.error);
-      r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, enviado: Date.now() }; ok++; try { await subirFotos(r); } catch (e) { /* queda pendiente */ }
+      r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, enviado: Date.now() }; ok++; try { await subirFotos(r); await subirPdf(r); } catch (e) { /* queda pendiente */ }
     } catch (e) { mal++; }
   }
   persist(); toast(`Enviados: ${ok}${mal ? ' · con error: ' + mal : ''}`, 3500); rCfg();
