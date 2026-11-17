@@ -537,7 +537,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 </script>
 
 <script>
-const APP_VERSION = "2026.11.16-4";
+const APP_VERSION = "2026.11.17-1";
 const DEFAULT_WORKER_URL = "https://weathered-recipe-d18c.ignagher.workers.dev/recuentos";
 const DEFAULT_SYNC_KEY   = "infaogro-recuentosagricolas-10021705020946";
 const FACTOR_QQ_MZN = 7683;   // constante de la fórmula de Odoo: (sana / semillasPorLibra) * 7683 / 100
@@ -997,19 +997,27 @@ async function construirPDF(s){
 }
 async function pdfBlob(){const {doc,folio}=await construirPDF(sesion);return{blob:doc.output('blob'),folio}}
 async function descargarPDF(){toast('Generando PDF…');try{const {blob,folio}=await pdfBlob();const u=URL.createObjectURL(blob);const a=document.createElement('a');a.href=u;a.download=folio+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),8000)}catch(e){toast('No se pudo generar el PDF: '+e.message,true)}}
+/** Si el reporte ya se compartió y está completo, se manda a INFOAGRO solo (los técnicos comparten el PDF y olvidan presionar Enviar). */
+async function autoEnviarTrasCompartir(){
+  if(!sesion||sesion.status==='synced'||sesion.status==='syncing'||sesion.status==='pending_sync')return null;
+  if(problemas().length){toast('PDF compartido, pero el reporte está incompleto: no se envió a INFOAGRO',true);return null}
+  const previo=sesion.status;sesion.status='pending_sync';sesion.lastError=null;sesion.autoEnvio=true;await persistir();return previo;
+}
+async function deshacerAutoEnvio(previo){if(previo===null||previo===undefined||!sesion||sesion.status!=='pending_sync'||!sesion.autoEnvio)return;sesion.status=previo;sesion.autoEnvio=false;await persistir()}
 async function compartirPDF(){
   toast('Generando PDF…');
   try{const {blob,folio}=await pdfBlob();const file=new File([blob],folio+'.pdf',{type:'application/pdf'});
     if(navigator.canShare&&navigator.canShare({files:[file]})){
       sesion.pdfCompartido=true;try{await idbPut(sesion)}catch(_){}actualizarHintPDF();   // se marca ANTES: el sistema puede suspender la app al abrir WhatsApp
-      try{await navigator.share({files:[file],title:'Madurez y Estimación',text:folio});return}
-      catch(e){if(e.name==='AbortError'){sesion.pdfCompartido=false;try{await idbPut(sesion)}catch(_){}actualizarHintPDF();return}}
+      const previo=await autoEnviarTrasCompartir();   // queda en cola de envío ANTES de abrir WhatsApp (si la app se suspende, se envía al volver)
+      try{await navigator.share({files:[file],title:'Madurez y Estimación',text:folio});if(previo!==null&&previo!==undefined){toast('PDF compartido ✔ — enviando a INFOAGRO…');ir('screen-home');sincronizarTodo(false)}return}
+      catch(e){if(e.name==='AbortError'){sesion.pdfCompartido=false;await deshacerAutoEnvio(previo);try{await idbPut(sesion)}catch(_){}actualizarHintPDF();return}}
     }
     const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=folio+'.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),8000);
-    sesion.pdfCompartido=true;await idbPut(sesion);actualizarHintPDF();toast('Se descargó el PDF; compártelo desde Descargas.');
+    sesion.pdfCompartido=true;await idbPut(sesion);actualizarHintPDF();const pv=await autoEnviarTrasCompartir();toast(pv!==null&&pv!==undefined?'Se descargó el PDF y el reporte se envía a INFOAGRO ✔':'Se descargó el PDF; compártelo desde Descargas.');if(pv!==null&&pv!==undefined){ir('screen-home');sincronizarTodo(false)}
   }catch(e){toast('No se pudo generar el PDF: '+e.message,true)}
 }
-async function marcarCompartidoManual(){if(!confirm('¿Confirmas que ya compartiste el PDF de este reporte?'))return;sesion.pdfCompartido=true;await idbPut(sesion);actualizarHintPDF();toast('Listo, ya puedes guardar y enviar ✔')}
+async function marcarCompartidoManual(){if(!confirm('¿Confirmas que ya compartiste el PDF de este reporte?'))return;sesion.pdfCompartido=true;await idbPut(sesion);actualizarHintPDF();const pv=await autoEnviarTrasCompartir();if(pv!==null&&pv!==undefined){toast('Listo ✔ — enviando a INFOAGRO…');ir('screen-home');sincronizarTodo(false)}else toast('Listo, ya puedes guardar y enviar ✔')}
 
 /* ============ ENVÍO A ODOO (vía Worker) ============ */
 async function guardarYEnviar(){
