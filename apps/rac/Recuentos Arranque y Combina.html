@@ -62,6 +62,11 @@ th{color:var(--gris);font-weight:600;font-size:12px}
 .tabs button.on{background:var(--verde);color:#fff;border-color:var(--verde)}
 #toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;opacity:0;pointer-events:none;transition:.25s;z-index:99;max-width:90%;text-align:center}
 #toast.on{opacity:.95}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.tl th,table.tl td{white-space:nowrap;padding:6px 5px}
+table.tl td:nth-child(2),table.tl th:nth-child(2){text-align:left}
+td.act{white-space:nowrap}
+td.act .btn{padding:4px 8px;margin-left:3px}
 .hide{display:none!important}
 </style>
 </head>
@@ -80,10 +85,10 @@ th{color:var(--gris);font-weight:600;font-size:12px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.16-1';
+const APP_VERSION = '2026.11.16-3';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
-const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v1', cfg: 'rac_cfg_v1' };
+const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const uid = () => (crypto.randomUUID ? crypto.randomUUID() : 'id' + Date.now() + Math.random().toString(16).slice(2));
@@ -105,7 +110,7 @@ const VARIEDADES = ['GA 06-G APTA','GA 06-G AUTORIZADA','GA 06-G REGISTRADA','GA
 
 /* ====== Estado ====== */
 let reportes = load(LS.rep, []);
-let cat = load(LS.cat, { companias: [], ciclos: [], fincas: [], lotes: [], arrancadores: [], combinas: [], variedades: VARIEDADES });
+let cat = Object.assign({ companias: [], sectores: [], ciclos: [], fincas: [], lotes: [], siembras: [], arrancadores: [], combinas: [], variedades: VARIEDADES }, load(LS.cat, {}));
 let cfg = load(LS.cfg, { tecnico: '' });
 let vista = { name: 'home' };
 let actual = null;          // reporte en edición
@@ -119,13 +124,12 @@ addEventListener('online', () => { setNet(); }); addEventListener('offline', set
 async function cargarCatalogos(silencioso) {
   if (!navigator.onLine) { if (!silencioso) toast('Sin señal: se usan los catálogos guardados'); return false; }
   try {
-    const [a, b] = await Promise.all([
-      fetch(WORKER + '/catalogos-recuentos').then((r) => r.json()),
-      fetch(WORKER + '/arranque-combina/catalogos').then((r) => r.json()),
-    ]);
-    if (a.error || b.error) throw new Error(a.error || b.error);
-    cat = { companias: a.companias, ciclos: a.ciclos, fincas: a.fincas, lotes: a.lotes,
-            arrancadores: b.arrancadores, combinas: b.combinas, variedades: (b.variedades && b.variedades.length ? b.variedades : VARIEDADES), updated_at: a.updated_at };
+    const b = await fetch(WORKER + '/arranque-combina/catalogos').then((r) => r.json());
+    if (b.error) throw new Error(b.error);
+    // El Worker ya filtra: solo Mani 2026 y solo lo que se sembró (compañías, fincas, lotes, variedad)
+    cat = { companias: b.companias, sectores: b.sectores || [], ciclos: b.ciclos, fincas: b.fincas, lotes: b.lotes, siembras: b.siembras,
+            arrancadores: b.arrancadores, combinas: b.combinas, variedades: (b.variedades && b.variedades.length ? b.variedades : VARIEDADES),
+            ciclo: b.ciclo, updated_at: b.updated_at };
     save(LS.cat, cat);
     if (!silencioso) toast('Catálogos actualizados');
     return true;
@@ -198,16 +202,21 @@ function rLista() {
 function abrir(id) {
   const r = reportes.find((x) => x.id === id); if (!r) return;
   if (r.estado === 'enviado') ir({ name: 'detalle', tipo: r.tipo, id });
-  else { actual = JSON.parse(JSON.stringify(r)); ir({ name: 'editar' }); }
+  else { actual = JSON.parse(JSON.stringify(r)); form = null; ir({ name: 'editar' }); }
 }
 
 /* ====== Nuevo / editar ====== */
 function nuevo(tipo) {
   const ult = reportes.filter((r) => r.tipo === tipo).sort((a, b) => b.mod - a.mod)[0];
   actual = { id: uid(), tipo, estado: 'borrador', creado: Date.now(), mod: Date.now(),
-    header: { numero: '', fecha: hoy(), company: ult ? ult.header.company : (cat.companias[0] || {}).id || null, ciclo: ult ? ult.header.ciclo : null,
+    header: { numero: '', fecha: hoy(), company: (ult && cat.companias.some((c) => c.id === ult.header.company)) ? ult.header.company : (cat.companias[0] || {}).id || null, ciclo: ult ? ult.header.ciclo : null,
               finca: ult ? ult.header.finca : null, variedad: '', dds: '' },
-    lines: [TIPOS[tipo].lineaVacia()], tecnico: cfg.tecnico };
+    lines: [], tecnico: cfg.tecnico };
+  const hh = actual.header;
+  if (!cat.ciclos.some((c) => c.id === hh.ciclo && c.company === hh.company)) hh.ciclo = (ciclosDe(hh.company)[0] || {}).id || null;
+  hh.sector = null;
+  if (!fincasDe(hh).some((f) => f.id === hh.finca)) hh.finca = null;
+  form = null;
   ir({ name: 'editar' });
 }
 function guardarBorrador(silencioso) {
@@ -220,112 +229,208 @@ function guardarBorrador(silencioso) {
 const opt = (arr, sel, ph) => `<option value="">${ph || '— elegir —'}</option>` + arr.map((a) => `<option value="${a.id}" ${a.id === sel ? 'selected' : ''}>${esc(a.nombre)}</option>`).join('');
 const optS = (arr, sel, ph) => `<option value="">${ph || '— elegir —'}</option>` + arr.map((a) => `<option ${a === sel ? 'selected' : ''}>${esc(a)}</option>`).join('');
 
+/* ====== Selectores: solo Mani 2026 y solo lo que se sembró ======
+   x_siembra se usa únicamente para saber dónde se sembró (finca, lote, variedad); el reporte no se liga a una siembra. */
+function siembrasDe(h) { return cat.siembras.filter((s) => (!h.company || s.company === h.company) && (!h.ciclo || s.ciclo === h.ciclo)); }
 function ciclosDe(company) { return cat.ciclos.filter((c) => !company || c.company === company); }
-function fincasDe(company) { return cat.fincas.filter((f) => !company || f.company === company); }
-function lotesDe(finca) { return cat.lotes.filter((l) => l.finca === finca); }
+function fincasDe(h) { const ids = new Set(siembrasDe(h).map((s) => s.finca)); return cat.fincas.filter((f) => ids.has(f.id) && (!h.sector || f.sector === h.sector)); }
+function sectoresDe(h) { const ids = new Set(siembrasDe({ company: h.company, ciclo: h.ciclo }).map((s) => s.finca)); const sec = new Set(cat.fincas.filter((f) => ids.has(f.id) && f.sector).map((f) => f.sector)); return cat.sectores.filter((s) => sec.has(s.id)); }
+function lotesDe(h) {
+  const m = new Map();
+  siembrasDe(h).filter((s) => s.finca === h.finca).forEach((s) => {
+    const x = m.get(s.lote) || { id: s.lote, nombre: nombreDe(cat.lotes, s.lote), variedades: [] };
+    if (s.variedad && !x.variedades.includes(s.variedad)) x.variedades.push(s.variedad);
+    m.set(s.lote, x);
+  });
+  return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+function variedadesDe(h) { return [...new Set(siembrasDe(h).filter((s) => s.finca === h.finca && s.variedad).map((s) => s.variedad))].sort(); }
 function equiposDe(tipo, company) { const l = tipo === 'arranque' ? cat.arrancadores : cat.combinas; return l.filter((e) => !company || e.company === company); }
 
+/* ====== Editor: formulario de una muestra + tabla de muestras creadas ====== */
+let form = null; // { rid, idx (null = nueva), dup (Nº copiado), d (datos de la muestra) }
+const CAMPOS_NUM = { arranque: ['plantas_m', 'moho_m', 'dano_arrancador', 'podridas', 'mohono', 'germinadas'], combina: ['sanas', 'vanas'] };
+const clonar = (o) => JSON.parse(JSON.stringify(o));
+function lineaNueva() {
+  const n = TIPOS[actual.tipo].lineaVacia(), u = actual.lines[actual.lines.length - 1];
+  if (u) { n.lote = u.lote; n.lote_nombre = u.lote_nombre; n.arrancador = u.arrancador; n.combina = u.combina; if (actual.tipo === 'combina') n.metros = u.metros; }
+  return n;
+}
+function formTieneDatos() { return !!form && form.idx == null && CAMPOS_NUM[actual.tipo].some((k) => form.d[k] !== '' && form.d[k] != null); }
+
 function rEditar() {
-  const r = actual, h = r.header, t = r.tipo, T = TIPOS[t];
+  const r = actual, h = r.header, t = r.tipo, T = TIPOS[r.tipo];
+  if (!form || form.rid !== r.id) form = { rid: r.id, idx: null, d: lineaNueva() };
   $('#titulo').textContent = T.corto + (h.numero ? ' · ' + h.numero : ' · nuevo');
+  const vars = variedadesDe(h);
   $('#main').innerHTML = `
     <div class="card"><h3>Datos del reporte</h3>
       <div class="row"><div><label>Nº de reporte (hoja)</label><input id="h_numero" inputmode="numeric" placeholder="vacío = automático" value="${esc(h.numero)}"></div>
         <div><label>Fecha</label><input type="date" id="h_fecha" value="${h.fecha}"></div></div>
       <label>Compañía</label><select id="h_company">${opt(cat.companias, h.company)}</select>
+      <label>Sector</label><select id="h_sector">${opt(sectoresDe(h), h.sector)}</select>
       <label>Ciclo</label><select id="h_ciclo">${opt(ciclosDe(h.company), h.ciclo)}</select>
-      <label>Finca</label><select id="h_finca">${opt(fincasDe(h.company), h.finca)}</select>
-      ${t === 'arranque' ? `<div class="row"><div><label>Variedad</label><select id="h_variedad">${optS(cat.variedades, h.variedad)}</select></div>
+      <label>Finca (sembrada en el ciclo${h.sector ? ' y sector' : ''})</label><select id="h_finca">${opt(fincasDe(h), h.finca)}</select>
+      ${t === 'arranque' ? `<div class="row"><div><label>Variedad sembrada</label><select id="h_variedad">${optS(vars, h.variedad, h.finca ? '— elegir —' : 'elige primero la finca')}</select></div>
         <div><label>DDS (días de siembra)</label><div style="display:flex;gap:6px"><input id="h_dds" type="number" inputmode="numeric" value="${esc(h.dds)}"><button class="btn sec sm" id="btnDds" title="Calcular desde la fecha de siembra">↻</button></div></div></div>` : ''}
     </div>
-    <div id="muestras"></div>
-    <button class="btn sec" id="addM" style="width:100%">＋ Agregar muestra</button>`;
-  pintarMuestras();
+    <div id="formM"></div>
+    <div class="card"><h3>Muestras creadas <span id="nMuestras" style="color:var(--gris);font-weight:400"></span></h3><div id="tablaM"></div></div>`;
+  pintarForm(); pintarTabla();
   const bar = $('#bar'); bar.classList.remove('hide');
   bar.innerHTML = `<button class="btn sec" id="bBorr">Guardar borrador</button><button class="btn" id="bRes">Resumen y enviar</button>`;
   $('#bBorr').onclick = () => { leerHeader(); guardarBorrador(); };
-  $('#bRes').onclick = () => { leerHeader(); const e = validar(); if (e.length) { alert('Falta corregir:\n\n• ' + e.join('\n• ')); return; } guardarBorrador(true); ir({ name: 'resumen' }); };
-  $('#addM').onclick = () => { leerHeader(); const ult = r.lines[r.lines.length - 1];
-    const n = T.lineaVacia(); if (ult) { n.lote = ult.lote; n.lote_nombre = ult.lote_nombre; n.arrancador = ult.arrancador; n.combina = ult.combina; if (t === 'combina') n.metros = ult.metros; }
-    r.lines.push(n); pintarMuestras(); const m = document.querySelectorAll('.muestra'); m[m.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' }); };
-  $('#h_company').onchange = () => { leerHeader(); h.ciclo = null; h.finca = null; rEditar(); };
-  $('#h_finca').onchange = () => { leerHeader(); r.lines.forEach((l) => { l.lote = null; l.lote_nombre = ''; }); pintarMuestras(); };
-  if (t === 'arranque') $('#btnDds').onclick = calcularDds;
+  $('#bRes').onclick = () => {
+    leerHeader();
+    if (formTieneDatos() && !confirm('Hay una muestra capturada que todavía no está en la tabla. ¿Continuar sin ella?')) return;
+    const e = validar(); if (e.length) { alert('Falta corregir:\n\n• ' + e.join('\n• ')); return; }
+    guardarBorrador(true); ir({ name: 'resumen' });
+  };
+  // Cambiar compañía/ciclo/finca cambia qué lotes son válidos: si ya hay muestras se pide confirmación
+  const base = (campo) => {
+    const prev = { company: h.company, sector: h.sector, ciclo: h.ciclo, finca: h.finca };
+    const nuevoVal = parseInt($('#h_' + campo).value) || null;
+    if (nuevoVal === prev[campo]) return;
+    if (r.lines.length && !confirm('Las muestras ya agregadas pertenecen a otra finca/ciclo y se quitarán. ¿Continuar?')) { $('#h_' + campo).value = prev[campo] || ''; return; }
+    leerHeader(); r.lines = []; form = null;
+    if (campo === 'company') { h.ciclo = (ciclosDe(h.company)[0] || {}).id || null; h.sector = null; h.finca = null; }
+    if (campo === 'sector') h.finca = null;
+    if (campo === 'ciclo') { h.finca = null; if (!sectoresDe(h).some((s) => s.id === h.sector)) h.sector = null; }
+    const v = variedadesDe(h); h.variedad = (t === 'arranque' && v.length === 1) ? v[0] : '';
+    rEditar();
+  };
+  $('#h_company').onchange = () => base('company');
+  $('#h_sector').onchange = () => base('sector');
+  $('#h_ciclo').onchange = () => base('ciclo');
+  $('#h_finca').onchange = () => { const f = cat.fincas.find((x) => x.id === parseInt($('#h_finca').value)); if (f && f.sector && !h.sector) { $('#h_sector').value = f.sector; } base('finca'); };
+  if (t === 'arranque') $('#btnDds').onclick = () => calcularDds(false);
 }
 function leerHeader() {
   const h = actual.header, g = (id) => { const e = document.getElementById(id); return e ? e.value : undefined; };
   h.numero = (g('h_numero') || '').trim(); h.fecha = g('h_fecha') || h.fecha;
-  h.company = parseInt(g('h_company')) || null; h.ciclo = parseInt(g('h_ciclo')) || null; h.finca = parseInt(g('h_finca')) || null;
+  h.company = parseInt(g('h_company')) || null; h.sector = parseInt(g('h_sector')) || null; h.ciclo = parseInt(g('h_ciclo')) || null; h.finca = parseInt(g('h_finca')) || null;
   if (actual.tipo === 'arranque') { h.variedad = g('h_variedad') || ''; h.dds = g('h_dds') === '' ? '' : parseInt(g('h_dds')); }
 }
-async function calcularDds() {
-  leerHeader(); const h = actual.header, l = actual.lines.find((x) => x.lote);
-  if (!h.ciclo || !h.finca || !l) return toast('Elige ciclo, finca y el lote de la primera muestra');
-  if (!navigator.onLine) return toast('Sin señal: escribe el DDS a mano');
-  try {
-    const d = await fetch(`${WORKER}/siembra-datos?ciclo_id=${h.ciclo}&finca_id=${h.finca}&lote_id=${l.lote}`).then((r) => r.json());
-    if (!d.fecha_siembra) return toast('No hay fecha de siembra registrada para ese lote');
-    const dias = Math.round((Date.parse(h.fecha) - Date.parse(d.fecha_siembra)) / 86400000);
-    h.dds = dias; $('#h_dds').value = dias; toast('DDS = ' + dias + ' (siembra ' + RAC.fmtFecha(d.fecha_siembra) + ')', 3500);
-  } catch (e) { toast('No se pudo consultar la siembra'); }
+// DDS = días entre la primera siembra del lote (ya guardada en el teléfono) y la fecha del reporte; funciona sin señal
+function calcularDds(silencioso) {
+  leerHeader(); const h = actual.header;
+  const lote = (form && form.d.lote) || (actual.lines.find((x) => x.lote) || {}).lote;
+  if (!h.finca || !lote) { if (!silencioso) toast('Elige la finca y el lote de la muestra'); return; }
+  const f = siembrasDe(h).filter((s) => s.finca === h.finca && s.lote === lote && s.fecha).map((s) => s.fecha).sort();
+  if (!f.length) { if (!silencioso) toast('No hay fecha de siembra registrada para ese lote'); return; }
+  const dias = Math.round((Date.parse(h.fecha) - Date.parse(f[0])) / 86400000);
+  h.dds = dias; const e = $('#h_dds'); if (e) e.value = dias;
+  if (!silencioso) toast('DDS = ' + dias + ' (siembra ' + RAC.fmtFecha(f[0]) + ')', 3500);
 }
 
-function pintarMuestras() {
-  const r = actual, t = r.tipo, h = r.header, box = $('#muestras');
-  const lotes = lotesDe(h.finca), eq = equiposDe(t, h.company);
-  const num = (i, k, lab, step) => `<div><label>${lab}</label><input type="number" inputmode="decimal" step="${step || 'any'}" data-i="${i}" data-k="${k}" value="${esc(r.lines[i][k])}"></div>`;
-  box.innerHTML = r.lines.map((l, i) => {
-    const eqSel = t === 'arranque' ? l.arrancador : l.combina;
-    const cuerpo = t === 'arranque'
-      ? `<div class="row3">${num(i, 'plantas_m', 'Plantas /m')}${num(i, 'moho_m', 'Con moho /m')}${num(i, 'dano_arrancador', 'Daño arranc.')}</div>
-         <div class="row3">${num(i, 'podridas', 'Podridas')}${num(i, 'mohono', 'Mohono')}${num(i, 'germinadas', 'Germinadas')}</div>`
-      : `<div class="row3"><div><label>Metros lineales</label><select data-i="${i}" data-k="metros"><option ${l.metros == 12 ? 'selected' : ''}>12</option><option ${l.metros == 16 ? 'selected' : ''}>16</option></select></div>${num(i, 'sanas', 'Cáps. sanas')}${num(i, 'vanas', 'Cáps. vanas')}</div>`;
-    return `<div class="card muestra" data-m="${i}"><div class="cab"><b>Muestra ${i + 1}</b>
-      <button class="btn sec sm" data-dup="${i}">Duplicar</button><button class="btn rojo sm" data-del="${i}">✕</button></div>
-      <div class="row"><div><label>Lote</label><select data-i="${i}" data-k="lote">${opt(lotes, l.lote)}</select></div>
-      <div><label>${t === 'arranque' ? 'Arrancador' : 'Combina'}</label><select data-i="${i}" data-k="equipo">${opt(eq, eqSel)}</select></div></div>
-      ${cuerpo}
-      <label>Observación</label><input data-i="${i}" data-k="obs" value="${esc(l.obs)}">
-      <div class="calc" id="calc${i}"></div></div>`;
-  }).join('');
-  box.querySelectorAll('[data-k]').forEach((e) => e.oninput = e.onchange = () => {
-    const i = +e.dataset.i, k = e.dataset.k, l = actual.lines[i];
-    if (k === 'lote') { l.lote = parseInt(e.value) || null; l.lote_nombre = nombreDe(lotesDe(actual.header.finca), l.lote); }
-    else if (k === 'equipo') { l[actual.tipo === 'arranque' ? 'arrancador' : 'combina'] = parseInt(e.value) || null; }
-    else if (k === 'metros') l.metros = parseInt(e.value);
-    else l[k] = e.value;
-    pintarCalc(i);
+function pintarForm() {
+  const r = actual, t = r.tipo, h = r.header, d = form.d, box = $('#formM');
+  const lotes = lotesDe(h), eq = equiposDe(t, h.company), eqSel = t === 'arranque' ? d.arrancador : d.combina;
+  const num = (k, lab) => `<div><label>${lab}</label><input type="number" inputmode="decimal" step="any" id="f_${k}" value="${esc(d[k])}"></div>`;
+  const titulo = form.idx != null ? `Editando la muestra ${form.idx + 1}` : (form.dup ? `Nueva muestra (copia de la ${form.dup}: ajusta los valores)` : `Nueva muestra ${r.lines.length + 1}`);
+  const optLote = '<option value="">— elegir —</option>' + lotes.map((l) => `<option value="${l.id}" ${l.id === d.lote ? 'selected' : ''}>${esc(l.nombre)}${l.variedades.length ? ' · ' + esc(l.variedades.join(' / ')) : ''}</option>`).join('');
+  const cuerpo = t === 'arranque'
+    ? `<div class="row3">${num('plantas_m', 'Plantas /m')}${num('moho_m', 'Con moho /m')}${num('dano_arrancador', 'Daño arranc.')}</div><div class="row3">${num('podridas', 'Podridas')}${num('mohono', 'Mohono')}${num('germinadas', 'Germinadas')}</div>`
+    : `<div class="row3"><div><label>Metros lineales</label><select id="f_metros"><option ${d.metros == 12 ? 'selected' : ''}>12</option><option ${d.metros == 16 ? 'selected' : ''}>16</option></select></div>${num('sanas', 'Cáps. sanas')}${num('vanas', 'Cáps. vanas')}</div>`;
+  box.innerHTML = `<div class="card muestra"><h3>${titulo}</h3>
+    ${h.finca ? '' : '<div class="aviso">Elige primero la finca: solo aparecen los lotes sembrados en ' + esc(cat.ciclo || 'el ciclo') + '.</div>'}
+    <div class="row"><div><label>Lote (sembrado)</label><select id="f_lote">${optLote}</select></div>
+      <div><label>${t === 'arranque' ? 'Arrancador' : 'Combina'}</label><select id="f_equipo">${opt(eq, eqSel)}</select></div></div>
+    ${cuerpo}
+    <label>Observación</label><input id="f_obs" value="${esc(d.obs)}">
+    <div class="calc" id="calcF"></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn" id="fAdd" style="flex:1">${form.idx != null ? 'Guardar cambios' : '＋ Agregar a la tabla'}</button>${(form.idx != null || form.dup) ? '<button class="btn sec" id="fCancel">Cancelar</button>' : ''}</div></div>`;
+  box.querySelectorAll('[id^="f_"]').forEach((e) => e.oninput = e.onchange = () => {
+    const k = e.id.slice(2);
+    if (k === 'lote') {
+      d.lote = parseInt(e.value) || null; const info = lotes.find((l) => l.id === d.lote); d.lote_nombre = info ? info.nombre : '';
+      if (t === 'arranque' && info && info.variedades.length) {
+        const sel = $('#h_variedad');
+        if (!h.variedad && info.variedades.length === 1) { h.variedad = info.variedades[0]; if (sel) sel.value = h.variedad; }
+        else if (h.variedad && !info.variedades.includes(h.variedad)) toast('Ojo: ese lote se sembró con ' + info.variedades.join(' / '), 4000);
+      }
+      if (t === 'arranque' && h.dds === '') calcularDds(true);
+    } else if (k === 'equipo') d[t === 'arranque' ? 'arrancador' : 'combina'] = parseInt(e.value) || null;
+    else if (k === 'metros') d.metros = parseInt(e.value);
+    else d[k] = e.value;
+    pintarCalcF();
   });
-  box.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { if (r.lines.length === 1) return toast('Debe quedar al menos una muestra'); if (confirm('¿Quitar la muestra ' + (+b.dataset.del + 1) + '?')) { r.lines.splice(+b.dataset.del, 1); pintarMuestras(); } });
-  box.querySelectorAll('[data-dup]').forEach((b) => b.onclick = () => { const c = JSON.parse(JSON.stringify(r.lines[+b.dataset.dup])); ['plantas_m', 'moho_m', 'dano_arrancador', 'podridas', 'mohono', 'germinadas', 'sanas', 'vanas', 'obs'].forEach((k) => { if (k in c) c[k] = ''; }); r.lines.splice(+b.dataset.dup + 1, 0, c); pintarMuestras(); });
-  r.lines.forEach((_, i) => pintarCalc(i));
+  $('#fAdd').onclick = () => {
+    leerHeader();
+    const err = validarLinea(d, ''); if (err.length) { alert('Falta corregir:\n\n• ' + err.join('\n• ')); return; }
+    if (form.idx != null) { r.lines[form.idx] = clonar(d); toast('Muestra ' + (form.idx + 1) + ' actualizada'); }
+    else { r.lines.push(clonar(d)); toast('Muestra ' + r.lines.length + ' agregada a la tabla'); }
+    if (t === 'arranque' && h.dds === '') calcularDds(true);
+    guardarBorrador(true);
+    form = { rid: r.id, idx: null, d: lineaNueva() }; pintarForm(); pintarTabla();
+    const p = $('#f_' + CAMPOS_NUM[t][0]); if (p) p.focus({ preventScroll: true });
+  };
+  const c = $('#fCancel'); if (c) c.onclick = () => { form = { rid: r.id, idx: null, d: lineaNueva() }; pintarForm(); };
+  pintarCalcF();
 }
-function pintarCalc(i) {
-  const l = actual.lines[i], e = $('#calc' + i); if (!e) return;
-  if (actual.tipo === 'arranque') { const c = RAC.arranqueLinea(l);
+function pintarCalcF() {
+  const d = form.d, e = $('#calcF'); if (!e) return;
+  if (actual.tipo === 'arranque') { const c = RAC.arranqueLinea(d);
     e.innerHTML = `<div>Plantas c/moho<b>${RAC.fmt(c.plantas_con_moho)}</b></div><div>QQ sin arrancar<b>${RAC.fmt(c.qq_sin_arrancar)}</b></div><div>QQ x Mzn<b>${RAC.fmt(c.qq_mzn)}</b></div>`;
-  } else { const c = RAC.combinaLinea(l);
+  } else { const c = RAC.combinaLinea(d);
     e.innerHTML = `<div>Sanas x m<b>${RAC.fmt(c.sanas_x_metro)}</b></div><div>Pérdida QQ x Mzn<b>${RAC.fmt(c.qq_mzn)}</b></div><div>Vanas en 2 m<b>${RAC.fmt(c.vanas_2m)}</b></div>`;
   }
 }
 
+// Tabla de muestras (una fila por muestra, no tarjetas). Con acciones = editor; sin acciones = solo lectura.
+function tablaLineas(r, acciones) {
+  const t = r.tipo, f = RAC.fmt;
+  if (!r.lines.length) return '<div style="color:var(--gris)">Aún no hay muestras. Captura la primera arriba y toca “Agregar a la tabla”.</div>';
+  const eqn = (id) => { const x = (t === 'arranque' ? cat.arrancadores : cat.combinas).find((e) => e.id === id); return x ? esc(x.nombre.split(' ')[0]) : '—'; };
+  const num = (v) => (v === '' || v == null ? '—' : esc(Number(v)));
+  const heads = t === 'arranque'
+    ? ['#', 'Lote', 'Arranc.', 'Plant/m', 'Moho/m', 'Daño', 'Podr.', 'Mohono', 'Germ.', 'QQ/Mzn']
+    : ['#', 'Lote', 'Combina', 'Mtrs', 'Sanas', 'Vanas', 'Sanas/m', 'Pérd. QQ/Mzn'];
+  const filas = r.lines.map((l, i) => {
+    const lote = esc(l.lote_nombre || nombreDe(cat.lotes, l.lote));
+    const cols = t === 'arranque'
+      ? (() => { const c = RAC.arranqueLinea(l); return [eqn(l.arrancador), num(l.plantas_m), num(l.moho_m), num(l.dano_arrancador), num(l.podridas), num(l.mohono), num(l.germinadas), `<b>${f(c.qq_mzn)}</b>`]; })()
+      : (() => { const c = RAC.combinaLinea(l); return [eqn(l.combina), num(l.metros), num(l.sanas), num(l.vanas), f(c.sanas_x_metro), `<b>${f(c.qq_mzn)}</b>`]; })();
+    const act = acciones ? `<td class="act"><button class="btn sec sm" data-dup="${i}" title="Duplicar">⧉</button><button class="btn sec sm" data-edit="${i}" title="Editar">✎</button><button class="btn rojo sm" data-del="${i}" title="Quitar">✕</button></td>` : '';
+    return `<tr><td>${i + 1}</td><td>${lote}</td>${cols.map((c) => `<td>${c}</td>`).join('')}${act}</tr>`;
+  }).join('');
+  return `<div class="scroll"><table class="tl"><tr>${heads.map((x) => `<th>${x}</th>`).join('')}${acciones ? '<th></th>' : ''}</tr>${filas}</table></div>`;
+}
+function pintarTabla() {
+  const r = actual, box = $('#tablaM'); if (!box) return;
+  box.innerHTML = tablaLineas(r, true);
+  $('#nMuestras').textContent = r.lines.length ? '(' + r.lines.length + ')' : '';
+  const ir2 = () => { const e = $('#formM'); if (e) e.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+  box.querySelectorAll('[data-dup]').forEach((b) => b.onclick = () => { const i = +b.dataset.dup; form = { rid: r.id, idx: null, dup: i + 1, d: clonar(r.lines[i]) }; pintarForm(); ir2(); });
+  box.querySelectorAll('[data-edit]').forEach((b) => b.onclick = () => { const i = +b.dataset.edit; form = { rid: r.id, idx: i, d: clonar(r.lines[i]) }; pintarForm(); ir2(); });
+  box.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => {
+    const i = +b.dataset.del; if (!confirm('¿Quitar la muestra ' + (i + 1) + ' de la tabla?')) return;
+    r.lines.splice(i, 1);
+    if (form && form.idx === i) form = { rid: r.id, idx: null, d: lineaNueva() }; else if (form && form.idx > i) form.idx--;
+    guardarBorrador(true); pintarForm(); pintarTabla();
+  });
+}
+
+function validarLinea(l, p) {
+  const e = [];
+  if (!l.lote) e.push(p + 'elige el lote');
+  if (actual.tipo === 'arranque') {
+    if (!l.arrancador) e.push(p + 'elige el arrancador');
+    CAMPOS_NUM.arranque.forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta ' + k.replace(/_/g, ' ')); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
+  } else {
+    if (!l.combina) e.push(p + 'elige la combina');
+    if (!(+l.metros > 0)) e.push(p + 'metros lineales');
+    CAMPOS_NUM.combina.forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta cápsulas ' + k); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
+  }
+  return e;
+}
 function validar() {
   const r = actual, h = r.header, e = [];
   if (!h.fecha) e.push('Fecha');
-  if (!h.company) e.push('Compañía'); if (!h.ciclo) e.push('Ciclo'); if (!h.finca) e.push('Finca');
+  if (!h.company) e.push('Compañía'); if (!h.sector && sectoresDe(h).length) e.push('Sector'); if (!h.ciclo) e.push('Ciclo'); if (!h.finca) e.push('Finca');
   if (r.tipo === 'arranque' && !h.variedad) e.push('Variedad');
-  r.lines.forEach((l, i) => {
-    const p = 'Muestra ' + (i + 1) + ': ';
-    if (!l.lote) e.push(p + 'elige el lote');
-    if (r.tipo === 'arranque') {
-      if (!l.arrancador) e.push(p + 'elige el arrancador');
-      ['plantas_m', 'moho_m', 'dano_arrancador', 'podridas', 'mohono', 'germinadas'].forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta ' + k.replace(/_/g, ' ')); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
-    } else {
-      if (!l.combina) e.push(p + 'elige la combina');
-      if (!(+l.metros > 0)) e.push(p + 'metros lineales');
-      ['sanas', 'vanas'].forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta cápsulas ' + k); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
-    }
-  });
+  if (!r.lines.length) e.push('Agrega al menos una muestra a la tabla');
+  r.lines.forEach((l, i) => e.push(...validarLinea(l, 'Muestra ' + (i + 1) + ': ')));
   return e;
 }
 
@@ -348,6 +453,7 @@ function rResumen() {
       <div>Nº <b>${esc(h.numero || '(automático)')}</b> · ${RAC.fmtFecha(h.fecha)}</div>
       <div>${esc(nombreDe(cat.companias, h.company))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div>
       <div>Finca <b>${esc(nombreDe(cat.fincas, h.finca))}</b>${r.tipo === 'arranque' ? ` · ${esc(h.variedad)} · DDS ${esc(h.dds === '' ? '—' : h.dds)}` : ''}</div></div>
+    <div class="card"><h3>Muestras (${r.lines.length})</h3>${tablaLineas(r, false)}</div>
     <div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}
       <div style="font-size:12px;color:var(--gris);margin-top:8px">Vista previa. INFOAGRO recalcula al recibir el reporte.</div></div>
     <div class="card"><label>Elaborado por</label><input id="tec" value="${esc(r.tecnico || cfg.tecnico)}" placeholder="Nombre del técnico"></div>
@@ -402,6 +508,7 @@ function rDetalle() {
   $('#main').innerHTML = `
     <div class="aviso okbox">Enviado a INFOAGRO ${r.odoo ? 'como Nº <b>' + esc(r.odoo.folio) + '</b>' : ''}. Solo lectura: para corregirlo, hazlo en INFOAGRO.</div>
     <div class="card"><div>${RAC.fmtFecha(h.fecha)} · ${esc(nombreDe(cat.fincas, h.finca))} · ${esc(nombreDe(cat.ciclos, h.ciclo))}</div></div>
+    <div class="card"><h3>Muestras (${r.lines.length})</h3>${tablaLineas(r, false)}</div>
     <div class="card"><h3>Promedios por lote</h3>${tablaResumen(r)}</div>
     <button class="btn rojo" id="quitar" style="width:100%">Quitar del teléfono</button>`;
   $('#quitar').onclick = () => { if (confirm('Esto solo borra la copia del teléfono; el reporte sigue en INFOAGRO. ¿Continuar?')) { reportes = reportes.filter((x) => x.id !== r.id); persist(); ir({ name: 'lista', tipo: r.tipo }); } };
@@ -413,7 +520,7 @@ function rCfg() {
   $('#main').innerHTML = `
     <div class="card"><label>Nombre del técnico (aparece en "Elaborado por")</label><input id="c_tec" value="${esc(cfg.tecnico)}"></div>
     <div class="card"><h3>Catálogos</h3>
-      <div style="font-size:13px;color:var(--gris)">${cat.fincas.length} fincas · ${cat.lotes.length} lotes · ${cat.arrancadores.length} arrancadores · ${cat.combinas.length} combinas${cat.updated_at ? '<br>Actualizado: ' + new Date(cat.updated_at).toLocaleString('es-NI') : ''}</div>
+      <div style="font-size:13px;color:var(--gris)">${cat.ciclo || 'Ciclo'}: ${cat.fincas.length} fincas · ${cat.lotes.length} lotes sembrados · ${cat.arrancadores.length} arrancadores · ${cat.combinas.length} combinas${cat.updated_at ? '<br>Actualizado: ' + new Date(cat.updated_at).toLocaleString('es-NI') : ''}</div>
       <button class="btn" id="c_cat" style="width:100%;margin-top:10px">Actualizar catálogos</button></div>
     <div class="card"><h3>Pendientes</h3><button class="btn sec" id="c_env" style="width:100%">Enviar todos los reportes "listos"</button></div>
     <div style="text-align:center;color:var(--gris);font-size:12px">Versión ${APP_VERSION}</div>`;
