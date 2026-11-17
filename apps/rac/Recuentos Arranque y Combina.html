@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.17-8';
+const APP_VERSION = '2026.11.17-10';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -687,6 +687,24 @@ function textoResumen(r) {
     + (c ? `\n\nMañana vs tarde: ${c.general.e.t} (${f(c.general.a)} → ${f(c.general.p)} QQ/Mzn)` : '') + `\n\nElaborado por ${r.tecnico || cfg.tecnico || '—'}`;
 }
 async function compartir(r) {
+  const recien = r.estado !== 'enviado';
+  // Validación: un PDF solo se comparte si el reporte ya está en INFOAGRO (evita diferencias con lo que llega por WhatsApp).
+  if (r.estado !== 'enviado') {
+    if (enviando) return;
+    if (actual && actual.id === r.id && document.getElementById('h_fecha')) leerHeader();   // solo si está la pantalla de edición
+    const e = validar();
+    if (e.length) { alert('Para compartir el PDF, el reporte debe estar completo y enviado a INFOAGRO.\n\nFalta corregir:\n\n• ' + e.join('\n• ')); return; }
+    r.tecnico = r.tecnico || cfg.tecnico;
+    if (!navigator.onLine) { r.estado = 'listo'; guardarBorrador(true); alert('Sin señal: el PDF no se puede compartir hasta que el reporte se envíe a INFOAGRO.\n\nQuedó guardado como «listo». Con internet vuelve a tocar Compartir PDF (se enviará primero a INFOAGRO).'); return; }
+    enviando = true; toast('Enviando a INFOAGRO antes de compartir…');
+    try { await enviarCore(r); toast('Enviado a INFOAGRO como Nº ' + r.odoo.folio + ' ✓'); }
+    catch (er) { r.estado = 'listo'; try { guardarBorrador(true); } catch (e2) { /* nada */ } alert('No se envió a INFOAGRO, por eso no se comparte el PDF.\n\n' + er.message + '\n\nEl reporte sigue guardado; reintenta.'); return; }
+    finally { enviando = false; }
+  }
+  await compartirPdf(r);
+  if (recien && (vista.name === 'editar' || vista.name === 'resumen')) ir({ name: 'detalle', tipo: r.tipo, id: r.id });   // ya quedó en INFOAGRO: pasa a solo lectura
+}
+async function compartirPdf(r) {
   const texto = textoResumen(r), file = new File([blobPdf(r)], nombrePdf(r), { type: 'application/pdf' });
   try {
     if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], text: texto, title: TIPOS[r.tipo].nombre }); return; }
@@ -729,24 +747,30 @@ function rResumen() {
 }
 
 let enviando = false;
+// Envía el reporte a INFOAGRO, y luego fotos y PDF. Lo usan «Enviar a INFOAGRO» y «Compartir PDF» (compartir exige que el reporte esté en INFOAGRO).
+async function enviarCore(r, alFotos) {
+  const h = r.header;
+  if (!String(r.tecnico || cfg.tecnico || '').trim()) throw new Error('Escribe el nombre de quien hace el recuento (campo «Elaborado por»): se guarda en INFOAGRO como usuario del dispositivo.');
+  const payload = { localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico || cfg.tecnico,
+    header: { numero: h.numero, temporal: tmpDe(r), fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds },
+    lines: r.lines.map((l) => ({ ...l })) };
+  const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify(payload) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok || !j.ok) throw new Error(j.error || 'Error ' + res.status);
+  r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, ya_existia: !!j.ya_existia, confirmado: j.lineas || null, enviado: Date.now() };
+  guardarBorrador(true);
+  const nf = fotosDe(r).length; if (nf) { if (alFotos) alFotos(); await subirFotos(r); }
+  const pdfOk = await subirPdf(r); guardarBorrador(true);
+  return { j, nf, pdfOk };
+}
 async function enviar() {
   if (enviando) return;
   const r = actual; r.tecnico = ($('#tec').value || '').trim(); cfg.tecnico = r.tecnico || cfg.tecnico; save(LS.cfg, cfg);
   r.estado = 'listo'; guardarBorrador(true);
   if (!navigator.onLine) { $('#resEnvio').innerHTML = '<div class="aviso">Sin señal. El reporte quedó guardado como <b>listo</b>; se enviará cuando tengas internet (abre la app y entra a Pendientes).</div>'; return; }
   enviando = true; const b = $('#bEnviar'); b.disabled = true; b.textContent = 'Enviando…';
-  const h = r.header;
-  const payload = { localId: r.id, app_version: APP_VERSION, tecnico: r.tecnico,
-    header: { numero: h.numero, temporal: tmpDe(r), fecha: h.fecha, company: h.company, ciclo: h.ciclo, finca: h.finca, variedad: h.variedad || null, dds: h.dds === '' ? 0 : h.dds },
-    lines: r.lines.map((l) => ({ ...l })) };
   try {
-    const res = await fetch(WORKER + TIPOS[r.tipo].path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify(payload) });
-    const j = await res.json().catch(() => ({}));
-    if (!res.ok || !j.ok) throw new Error(j.error || 'Error ' + res.status);
-    r.estado = 'enviado'; r.odoo = { id: j.odoo_id, folio: j.folio, ya_existia: !!j.ya_existia, confirmado: j.lineas || null, enviado: Date.now() };
-    guardarBorrador(true);
-    const nf = fotosDe(r).length; if (nf) { $('#resEnvio').innerHTML = '<div class="aviso">Reporte enviado. Subiendo fotos…</div>'; await subirFotos(r); }
-    const pdfOk = await subirPdf(r); guardarBorrador(true);
+    const { j, nf, pdfOk } = await enviarCore(r, () => { $('#resEnvio').innerHTML = '<div class="aviso">Reporte enviado. Subiendo fotos…</div>'; });
     const fp = fotosDe(r).filter((f) => !f.sub).length;
     $('#resEnvio').innerHTML = `<div class="aviso okbox"><b>Enviado a INFOAGRO ✓</b><br>Reporte Nº <b>${esc(j.folio)}</b>${j.ya_existia ? ' (ya estaba registrado, no se duplicó)' : ''} · ${(j.line_ids || []).length || r.lines.length} muestras.${pdfOk ? '<br>PDF del recuento adjunto ✓' : '<br>PDF pendiente de subir: se envía solo al tener señal.'}${nf ? (fp ? `<br><b>${fp} de ${nf} foto(s) quedaron pendientes</b>: se suben solas al tener señal.` : `<br>${nf} foto(s) adjuntas al recuento ✓`) : ''}${difCalc(r, j.lineas)}</div>`;
     $('#bar').innerHTML = `<button class="btn" id="bFin">Terminar</button>`; $('#bFin').onclick = () => ir({ name: 'home' });
