@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1f6f43">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Acopio · Remisionista</title>
+<style>
+:root{--verde:#1f6f43;--verde2:#2e8b57;--claro:#eaf4ee;--ambar:#c77d12;--rojo:#b3261e;--gris:#5f6b66;--borde:#d5ddd8;--bg:#f4f7f5}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:#1c2421;padding-bottom:40px}
+header.top{background:var(--verde);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:20}
+header.top h1{font-size:17px;margin:0;flex:1;font-weight:600}
+header.top button{background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:8px;padding:8px 10px;font-size:14px}
+main{max-width:720px;margin:0 auto;padding:14px}
+.net{font-size:12px;padding:3px 8px;border-radius:10px;background:rgba(255,255,255,.2)}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mod{background:#fff;border:1px solid var(--borde);border-radius:16px;padding:18px 10px;text-align:center;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.mod:active{transform:scale(.98)}.mod.full{grid-column:1/3}
+.mod .ic{font-size:46px;line-height:1}.mod h2{font-size:16px;margin:8px 0 2px}.mod small{color:var(--gris);display:block;font-size:12px}
+.badge{display:inline-block;background:var(--ambar);color:#fff;border-radius:10px;font-size:12px;padding:1px 8px;margin-top:6px}.badge.ok{background:var(--verde2)}.badge.rojo{background:var(--rojo)}
+.card{background:#fff;border:1px solid var(--borde);border-radius:12px;padding:12px;margin:10px 0}
+.card h3{margin:0 0 8px;font-size:15px;color:var(--verde)}
+label{display:block;font-size:12px;color:var(--gris);margin:8px 0 3px}
+input,select{width:100%;font-size:16px;padding:10px;border:1px solid var(--borde);border-radius:8px;background:#fff;font-family:inherit}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.rem{display:flex;gap:8px}
+.btn{border:0;border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;background:var(--verde);color:#fff;width:100%;margin-top:10px}
+.btn.sec{background:#fff;color:var(--verde);border:1px solid var(--verde)}.btn.rojo{background:var(--rojo)}.btn.sm{width:auto;margin:0;padding:8px 12px;font-size:13px}.btn:disabled{opacity:.5}
+.aviso{background:#fff7e6;border:1px solid #f0d49b;border-radius:10px;padding:10px;font-size:13px;margin:10px 0}.aviso.err{background:#fdecea;border-color:#f0b5b0}.aviso.ok{background:var(--claro);border-color:#b7d8c5}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.chip{border:1px solid var(--borde);border-radius:18px;padding:8px 12px;font-size:14px;background:#fff}.chip.on{background:var(--verde);color:#fff;border-color:var(--verde)}.chip small{opacity:.75;display:block;font-size:11px}
+.big{font-size:30px;font-weight:700;color:var(--verde)}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;text-align:center;margin-top:8px}.kv div{background:var(--claro);border-radius:8px;padding:8px;font-size:12px;color:var(--gris)}.kv b{display:block;font-size:16px;color:#1c2421}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 5px;border-bottom:1px solid var(--borde);text-align:left;white-space:nowrap}th{color:var(--gris);font-size:11px}.scroll{overflow-x:auto}
+@media(max-width:380px){.row,.g2{grid-template-columns:1fr}}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+input,select{min-height:44px}
+.stickybar{position:sticky;bottom:0;z-index:15;padding:14px 0 calc(10px + env(safe-area-inset-bottom));background:linear-gradient(rgba(244,247,245,0),var(--bg) 35%)}
+.stickybar .btn{margin-top:0;font-size:17px;padding:15px}
+.eqst{font-size:12px;margin-top:3px;min-height:15px}.eqst.ok{color:var(--verde)}.eqst.mal{color:var(--ambar)}
+.lt{border:1px solid var(--borde);border-radius:12px;padding:10px;margin-top:8px;background:#fbfdfb}.lt .h{display:flex;justify-content:space-between;gap:8px;font-weight:600}.lt small{color:var(--gris);font-weight:400}.lt .calc{font-size:12px;color:var(--gris);margin-top:6px}
+@media(min-width:700px){main{max-width:760px}}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;border-radius:20px;padding:9px 16px;font-size:14px;z-index:60;display:none;max-width:90%}
+#scan{position:fixed;inset:0;background:#000;z-index:50;display:none;flex-direction:column}
+#scan video{flex:1;width:100%;object-fit:cover}#scan .bar{padding:12px;display:flex;gap:8px;background:#111}#scan .bar .btn{margin:0}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<header class="top"><button id="back" class="hide">←</button><h1 id="titulo">Acopio · Remisionista</h1><span class="net" id="net">—</span><button id="cfgBtn">⚙</button></header>
+<main id="main"></main>
+<div id="toast"></div>
+<div id="scan"><video id="vid" playsinline muted></video><div class="bar"><button class="btn sec" id="scanFoto">📁 Foto</button><button class="btn rojo" id="scanX">Cerrar</button></div></div>
+<input type="file" id="fileQR" accept="image/*" capture="environment" class="hide">
+<script>
+'use strict';
+const APP_VERSION = '2026.11.18-1';
+const APP_ROL = 'remisionista'; /*ROL: lo fija build_apps.py → 'remisionista' | 'chofer'*/
+const ROL_TXT = { remisionista: { app: 'Remisionista', main: 'salida' }, chofer: { app: 'Chofer', main: 'chofer' } }[APP_ROL];
+const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
+const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
+// Remisionista conserva sus claves de siempre (no pierde pendientes); el Chofer usa las suyas: cada app guarda sus propios datos.
+const LP = APP_ROL === 'chofer' ? 'rrc_' : 'rr_';
+const LS = { cfg: LP + 'cfg_v1', cat: LP + 'cat_v1', sal: LP + 'salidas_v1', trk: LP + 'track_v1', hist: LP + 'hist_v1' };
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { toast('Almacenamiento lleno'); } };
+const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); }));
+const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+function fhora(iso) { if (!iso) return '—'; const d = new Date(iso.length === 19 && !iso.includes('T') ? iso.replace(' ', 'T') + 'Z' : iso); if (isNaN(d)) return '—'; const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}-${MES[d.getMonth()]} ${p(d.getHours())}:${p(d.getMinutes())}`; }
+let tt; function toast(m, ms = 2500) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(tt); tt = setTimeout(() => t.style.display = 'none', ms); }
+
+let cfg = Object.assign({ nombre: '', planta: null, ult: {} }, load(LS.cfg, {}));
+let cat = Object.assign({ lotes: [], planta: null, updated_at: null, cs: null }, load(LS.cat, {}));
+let salidas = load(LS.sal, []);
+let track = load(LS.trk, null);
+let vista = ROL_TXT.main;
+const plantaCfg = () => cfg.planta || cat.planta || null;
+
+/* ---------- QR: extrae el número de remisión de lo que traiga el código ---------- */
+function parseQR(txt) {
+  const raw = String(txt || '').trim(); let rem = '';
+  try { const j = JSON.parse(raw); if (j && typeof j === 'object') { const k = Object.keys(j).find((x) => /remis|numero|num|folio|^id$/i.test(x)); if (k) rem = String(j[k]); } } catch (e) { /* no es JSON */ }
+  if (!rem && /^https?:\/\//i.test(raw)) {
+    try { const u = new URL(raw); for (const [k, v] of u.searchParams) if (/remis|numero|num|folio|^id$|^n$/i.test(k)) { rem = v; break; }
+      if (!rem) { const m = u.pathname.match(/(\d{3,})\/?$/); if (m) rem = m[1]; } } catch (e) { /* url inválida */ }
+  }
+  if (!rem) { const m = raw.match(/(?:remisi[oó]n|rem|no\.?|n[ºo°])\s*[:#-]?\s*(\d{3,})/i) || raw.match(/\b(\d{3,})\b/); if (m) rem = m[1]; }
+  return { remision: rem.trim(), raw };
+}
+
+/* ---------- Geometría ---------- */
+function pipRing(x, y, ring) { let d = false; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) { const [xi, yi] = ring[i], [xj, yj] = ring[j]; if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d; } return d; }
+function geo(l) { if (l._g) return l._g; try { l._g = JSON.parse(l.geojson); } catch (e) { l._g = null; } return l._g; }
+function pip(lng, lat, l) { const g = geo(l); if (!g || !g.coordinates) return false; const polys = g.type === 'MultiPolygon' ? g.coordinates : [g.coordinates]; return polys.some((p) => pipRing(lng, lat, p[0]) && !p.slice(1).some((h) => pipRing(lng, lat, h))); }
+function centro(l) { if (l._c) return l._c; const g = geo(l); if (!g) return (l._c = [0, 0]); const pts = (g.type === 'MultiPolygon' ? g.coordinates[0][0] : g.coordinates[0]); let x = 0, y = 0; pts.forEach((p) => { x += p[0]; y += p[1]; }); return (l._c = [x / pts.length, y / pts.length]); }
+function dist(lat1, lng1, lat2, lng2) { const R = 6371000, r = Math.PI / 180, a = Math.sin((lat2 - lat1) * r / 2) ** 2 + Math.cos(lat1 * r) * Math.cos(lat2 * r) * Math.sin((lng2 - lng1) * r / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(a)); }
+function getPos(alta = true) { return new Promise((res, rej) => { if (!navigator.geolocation) return rej(new Error('Este teléfono no tiene GPS')); navigator.geolocation.getCurrentPosition((p) => res(p), (e) => rej(new Error(e.code === 1 ? 'Permiso de ubicación denegado' : 'No se pudo obtener la ubicación')), { enableHighAccuracy: alta, timeout: 20000, maximumAge: 0 }); }); }
+
+/* ---------- Lector QR (BarcodeDetector + cámara; manual como respaldo) ---------- */
+let stream = null, scanning = false;
+async function leerQR(cb) {
+  if (!('BarcodeDetector' in window)) { toast('Este navegador no lee QR con cámara: usa "Foto" o escribe el número', 4000); }
+  $('#scan').style.display = 'flex'; scanning = true;
+  const det = 'BarcodeDetector' in window ? new BarcodeDetector({ formats: ['qr_code'] }) : null;
+  const fin = (txt) => { cerrarScan(); cb(txt); };
+  $('#scanX').onclick = cerrarScan;
+  $('#scanFoto').onclick = () => $('#fileQR').click();
+  $('#fileQR').onchange = async (e) => { const f = e.target.files[0]; e.target.value = ''; if (!f || !det) return toast('No se pudo leer la foto'); try { const r = await det.detect(await createImageBitmap(f)); if (r.length) fin(r[0].rawValue); else toast('No se encontró un QR en la foto'); } catch (x) { toast('No se pudo leer la foto'); } };
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    const v = $('#vid'); v.srcObject = stream; v.play().catch(() => {});
+    const tick = async () => { if (!scanning) return; if (det) { try { const r = await det.detect(v); if (r.length) return fin(r[0].rawValue); } catch (e) { /* frame no listo */ } } setTimeout(tick, 250); };
+    tick();
+  } catch (e) { toast('No se pudo abrir la cámara'); }
+}
+function cerrarScan() { scanning = false; if (stream) stream.getTracks().forEach((t) => t.stop()); stream = null; $('#scan').style.display = 'none'; }
+
+/* ---------- Catálogo (lotes con polígono) ---------- */
+async function cargarCatalogo(silencioso) {
+  let ok = false;
+  try {
+    const r = await fetch(WORKER + '/acopio/geocercas').then((x) => x.json());
+    if (r.error) throw new Error(r.error);
+    cat = Object.assign(cat, { lotes: r.lotes, planta: r.planta, updated_at: r.updated_at, ciclo: r.ciclo }); ok = true;
+  } catch (e) { /* se conserva lo guardado */ }
+  try {   // listas del formulario (ciclo, productor, variedad, camión, furgón, conductor): quedan guardadas para trabajar sin señal
+    const r = await fetch(WORKER + '/acopio/catalogos').then((x) => x.json());
+    if (r.error) throw new Error(r.error);
+    cat.cs = { companias: r.companias || [], sectores: r.sectores || [], fincas: r.fincas || [], productor_por_company: r.productor_por_company || {}, ciclos: r.ciclos || [], productores: r.productores || [], variedades: r.variedades || [], camiones: r.camiones || [], furgones: r.furgones || [], conductores: r.conductores || [] }; cat.ciclo = r.ciclo || cat.ciclo; ok = true;
+  } catch (e) { /* se conserva lo guardado */ }
+  if (ok) save(LS.cat, cat);
+  if (!silencioso) toast(ok ? `Catálogo al día: ${cat.lotes.length} lotes · ${cat.cs ? cat.cs.conductores.length : 0} conductores` : 'Sin conexión: se usa el catálogo guardado');
+}
+
+/* ---------- Navegación ---------- */
+function ir(v) { vista = (v === 'home' ? ROL_TXT.main : v); render(); window.scrollTo(0, 0); }   // «home» = la pantalla principal de este rol
+function render() {
+  $('#back').classList.toggle('hide', vista === ROL_TXT.main);
+  $('#titulo').textContent = { salida: 'Remisionista · salida del plantillo', chofer: 'Chofer · rastreo del camión', cfg: 'Ajustes' }[vista];
+  ({ salida: rSalida, chofer: rChofer, cfg: rCfg })[vista]();
+}
+$('#back').onclick = () => ir('home'); $('#cfgBtn').onclick = () => ir('cfg');
+const actualizaRed = () => { const n = $('#net'); n.textContent = navigator.onLine ? 'en línea' : 'sin señal'; };
+addEventListener('online', () => { actualizaRed(); sincronizar(); flush(); }); addEventListener('offline', actualizaRed);
+
+/* ---------- REMISIONISTA: captura de la remisión (escribe directo en x_acopio) ---------- */
+const CIAS_FIJAS = { 2: 'Division Agricola Comasa', 3: 'Grupo ZP' };
+const CS = () => {   // listas del catálogo; si faltan compañías/fincas (Worker anterior o catálogo sin bajar) se arman con los lotes guardados
+  const c = Object.assign({ companias: [], sectores: [], fincas: [], productor_por_company: {}, ciclos: [], productores: [], variedades: [], camiones: [], furgones: [], conductores: [] }, cat.cs || {});
+  if (!c.companias.length || !c.fincas.length) {
+    const cm = new Map(), fm = new Map();
+    cat.lotes.forEach((l) => { if (l.company && !cm.has(l.company)) cm.set(l.company, { id: l.company, nombre: CIAS_FIJAS[l.company] || ('Compañía ' + l.company) }); if (l.finca_id && !fm.has(l.finca_id)) fm.set(l.finca_id, { id: l.finca_id, nombre: l.finca, company: l.company }); });
+    if (!c.companias.length) c.companias = [...cm.values()];
+    if (!c.fincas.length) c.fincas = [...fm.values()].sort((x, y) => String(x.nombre).localeCompare(String(y.nombre)));
+  }
+  return c;
+};
+const tmpRem = () => { const d = new Date(), p = (n) => String(n).padStart(2, '0'); return 'TR' + String(d.getFullYear()).slice(2) + p(d.getMonth() + 1) + p(d.getDate()) + '-' + Math.random().toString(36).slice(2, 6).toUpperCase(); };
+const num = (v) => { const n = parseFloat(v); return isFinite(n) && n > 0 ? n : 0; };
+const K_MED = 65 / 75;                                        // una tolvada mediana equivale a 65/75 de una grande
+const convL = (t) => num(t && t.g) + num(t && t.m) * K_MED;   // tolvadas convertidas a grandes
+const qqL = (t) => num(t && t.g) * 75 + num(t && t.m) * 65;   // QQ estimados
+const f2 = (n) => (Math.round(n * 100) / 100).toFixed(2);
+function resolverEq(lista, texto, furgon) {
+  let t = String(texto || '').trim(); if (!t) return null;
+  if (furgon) { const m = t.match(/^(?:nr|f)?\s*0*(\d{1,3})$/i); if (m) t = 'F' + m[1].padStart(3, '0'); }   // NR19 → F019
+  const n = (x) => x.toLowerCase().replace(/\s+/g, ' '), tt = n(t);
+  let r = lista.filter((e) => n(e.nombre) === tt);
+  if (!r.length) r = lista.filter((e) => n(e.nombre).startsWith(tt));
+  if (!r.length && tt.length >= 3) r = lista.filter((e) => n(e.nombre).includes(tt));
+  return r.length === 1 ? r[0] : (r.length > 1 ? 'amb' : null);
+}
+const optsL = (arr, sel, vacio) => `<option value="">${vacio}</option>` + arr.map((x) => `<option value="${x.id}" ${+sel === x.id ? 'selected' : ''}>${esc(x.nombre)}</option>`).join('');
+let sf = null; // formulario de salida en curso
+function nuevoSf() {
+  const u = cfg.ult || {};
+  const cs = CS();
+  const o = { remision: '', qr: '', temporal: tmpRem(), company: (cs.companias.some((c) => c.id === u.company) ? u.company : (cs.companias[0] || {}).id) || 0, sector: u.sector || 0, finca: u.finca || 0, ciclo_id: 0, variedad_id: u.variedad_id || 0,
+    camion: '', camion_id: 0, remolque: '', furgon: '', furgon_id: 0, conductor: '', conductor_id: 0, pos: null, sel: new Set(), tolv: {}, msg: '' };
+  sf = o; fijaCiclo(); return o;
+}
+const fincasSf = () => CS().fincas.filter((f) => (!sf.company || f.company === sf.company) && (!sf.sector || f.sector === sf.sector));
+const sectoresSf = () => { const ids = new Set(CS().fincas.filter((f) => !sf.company || f.company === sf.company).map((f) => f.sector).filter(Boolean)); return CS().sectores.filter((x) => ids.has(x.id)); };
+const productorSf = () => CS().productor_por_company[sf.company] || null;   // FIJO por compañía; si hay que cambiarlo se hace en Odoo
+function fijaCiclo() { const lst = CS().ciclos.filter((x) => !sf.company || x.company === sf.company); if (!lst.some((x) => x.id === sf.ciclo_id)) sf.ciclo_id = (lst.find((x) => x.nombre === cat.ciclo) || {}).id || 0; }
+function companiaSf() { if (sf.company) return sf.company; const l = cat.lotes.find((x) => sf.sel.has(x.id)); return l ? l.company : null; }
+function eqCampo(id, label, lista, key, listId, furg, ph) {
+  return `<div><label>${label}</label><input id="${id}" list="${listId}" autocomplete="off" autocapitalize="characters" placeholder="${ph || 'Escribe o elige'}" value="${esc(sf[key])}"><datalist id="${listId}">${lista.map((e) => `<option value="${esc(e.nombre)}">`).join('')}</datalist><div class="eqst" id="${id}_st"></div></div>`;
+}
+function pintaEqSt(id, key, lista, furg) {
+  const st = $('#' + id + '_st'); if (!st) return;
+  const r = resolverEq(lista, sf[key], furg);
+  if (!sf[key]) { st.textContent = ''; st.className = 'eqst'; sf[key + '_id'] = 0; return; }
+  if (r && r !== 'amb') { sf[key + '_id'] = r.id; st.textContent = '✔ ' + r.nombre; st.className = 'eqst ok'; }
+  else { sf[key + '_id'] = 0; st.textContent = !lista.length ? 'Sin catálogo guardado: se enviará como texto' : r === 'amb' ? 'Varias coincidencias: elige de la lista' : '⚠ No está en el catálogo: se enviará como texto'; st.className = 'eqst mal'; }
+}
+function rSalida() {
+  if (!cfg.nombre) { toast('Primero indica quién usa este dispositivo', 4000); return ir('cfg'); }   // el nombre se pide una sola vez y se guarda en el dispositivo
+  sf = sf || nuevoSf();
+  if (!sf.company) { const u = cfg.ult || {}, cs0 = CS(); sf.company = (cs0.companias.some((x) => x.id === u.company) ? u.company : (cs0.companias[0] || {}).id) || 0; }
+  fijaCiclo();
+  const c = CS(), lista = salidas.slice().reverse().slice(0, 15);
+  const comp = companiaSf(), ciclos = c.ciclos.filter((x) => !comp || x.company === comp);
+  $('#main').innerHTML = `
+  <div class="card"><h3>1. Remisión</h3>
+    <div class="rem"><input id="s_rem" inputmode="numeric" placeholder="Nº de remisión" value="${esc(sf.remision)}"><button class="btn sm" id="s_scan" style="width:auto">📷 QR</button></div>
+    ${sf.qr ? `<div style="font-size:11px;color:var(--gris);margin-top:4px;word-break:break-all">QR: ${esc(sf.qr.slice(0, 120))}</div>` : ''}
+    <div style="font-size:12px;color:var(--gris);margin-top:6px">Nº temporal: <b>${esc(sf.temporal)}</b> · INFOAGRO lo liga a la remisión.<br>El Nº de remisión puede repetirse entre ciclos (la planta reinicia el consecutivo): se identifica con <b>Nº + ciclo</b>, revisa el ciclo en el paso 2.</div>
+    <div style="margin-top:8px;font-size:14px">Remisionista: <b>${esc(cfg.nombre)}</b> <small style="color:var(--gris)">(usuario de este dispositivo)</small> <a href="#" id="s_user_ch" style="font-size:12px">cambiar</a></div></div>
+  <div class="card"><h3>2. Datos de la remisión</h3>
+    <div class="g2"><div><label>Compañía</label><select id="s_cia">${optsL(c.companias, sf.company, '— elegir —')}</select></div>
+      <div><label>Sector</label><select id="s_sec">${optsL(sectoresSf(), sf.sector, 'Todos')}</select></div></div>
+    <div class="g2"><div><label>Ciclo</label><select id="s_ciclo">${optsL(ciclos, sf.ciclo_id, '— elegir —')}</select></div>
+      <div><label>Finca</label><select id="s_finca">${optsL(fincasSf(), sf.finca, '— elegir —')}</select></div></div>
+    <label>Variedad</label><select id="s_var">${optsL(c.variedades, sf.variedad_id, '— elegir —')}</select>
+    <div class="g2" style="margin-top:2px">${eqCampo('s_cam', 'Camión (cabezal)', c.camiones, 'camion', 'dl_cam', false, 'ej. CH16345')}
+      <div><label>Placa remolque</label><input id="s_rem2" autocapitalize="characters" value="${esc(sf.remolque)}"></div></div>
+    <div class="g2">${eqCampo('s_fur', 'Furgón', c.furgones, 'furgon', 'dl_fur', true, 'ej. 19 o F019')}${eqCampo('s_cond', 'Conductor', c.conductores, 'conductor', 'dl_con', false, 'Nombre')}</div>
+    ${c.productores.length || c.conductores.length ? '' : '<div class="aviso">Aún no hay listas guardadas (productor, variedad, conductor…). Conéctate y abre ⚙ → Actualizar catálogo; mientras tanto puedes escribir camión, furgón y conductor.</div>'}</div>
+  <div class="card"><h3>3. Ubicación y lotes</h3><div id="s_gps">${sf.pos ? '' : 'Aún sin ubicación.'}</div><button class="btn sec" id="s_loc">📍 Obtener ubicación y detectar lote</button><div id="s_lotes"></div></div>
+  <div class="card"><h3>4. Tolvadas por finca y lote</h3><div id="s_tolv"><small style="color:var(--gris)">Marca primero el lote en el paso 3.</small></div></div>
+  <div class="stickybar"><button class="btn" id="s_ok">Registrar salida</button></div>
+  <div class="card"><h3>Salidas registradas (${salidas.length})</h3>${lista.length ? `<div class="scroll"><table><tr><th>Remisión · ciclo</th><th>Lote</th><th>Tolv. conv.</th><th>Hora</th><th>Estado</th></tr>${lista.map((s) => `<tr><td>${esc(s.remision)}<br><small style="color:var(--gris)">${esc(((CS().ciclos.find((x) => x.id === s.ciclo_id)) || {}).nombre || '')}</small></td><td>${esc(s.lotes_txt || '—')}</td><td>${s.tlv != null ? f2(s.tlv) : '—'}</td><td>${fhora(s.fecha)}</td><td>${s.estado === 'enviada' ? '✔ enviada' : s.estado === 'duplicada' ? '⚠ ya existía' : s.estado === 'rechazada' ? `<span style="color:var(--rojo)">✖ rechazada</span> <button class="btn sm sec" data-retry="${esc(s.localId)}">Reintentar</button><br><small style="white-space:normal">${esc(s.error || '')}</small>` : '⏳ pendiente'}</td></tr>`).join('')}</table></div>` : '<small>Sin registros.</small>'}</div>`;
+  pintaLotes();
+  const leer = () => { sf.remision = $('#s_rem').value.trim(); sf.remolque = $('#s_rem2').value.trim(); };
+  [['s_cam', 'camion', c.camiones, false], ['s_fur', 'furgon', c.furgones, true], ['s_cond', 'conductor', c.conductores, false]].forEach(([id, key, lst, furg]) => {
+    const el = $('#' + id);
+    el.oninput = () => { sf[key] = el.value; pintaEqSt(id, key, lst, furg); };
+    el.onchange = () => { const r = resolverEq(lst, el.value, furg); if (r && r !== 'amb') { el.value = r.nombre; sf[key] = r.nombre; } pintaEqSt(id, key, lst, furg); };
+    pintaEqSt(id, key, lst, furg);
+  });
+  $('#s_cia').onchange = () => { leer(); sf.company = +$('#s_cia').value || 0; sf.sector = 0; sf.finca = 0; fijaCiclo(); rSalida(); };
+  $('#s_sec').onchange = () => { leer(); sf.sector = +$('#s_sec').value || 0; if (sf.finca && !fincasSf().some((x) => x.id === sf.finca)) sf.finca = 0; rSalida(); };
+  $('#s_finca').onchange = () => { leer(); sf.finca = +$('#s_finca').value || 0; const fx = CS().fincas.find((x) => x.id === sf.finca); if (fx && fx.sector && !sf.sector) sf.sector = fx.sector; rSalida(); };
+  $('#s_ciclo').onchange = () => { sf.ciclo_id = +$('#s_ciclo').value || 0; }; $('#s_var').onchange = () => { sf.variedad_id = +$('#s_var').value || 0; };
+  document.querySelectorAll('[data-retry]').forEach((b) => b.onclick = () => { const x = salidas.find((q) => q.localId === b.dataset.retry); if (x) { x.estado = 'pendiente'; x.error = ''; save(LS.sal, salidas); sincronizar(); rSalida(); } });
+  $('#s_scan').onclick = () => { leer(); leerQR((t) => { const q = parseQR(t); sf.qr = q.raw; sf.remision = q.remision || sf.remision; if (!q.remision) toast('No se reconoció el número: escríbelo', 4000); else toast('Remisión ' + q.remision); rSalida(); if (!sf.pos) $('#s_loc').click(); }); };
+  $('#s_loc').onclick = async () => { leer(); $('#s_gps').textContent = 'Obteniendo ubicación…'; try { const p = await getPos(); sf.pos = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, ts: new Date().toISOString() }; const dentro = cat.lotes.filter((l) => pip(sf.pos.lng, sf.pos.lat, l)); sf.sel = new Set(dentro.map((l) => l.id)); if (dentro.length && !sf.finca) { const d0 = dentro[0], fx = CS().fincas.find((x) => x.id === d0.finca_id); sf.company = sf.company || d0.company; if (fx) { sf.sector = sf.sector || fx.sector || 0; } sf.finca = d0.finca_id; fijaCiclo(); rSalida(); sf.sel = new Set(dentro.map((l) => l.id)); pintaLotes(); return; } pintaLotes(); } catch (e) { $('#s_gps').innerHTML = `<div class="aviso err">${esc(e.message)}</div>`; } };
+  $('#s_user_ch').onclick = (e) => { e.preventDefault(); ir('cfg'); };
+  $('#s_ok').onclick = () => { leer(); registrarSalida(); };
+}
+function pintaLotes() {
+  const box = $('#s_lotes'), g = $('#s_gps'); if (!box || !sf.pos) return;
+  const p = sf.pos;
+  const cand = cat.lotes.map((l) => { const dentro = pip(p.lng, p.lat, l), c = centro(l); return { l, dentro, d: dentro ? 0 : dist(p.lat, p.lng, c[1], c[0]) }; })
+    .sort((a, b) => (b.dentro - a.dentro) || ((b.l.finca_id === sf.finca) - (a.l.finca_id === sf.finca)) || (b.l.sembrado - a.l.sembrado) || (a.d - b.d)).slice(0, 8);
+  const hay = cand.some((c) => c.dentro);
+  g.innerHTML = `<div class="aviso ${hay ? 'ok' : ''}">${hay ? '✔ Dentro de la geocerca' : '⚠ Fuera de toda geocerca conocida: elige el lote manualmente'} · precisión ±${Math.round(p.acc)} m</div>`;
+  box.innerHTML = `<label>Lote(s) de donde sale la carga (toca para marcar)</label><div class="chips">${cand.map((c) => `<div class="chip ${sf.sel.has(c.l.id) ? 'on' : ''}" data-id="${c.l.id}">${esc(c.l.nombre)}<small>${esc(c.l.finca)}${c.dentro ? ' · dentro' : ' · a ' + Math.round(c.d) + ' m'}</small></div>`).join('')}</div>`;
+  box.querySelectorAll('.chip').forEach((el) => el.onclick = () => { const id = +el.dataset.id; sf.sel.has(id) ? sf.sel.delete(id) : sf.sel.add(id); pintaLotes(); });
+  pintaTolv();
+}
+function totTolv(ls) { return ls.reduce((a, l) => { const t = sf.tolv[l.id] || {}; a.g += num(t.g); a.m += num(t.m); a.c += convL(t); a.q += qqL(t); return a; }, { g: 0, m: 0, c: 0, q: 0 }); }
+function pintaTolv() {
+  const b = $('#s_tolv'); if (!b) return;
+  const ls = cat.lotes.filter((l) => sf.sel.has(l.id));
+  if (!ls.length) { b.innerHTML = '<small style="color:var(--gris)">Marca primero el lote en el paso 3.</small>'; return; }
+  const resumen = () => { const t = totTolv(ls); return `<div class="kv"><div>Tolv. G<b>${f2(t.g)}</b></div><div>Tolv. M<b>${f2(t.m)}</b></div><div>Convertidas<b>${f2(t.c)}</b></div><div>QQ estimados<b>${f2(t.q)}</b></div></div>`; };
+  b.innerHTML = ls.map((l) => { const t = sf.tolv[l.id] || {}; return `<div class="lt"><div class="h"><span>${esc(l.nombre)}</span><small>${esc(l.finca)}</small></div>
+    <div class="g2"><div><label>Tolv. G (grande)</label><input data-g="${l.id}" type="number" inputmode="decimal" step="0.25" min="0" value="${esc(t.g == null ? '' : t.g)}"></div>
+    <div><label>Tolv. M (mediana)</label><input data-m="${l.id}" type="number" inputmode="decimal" step="0.25" min="0" value="${esc(t.m == null ? '' : t.m)}"></div></div>
+    <div class="calc" id="lc_${l.id}">Convertidas ${f2(convL(t))} · QQ estimados ${f2(qqL(t))}</div></div>`; }).join('') + `<div id="s_tot">${resumen()}</div><div style="font-size:11px;color:var(--gris);margin-top:6px">Mediana = 65/75 de una grande · QQ estimados = G×75 + M×65 (Odoo recalcula al recibir).</div>`;
+  const upd = (id) => { const t = sf.tolv[id] || {}; $('#lc_' + id).textContent = `Convertidas ${f2(convL(t))} · QQ estimados ${f2(qqL(t))}`; $('#s_tot').innerHTML = resumen(); };
+  b.querySelectorAll('[data-g]').forEach((i) => i.oninput = () => { (sf.tolv[i.dataset.g] = sf.tolv[i.dataset.g] || {}).g = i.value; upd(i.dataset.g); });
+  b.querySelectorAll('[data-m]').forEach((i) => i.oninput = () => { (sf.tolv[i.dataset.m] = sf.tolv[i.dataset.m] || {}).m = i.value; upd(i.dataset.m); });
+}
+function registrarSalida() {
+  const c = CS(), falta = [];
+  if (!sf.remision) falta.push('Nº de remisión');
+  if (!cfg.nombre) falta.push('Tu nombre (remisionista)');
+  if (!sf.pos) falta.push('Ubicación (paso 3)');
+  if (!sf.company && !cat.lotes.some((l) => sf.sel.has(l.id))) falta.push('Compañía'); if (!sf.finca && c.fincas.length) falta.push('Finca'); if (!sf.ciclo_id) falta.push(c.ciclos.length ? 'Ciclo' : 'Ciclo (conéctate y abre ⚙ → Actualizar catálogo)'); if (c.variedades.length && !sf.variedad_id) falta.push('Variedad');
+  if (!sf.camion) falta.push('Camión'); if (!sf.conductor) falta.push('Conductor');
+  const ls = cat.lotes.filter((l) => sf.sel.has(l.id));
+  if (!ls.length) falta.push('Lote (paso 3)'); else if (!ls.some((l) => convL(sf.tolv[l.id]) > 0)) falta.push('Tolvadas G/M de al menos un lote');
+  if (falta.length) return alert('Falta completar:\n\n• ' + falta.join('\n• '));
+  if (salidas.some((s) => s.remision === sf.remision && (s.ciclo_id || 0) === (sf.ciclo_id || 0) && s.estado !== 'duplicada' && s.estado !== 'rechazada') && !confirm(`La remisión ${sf.remision} ya se registró en este teléfono para ese ciclo. ¿Registrar otra vez?`)) return;
+  const detalle = ls.map((l) => { const t = sf.tolv[l.id] || {}; return { lote: l.id, nombre: l.nombre, finca_id: l.finca_id, g: num(t.g), m: num(t.m), tolvadas: Math.round(convL(t) * 100) / 100 }; });
+  if (detalle.some((d) => !(d.tolvadas > 0)) && !confirm('Hay lotes sin tolvadas (se registrarán en 0). ¿Continuar?')) return;
+  const tlv = Math.round(detalle.reduce((a, d) => a + d.tolvadas, 0) * 100) / 100, f = ls[0];
+  const fur = resolverEq(c.furgones, sf.furgon, true), furTxt = (fur && fur !== 'amb') ? fur.nombre.split(' ')[0] : (() => { const m = String(sf.furgon).match(/^(?:nr|f)?\s*0*(\d{1,3})$/i); return m ? 'F' + m[1].padStart(3, '0') : String(sf.furgon).trim(); })();
+  salidas.push({ localId: uuid(), registro_acopio: true, temporal: sf.temporal, remision: sf.remision, qr: sf.qr,
+    ciclo_id: sf.ciclo_id || 0, productor_id: (productorSf() || {}).id || 0, variedad_id: sf.variedad_id || 0,
+    camion: sf.camion, camion_id: sf.camion_id || 0, remolque: sf.remolque, furgon: furTxt, furgon_id: sf.furgon_id || 0, conductor: sf.conductor, conductor_id: sf.conductor_id || 0,
+    detalle, tlv, lat: sf.pos.lat, lng: sf.pos.lng, acc: sf.pos.acc, fecha: new Date().toISOString(),
+    lotes: ls.map((l) => l.id), lotes_txt: ls.map((l) => `${l.nombre} (${l.finca})`).join(', '), finca: sf.finca || (f ? f.finca_id : null), company: sf.company || (f ? f.company : null), chequeador: cfg.nombre, estado: 'pendiente' });
+  cfg.ult = { company: sf.company, sector: sf.sector, finca: sf.finca, variedad_id: sf.variedad_id }; save(LS.cfg, cfg);
+  save(LS.sal, salidas); sf = null; toast('Salida guardada'); rSalida(); sincronizar();
+}
+let sincronizando = false;
+async function sincronizar() {
+  if (sincronizando || !navigator.onLine) return; sincronizando = true;
+  try {
+    for (const s of salidas.filter((x) => x.estado === 'pendiente')) {
+      try {
+        const r = await fetch(WORKER + '/acopio/salida', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify(s) });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.ok) { s.estado = 'enviada'; s.odoo_id = j.odoo_id; s.dentro = j.dentro_geocerca; }
+        else if (r.status === 409) { s.estado = 'duplicada'; toast(`Remisión ${s.remision}: ya tenía salida registrada`, 4000); }
+        else if (r.status === 422) { s.estado = 'rechazada'; s.error = j.error || 'INFOAGRO rechazó la remisión'; toast(`Remisión ${s.remision}: ${s.error}`, 6000); }   // no bloquea la cola: se corrige y se reintenta
+        else break; // error del servidor: se reintenta luego
+      } catch (e) { break; }
+      save(LS.sal, salidas);
+    }
+  } finally { sincronizando = false; save(LS.sal, salidas); if (vista === 'salida') rSalida(); }
+}
+
+/* ---------- CHOFER: rastreo ---------- */
+let watchId = null, wake = null, flushT = null, ultimoFix = null, cercaN = 0;
+function rChofer() {
+  if (!track) {
+    $('#main').innerHTML = `<div class="card"><h3>Iniciar rastreo</h3><div class="rem"><input id="c_rem" inputmode="numeric" placeholder="Nº de remisión"><button class="btn sm" id="c_scan" style="width:auto">📷 QR</button></div>
+      <button class="btn" id="c_go">▶ Iniciar rastreo</button></div>
+      <div class="aviso">Deja esta pantalla abierta y el teléfono con la ubicación activada hasta llegar a la planta. El rastreo se detiene solo al llegar.</div>
+      ${plantaCfg() ? '' : '<div class="aviso">Falta la ubicación de la planta Comasa: en ⚙ Ajustes toca “Usar mi ubicación como planta” estando en la planta (o se configura en el Worker). Sin ella la llegada se marca manualmente.</div>'}`;
+    let qr = '';
+    const iniciar = () => { const n = $('#c_rem').value.trim(); if (!n) return toast('Falta el número de remisión'); iniciarTrack(n, qr); };
+    $('#c_scan').onclick = () => leerQR((t) => { const q = parseQR(t); qr = q.raw; if (q.remision) { $('#c_rem').value = q.remision; iniciar(); } else toast('No se reconoció el número: escríbelo', 4000); });
+    $('#c_go').onclick = iniciar; return;
+  }
+  pintaTrack();
+}
+function pintaTrack() {
+  if (vista !== 'chofer' || !track) return;
+  const pl = plantaCfg(), u = ultimoFix, pend = track.pts.filter((p) => !p.sent).length, env = track.pts.length - pend;
+  const d = pl && u ? dist(u.lat, u.lng, pl.lat, pl.lng) : null;
+  $('#main').innerHTML = `<div class="card"><h3>Remisión ${esc(track.remision)}</h3>
+    ${track.llegada ? '<div class="aviso ok"><b>✔ Llegó a la planta</b> · ' + fhora(track.llegada.ts) + (track.llegadaSent ? ' · enviada' : ' · pendiente de enviar') + '</div>' : `<div class="big">${d != null ? (d > 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m') : '—'}</div><small>distancia a la planta ${pl ? '' : '(sin ubicación de planta configurada)'}</small>`}
+    <div class="kv"><div>Puntos enviados<b>${env}</b></div><div>Por enviar<b>${pend}</b></div><div>Precisión<b>${u ? '±' + Math.round(u.acc) + ' m' : '—'}</b></div><div>Último punto<b>${u ? fhora(u.ts) : '—'}</b></div></div>
+    ${track.llegada ? '' : '<button class="btn" id="c_lleg">🏁 Llegué a la planta (manual)</button>'}
+    <button class="btn ${track.llegada ? '' : 'sec'}" id="c_fin">${track.llegada ? 'Terminar' : 'Cancelar rastreo'}</button></div>`;
+  const l = $('#c_lleg'); if (l) l.onclick = async () => { const p = ultimoFix || (await getPos().then((x) => ({ lat: x.coords.latitude, lng: x.coords.longitude, ts: new Date().toISOString() })).catch(() => null)); if (!p) return toast('Sin ubicación todavía'); llegar(p); };
+  $('#c_fin').onclick = () => { if (!track.llegada && !confirm('¿Cancelar el rastreo? Lo ya registrado se conserva en Odoo.')) return; detener(); if (track.llegada && !track.llegadaSent) { toast('Falta enviar la llegada; se enviará al tener señal'); return ir('home'); } finalizar(); };
+}
+function iniciarTrack(rem, qr) { track = { remision: rem, qr, started: new Date().toISOString(), pts: [], llegada: null, llegadaSent: false }; save(LS.trk, track); cercaN = 0; ultimoFix = null; comenzar(); render(); }
+async function comenzar() {
+  if (!navigator.geolocation) return toast('Este teléfono no tiene GPS');
+  if (watchId != null) return;
+  watchId = navigator.geolocation.watchPosition(onPos, (e) => toast(e.code === 1 ? 'Activa el permiso de ubicación' : 'Buscando señal GPS…'), { enableHighAccuracy: true, maximumAge: 3000, timeout: 30000 });
+  try { if ('wakeLock' in navigator) wake = await navigator.wakeLock.request('screen'); } catch (e) { /* sin wake lock */ }
+  clearInterval(flushT); flushT = setInterval(flush, 30000);
+}
+function detener() { if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null; clearInterval(flushT); flushT = null; try { if (wake) wake.release(); } catch (e) { /* ya liberado */ } wake = null; }
+function onPos(p) {
+  if (!track || track.llegada) return;
+  const f = { ts: new Date(p.timestamp || Date.now()).toISOString(), lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy, vel: p.coords.speed || 0 };
+  ultimoFix = f;
+  const prev = track.pts[track.pts.length - 1];
+  if (!prev || new Date(f.ts) - new Date(prev.ts) >= 20000 || dist(prev.lat, prev.lng, f.lat, f.lng) >= 30) { track.pts.push(Object.assign({ sent: false }, f)); save(LS.trk, track); }
+  const pl = plantaCfg();
+  if (pl && f.acc <= 120) { cercaN = dist(f.lat, f.lng, pl.lat, pl.lng) <= (pl.radio || 300) ? cercaN + 1 : 0; if (cercaN >= 2) return llegar(f); }
+  pintaTrack();
+}
+function llegar(f) { track.llegada = { ts: new Date().toISOString(), lat: f.lat, lng: f.lng }; track.llegadaSent = false; save(LS.trk, track); detener(); toast('Llegada a la planta registrada'); pintaTrack(); flush(); }
+let flushing = false;
+async function flush() {
+  if (!track || flushing || !navigator.onLine) return;
+  const pend = track.pts.filter((p) => !p.sent).slice(0, 200);
+  if (!pend.length && !(track.llegada && !track.llegadaSent)) return;
+  flushing = true;
+  try {
+    const body = { remision: track.remision, puntos: pend.map(({ ts, lat, lng, acc, vel }) => ({ ts, lat, lng, acc, vel })), llegada: track.llegada || undefined, app_version: APP_VERSION };
+    const r = await fetch(WORKER + '/acopio/puntos', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (r.ok && j.ok) { pend.forEach((p) => p.sent = true); if (track.llegada) track.llegadaSent = true; save(LS.trk, track); }
+  } catch (e) { /* se reintenta */ } finally { flushing = false; pintaTrack(); if (track && track.llegada && track.llegadaSent && !track.pts.some((p) => !p.sent)) { const h = load(LS.hist, []); h.push({ remision: track.remision, llegada: track.llegada.ts, puntos: track.pts.length }); save(LS.hist, h.slice(-30)); toast('Remisión ' + track.remision + ' entregada ✔', 4000); detener(); track = null; localStorage.removeItem(LS.trk); if (vista === 'chofer') render(); } }
+}
+function finalizar() { track = null; localStorage.removeItem(LS.trk); ir('home'); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && track && !track.llegada) { comenzar(); flush(); } });
+
+/* ---------- AJUSTES ---------- */
+function rCfg() {
+  const pl = plantaCfg();
+  $('#main').innerHTML = `<div class="card"><h3>Usuario de este dispositivo</h3><small style="color:var(--gris)">${APP_ROL === 'chofer' ? 'Nombre del chofer que usa este teléfono.' : 'Se pide una sola vez. Es quien aparece como remisionista (usuario dispositivo) en INFOAGRO.'}</small><input id="k_nom" value="${esc(cfg.nombre)}" placeholder="Nombre y apellido" autocomplete="name"></div>
+  ${APP_ROL !== 'chofer' ? '' : `<div class="card"><h3>Planta Comasa (geocerca de llegada)</h3><div class="row"><div><label>Latitud</label><input id="k_lat" inputmode="decimal" value="${pl ? pl.lat : ''}"></div><div><label>Longitud</label><input id="k_lng" inputmode="decimal" value="${pl ? pl.lng : ''}"></div></div>
+    <label>Radio (metros)</label><input id="k_rad" inputmode="numeric" value="${pl ? pl.radio || 300 : 300}">
+    <button class="btn sec" id="k_here">📍 Usar mi ubicación como planta</button></div>`}
+  <div class="card"><h3>Catálogo</h3><small>${cat.lotes.length} lotes con geocerca · ${cat.updated_at ? fhora(cat.updated_at) : 'sin descargar'}</small><button class="btn sec" id="k_cat">Actualizar catálogo</button></div>
+  <button class="btn" id="k_ok">Guardar</button><div style="text-align:center;font-size:12px;color:var(--gris);margin-top:14px">Versión ${APP_VERSION}</div>`;
+  if ($('#k_here')) $('#k_here').onclick = async () => { try { const p = await getPos(); $('#k_lat').value = p.coords.latitude.toFixed(6); $('#k_lng').value = p.coords.longitude.toFixed(6); toast('Ubicación copiada: toca Guardar'); } catch (e) { toast(e.message); } };
+  $('#k_cat').onclick = async () => { await cargarCatalogo(false); rCfg(); };
+  $('#k_ok').onclick = () => { cfg.nombre = $('#k_nom').value.trim(); if ($('#k_lat')) { const la = parseFloat($('#k_lat').value), ln = parseFloat($('#k_lng').value); cfg.planta = isFinite(la) && isFinite(ln) ? { lat: la, lng: ln, radio: parseInt($('#k_rad').value) || 300 } : null; } save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
+}
+
+/* ---------- Arranque ---------- */
+actualizaRed(); render();
+cargarCatalogo(true).then(() => { if (vista === 'salida' && sf && !sf.company) rSalida(); }); sincronizar();
+if (track && !track.llegada) comenzar(); else if (track) flush();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
