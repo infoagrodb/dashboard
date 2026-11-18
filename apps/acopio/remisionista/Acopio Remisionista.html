@@ -57,7 +57,7 @@ input,select{min-height:44px}
 <input type="file" id="fileQR" accept="image/*" capture="environment" class="hide">
 <script>
 'use strict';
-const APP_VERSION = '2026.11.18-1';
+const APP_VERSION = '2026.11.18-2';
 const APP_ROL = 'remisionista'; /*ROL: lo fija build_apps.py → 'remisionista' | 'chofer'*/
 const ROL_TXT = { remisionista: { app: 'Remisionista', main: 'salida' }, chofer: { app: 'Chofer', main: 'chofer' } }[APP_ROL];
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
@@ -74,12 +74,12 @@ const MES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct
 function fhora(iso) { if (!iso) return '—'; const d = new Date(iso.length === 19 && !iso.includes('T') ? iso.replace(' ', 'T') + 'Z' : iso); if (isNaN(d)) return '—'; const p = (n) => String(n).padStart(2, '0'); return `${p(d.getDate())}-${MES[d.getMonth()]} ${p(d.getHours())}:${p(d.getMinutes())}`; }
 let tt; function toast(m, ms = 2500) { const t = $('#toast'); t.textContent = m; t.style.display = 'block'; clearTimeout(tt); tt = setTimeout(() => t.style.display = 'none', ms); }
 
-let cfg = Object.assign({ nombre: '', planta: null, ult: {} }, load(LS.cfg, {}));
+let cfg = Object.assign({ nombre: '', ult: {} }, load(LS.cfg, {})); delete cfg.planta;
 let cat = Object.assign({ lotes: [], planta: null, updated_at: null, cs: null }, load(LS.cat, {}));
 let salidas = load(LS.sal, []);
 let track = load(LS.trk, null);
 let vista = ROL_TXT.main;
-const plantaCfg = () => cfg.planta || cat.planta || null;
+const plantaCfg = () => cat.planta || null;   // la planta se guarda en el Worker (no en cada teléfono)
 
 /* ---------- QR: extrae el número de remisión de lo que traiga el código ---------- */
 function parseQR(txt) {
@@ -317,7 +317,8 @@ function rChofer() {
     $('#main').innerHTML = `<div class="card"><h3>Iniciar rastreo</h3><div class="rem"><input id="c_rem" inputmode="numeric" placeholder="Nº de remisión"><button class="btn sm" id="c_scan" style="width:auto">📷 QR</button></div>
       <button class="btn" id="c_go">▶ Iniciar rastreo</button></div>
       <div class="aviso">Deja esta pantalla abierta y el teléfono con la ubicación activada hasta llegar a la planta. El rastreo se detiene solo al llegar.</div>
-      ${plantaCfg() ? '' : '<div class="aviso">Falta la ubicación de la planta Comasa: en ⚙ Ajustes toca “Usar mi ubicación como planta” estando en la planta (o se configura en el Worker). Sin ella la llegada se marca manualmente.</div>'}`;
+      <div class="aviso">⚠ Con la app en segundo plano (WhatsApp, Waze, música…) el teléfono pausa el GPS. Para rastrear sin tener esta app abierta usa <b>Traccar Client</b>: instrucciones en ⚙ Ajustes.</div>
+      ${plantaCfg() ? '' : '<div class="aviso">La ubicación de la planta aún no está en el servidor: la llegada se marcará manualmente.</div>'}`;
     let qr = '';
     const iniciar = () => { const n = $('#c_rem').value.trim(); if (!n) return toast('Falta el número de remisión'); iniciarTrack(n, qr); };
     $('#c_scan').onclick = () => leerQR((t) => { const q = parseQR(t); qr = q.raw; if (q.remision) { $('#c_rem').value = q.remision; iniciar(); } else toast('No se reconoció el número: escríbelo', 4000); });
@@ -371,20 +372,31 @@ async function flush() {
   } catch (e) { /* se reintenta */ } finally { flushing = false; pintaTrack(); if (track && track.llegada && track.llegadaSent && !track.pts.some((p) => !p.sent)) { const h = load(LS.hist, []); h.push({ remision: track.remision, llegada: track.llegada.ts, puntos: track.pts.length }); save(LS.hist, h.slice(-30)); toast('Remisión ' + track.remision + ' entregada ✔', 4000); detener(); track = null; localStorage.removeItem(LS.trk); if (vista === 'chofer') render(); } }
 }
 function finalizar() { track = null; localStorage.removeItem(LS.trk); ir('home'); }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && track && !track.llegada) { comenzar(); flush(); } });
+let ocultoDesde = 0;
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') { ocultoDesde = Date.now(); return; }
+  if (track && !track.llegada) {
+    const min = ocultoDesde ? Math.round((Date.now() - ocultoDesde) / 60000) : 0;
+    if (min >= 1) toast(`El teléfono pausó el GPS ${min} min (la app estuvo en segundo plano). Para rastreo continuo usa Traccar Client (⚙ Ajustes).`, 7000);
+    comenzar(); flush();
+  }
+  ocultoDesde = 0;
+});
 
 /* ---------- AJUSTES ---------- */
 function rCfg() {
   const pl = plantaCfg();
   $('#main').innerHTML = `<div class="card"><h3>Usuario de este dispositivo</h3><small style="color:var(--gris)">${APP_ROL === 'chofer' ? 'Nombre del chofer que usa este teléfono.' : 'Se pide una sola vez. Es quien aparece como remisionista (usuario dispositivo) en INFOAGRO.'}</small><input id="k_nom" value="${esc(cfg.nombre)}" placeholder="Nombre y apellido" autocomplete="name"></div>
-  ${APP_ROL !== 'chofer' ? '' : `<div class="card"><h3>Planta Comasa (geocerca de llegada)</h3><div class="row"><div><label>Latitud</label><input id="k_lat" inputmode="decimal" value="${pl ? pl.lat : ''}"></div><div><label>Longitud</label><input id="k_lng" inputmode="decimal" value="${pl ? pl.lng : ''}"></div></div>
-    <label>Radio (metros)</label><input id="k_rad" inputmode="numeric" value="${pl ? pl.radio || 300 : 300}">
-    <button class="btn sec" id="k_here">📍 Usar mi ubicación como planta</button></div>`}
+  ${APP_ROL !== 'chofer' ? '' : `<div class="card"><h3>Planta Comasa (llegada)</h3><small>${pl ? `Ubicación guardada en el servidor · radio ${pl.radio || 300} m. La llegada se registra sola.` : 'La ubicación de la planta aún no está en el servidor: avisa al administrador. Mientras tanto la llegada se marca manualmente.'}</small></div>
+  <div class="card"><h3>Rastreo en segundo plano (recomendado)</h3>
+    <small style="color:var(--gris)">Esta app solo manda la ubicación mientras está abierta en pantalla: si pasas a WhatsApp, Waze o música, el teléfono pausa el GPS. Para rastrear con otras apps abiertas instala <b>Traccar Client</b> (gratis, Android/iOS) y configúralo una sola vez:</small>
+    <ol style="margin:8px 0 8px 18px;padding:0;font-size:13px;line-height:1.5"><li><b>Identificador del dispositivo</b>: el código de tu camión (ej. CH16345)</li><li><b>URL del servidor</b>: copia la de abajo</li><li>Precisión: <b>alta</b> · Frecuencia: <b>15 s</b> · permiso de ubicación <b>«Siempre»</b></li><li>Activa el servicio antes de salir; el remisionista debe registrar tu camión en la remisión</li></ol>
+    <input id="k_tr" readonly value="${esc(WORKER + '/acopio/traccar?k=' + SYNC_KEY)}" onclick="this.select()"><button class="btn sec" id="k_trc">Copiar URL</button></div>`}
   <div class="card"><h3>Catálogo</h3><small>${cat.lotes.length} lotes con geocerca · ${cat.updated_at ? fhora(cat.updated_at) : 'sin descargar'}</small><button class="btn sec" id="k_cat">Actualizar catálogo</button></div>
   <button class="btn" id="k_ok">Guardar</button><div style="text-align:center;font-size:12px;color:var(--gris);margin-top:14px">Versión ${APP_VERSION}</div>`;
-  if ($('#k_here')) $('#k_here').onclick = async () => { try { const p = await getPos(); $('#k_lat').value = p.coords.latitude.toFixed(6); $('#k_lng').value = p.coords.longitude.toFixed(6); toast('Ubicación copiada: toca Guardar'); } catch (e) { toast(e.message); } };
+  if ($('#k_trc')) $('#k_trc').onclick = async () => { try { await navigator.clipboard.writeText($('#k_tr').value); toast('URL copiada'); } catch (e) { $('#k_tr').select(); toast('Selecciónala y cópiala'); } };
   $('#k_cat').onclick = async () => { await cargarCatalogo(false); rCfg(); };
-  $('#k_ok').onclick = () => { cfg.nombre = $('#k_nom').value.trim(); if ($('#k_lat')) { const la = parseFloat($('#k_lat').value), ln = parseFloat($('#k_lng').value); cfg.planta = isFinite(la) && isFinite(ln) ? { lat: la, lng: ln, radio: parseInt($('#k_rad').value) || 300 } : null; } save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
+  $('#k_ok').onclick = () => { cfg.nombre = $('#k_nom').value.trim(); save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
 }
 
 /* ---------- Arranque ---------- */
