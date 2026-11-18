@@ -57,7 +57,7 @@ input,select{min-height:44px}
 <input type="file" id="fileQR" accept="image/*" capture="environment" class="hide">
 <script>
 'use strict';
-const APP_VERSION = '2026.11.18-2';
+const APP_VERSION = '2026.11.18-3';
 const APP_ROL = 'chofer'; /*ROL: lo fija build_apps.py → 'remisionista' | 'chofer'*/
 const ROL_TXT = { remisionista: { app: 'Remisionista', main: 'salida' }, chofer: { app: 'Chofer', main: 'chofer' } }[APP_ROL];
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
@@ -317,12 +317,12 @@ function rChofer() {
     $('#main').innerHTML = `<div class="card"><h3>Iniciar rastreo</h3><div class="rem"><input id="c_rem" inputmode="numeric" placeholder="Nº de remisión"><button class="btn sm" id="c_scan" style="width:auto">📷 QR</button></div>
       <button class="btn" id="c_go">▶ Iniciar rastreo</button></div>
       <div class="aviso">Deja esta pantalla abierta y el teléfono con la ubicación activada hasta llegar a la planta. El rastreo se detiene solo al llegar.</div>
-      <div class="aviso">⚠ Con la app en segundo plano (WhatsApp, Waze, música…) el teléfono pausa el GPS. Para rastrear sin tener esta app abierta usa <b>Traccar Client</b>: instrucciones en ⚙ Ajustes.</div>
+      ${cfg.traccar ? '' : '<div class="aviso">⚠ Con la app en segundo plano (WhatsApp, Waze, música…) el teléfono pausa el GPS. Para rastrear con otras apps abiertas instala y configura <b>Traccar Client</b>.<button class="btn" id="c_tr" style="margin-top:8px">Instalar y configurar Traccar</button></div>'}
       ${plantaCfg() ? '' : '<div class="aviso">La ubicación de la planta aún no está en el servidor: la llegada se marcará manualmente.</div>'}`;
     let qr = '';
     const iniciar = () => { const n = $('#c_rem').value.trim(); if (!n) return toast('Falta el número de remisión'); iniciarTrack(n, qr); };
     $('#c_scan').onclick = () => leerQR((t) => { const q = parseQR(t); qr = q.raw; if (q.remision) { $('#c_rem').value = q.remision; iniciar(); } else toast('No se reconoció el número: escríbelo', 4000); });
-    $('#c_go').onclick = iniciar; return;
+    $('#c_go').onclick = iniciar; if ($('#c_tr')) $('#c_tr').onclick = () => ir('cfg'); return;
   }
   pintaTrack();
 }
@@ -383,20 +383,36 @@ document.addEventListener('visibilitychange', () => {
   ocultoDesde = 0;
 });
 
+/* ---------- Traccar Client (rastreo en segundo plano): instalar + configurar con un toque ---------- */
+const TRACCAR = { play: 'https://play.google.com/store/apps/details?id=org.traccar.client', ios: 'https://apps.apple.com/app/traccar-client/id843156974' };
+const esIOS = () => /iPhone|iPad|iPod/i.test(navigator.userAgent);
+const camionId = (x) => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+function traccarLinks(camion) {
+  const url = WORKER + '/acopio/traccar?k=' + SYNC_KEY, q = 'url=' + encodeURIComponent(url) + '&id=' + encodeURIComponent(camionId(camion)) + '&interval=15&distance=0';
+  return { store: esIOS() ? TRACCAR.ios : TRACCAR.play, config: esIOS() ? 'org.traccar.client://config?' + q : 'intent://config?' + q + '#Intent;scheme=org.traccar.client;package=org.traccar.client;end', url };
+}
+
 /* ---------- AJUSTES ---------- */
 function rCfg() {
   const pl = plantaCfg();
   $('#main').innerHTML = `<div class="card"><h3>Usuario de este dispositivo</h3><small style="color:var(--gris)">${APP_ROL === 'chofer' ? 'Nombre del chofer que usa este teléfono.' : 'Se pide una sola vez. Es quien aparece como remisionista (usuario dispositivo) en INFOAGRO.'}</small><input id="k_nom" value="${esc(cfg.nombre)}" placeholder="Nombre y apellido" autocomplete="name"></div>
   ${APP_ROL !== 'chofer' ? '' : `<div class="card"><h3>Planta Comasa (llegada)</h3><small>${pl ? `Ubicación guardada en el servidor · radio ${pl.radio || 300} m. La llegada se registra sola.` : 'La ubicación de la planta aún no está en el servidor: avisa al administrador. Mientras tanto la llegada se marca manualmente.'}</small></div>
   <div class="card"><h3>Rastreo en segundo plano (recomendado)</h3>
-    <small style="color:var(--gris)">Esta app solo manda la ubicación mientras está abierta en pantalla: si pasas a WhatsApp, Waze o música, el teléfono pausa el GPS. Para rastrear con otras apps abiertas instala <b>Traccar Client</b> (gratis, Android/iOS) y configúralo una sola vez:</small>
-    <ol style="margin:8px 0 8px 18px;padding:0;font-size:13px;line-height:1.5"><li><b>Identificador del dispositivo</b>: el código de tu camión (ej. CH16345)</li><li><b>URL del servidor</b>: copia la de abajo</li><li>Precisión: <b>alta</b> · Frecuencia: <b>15 s</b> · permiso de ubicación <b>«Siempre»</b></li><li>Activa el servicio antes de salir; el remisionista debe registrar tu camión en la remisión</li></ol>
-    <input id="k_tr" readonly value="${esc(WORKER + '/acopio/traccar?k=' + SYNC_KEY)}" onclick="this.select()"><button class="btn sec" id="k_trc">Copiar URL</button></div>`}
+    <small style="color:var(--gris)">Esta app solo manda la ubicación mientras está abierta en pantalla: si pasas a WhatsApp, Waze o música, el teléfono pausa el GPS. Con <b>Traccar Client</b> (gratis) el rastreo sigue con cualquier otra app abierta.</small>
+    <label>Código de tu camión (ej. CH16345)</label><input id="k_cam" value="${esc(cfg.camion || '')}" placeholder="CH16345" autocapitalize="characters">
+    <button class="btn" id="k_tr1" style="margin-top:10px">1 · Instalar Traccar Client</button>
+    <button class="btn" id="k_tr2" style="margin-top:8px">2 · Configurarlo automáticamente</button>
+    <small style="color:var(--gris);display:block;margin-top:8px">Al abrirse Traccar, acepta la configuración, da permiso de ubicación <b>«Siempre»</b>, permite el uso en segundo plano sin restricciones y activa el servicio antes de salir. El remisionista debe registrar tu camión en la remisión.</small>
+    <details style="margin-top:8px"><summary style="font-size:13px">Si no se configura solo (manual)</summary><small>Identificador: el código del camión · Precisión alta · Frecuencia 15 s · URL del servidor:</small>
+    <input id="k_tr" readonly value="${esc(WORKER + '/acopio/traccar?k=' + SYNC_KEY)}" onclick="this.select()"><button class="btn sec" id="k_trc">Copiar URL</button></details></div>`}
   <div class="card"><h3>Catálogo</h3><small>${cat.lotes.length} lotes con geocerca · ${cat.updated_at ? fhora(cat.updated_at) : 'sin descargar'}</small><button class="btn sec" id="k_cat">Actualizar catálogo</button></div>
   <button class="btn" id="k_ok">Guardar</button><div style="text-align:center;font-size:12px;color:var(--gris);margin-top:14px">Versión ${APP_VERSION}</div>`;
+  const guardaCam = () => { cfg.camion = camionId($('#k_cam').value); save(LS.cfg, cfg); return cfg.camion; };
+  if ($('#k_tr1')) $('#k_tr1').onclick = () => { cfg.traccar1 = true; save(LS.cfg, cfg); location.href = traccarLinks('').store; };
+  if ($('#k_tr2')) $('#k_tr2').onclick = () => { const c = guardaCam(); if (!c) return toast('Escribe primero el código de tu camión'); cfg.traccar = true; save(LS.cfg, cfg); location.href = traccarLinks(c).config; setTimeout(() => { if (document.visibilityState === 'visible') toast('¿No se abrió Traccar? Instálalo con el botón 1 o usa la configuración manual', 6000); }, 1800); };
   if ($('#k_trc')) $('#k_trc').onclick = async () => { try { await navigator.clipboard.writeText($('#k_tr').value); toast('URL copiada'); } catch (e) { $('#k_tr').select(); toast('Selecciónala y cópiala'); } };
   $('#k_cat').onclick = async () => { await cargarCatalogo(false); rCfg(); };
-  $('#k_ok').onclick = () => { cfg.nombre = $('#k_nom').value.trim(); save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
+  $('#k_ok').onclick = () => { cfg.nombre = $('#k_nom').value.trim(); if ($('#k_cam')) cfg.camion = camionId($('#k_cam').value); save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
 }
 
 /* ---------- Arranque ---------- */
