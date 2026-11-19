@@ -57,7 +57,7 @@ input,select{min-height:44px}
 <input type="file" id="fileQR" accept="image/*" capture="environment" class="hide">
 <script>
 'use strict';
-const APP_VERSION = '2026.11.19-3';
+const APP_VERSION = '2026.11.19-4';
 const APP_ROL = 'chofer'; /*ROL: lo fija build_apps.py → 'remisionista' | 'chofer'*/
 const ROL_TXT = { remisionista: { app: 'Remisionista', main: 'salida' }, chofer: { app: 'Chofer', main: 'chofer' } }[APP_ROL];
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
@@ -459,7 +459,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
   const nombreApp = (document.title || 'la app').trim();
   const aChrome = () => { const esc = encodeURIComponent(location.href); location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=' + location.protocol.replace(':', '') + ';package=com.android.chrome;S.browser_fallback_url=' + esc + ';end'; };
   const copiar = async (b) => { try { await navigator.clipboard.writeText(location.href); b.textContent = '✅ Enlace copiado: pégalo en Chrome'; } catch (e) { prompt('Copia este enlace y ábrelo en Chrome:', location.href); } };
-  function pasos() {
+  function pasosInstalar() {
     const tit = '<div class="pwa-ic">📲</div><h2>Instalar la app</h2>';
     const L = (arr) => '<ol>' + arr.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
     const nota = '<p style="font-size:14px;margin-top:-6px">Después busca el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones.</p>';
@@ -475,18 +475,31 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
     const bc = o.querySelector('#pwaChrome'); if (bc) bc.onclick = aChrome; const bp = o.querySelector('#pwaCopy'); if (bp) bp.onclick = () => copiar(bp);
   }
   let dip = null, btn = null;
+  const KEY = 'pwa_instalada';
+  const marcaInstalada = () => { try { localStorage.setItem(KEY, '1'); } catch (e) { /* ok */ } if (btn) btn.textContent = TXT_YA; };
+  const yaInstalada = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+  const TXT_INST = '📲 Instalar la app en mi teléfono', TXT_YA = '📲 Ya la instalé: poner el ícono en mi pantalla';
+  const marca = /Xiaomi|Redmi|POCO|MIUI/i.test(ua) ? 'xiaomi' : /SM-|Samsung/i.test(ua) ? 'samsung' : /HUAWEI|HONOR/i.test(ua) ? 'huawei' : '';
+  // Android no siempre crea el acceso directo solo: la app queda instalada en «todas las aplicaciones» y desde ahí se pone en la pantalla principal
+  function guiaAcceso() {
+    const extra = { xiaomi: '<p style="font-size:14px">En Xiaomi/Redmi/POCO, si no se crea solo: <b>Ajustes → Aplicaciones → Permisos → Otros permisos → Chrome → «Crear accesos directos»</b> y actívalo.</p>',
+      samsung: '<p style="font-size:14px">En Samsung, para que se pongan solos: <b>Ajustes → Pantalla de inicio → «Añadir apps nuevas a la pantalla de inicio»</b>.</p>', huawei: '', '': '' }[marca];
+    const o = ov('<div class="pwa-ic">📌</div><h2>Poner el ícono en tu pantalla</h2><p>La app ya está instalada. Para tener el ícono a la mano:</p><ol><li>En la pantalla principal, <b>desliza hacia arriba</b> para ver todas tus aplicaciones.</li><li>Busca <b>«' + nombreApp + '»</b>.</li><li><b>Mantén presionado</b> su ícono.</li><li>Elige <b>«Agregar a pantalla de inicio»</b> (o arrástralo a la pantalla).</li></ol>' + extra + '<button class="pwa-btn" id="pwaOk">Entendido</button><button class="pwa-btn sec" id="pwaRe">No la encuentro: volver a instalar</button>');
+    o.querySelector('#pwaOk').onclick = () => o.remove(); o.querySelector('#pwaRe').onclick = () => { o.remove(); pasosInstalar(); };
+  }
   async function instalar() {
-    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') { ov('<div class="pwa-ic">⏳</div><h2>Instalando…</h2><p>En unos segundos verás el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones. Ábrela desde ahí.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; return; } } catch (e) { dip = null; } }
-    pasos();
+    if (yaInstalada() && !dip) return guiaAcceso();
+    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') { marcaInstalada(); guiaAcceso(); return; } } catch (e) { dip = null; } }
+    pasosInstalar();
   }
   function pintaBoton() {
     if (standalone()) { if (btn) { btn.remove(); btn = null; } return; }
     if (btn) return;
-    btn = E('button', 'pwa-inst', '📲 Instalar la app en mi teléfono'); btn.id = 'pwaInstBtn'; btn.onclick = instalar;
+    btn = E('button', 'pwa-inst', yaInstalada() ? TXT_YA : TXT_INST); btn.id = 'pwaInstBtn'; btn.onclick = instalar;
     const h = document.querySelector('header'); if (h && h.parentNode) h.parentNode.insertBefore(btn, h.nextSibling); else document.body.insertBefore(btn, document.body.firstChild);
   }
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); dip = e; pintaBoton(); });
-  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde su ícono (en tu pantalla de inicio o en tus aplicaciones).</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
+  addEventListener('appinstalled', () => { marcaInstalada(); if (!document.querySelector('.pwa-ov')) guiaAcceso(); });
   pintaBoton();
 
   /* ---- 2) Actualización OBLIGATORIA ---- */
