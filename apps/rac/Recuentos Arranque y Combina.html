@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.19-1';
+const APP_VERSION = '2026.11.19-2';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -887,16 +887,32 @@ setTimeout(reintentaFotos, 3000);
   const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   /* ---- 1) Botón INSTALAR ---- */
-  let dip = null, btn = null;
+  const ua = navigator.userAgent;
+  const enApp = /FBAN|FBAV|Instagram|WhatsApp|Line\/|Snapchat|MicroMessenger|TikTok|; wv\)/i.test(ua);   // navegador interno de otra app (no se puede instalar desde ahí)
+  const nav = ios ? (/CriOS/.test(ua) ? 'chromeios' : /EdgiOS/.test(ua) ? 'edgeios' : /FxiOS/.test(ua) ? 'firefoxios' : 'safari')
+    : enApp ? 'enapp' : /SamsungBrowser/.test(ua) ? 'samsung' : /Firefox/.test(ua) ? 'firefox' : /EdgA/.test(ua) ? 'edge' : /OPR\/|Opera|OPT\//.test(ua) ? 'opera'
+    : /MiuiBrowser|HuaweiBrowser|UCBrowser|VivoBrowser|HeyTapBrowser|OppoBrowser|Quark|Puffin/i.test(ua) ? 'otro' : /Chrome\//.test(ua) ? 'chrome' : 'otro';
+  const nombreApp = (document.title || 'la app').trim();
+  const aChrome = () => { const esc = encodeURIComponent(location.href); location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=' + location.protocol.replace(':', '') + ';package=com.android.chrome;S.browser_fallback_url=' + esc + ';end'; };
+  const copiar = async (b) => { try { await navigator.clipboard.writeText(location.href); b.textContent = '✅ Enlace copiado: pégalo en Chrome'; } catch (e) { prompt('Copia este enlace y ábrelo en Chrome:', location.href); } };
   function pasos() {
     const tit = '<div class="pwa-ic">📲</div><h2>Instalar la app</h2>';
-    const li = ios
-      ? '<ol><li>Toca el botón <b>Compartir</b> (el cuadro con una flecha hacia arriba ⬆️), abajo en la pantalla.</li><li>Elige <b>«Añadir a pantalla de inicio»</b>.</li><li>Toca <b>«Añadir»</b>. Listo: abre la app desde su ícono.</li></ol><p style="font-size:14px">Si no ves el botón Compartir, abre esta página con <b>Safari</b>.</p>'
-      : '<ol><li>Toca los <b>tres puntos ⋮</b> arriba a la derecha del navegador.</li><li>Elige <b>«Instalar app»</b> o <b>«Añadir a pantalla de inicio»</b>.</li><li>Toca <b>«Instalar»</b>. Listo: abre la app desde su ícono.</li></ol>';
-    const o = ov(tit + li + '<button class="pwa-btn sec" id="pwaOk">Entendido</button>'); o.querySelector('#pwaOk').onclick = () => o.remove();
+    const L = (arr) => '<ol>' + arr.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+    const nota = '<p style="font-size:14px;margin-top:-6px">Después busca el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones.</p>';
+    const chromeBtn = !ios ? '<button class="pwa-btn" id="pwaChrome">🌐 Abrir en Chrome (recomendado)</button><button class="pwa-btn sec" id="pwaCopy">📋 Copiar enlace</button>' : '<button class="pwa-btn sec" id="pwaCopy">📋 Copiar enlace</button>';
+    let cuerpo = '';
+    if (nav === 'chrome') cuerpo = L(['Toca los <b>tres puntos ⋮</b> arriba a la derecha.', 'Elige <b>«Instalar app»</b> o <b>«Añadir a pantalla de inicio»</b>.', 'Toca <b>«Instalar»</b>.']) + nota;
+    else if (nav === 'samsung') cuerpo = '<p>Estás en <b>Samsung Internet</b>. Puedes instalar aquí:</p>' + L(['Toca el menú <b>☰</b> (abajo a la derecha).', 'Elige <b>«Agregar página a»</b> y luego <b>«Pantalla de inicio»</b>.', 'Toca <b>«Agregar»</b>.']) + nota + '<p style="font-size:14px">Si no aparece el ícono, usa Chrome:</p>' + chromeBtn;
+    else if (nav === 'firefox') cuerpo = '<p>Estás en <b>Firefox</b>. Puedes instalar aquí:</p>' + L(['Toca los <b>tres puntos ⋮</b>.', 'Elige <b>«Instalar»</b> (o <b>«Agregar a pantalla de inicio»</b>).', 'Confirma con <b>«Agregar»</b>.']) + nota + '<p style="font-size:14px">Si no aparece el ícono, usa Chrome:</p>' + chromeBtn;
+    else if (nav === 'edge') cuerpo = '<p>Estás en <b>Edge</b>:</p>' + L(['Toca el menú <b>⋯</b> (abajo).', 'Elige <b>«Agregar al teléfono»</b>.', 'Toca <b>«Agregar»</b>.']) + nota + '<p style="font-size:14px">Si no aparece el ícono, usa Chrome:</p>' + chromeBtn;
+    else if (ios) cuerpo = L(['Toca el botón <b>Compartir</b> (el cuadro con la flecha ⬆️).', 'Elige <b>«Añadir a pantalla de inicio»</b>.', 'Toca <b>«Añadir»</b>.']) + nota + (nav === 'safari' ? '' : '<p style="font-size:14px">Si no ves esa opción, abre este enlace con <b>Safari</b>:</p>' + chromeBtn);
+    else cuerpo = '<p>Este navegador' + (nav === 'enapp' ? ' (el de otra aplicación)' : '') + ' <b>no puede instalar la app</b> bien. Ábrela con <b>Chrome</b> y toca de nuevo «Instalar»:</p>' + chromeBtn;
+    const o = ov(tit + cuerpo + '<button class="pwa-btn sec" id="pwaOk">Entendido</button>'); o.querySelector('#pwaOk').onclick = () => o.remove();
+    const bc = o.querySelector('#pwaChrome'); if (bc) bc.onclick = aChrome; const bp = o.querySelector('#pwaCopy'); if (bp) bp.onclick = () => copiar(bp);
   }
+  let dip = null, btn = null;
   async function instalar() {
-    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') return; } catch (e) { dip = null; } }
+    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') { ov('<div class="pwa-ic">⏳</div><h2>Instalando…</h2><p>En unos segundos verás el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones. Ábrela desde ahí.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; return; } } catch (e) { dip = null; } }
     pasos();
   }
   function pintaBoton() {
@@ -906,7 +922,7 @@ setTimeout(reintentaFotos, 3000);
     const h = document.querySelector('header'); if (h && h.parentNode) h.parentNode.insertBefore(btn, h.nextSibling); else document.body.insertBefore(btn, document.body.firstChild);
   }
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); dip = e; pintaBoton(); });
-  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde el ícono en tu pantalla.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
+  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde su ícono (en tu pantalla de inicio o en tus aplicaciones).</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
   pintaBoton();
 
   /* ---- 2) Actualización OBLIGATORIA ---- */
