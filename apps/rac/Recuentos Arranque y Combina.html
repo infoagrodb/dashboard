@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.17-13';
+const APP_VERSION = '2026.11.19-1';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -864,5 +864,83 @@ render();
 cargarCatalogos(true).then((ok) => { if (ok && vista.name === 'home') render(); });
 setTimeout(reintentaFotos, 3000);
 </script>
+<!--PWA_AYUDA_INI-->
+<script>
+/* PWA_AYUDA — botón grande «Instalar la app» + actualización obligatoria al centro de la pantalla.
+   Mismo código en las 3 apps de campo (Remisionista, Chofer, Recuentos). Usa APP_VERSION de la app. */
+(function () {
+  'use strict';
+  const VER = (typeof APP_VERSION !== 'undefined') ? APP_VERSION : '';
+  const E = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h != null) e.innerHTML = h; return e; };
+  const st = E('style', '', `
+    .pwa-ov{position:fixed;inset:0;z-index:2147483000;background:rgba(10,20,15,.72);display:flex;align-items:center;justify-content:center;padding:20px}
+    .pwa-card{background:#fff;color:#1c2421;border-radius:18px;max-width:380px;width:100%;padding:22px 20px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.4);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    .pwa-card h2{margin:6px 0 8px;font-size:22px}.pwa-card p{margin:0 0 14px;font-size:16px;line-height:1.45;color:#3b4742}
+    .pwa-card ol{text-align:left;margin:0 0 16px 0;padding-left:22px;font-size:16px;line-height:1.6}
+    .pwa-ic{font-size:44px;line-height:1}
+    .pwa-btn{display:block;width:100%;border:0;border-radius:14px;padding:16px 12px;font-size:19px;font-weight:700;color:#fff;background:var(--verde,#1f6f43);margin-top:10px}
+    .pwa-btn.sec{background:#e8eeea;color:#1c2421;font-weight:600;font-size:16px}
+    .pwa-inst{display:block;width:calc(100% - 24px);margin:12px;border:0;border-radius:14px;padding:16px 12px;font-size:19px;font-weight:700;color:#fff;background:#d97706;box-shadow:0 2px 8px rgba(0,0,0,.18)}`);
+  document.head.appendChild(st);
+  const ov = (html, bloq) => { const o = E('div', 'pwa-ov'); o.appendChild(E('div', 'pwa-card', html)); if (!bloq) o.addEventListener('click', (ev) => { if (ev.target === o) o.remove(); }); document.body.appendChild(o); return o; };
+  const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+  /* ---- 1) Botón INSTALAR ---- */
+  let dip = null, btn = null;
+  function pasos() {
+    const tit = '<div class="pwa-ic">📲</div><h2>Instalar la app</h2>';
+    const li = ios
+      ? '<ol><li>Toca el botón <b>Compartir</b> (el cuadro con una flecha hacia arriba ⬆️), abajo en la pantalla.</li><li>Elige <b>«Añadir a pantalla de inicio»</b>.</li><li>Toca <b>«Añadir»</b>. Listo: abre la app desde su ícono.</li></ol><p style="font-size:14px">Si no ves el botón Compartir, abre esta página con <b>Safari</b>.</p>'
+      : '<ol><li>Toca los <b>tres puntos ⋮</b> arriba a la derecha del navegador.</li><li>Elige <b>«Instalar app»</b> o <b>«Añadir a pantalla de inicio»</b>.</li><li>Toca <b>«Instalar»</b>. Listo: abre la app desde su ícono.</li></ol>';
+    const o = ov(tit + li + '<button class="pwa-btn sec" id="pwaOk">Entendido</button>'); o.querySelector('#pwaOk').onclick = () => o.remove();
+  }
+  async function instalar() {
+    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') return; } catch (e) { dip = null; } }
+    pasos();
+  }
+  function pintaBoton() {
+    if (standalone()) { if (btn) { btn.remove(); btn = null; } return; }
+    if (btn) return;
+    btn = E('button', 'pwa-inst', '📲 Instalar la app en mi teléfono'); btn.id = 'pwaInstBtn'; btn.onclick = instalar;
+    const h = document.querySelector('header'); if (h && h.parentNode) h.parentNode.insertBefore(btn, h.nextSibling); else document.body.insertBefore(btn, document.body.firstChild);
+  }
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); dip = e; pintaBoton(); });
+  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde el ícono en tu pantalla.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
+  pintaBoton();
+
+  /* ---- 2) Actualización OBLIGATORIA ---- */
+  let gate = null, chequeando = false;
+  async function versionNueva() {
+    if (!navigator.onLine || !VER) return null;
+    try {
+      const r = await fetch(location.pathname + '?_=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return null;
+      const m = (await r.text()).match(/APP_VERSION\s*=\s*'([^']+)'/);
+      return m && m[1] !== VER ? m[1] : null;
+    } catch (e) { return null; }
+  }
+  async function actualizar(b) {
+    b.disabled = true; b.textContent = 'Actualizando…';
+    try { if (typeof guardarBorrador === 'function' && typeof actual !== 'undefined' && actual && typeof vista === 'object' && vista && vista.name === 'editar') { if (typeof leerHeader === 'function') leerHeader(); guardarBorrador(true); } } catch (e) { /* no crítico */ }
+    try { await fetch(location.pathname, { cache: 'reload' }); } catch (e) { /* sin red: se reintenta */ }
+    try { if (navigator.serviceWorker) { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map((r) => r.update().catch(() => 0))); } } catch (e) { /* ok */ }
+    location.reload();
+  }
+  async function revisar() {
+    if (gate || chequeando) return; chequeando = true;
+    try {
+      const v = await versionNueva(); if (!v) return;
+      gate = ov('<div class="pwa-ic">🔄</div><h2>Hay una nueva versión</h2><p>Para seguir usando la app debes actualizarla. <b>Tus datos guardados no se pierden.</b></p><button class="pwa-btn" id="pwaAct">Actualizar ahora</button>', true);
+      gate.id = 'pwaUpd'; const b = gate.querySelector('#pwaAct'); b.onclick = () => actualizar(b);
+    } finally { chequeando = false; }
+  }
+  setTimeout(revisar, 400);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') revisar(); });
+  addEventListener('online', revisar);
+  setInterval(revisar, 5 * 60 * 1000);
+})();
+</script>
+<!--PWA_AYUDA_FIN-->
 </body>
 </html>
