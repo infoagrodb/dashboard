@@ -57,7 +57,7 @@ input,select{min-height:44px}
 <input type="file" id="fileQR" accept="image/*" capture="environment" class="hide">
 <script>
 'use strict';
-const APP_VERSION = '2026.11.18-4';
+const APP_VERSION = '2026.11.19-3';
 const APP_ROL = 'chofer'; /*ROL: lo fija build_apps.py → 'remisionista' | 'chofer'*/
 const ROL_TXT = { remisionista: { app: 'Remisionista', main: 'salida' }, chofer: { app: 'Chofer', main: 'chofer' } }[APP_ROL];
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
@@ -314,15 +314,15 @@ async function sincronizar() {
 let watchId = null, wake = null, flushT = null, ultimoFix = null, cercaN = 0;
 function rChofer() {
   if (!track) {
-    $('#main').innerHTML = `<div class="card"><h3>Iniciar rastreo</h3><div class="rem"><input id="c_rem" inputmode="numeric" placeholder="Nº de remisión"><button class="btn sm" id="c_scan" style="width:auto">📷 QR</button></div>
-      <button class="btn" id="c_go">▶ Iniciar rastreo</button></div>
-      <div class="aviso">Deja esta pantalla abierta y el teléfono con la ubicación activada hasta llegar a la planta. El rastreo se detiene solo al llegar.</div>
-      ${cfg.traccar ? '' : '<div class="aviso">⚠ Con la app en segundo plano (WhatsApp, Waze, música…) el teléfono pausa el GPS. Para rastrear con otras apps abiertas instala y configura <b>Traccar Client</b>.<button class="btn" id="c_tr" style="margin-top:8px">Instalar y configurar Traccar</button></div>'}
+    $('#main').innerHTML = `<div class="card"><h3>Iniciar rastreo</h3><button class="btn" id="c_scan2" style="font-size:19px;padding:18px">📷 Escanear QR de la remisión</button>
+      <div style="text-align:center;color:var(--gris);margin:10px 0 6px;font-size:13px">o escribe el número</div>
+      <div class="rem"><input id="c_rem" inputmode="numeric" placeholder="Nº de remisión"><button class="btn sm" id="c_go" style="width:auto">▶ Iniciar</button></div></div>
+      <div class="aviso">El camión y el conductor se toman de la remisión. Deja el teléfono con la ubicación activada hasta llegar a la planta: el rastreo se detiene solo.</div>
       ${plantaCfg() ? '' : '<div class="aviso">La ubicación de la planta aún no está en el servidor: la llegada se marcará manualmente.</div>'}`;
     let qr = '';
     const iniciar = () => { const n = $('#c_rem').value.trim(); if (!n) return toast('Falta el número de remisión'); iniciarTrack(n, qr); };
-    $('#c_scan').onclick = () => leerQR((t) => { const q = parseQR(t); qr = q.raw; if (q.remision) { $('#c_rem').value = q.remision; iniciar(); } else toast('No se reconoció el número: escríbelo', 4000); });
-    $('#c_go').onclick = iniciar; if ($('#c_tr')) $('#c_tr').onclick = () => ir('cfg'); return;
+    $('#c_scan2').onclick = () => leerQR((t) => { const q = parseQR(t); qr = q.raw; if (q.remision) { $('#c_rem').value = q.remision; iniciar(); } else toast('No se reconoció el número: escríbelo', 4000); });
+    $('#c_go').onclick = iniciar; return;
   }
   pintaTrack();
 }
@@ -333,12 +333,23 @@ function pintaTrack() {
   $('#main').innerHTML = `<div class="card"><h3>Remisión ${esc(track.remision)}</h3>
     ${track.llegada ? '<div class="aviso ok"><b>✔ Llegó a la planta</b> · ' + fhora(track.llegada.ts) + (track.llegadaSent ? ' · enviada' : ' · pendiente de enviar') + '</div>' : `<div class="big">${d != null ? (d > 1000 ? (d / 1000).toFixed(1) + ' km' : Math.round(d) + ' m') : '—'}</div><small>distancia a la planta ${pl ? '' : '(sin ubicación de planta configurada)'}</small>`}
     <div class="kv"><div>Puntos enviados<b>${env}</b></div><div>Por enviar<b>${pend}</b></div><div>Precisión<b>${u ? '±' + Math.round(u.acc) + ' m' : '—'}</b></div><div>Último punto<b>${u ? fhora(u.ts) : '—'}</b></div></div>
-    ${track.llegada ? '' : '<button class="btn" id="c_lleg">🏁 Llegué a la planta (manual)</button>'}
+    ${track.llegada ? '' : (track.camion
+      ? `<div class="aviso">Camión <b>${esc(track.camion)}</b> (tomado de la remisión)<br>Si vas a usar WhatsApp, Waze o música, activa el rastreo en segundo plano:</div><button class="btn" id="c_bg">📍 Seguir con otras apps abiertas</button>${trFalla ? '<div class="aviso">¿No se abrió Traccar? Instálalo (solo la primera vez) y vuelve a tocar el botón de arriba.</div><button class="btn sec" id="c_inst">Instalar Traccar Client</button>' : ''}`
+      : '<div class="aviso">Buscando el camión de la remisión… (el remisionista debe haber registrado la salida)</div>')}
+    ${track.llegada ? '' : '<button class="btn sec" id="c_lleg">🏁 Llegué a la planta (manual)</button>'}
     <button class="btn ${track.llegada ? '' : 'sec'}" id="c_fin">${track.llegada ? 'Terminar' : 'Cancelar rastreo'}</button></div>`;
+  const bg = $('#c_bg'); if (bg) bg.onclick = () => { cfg.traccar = true; save(LS.cfg, cfg); trFalla = false; location.href = traccarLinks(track.camion).config; setTimeout(() => { if (document.visibilityState === 'visible') { trFalla = true; pintaTrack(); } }, 2200); };
+  const ins = $('#c_inst'); if (ins) ins.onclick = () => { location.href = traccarLinks('').store; };
   const l = $('#c_lleg'); if (l) l.onclick = async () => { const p = ultimoFix || (await getPos().then((x) => ({ lat: x.coords.latitude, lng: x.coords.longitude, ts: new Date().toISOString() })).catch(() => null)); if (!p) return toast('Sin ubicación todavía'); llegar(p); };
   $('#c_fin').onclick = () => { if (!track.llegada && !confirm('¿Cancelar el rastreo? Lo ya registrado se conserva en Odoo.')) return; detener(); if (track.llegada && !track.llegadaSent) { toast('Falta enviar la llegada; se enviará al tener señal'); return ir('home'); } finalizar(); };
 }
-function iniciarTrack(rem, qr) { track = { remision: rem, qr, started: new Date().toISOString(), pts: [], llegada: null, llegadaSent: false }; save(LS.trk, track); cercaN = 0; ultimoFix = null; comenzar(); render(); }
+let trFalla = false;
+// El camión sale de la remisión que registró el remisionista (no se escribe a mano)
+async function buscaCamion() {
+  if (!track || track.camion || !navigator.onLine) return;
+  try { const r = await fetch(WORKER + '/acopio/remision?num=' + encodeURIComponent(track.remision)).then((x) => x.json()); const c = r && r.rastreo && r.rastreo.camion_codigo; if (c && track) { track.camion = c; save(LS.trk, track); pintaTrack(); } } catch (e) { /* se reintenta */ }
+}
+function iniciarTrack(rem, qr) { track = { remision: rem, qr, started: new Date().toISOString(), pts: [], llegada: null, llegadaSent: false }; save(LS.trk, track); cercaN = 0; ultimoFix = null; trFalla = false; comenzar(); render(); buscaCamion(); }
 async function comenzar() {
   if (!navigator.geolocation) return toast('Este teléfono no tiene GPS');
   if (watchId != null) return;
@@ -360,6 +371,7 @@ function onPos(p) {
 function llegar(f) { track.llegada = { ts: new Date().toISOString(), lat: f.lat, lng: f.lng }; track.llegadaSent = false; save(LS.trk, track); detener(); toast('Llegada a la planta registrada'); pintaTrack(); flush(); }
 let flushing = false;
 async function flush() {
+  if (track && !track.camion) buscaCamion();
   if (!track || flushing || !navigator.onLine) return;
   const pend = track.pts.filter((p) => !p.sent).slice(0, 200);
   if (!pend.length && !(track.llegada && !track.llegadaSent)) return;
@@ -395,24 +407,19 @@ function traccarLinks(camion) {
 /* ---------- AJUSTES ---------- */
 function rCfg() {
   const pl = plantaCfg();
-  $('#main').innerHTML = `<div class="card"><h3>Usuario de este dispositivo</h3><small style="color:var(--gris)">${APP_ROL === 'chofer' ? 'Nombre del chofer que usa este teléfono.' : 'Se pide una sola vez. Es quien aparece como remisionista (usuario dispositivo) en INFOAGRO.'}</small><input id="k_nom" value="${esc(cfg.nombre)}" placeholder="Nombre y apellido" autocomplete="name"></div>
+  $('#main').innerHTML = `${APP_ROL === 'chofer' ? '' : `<div class="card"><h3>Usuario de este dispositivo</h3><small style="color:var(--gris)">${APP_ROL === 'chofer' ? 'Nombre del chofer que usa este teléfono.' : 'Se pide una sola vez. Es quien aparece como remisionista (usuario dispositivo) en INFOAGRO.'}</small><input id="k_nom" value="${esc(cfg.nombre)}" placeholder="Nombre y apellido" autocomplete="name"></div>`}
   ${APP_ROL !== 'chofer' ? '' : `<div class="card"><h3>Planta Comasa (llegada)</h3><small>${pl ? `Ubicación guardada en el servidor · radio ${pl.radio || 300} m. La llegada se registra sola.` : 'La ubicación de la planta aún no está en el servidor: avisa al administrador. Mientras tanto la llegada se marca manualmente.'}</small></div>
-  <div class="card"><h3>Rastreo en segundo plano (recomendado)</h3>
-    <small style="color:var(--gris)">Esta app solo manda la ubicación mientras está abierta en pantalla: si pasas a WhatsApp, Waze o música, el teléfono pausa el GPS. Con <b>Traccar Client</b> (gratis) el rastreo sigue con cualquier otra app abierta.</small>
-    <label>Código de tu camión (ej. CH16345)</label><input id="k_cam" value="${esc(cfg.camion || '')}" placeholder="CH16345" autocapitalize="characters">
-    <button class="btn" id="k_tr1" style="margin-top:10px">1 · Instalar Traccar Client</button>
-    <button class="btn" id="k_tr2" style="margin-top:8px">2 · Configurarlo automáticamente</button>
-    <small style="color:var(--gris);display:block;margin-top:8px">Al abrirse Traccar, acepta la configuración, da permiso de ubicación <b>«Siempre»</b>, permite el uso en segundo plano sin restricciones y activa el servicio antes de salir. El remisionista debe registrar tu camión en la remisión.</small>
-    <details style="margin-top:8px"><summary style="font-size:13px">Si no se configura solo (manual)</summary><small>Identificador: el código del camión · Precisión alta · Frecuencia 15 s · URL del servidor:</small>
+  <div class="card"><h3>Traccar Client (rastreo en segundo plano)</h3>
+    <small style="color:var(--gris)">Se instala una sola vez. Después, al iniciar el rastreo de una remisión, la app lo configura sola con el camión de la remisión.</small>
+    <button class="btn" id="k_tr1" style="margin-top:10px">Instalar Traccar Client</button>
+    <details style="margin-top:8px"><summary style="font-size:13px">Configuración manual (si no se abre sola)</summary><small>Identificador: el código del camión de la remisión · Precisión alta · Frecuencia 15 s · URL del servidor:</small>
     <input id="k_tr" readonly value="${esc(WORKER + '/acopio/traccar?k=' + SYNC_KEY)}" onclick="this.select()"><button class="btn sec" id="k_trc">Copiar URL</button></details></div>`}
   <div class="card"><h3>Catálogo</h3><small>${cat.lotes.length} lotes con geocerca · ${cat.updated_at ? fhora(cat.updated_at) : 'sin descargar'}</small><button class="btn sec" id="k_cat">Actualizar catálogo</button></div>
   <button class="btn" id="k_ok">Guardar</button><div style="text-align:center;font-size:12px;color:var(--gris);margin-top:14px">Versión ${APP_VERSION}</div>`;
-  const guardaCam = () => { cfg.camion = camionId($('#k_cam').value); save(LS.cfg, cfg); return cfg.camion; };
-  if ($('#k_tr1')) $('#k_tr1').onclick = () => { cfg.traccar1 = true; save(LS.cfg, cfg); location.href = traccarLinks('').store; };
-  if ($('#k_tr2')) $('#k_tr2').onclick = () => { const c = guardaCam(); if (!c) return toast('Escribe primero el código de tu camión'); cfg.traccar = true; save(LS.cfg, cfg); location.href = traccarLinks(c).config; setTimeout(() => { if (document.visibilityState === 'visible') toast('¿No se abrió Traccar? Instálalo con el botón 1 o usa la configuración manual', 6000); }, 1800); };
+  if ($('#k_tr1')) $('#k_tr1').onclick = () => { location.href = traccarLinks('').store; };
   if ($('#k_trc')) $('#k_trc').onclick = async () => { try { await navigator.clipboard.writeText($('#k_tr').value); toast('URL copiada'); } catch (e) { $('#k_tr').select(); toast('Selecciónala y cópiala'); } };
   $('#k_cat').onclick = async () => { await cargarCatalogo(false); rCfg(); };
-  $('#k_ok').onclick = () => { cfg.nombre = $('#k_nom').value.trim(); if ($('#k_cam')) cfg.camion = camionId($('#k_cam').value); save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
+  $('#k_ok').onclick = () => { if ($('#k_nom')) cfg.nombre = $('#k_nom').value.trim(); save(LS.cfg, cfg); toast('Guardado'); ir('home'); };
 }
 
 /* ---------- Arranque ---------- */
@@ -444,16 +451,32 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
   const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
 
   /* ---- 1) Botón INSTALAR ---- */
-  let dip = null, btn = null;
+  const ua = navigator.userAgent;
+  const enApp = /FBAN|FBAV|Instagram|WhatsApp|Line\/|Snapchat|MicroMessenger|TikTok|; wv\)/i.test(ua);   // navegador interno de otra app (no se puede instalar desde ahí)
+  const nav = ios ? (/CriOS/.test(ua) ? 'chromeios' : /EdgiOS/.test(ua) ? 'edgeios' : /FxiOS/.test(ua) ? 'firefoxios' : 'safari')
+    : enApp ? 'enapp' : /SamsungBrowser/.test(ua) ? 'samsung' : /Firefox/.test(ua) ? 'firefox' : /EdgA/.test(ua) ? 'edge' : /OPR\/|Opera|OPT\//.test(ua) ? 'opera'
+    : /MiuiBrowser|HuaweiBrowser|UCBrowser|VivoBrowser|HeyTapBrowser|OppoBrowser|Quark|Puffin/i.test(ua) ? 'otro' : /Chrome\//.test(ua) ? 'chrome' : 'otro';
+  const nombreApp = (document.title || 'la app').trim();
+  const aChrome = () => { const esc = encodeURIComponent(location.href); location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=' + location.protocol.replace(':', '') + ';package=com.android.chrome;S.browser_fallback_url=' + esc + ';end'; };
+  const copiar = async (b) => { try { await navigator.clipboard.writeText(location.href); b.textContent = '✅ Enlace copiado: pégalo en Chrome'; } catch (e) { prompt('Copia este enlace y ábrelo en Chrome:', location.href); } };
   function pasos() {
     const tit = '<div class="pwa-ic">📲</div><h2>Instalar la app</h2>';
-    const li = ios
-      ? '<ol><li>Toca el botón <b>Compartir</b> (el cuadro con una flecha hacia arriba ⬆️), abajo en la pantalla.</li><li>Elige <b>«Añadir a pantalla de inicio»</b>.</li><li>Toca <b>«Añadir»</b>. Listo: abre la app desde su ícono.</li></ol><p style="font-size:14px">Si no ves el botón Compartir, abre esta página con <b>Safari</b>.</p>'
-      : '<ol><li>Toca los <b>tres puntos ⋮</b> arriba a la derecha del navegador.</li><li>Elige <b>«Instalar app»</b> o <b>«Añadir a pantalla de inicio»</b>.</li><li>Toca <b>«Instalar»</b>. Listo: abre la app desde su ícono.</li></ol>';
-    const o = ov(tit + li + '<button class="pwa-btn sec" id="pwaOk">Entendido</button>'); o.querySelector('#pwaOk').onclick = () => o.remove();
+    const L = (arr) => '<ol>' + arr.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
+    const nota = '<p style="font-size:14px;margin-top:-6px">Después busca el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones.</p>';
+    const chromeBtn = !ios ? '<button class="pwa-btn" id="pwaChrome">🌐 Abrir en Chrome (recomendado)</button><button class="pwa-btn sec" id="pwaCopy">📋 Copiar enlace</button>' : '<button class="pwa-btn sec" id="pwaCopy">📋 Copiar enlace</button>';
+    let cuerpo = '';
+    if (nav === 'chrome') cuerpo = L(['Toca los <b>tres puntos ⋮</b> arriba a la derecha.', 'Elige <b>«Instalar app»</b> o <b>«Añadir a pantalla de inicio»</b>.', 'Toca <b>«Instalar»</b>.']) + nota;
+    else if (nav === 'samsung') cuerpo = '<p>Estás en <b>Samsung Internet</b>. Puedes instalar aquí:</p>' + L(['Toca el menú <b>☰</b> (abajo a la derecha).', 'Elige <b>«Agregar página a»</b> y luego <b>«Pantalla de inicio»</b>.', 'Toca <b>«Agregar»</b>.']) + nota + '<p style="font-size:14px">Si no aparece el ícono, usa Chrome:</p>' + chromeBtn;
+    else if (nav === 'firefox') cuerpo = '<p>Estás en <b>Firefox</b>. Puedes instalar aquí:</p>' + L(['Toca los <b>tres puntos ⋮</b>.', 'Elige <b>«Instalar»</b> (o <b>«Agregar a pantalla de inicio»</b>).', 'Confirma con <b>«Agregar»</b>.']) + nota + '<p style="font-size:14px">Si no aparece el ícono, usa Chrome:</p>' + chromeBtn;
+    else if (nav === 'edge') cuerpo = '<p>Estás en <b>Edge</b>:</p>' + L(['Toca el menú <b>⋯</b> (abajo).', 'Elige <b>«Agregar al teléfono»</b>.', 'Toca <b>«Agregar»</b>.']) + nota + '<p style="font-size:14px">Si no aparece el ícono, usa Chrome:</p>' + chromeBtn;
+    else if (ios) cuerpo = L(['Toca el botón <b>Compartir</b> (el cuadro con la flecha ⬆️).', 'Elige <b>«Añadir a pantalla de inicio»</b>.', 'Toca <b>«Añadir»</b>.']) + nota + (nav === 'safari' ? '' : '<p style="font-size:14px">Si no ves esa opción, abre este enlace con <b>Safari</b>:</p>' + chromeBtn);
+    else cuerpo = '<p>Este navegador' + (nav === 'enapp' ? ' (el de otra aplicación)' : '') + ' <b>no puede instalar la app</b> bien. Ábrela con <b>Chrome</b> y toca de nuevo «Instalar»:</p>' + chromeBtn;
+    const o = ov(tit + cuerpo + '<button class="pwa-btn sec" id="pwaOk">Entendido</button>'); o.querySelector('#pwaOk').onclick = () => o.remove();
+    const bc = o.querySelector('#pwaChrome'); if (bc) bc.onclick = aChrome; const bp = o.querySelector('#pwaCopy'); if (bp) bp.onclick = () => copiar(bp);
   }
+  let dip = null, btn = null;
   async function instalar() {
-    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') return; } catch (e) { dip = null; } }
+    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') { ov('<div class="pwa-ic">⏳</div><h2>Instalando…</h2><p>En unos segundos verás el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones. Ábrela desde ahí.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; return; } } catch (e) { dip = null; } }
     pasos();
   }
   function pintaBoton() {
@@ -463,7 +486,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catc
     const h = document.querySelector('header'); if (h && h.parentNode) h.parentNode.insertBefore(btn, h.nextSibling); else document.body.insertBefore(btn, document.body.firstChild);
   }
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); dip = e; pintaBoton(); });
-  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde el ícono en tu pantalla.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
+  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde su ícono (en tu pantalla de inicio o en tus aplicaciones).</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
   pintaBoton();
 
   /* ---- 2) Actualización OBLIGATORIA ---- */
