@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.24-2';
+const APP_VERSION = '2026.11.24-3';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -382,7 +382,8 @@ function pintarForm() {
     ${form.msg ? `<div class="aviso">${esc(form.msg)}</div>` : ''}
     ${h.finca ? '' : '<div class="aviso">Elige primero la finca: solo aparecen los lotes sembrados en ' + esc(cat.ciclo || 'el ciclo') + '.</div>'}
     <div class="row"><div><label>Lote (sembrado)</label><select id="f_lote">${optLote}</select></div>
-      <div><label>${t === 'arranque' ? 'Arrancador' : 'Combina'}</label><select id="f_equipo">${opt(eq, eqSel)}</select></div></div>
+      <div><label>${t === 'arranque' ? 'Arrancador' : 'Combina'}</label><select id="f_equipo">${opt(eq, eqSel)}</select>
+        <button type="button" class="btn sec sm" id="fEqNuevo" style="margin-top:6px;width:100%">＋ ${t === 'arranque' ? 'Arrancador' : 'Combina'} nuevo (no está en la lista)</button></div></div>
     ${cuerpo}
     <label>Observación</label><input id="f_obs" value="${esc(d.obs)}">
     <div class="calc" id="calcF"></div>
@@ -404,6 +405,24 @@ function pintarForm() {
     else d[k] = e.value;
     pintarCalcF();
   });
+  $('#fEqNuevo').onclick = async () => {
+    leerHeader();
+    const cia = h.company, etq = t === 'arranque' ? 'arrancador' : 'combina';
+    if (!cia) { alert('Elige primero la compañía del reporte: el ' + etq + ' se registra en esa compañía.'); return; }
+    if (!navigator.onLine) { alert('Necesitas señal para registrar un ' + etq + ' nuevo en INFOAGRO. Con internet vuelve a intentarlo.'); return; }
+    const nombre = (prompt('Nombre del ' + etq + ' nuevo en ' + nombreDe(cat.companias, cia) + '\n(ej. ' + (t === 'arranque' ? 'AN013 Arrancador KMC' : 'CR019 Combina Remolcada') + ')') || '').trim();
+    if (!nombre) return;
+    const b = $('#fEqNuevo'); b.disabled = true; b.textContent = 'Registrando…';
+    try {
+      const res = await fetch(WORKER + '/arranque-combina/equipo', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Sync-Key': SYNC_KEY }, body: JSON.stringify({ tipo: t, company: cia, nombre }) });
+      const j = await res.json().catch(() => ({})); if (!res.ok || !j.ok) throw new Error(j.error || res.status);
+      const lista = t === 'arranque' ? cat.arrancadores : cat.combinas;
+      if (!lista.some((x) => x.id === j.id)) { lista.push({ id: j.id, nombre: j.nombre, company: cia }); lista.sort((x, y) => x.nombre.localeCompare(y.nombre)); try { save(LS.cat, cat); } catch (e) { /* nada */ } }
+      d[t === 'arranque' ? 'arrancador' : 'combina'] = j.id;
+      toast(j.ya_existia ? 'Ya existía: «' + j.nombre + '» elegido' : '«' + j.nombre + '» registrado en INFOAGRO ✓', 3500);
+      pintarForm();
+    } catch (e) { alert('No se pudo registrar el ' + etq + ': ' + e.message); b.disabled = false; b.textContent = '＋ ' + (t === 'arranque' ? 'Arrancador' : 'Combina') + ' nuevo (no está en la lista)'; }
+  };
   $('#fAdd').onclick = () => {
     leerHeader();
     const err = validarLinea(d, ''); if (err.length) { alert('Falta corregir:\n\n• ' + err.join('\n• ')); return; }
