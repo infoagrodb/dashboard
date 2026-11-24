@@ -86,7 +86,7 @@ td.act .btn{padding:4px 8px;margin-left:3px}
 <script>
 'use strict';
 /* ====== Configuración ====== */
-const APP_VERSION = '2026.11.19-2';
+const APP_VERSION = '2026.11.24-2';
 const WORKER = 'https://weathered-recipe-d18c.ignagher.workers.dev';
 const SYNC_KEY = 'infaogro-recuentosagricolas-10021705020946';
 const LS = { rep: 'rac_reportes_v1', cat: 'rac_catalogos_v2', cfg: 'rac_cfg_v1' };
@@ -118,7 +118,30 @@ let cat = Object.assign({ companias: [], sectores: [], ciclos: [], fincas: [], l
 let cfg = load(LS.cfg, { tecnico: '' });
 let vista = { name: 'home' };
 let actual = null;          // reporte en edición
-const persist = () => save(LS.rep, reportes);
+/* Fotos en IndexedDB (localStorage solo da ~5 MB y se llenaba con 2-3 fotos). El reporte guarda solo {id, sub, g}; la imagen (d) vive en IndexedDB. */
+const FDB = {
+  ok: typeof indexedDB !== 'undefined', _p: null,
+  open() { if (!this.ok) return Promise.reject(new Error('sin IndexedDB')); if (!this._p) this._p = new Promise((res, rej) => { const q = indexedDB.open('rac_fotos', 1); q.onupgradeneeded = () => q.result.createObjectStore('f'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); return this._p; },
+  async _tx(modo, fn) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('f', modo), st = t.objectStore('f'), rq = fn(st); t.oncomplete = () => res(rq && rq.result); t.onerror = t.onabort = () => rej(t.error); }); },
+  put(id, d) { return this._tx('readwrite', (st) => st.put(d, id)); },
+  get(id) { return this._tx('readonly', (st) => st.get(id)); },
+  del(id) { return this._tx('readwrite', (st) => st.delete(id)); },
+  keys() { return this._tx('readonly', (st) => st.getAllKeys()); },
+};
+const fotoSerial = (f) => (typeof f === 'string' || !f.g ? f : { id: f.id, sub: f.sub, g: 1 });
+const persist = () => {
+  for (const r of reportes) for (const f of (r.fotos || [])) if (typeof f === 'object' && f.d && !f.g && FDB.ok) { f.g = 1; FDB.put(f.id, f.d).catch(() => { f.g = 0; }); }
+  save(LS.rep, reportes.map((r) => (r.fotos && r.fotos.length ? Object.assign({}, r, { fotos: r.fotos.map(fotoSerial) }) : r)));
+};
+async function hidratarFotos() {   // migra fotos viejas (que estaban en localStorage) y carga las de IndexedDB
+  try {
+    for (const r of reportes) for (const f of (r.fotos || [])) if (typeof f === 'object' && f.g && !f.d) { try { f.d = (await FDB.get(f.id)) || ''; } catch (e) { f.d = ''; } }
+    for (const r of reportes) if ((r.fotos || []).some((f) => typeof f === 'string')) fotosDe(r);
+    persist();
+    if (FDB.ok) { const usadas = new Set(reportes.flatMap((r) => (r.fotos || []).map((f) => f.id))); for (const k of await FDB.keys()) if (!usadas.has(k)) FDB.del(k).catch(() => {}); }
+  } catch (e) { /* sin IndexedDB: queda como antes */ }
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* nada */ }
+}
 
 function toast(m, ms = 2400) { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), ms); }
 function setNet() { const n = $('#net'); n.textContent = navigator.onLine ? 'en línea' : 'sin señal'; n.style.background = navigator.onLine ? 'rgba(255,255,255,.2)' : '#c77d12'; }
@@ -259,7 +282,8 @@ function lotesDe(h) {
   return [...m.values()].sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 function variedadesDe(h) { return [...new Set(siembrasDe(h).filter((s) => s.finca === h.finca && s.variedad).map((s) => s.variedad))].sort(); }
-function equiposDe(tipo, company) { const l = tipo === 'arranque' ? cat.arrancadores : cat.combinas; return l.filter((e) => !company || e.company === company); }
+// Arranque → solo arrancadores; Combina → solo combinas; siempre de la compañía del reporte (sin compañía no se muestra ninguno)
+function equiposDe(tipo, company) { const l = tipo === 'arranque' ? cat.arrancadores : cat.combinas; return company ? l.filter((e) => e.company === company) : []; }
 
 /* ====== Editor: formulario de una muestra + tabla de muestras creadas ====== */
 let form = null; // { rid, idx (null = nueva), dup (Nº copiado), d (datos de la muestra) }
@@ -445,9 +469,11 @@ function validarLinea(l, p) {
   if (!l.lote) e.push(p + 'elige el lote');
   if (actual.tipo === 'arranque') {
     if (!l.arrancador) e.push(p + 'elige el arrancador');
+    else if (!equiposDe('arranque', actual.header.company).some((x) => x.id === l.arrancador)) e.push(p + 'el arrancador no es de la compañía del reporte: vuelve a elegirlo');
     CAMPOS_NUM.arranque.forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta ' + k.replace(/_/g, ' ')); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
   } else {
     if (!l.combina) e.push(p + 'elige la combina');
+    else if (!equiposDe('combina', actual.header.company).some((x) => x.id === l.combina)) e.push(p + 'la combina no es de la compañía del reporte: vuelve a elegirla');
     if (!(+l.metros > 0)) e.push(p + 'metros lineales');
     CAMPOS_NUM.combina.forEach((k) => { if (l[k] === '' || l[k] == null) e.push(p + 'falta cápsulas ' + k); else if (+l[k] < 0) e.push(p + k + ' no puede ser negativo'); });
   }
@@ -860,6 +886,7 @@ async function enviarListos() {
 /* ====== Inicio ====== */
 setNet();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+hidratarFotos().then(() => { if (vista.name === 'home') render(); });
 render();
 cargarCatalogos(true).then((ok) => { if (ok && vista.name === 'home') render(); });
 setTimeout(reintentaFotos, 3000);
@@ -895,7 +922,7 @@ setTimeout(reintentaFotos, 3000);
   const nombreApp = (document.title || 'la app').trim();
   const aChrome = () => { const esc = encodeURIComponent(location.href); location.href = 'intent://' + location.host + location.pathname + location.search + '#Intent;scheme=' + location.protocol.replace(':', '') + ';package=com.android.chrome;S.browser_fallback_url=' + esc + ';end'; };
   const copiar = async (b) => { try { await navigator.clipboard.writeText(location.href); b.textContent = '✅ Enlace copiado: pégalo en Chrome'; } catch (e) { prompt('Copia este enlace y ábrelo en Chrome:', location.href); } };
-  function pasos() {
+  function pasosInstalar() {
     const tit = '<div class="pwa-ic">📲</div><h2>Instalar la app</h2>';
     const L = (arr) => '<ol>' + arr.map((x) => '<li>' + x + '</li>').join('') + '</ol>';
     const nota = '<p style="font-size:14px;margin-top:-6px">Después busca el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones.</p>';
@@ -911,18 +938,31 @@ setTimeout(reintentaFotos, 3000);
     const bc = o.querySelector('#pwaChrome'); if (bc) bc.onclick = aChrome; const bp = o.querySelector('#pwaCopy'); if (bp) bp.onclick = () => copiar(bp);
   }
   let dip = null, btn = null;
+  const KEY = 'pwa_instalada';
+  const marcaInstalada = () => { try { localStorage.setItem(KEY, '1'); } catch (e) { /* ok */ } if (btn) btn.textContent = TXT_YA; };
+  const yaInstalada = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
+  const TXT_INST = '📲 Instalar la app en mi teléfono', TXT_YA = '📲 Ya la instalé: poner el ícono en mi pantalla';
+  const marca = /Xiaomi|Redmi|POCO|MIUI/i.test(ua) ? 'xiaomi' : /SM-|Samsung/i.test(ua) ? 'samsung' : /HUAWEI|HONOR/i.test(ua) ? 'huawei' : '';
+  // Android no siempre crea el acceso directo solo: la app queda instalada en «todas las aplicaciones» y desde ahí se pone en la pantalla principal
+  function guiaAcceso() {
+    const extra = { xiaomi: '<p style="font-size:14px">En Xiaomi/Redmi/POCO, si no se crea solo: <b>Ajustes → Aplicaciones → Permisos → Otros permisos → Chrome → «Crear accesos directos»</b> y actívalo.</p>',
+      samsung: '<p style="font-size:14px">En Samsung, para que se pongan solos: <b>Ajustes → Pantalla de inicio → «Añadir apps nuevas a la pantalla de inicio»</b>.</p>', huawei: '', '': '' }[marca];
+    const o = ov('<div class="pwa-ic">📌</div><h2>Poner el ícono en tu pantalla</h2><p>La app ya está instalada. Para tener el ícono a la mano:</p><ol><li>En la pantalla principal, <b>desliza hacia arriba</b> para ver todas tus aplicaciones.</li><li>Busca <b>«' + nombreApp + '»</b>.</li><li><b>Mantén presionado</b> su ícono.</li><li>Elige <b>«Agregar a pantalla de inicio»</b> (o arrástralo a la pantalla).</li></ol>' + extra + '<button class="pwa-btn" id="pwaOk">Entendido</button><button class="pwa-btn sec" id="pwaRe">No la encuentro: volver a instalar</button>');
+    o.querySelector('#pwaOk').onclick = () => o.remove(); o.querySelector('#pwaRe').onclick = () => { o.remove(); pasosInstalar(); };
+  }
   async function instalar() {
-    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') { ov('<div class="pwa-ic">⏳</div><h2>Instalando…</h2><p>En unos segundos verás el ícono <b>«' + nombreApp + '»</b> en tu pantalla de inicio o en tus aplicaciones. Ábrela desde ahí.</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; return; } } catch (e) { dip = null; } }
-    pasos();
+    if (yaInstalada() && !dip) return guiaAcceso();
+    if (dip) { try { dip.prompt(); const r = await dip.userChoice; dip = null; if (r && r.outcome === 'accepted') { marcaInstalada(); guiaAcceso(); return; } } catch (e) { dip = null; } }
+    pasosInstalar();
   }
   function pintaBoton() {
     if (standalone()) { if (btn) { btn.remove(); btn = null; } return; }
     if (btn) return;
-    btn = E('button', 'pwa-inst', '📲 Instalar la app en mi teléfono'); btn.id = 'pwaInstBtn'; btn.onclick = instalar;
+    btn = E('button', 'pwa-inst', yaInstalada() ? TXT_YA : TXT_INST); btn.id = 'pwaInstBtn'; btn.onclick = instalar;
     const h = document.querySelector('header'); if (h && h.parentNode) h.parentNode.insertBefore(btn, h.nextSibling); else document.body.insertBefore(btn, document.body.firstChild);
   }
   addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); dip = e; pintaBoton(); });
-  addEventListener('appinstalled', () => { if (btn) { btn.remove(); btn = null; } ov('<div class="pwa-ic">✅</div><h2>¡App instalada!</h2><p>Ya puedes cerrar esta página y abrir la app desde su ícono (en tu pantalla de inicio o en tus aplicaciones).</p><button class="pwa-btn" id="pwaOk">Entendido</button>').querySelector('#pwaOk').onclick = function () { this.closest('.pwa-ov').remove(); }; });
+  addEventListener('appinstalled', () => { marcaInstalada(); if (!document.querySelector('.pwa-ov')) guiaAcceso(); });
   pintaBoton();
 
   /* ---- 2) Actualización OBLIGATORIA ---- */
